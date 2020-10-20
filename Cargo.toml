@@ -7,9 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-surf = "2.0.0"
-async-std = "1.6.5"
 dotenv = "0.15.0"
 serde = { version = "1.0.117", features = ["derive"] }
 base64 = "0.13.0"
 color-eyre = "0.5.6"
+tokio = { version = "0.2.22", features = ["macros", "rt-core"] }
+reqwest = { version = "0.10.8", default-features = false, features = ["rustls-tls", "json"] }
+console = "0.13.0"
+dialoguer = "0.7.1"
