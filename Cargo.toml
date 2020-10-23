@@ -11,7 +11,8 @@ dotenv = "0.15.0"
 serde = { version = "1.0.117", features = ["derive"] }
 base64 = "0.13.0"
 color-eyre = "0.5.6"
-tokio = { version = "0.2.22", features = ["macros", "rt-core"] }
+tokio = { version = "0.2.22", features = ["macros", "rt-core", "fs"] }
 reqwest = { version = "0.10.8", default-features = false, features = ["rustls-tls", "json"] }
 console = "0.13.0"
 dialoguer = "0.7.1"
+toml = "0.5.7"
