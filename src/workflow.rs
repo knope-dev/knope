@@ -25,7 +25,7 @@ pub struct Workflow {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Step {
-    ListIssues { status: String },
+    SelectIssue { status: String },
 }
 
 #[derive(Deserialize, Debug)]

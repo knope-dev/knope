@@ -3,7 +3,7 @@ mod state;
 mod workflow;
 
 use crate::workflow::{Config, Step, Workflow};
-use color_eyre::eyre::{eyre, Result, WrapErr};
+use color_eyre::eyre::{eyre, Result};
 use console::Term;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Select;
@@ -61,6 +61,6 @@ async fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
 
 async fn run_step(step: Step, state: State) -> Result<State> {
     match step {
-        Step::ListIssues { status } => jira::select_issue(status, state).await,
+        Step::SelectIssue { status } => jira::select_issue(status, state).await,
     }
 }

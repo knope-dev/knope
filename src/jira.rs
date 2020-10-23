@@ -53,22 +53,21 @@ pub async fn select_issue(status: String, mut state: State) -> Result<State> {
     }
 }
 
-fn get_auth() -> String {
-    let token = std::env::var("JIRA_TOKEN").unwrap();
-    let email = std::env::var("EMAIL").unwrap();
-    format!("Basic {}", base64::encode(format!("{}:{}", email, token)))
+fn get_auth() -> Result<String> {
+    let token = std::env::var("JIRA_TOKEN").wrap_err("You must have the JIRA_TOKEN variable set in .env or an environment variable")?;
+    let email = std::env::var("EMAIL").wrap_err("You must have the EMAIL variable set in .env or an environment variable")?;
+    Ok(format!("Basic {}", base64::encode(format!("{}:{}", email, token))))
 }
 
 async fn get_issues(status: String) -> Result<Vec<Issue>> {
-    // TODO: Move client into state
-    // TODO: Make this URL configurable
-    // TODO: Handle this error gracefully
-    let auth = get_auth();
+    let auth = get_auth()?;
     let body = SearchParams {
         jql: format!("status = {}", status),
         fields: vec!["summary"],
     };
+    // TODO: Move client into state
     let client = reqwest::Client::new();
+    // TODO: Make this URL configurable
     Ok(client
         .post("https://triaxtec.atlassian.net/rest/api/2/search")
         .json(&body)
