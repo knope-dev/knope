@@ -1,9 +1,10 @@
 use std::fmt;
 
-use crate::state::State;
+use crate::prompt::select;
+use crate::state;
+use crate::state::{Initial, IssueSelected, ProjectSelected, State};
+use crate::workflow::JiraConfig;
 use color_eyre::eyre::{eyre, Result, WrapErr};
-use console::Term;
-use dialoguer::{theme::ColorfulTheme, Select};
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};
 
@@ -35,48 +36,130 @@ struct SearchResponse {
     issues: Vec<Issue>,
 }
 
-pub async fn select_issue(status: String, mut state: State) -> Result<State> {
-    let mut issues = get_issues(status).await?;
-    let selection = Select::with_theme(&ColorfulTheme::default())
-        .items(&issues)
-        .default(0)
-        .interact_on_opt(&Term::stderr())?;
-
-    match selection {
-        Some(index) => {
-            let Issue { key, .. } = issues.remove(index);
-            println!("User selected item : {}", &key);
-            state.selected_issue_key = Some(key);
-            Ok(state)
+pub fn select_issue(status: String, state: State) -> Result<State> {
+    match state {
+        State::IssueSelected(..) | State::ProjectSelected(..) => {
+            Err(eyre!("You've already selected an issue!"))
         }
-        None => Err(eyre!("No issue selected")),
+        State::Initial(Initial {
+            jira_config,
+            projects,
+        }) => {
+            let issues = get_issues(&jira_config, status)?;
+            let issue = select(issues, "Select an Issue")?;
+            println!("Selected item : {}", &issue.key);
+            Ok(State::IssueSelected(IssueSelected {
+                jira_config,
+                issue: state::Issue {
+                    key: issue.key,
+                    summary: issue.fields.summary,
+                },
+                projects,
+            }))
+        }
     }
 }
 
 fn get_auth() -> Result<String> {
-    let token = std::env::var("JIRA_TOKEN").wrap_err("You must have the JIRA_TOKEN variable set in .env or an environment variable")?;
-    let email = std::env::var("EMAIL").wrap_err("You must have the EMAIL variable set in .env or an environment variable")?;
-    Ok(format!("Basic {}", base64::encode(format!("{}:{}", email, token))))
+    // TODO: Handle this error and print out a useful message about generating a token (https://id.atlassian.com/manage-profile/security/api-tokens)
+    // TODO: store this in keychain instead of env var
+    let token = std::env::var("JIRA_TOKEN")
+        .wrap_err("You must have the JIRA_TOKEN variable set in .env or an environment variable")?;
+    let email = std::env::var("EMAIL")
+        .wrap_err("You must have the EMAIL variable set in .env or an environment variable")?;
+    Ok(format!(
+        "Basic {}",
+        base64::encode(format!("{}:{}", email, token))
+    ))
 }
 
-async fn get_issues(status: String) -> Result<Vec<Issue>> {
+fn get_issues(jira_config: &JiraConfig, status: String) -> Result<Vec<Issue>> {
     let auth = get_auth()?;
-    let body = SearchParams {
-        jql: format!("status = {}", status),
-        fields: vec!["summary"],
-    };
-    // TODO: Move client into state
-    let client = reqwest::Client::new();
-    // TODO: Make this URL configurable
-    Ok(client
-        .post("https://triaxtec.atlassian.net/rest/api/2/search")
-        .json(&body)
-        .header("Authorization", auth)
-        .send()
-        .await
-        .wrap_err("Could not request issues")?
-        .json::<SearchResponse>()
-        .await
+    let jql = format!("status = {}", status);
+    let url = format!("{}/rest/api/3/search", jira_config.url);
+    Ok(ureq::post(&url)
+        .set("Authorization", &auth)
+        .send_json(serde_json::json!({"jql": jql, "fields": ["summary"]}))
+        .into_json_deserialize::<SearchResponse>()
         .wrap_err("Could not request issues")?
         .issues)
+}
+
+fn transition_issue(jira_config: &JiraConfig, issue_key: &str, status: &str) -> Result<()> {
+    let auth = get_auth()?; // TODO: get auth once and store in state
+    let url = format!(
+        "{}/rest/api/3/issue/{}/transitions",
+        jira_config.url, issue_key
+    );
+    let response = ureq::get(&url)
+        .set("Authorization", &auth)
+        .call()
+        .into_json_deserialize::<GetTransitionResponse>()
+        .wrap_err("Could not decode transitions")?;
+    let transition = response
+        .transitions
+        .into_iter()
+        .find(|transition| transition.name == status)
+        .ok_or_else(|| eyre!("No matching transition found"))?;
+    let response = ureq::post(&url)
+        .set("Authorization", &auth)
+        .send_json(serde_json::json!({"transition": {"id": transition.id}}));
+    if !response.ok() {
+        return Err(eyre!(
+            "Received {} when transitioning issue with body {:#?}",
+            response.status(),
+            response.into_json()?
+        ));
+    }
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct GetTransitionResponse {
+    transitions: Vec<Transition>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Transition {
+    id: String,
+    name: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PostTransitionBody {
+    transition: Transition,
+}
+
+pub fn transition_selected_issue(status: String, state: State) -> Result<State> {
+    match state {
+        State::Initial(..) => Err(eyre!(
+            "No issue selected, try running a SelectIssue step before this one"
+        )),
+        State::ProjectSelected(ProjectSelected {
+            jira_config,
+            issue,
+            project,
+        }) => {
+            transition_issue(&jira_config, &issue.key, &status)?;
+            println!("{} transitioned to {}", issue.key, &status);
+            Ok(State::ProjectSelected(ProjectSelected {
+                jira_config,
+                issue,
+                project,
+            }))
+        }
+        State::IssueSelected(IssueSelected {
+            jira_config,
+            issue,
+            projects,
+        }) => {
+            transition_issue(&jira_config, &issue.key, &status)?;
+            println!("{} transitioned to {}", &issue.key, &status);
+            Ok(State::IssueSelected(IssueSelected {
+                jira_config,
+                issue,
+                projects,
+            }))
+        }
+    }
 }
