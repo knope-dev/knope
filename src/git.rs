@@ -36,11 +36,11 @@ pub fn switch_branches(state: State) -> Result<State> {
 pub fn rebase_branch(state: State, to: String) -> Result<State> {
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
-    let branch_name = head.name().ok_or(eyre!(
+    let ref_name = head.name().ok_or(eyre!(
         "Could not get a name for current HEAD. Are you at the tip of a branch?"
     ))?;
     let data = match state {
-        State::Initial(data) => select_issue_from_branch_name(data, branch_name)?,
+        State::Initial(data) => select_issue_from_branch_name(data, ref_name)?,
         State::IssueSelected(data) => data,
     };
 
@@ -61,34 +61,30 @@ pub fn rebase_branch(state: State, to: String) -> Result<State> {
     Ok(State::IssueSelected(data))
 }
 
-fn select_issue_from_branch_name(data: Initial, branch_name: &str) -> Result<IssueSelected> {
+fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
     let re = Regex::new("([A-Z]+-[0-9]+)(.*)").unwrap();
-    let caps = re.captures(branch_name).ok_or_else(|| {
+    let caps = re.captures(ref_name).ok_or_else(|| {
         eyre!(
-            "Current branch {} is not in the right format. Was it created with Flow?",
-            branch_name
+            "Current ref {} is not in the right format. Was it created with Flow?",
+            ref_name
         )
     })?;
     let key = caps
-        .get(0)
-        .ok_or_else(|| {
-            eyre!(
-                "Could not determine Jira issue key from branch {}",
-                branch_name
-            )
-        })?
+        .get(1)
+        .ok_or_else(|| eyre!("Could not determine Jira issue key from ref {}", ref_name))?
         .as_str()
         .to_owned();
     let summary = caps
-        .get(0)
+        .get(2)
         .ok_or_else(|| {
             eyre!(
-                "Could not determine Jira issue summary from branch {}",
-                branch_name
+                "Could not determine Jira issue summary from ref {}",
+                ref_name
             )
         })?
         .as_str()
         .to_owned();
+    println!("Auto-selecting issue {} from ref {}", &key, ref_name);
     Ok(IssueSelected {
         jira_config: data.jira_config,
         issue: Issue { key, summary },
