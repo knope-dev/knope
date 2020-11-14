@@ -33,10 +33,9 @@ pub fn create_branch(state: State) -> Result<State> {
             .get()
             .name()
             .ok_or_else(|| eyre!("Problem checking out existing branch"))?;
-        repo.set_head(existing_ref).wrap_err(format!(
-            "Found branch {} but could not set head.",
-            new_branch_name
-        ))?;
+        repo.set_head(existing_ref).wrap_err_with(|| {
+            format!("Found branch {} but could not set head.", new_branch_name)
+        })?;
         return Ok(State::ProjectSelected(data));
     }
 
@@ -57,11 +56,12 @@ pub fn create_branch(state: State) -> Result<State> {
 
     let new_branch = repo
         .branch(&new_branch_name, &branch.get().peel_to_commit()?, false)
-        .wrap_err(format!("Failed to create new branch {}", new_branch_name))?;
-    repo.checkout_tree(&new_branch.get().peel_to_tree()?.into_object(), None)
-        .wrap_err(format!(
-            "Could not check out {} after creation",
-            &new_branch_name
-        ))?;
+        .wrap_err_with(|| format!("Failed to create new branch {}", new_branch_name))?;
+    let ref_name = new_branch
+        .get()
+        .name()
+        .ok_or_else(|| eyre!("Problem checking out existing branch"))?;
+    repo.set_head(ref_name)
+        .wrap_err_with(|| format!("Could not check out {} after creation", &ref_name))?;
     Ok(State::ProjectSelected(data))
 }
