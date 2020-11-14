@@ -32,7 +32,7 @@ impl std::fmt::Display for Workflow {
 pub enum Step {
     SelectIssue { status: String },
     TransitionIssue { status: String },
-    CreateBranch,
+    SwitchBranches,
 }
 
 #[derive(Debug, Default, Deserialize)]

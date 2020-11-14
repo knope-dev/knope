@@ -10,7 +10,7 @@ name = "Start New Task"
     status = "Development"
 
     [[workflows.steps]]
-    type = "CreateBranch"
+    type = "SwitchBranches"
 
 [jira]
 url = "https://triaxtec.atlassian.net"

@@ -37,6 +37,6 @@ fn run_step(step: Step, state: State) -> Result<State> {
         Step::TransitionIssue { status } => {
             jira::transition_selected_issue(status, state).wrap_err("During TransitionIssue")
         }
-        Step::CreateBranch => git::create_branch(state).wrap_err("During CreateBranch"),
+        Step::SwitchBranches => git::switch_branches(state).wrap_err("During SwitchBranches"),
     }
 }
