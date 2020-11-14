@@ -1,14 +1,17 @@
 use color_eyre::eyre::{eyre, ContextCompat, Result, WrapErr};
 
 use crate::prompt::select;
-use crate::state::{select_project, State};
+use crate::state::State;
 use git2::{Branch, BranchType, Repository};
 
 pub fn create_branch(state: State) -> Result<State> {
-    let data = select_project(state).wrap_err("Failed to select project")?;
-    let repo = match Repository::open(&data.project.directory) {
+    let data = match state {
+        State::Initial(..) => return Err(eyre!("You must SelectIssue first.")),
+        State::IssueSelected(data) => data,
+    };
+    let repo = match Repository::open(".") {
         Ok(repo) => repo,
-        Err(e) => return Err(eyre!("failed to open project {}: {}", data.project, e)),
+        Err(e) => return Err(eyre!("Failed to find Git repo in this directory: {}", e)),
     };
     let new_branch_name = format!(
         "{}-{}",
@@ -36,7 +39,7 @@ pub fn create_branch(state: State) -> Result<State> {
         repo.set_head(existing_ref).wrap_err_with(|| {
             format!("Found branch {} but could not set head.", new_branch_name)
         })?;
-        return Ok(State::ProjectSelected(data));
+        return Ok(State::IssueSelected(data));
     }
 
     let branch_names: Vec<&str> = branches
@@ -63,5 +66,5 @@ pub fn create_branch(state: State) -> Result<State> {
         .ok_or_else(|| eyre!("Problem checking out existing branch"))?;
     repo.set_head(ref_name)
         .wrap_err_with(|| format!("Could not check out {} after creation", &ref_name))?;
-    Ok(State::ProjectSelected(data))
+    Ok(State::IssueSelected(data))
 }

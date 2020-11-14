@@ -16,16 +16,9 @@ fn main() -> Result<()> {
     dotenv().ok();
 
     let config = workflow::load_workflow()?;
-    let Config {
-        workflows,
-        jira,
-        projects,
-    } = config;
+    let Config { workflows, jira } = config;
     let workflow = select(workflows, "Select a workflow")?;
-    let state = State::Initial(Initial {
-        jira_config: jira,
-        projects,
-    });
+    let state = State::Initial(Initial { jira_config: jira });
     run_workflow(workflow, state)
 }
 

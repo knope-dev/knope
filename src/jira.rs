@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::prompt::select;
 use crate::state;
-use crate::state::{Initial, IssueSelected, ProjectSelected, State};
+use crate::state::{Initial, IssueSelected, State};
 use crate::workflow::JiraConfig;
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use serde::export::Formatter;
@@ -38,13 +38,8 @@ struct SearchResponse {
 
 pub fn select_issue(status: String, state: State) -> Result<State> {
     match state {
-        State::IssueSelected(..) | State::ProjectSelected(..) => {
-            Err(eyre!("You've already selected an issue!"))
-        }
-        State::Initial(Initial {
-            jira_config,
-            projects,
-        }) => {
+        State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
+        State::Initial(Initial { jira_config }) => {
             let issues = get_issues(&jira_config, status)?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue.key);
@@ -54,7 +49,6 @@ pub fn select_issue(status: String, state: State) -> Result<State> {
                     key: issue.key,
                     summary: issue.fields.summary,
                 },
-                projects,
             }))
         }
     }
@@ -75,7 +69,7 @@ fn get_auth() -> Result<String> {
 
 fn get_issues(jira_config: &JiraConfig, status: String) -> Result<Vec<Issue>> {
     let auth = get_auth()?;
-    let jql = format!("status = {}", status);
+    let jql = format!("status = {} AND project = {}", status, jira_config.project);
     let url = format!("{}/rest/api/3/search", jira_config.url);
     Ok(ureq::post(&url)
         .set("Authorization", &auth)
@@ -135,31 +129,10 @@ pub fn transition_selected_issue(status: String, state: State) -> Result<State> 
         State::Initial(..) => Err(eyre!(
             "No issue selected, try running a SelectIssue step before this one"
         )),
-        State::ProjectSelected(ProjectSelected {
-            jira_config,
-            issue,
-            project,
-        }) => {
-            transition_issue(&jira_config, &issue.key, &status)?;
-            println!("{} transitioned to {}", issue.key, &status);
-            Ok(State::ProjectSelected(ProjectSelected {
-                jira_config,
-                issue,
-                project,
-            }))
-        }
-        State::IssueSelected(IssueSelected {
-            jira_config,
-            issue,
-            projects,
-        }) => {
+        State::IssueSelected(IssueSelected { jira_config, issue }) => {
             transition_issue(&jira_config, &issue.key, &status)?;
             println!("{} transitioned to {}", &issue.key, &status);
-            Ok(State::IssueSelected(IssueSelected {
-                jira_config,
-                issue,
-                projects,
-            }))
+            Ok(State::IssueSelected(IssueSelected { jira_config, issue }))
         }
     }
 }

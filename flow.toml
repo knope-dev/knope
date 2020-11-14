@@ -1,0 +1,17 @@
+[[workflows]]
+name = "Start New Task"
+
+    [[workflows.steps]]
+    type = "SelectIssue"
+    status = "selected"
+
+    [[workflows.steps]]
+    type = "TransitionIssue"
+    status = "Development"
+
+    [[workflows.steps]]
+    type = "CreateBranch"
+
+[jira]
+url = "https://triaxtec.atlassian.net"
+project = "FLOW"
