@@ -36,9 +36,9 @@ pub fn switch_branches(state: State) -> Result<State> {
 pub fn rebase_branch(state: State, to: String) -> Result<State> {
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
-    let ref_name = head.name().ok_or(eyre!(
-        "Could not get a name for current HEAD. Are you at the tip of a branch?"
-    ))?;
+    let ref_name = head.name().ok_or_else(|| {
+        eyre!("Could not get a name for current HEAD. Are you at the tip of a branch?")
+    })?;
     let data = match state {
         State::Initial(data) => select_issue_from_branch_name(data, ref_name)?,
         State::IssueSelected(data) => data,
@@ -133,7 +133,7 @@ fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
 
 fn find_branch<'vec, 'repo>(
     name: &str,
-    branches: &'vec Vec<Branch<'repo>>,
+    branches: &'vec [Branch<'repo>],
 ) -> Option<&'vec Branch<'repo>> {
     branches.iter().find(|b| b.name().ok() == Some(Some(name)))
 }
