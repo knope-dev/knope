@@ -12,6 +12,17 @@ name = "Start New Task"
     [[workflows.steps]]
     type = "SwitchBranches"
 
+[[workflows]]
+name = "Finish Development"
+
+    [[workflows.steps]]
+    type = "RebaseBranch"
+    to = "main"
+
+    [[workflows.steps]]
+    type = "TransitionIssue"
+    status = "Done"
+
 [jira]
 url = "https://triaxtec.atlassian.net"
 project = "FLOW"

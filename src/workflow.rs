@@ -33,6 +33,7 @@ pub enum Step {
     SelectIssue { status: String },
     TransitionIssue { status: String },
     SwitchBranches,
+    RebaseBranch { to: String },
 }
 
 #[derive(Debug, Default, Deserialize)]
