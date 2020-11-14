@@ -85,9 +85,15 @@ fn transition_issue(jira_config: &JiraConfig, issue_key: &str, status: &str) -> 
         "{}/rest/api/3/issue/{}/transitions",
         jira_config.url, issue_key
     );
-    let response = ureq::get(&url)
-        .set("Authorization", &auth)
-        .call()
+    let response = ureq::get(&url).set("Authorization", &auth).call();
+    if response.error() {
+        return Err(eyre!(
+            "Received {} when transitioning issue with body {:#?}",
+            response.status(),
+            response.into_json()?
+        ));
+    }
+    let response = response
         .into_json_deserialize::<GetTransitionResponse>()
         .wrap_err("Could not decode transitions")?;
     let transition = response
@@ -98,7 +104,7 @@ fn transition_issue(jira_config: &JiraConfig, issue_key: &str, status: &str) -> 
     let response = ureq::post(&url)
         .set("Authorization", &auth)
         .send_json(serde_json::json!({"transition": {"id": transition.id}}));
-    if !response.ok() {
+    if response.error() {
         return Err(eyre!(
             "Received {} when transitioning issue with body {:#?}",
             response.status(),

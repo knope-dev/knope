@@ -53,7 +53,7 @@ pub fn rebase_branch(state: State, to: String) -> Result<State> {
     let source = repo
         .reference_to_annotated_commit(&head)
         .wrap_err("Could not retrieve annotated commit from source to rebase")?;
-    repo.rebase(Some(&source), None, Some(&target), None)
+    repo.rebase(Some(&target), None, Some(&source), None)
         .wrap_err("Failed to start rebase")?
         .finish(None)
         .wrap_err("Could not complete rebase")?;
