@@ -57,7 +57,11 @@ pub fn rebase_branch(state: State, to: String) -> Result<State> {
         .wrap_err("Failed to start rebase")?
         .finish(None)
         .wrap_err("Could not complete rebase")?;
+
+    println!("Rebased current branch onto {}", to);
     switch_to_branch(&repo, &target_branch)?;
+    println!("Switched to branch {}, don't forget to push!", to);
+
     Ok(State::IssueSelected(data))
 }
 
