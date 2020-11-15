@@ -4,15 +4,17 @@ use serde::export::Formatter;
 use serde::Deserialize;
 use std::fs;
 
-pub fn load_workflow() -> Result<Config> {
-    let contents = fs::read_to_string("flow.toml").wrap_err("Could not find config file.")?;
-    toml::from_str(&contents).wrap_err("Failed to parse config file.")
-}
-
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub workflows: Vec<Workflow>,
     pub jira: JiraConfig,
+}
+
+impl Config {
+    pub fn load(path: &str) -> Result<Self> {
+        let contents = fs::read_to_string(path).wrap_err("Could not find config file.")?;
+        toml::from_str(&contents).wrap_err("Failed to parse config file.")
+    }
 }
 
 #[derive(Deserialize, Debug)]

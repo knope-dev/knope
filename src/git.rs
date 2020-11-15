@@ -16,7 +16,7 @@ pub fn switch_branches(state: State) -> Result<State> {
     let new_branch_name = branch_name_from_issue(&data.issue);
     let branches = get_all_branches(&repo)?;
 
-    if let Some(existing) = find_branch(&new_branch_name, &branches) {
+    if let Ok(existing) = repo.find_branch(&new_branch_name, BranchType::Local) {
         println!(
             "Found existing branch named {}, switching to it.",
             new_branch_name
@@ -28,7 +28,7 @@ pub fn switch_branches(state: State) -> Result<State> {
     println!("Creating a new branch called {}", new_branch_name);
     let branch = select_branch(branches, "Which branch do you want to base off of?")?;
     let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
-    switch_to_branch(&repo, &new_branch)?;
+    switch_to_branch(&repo, new_branch)?;
     Ok(State::IssueSelected(data))
 }
 
@@ -59,7 +59,7 @@ pub fn rebase_branch(state: State, to: String) -> Result<State> {
         .wrap_err("Could not complete rebase")?;
 
     println!("Rebased current branch onto {}", to);
-    switch_to_branch(&repo, &target_branch)?;
+    switch_to_branch(&repo, target_branch)?;
     println!("Switched to branch {}, don't forget to push!", to);
 
     Ok(State::IssueSelected(data))
@@ -122,7 +122,7 @@ fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Br
         .wrap_err("failed to select branch")
 }
 
-fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
+fn switch_to_branch(repo: &Repository, branch: Branch) -> Result<()> {
     let ref_name = branch
         .get()
         .name()
@@ -131,16 +131,9 @@ fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
         .wrap_err_with(|| format!("Found branch {} but could not switch to it.", ref_name))
 }
 
-fn find_branch<'vec, 'repo>(
-    name: &str,
-    branches: &'vec [Branch<'repo>],
-) -> Option<&'vec Branch<'repo>> {
-    branches.iter().find(|b| b.name().ok() == Some(Some(name)))
-}
-
 fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
     Ok(repo
-        .branches(None)
+        .branches(Some(BranchType::Local))
         .wrap_err("Could not list branches")?
         .into_iter()
         .filter_map(|b| b.ok())
@@ -150,4 +143,52 @@ fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
 
 fn branch_name_from_issue(issue: &Issue) -> String {
     format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(" ", "-")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+
+    #[test]
+    fn branch_name_from_issue() {
+        let issue = Issue {
+            key: "FLOW-5".to_string(),
+            summary: "A test issue".to_string(),
+        };
+        let branch_name = super::branch_name_from_issue(&issue);
+        assert_eq!(&branch_name, "FLOW-5-a-test-issue");
+    }
+
+    #[test]
+    fn get_all_branches() {
+        let output = String::from_utf8(
+            Command::new("git")
+                .arg("branch")
+                .output()
+                .expect("Failed to execute command")
+                .stdout,
+        )
+        .expect("Output was not UTF-8");
+        let expected = output
+            .split("\n")
+            .filter(|b| !b.is_empty())
+            .map(|b| b.replace(" ", "").replace("*", ""))
+            .collect::<Vec<_>>();
+
+        let repo = Repository::open(".").expect("Could not open repo");
+        let actual = super::get_all_branches(&repo)
+            .expect("Could not list branches")
+            .into_iter()
+            .map(|branch| {
+                branch
+                    .name()
+                    .expect("Could not get name")
+                    .expect("No name")
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, actual);
+    }
 }

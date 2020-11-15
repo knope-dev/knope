@@ -18,3 +18,9 @@ pub enum State {
     Initial(Initial),
     IssueSelected(IssueSelected),
 }
+
+impl State {
+    pub fn new(jira_config: JiraConfig) -> Self {
+        State::Initial(Initial { jira_config })
+    }
+}
