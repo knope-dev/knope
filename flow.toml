@@ -23,6 +23,12 @@ name = "Finish Development"
     type = "TransitionIssue"
     status = "Done"
 
+    [[workflows.steps]]
+    type = "BumpVersion"
+    rule = "Pre"
+    value = "rc"
+
+
 [jira]
 url = "https://triaxtec.atlassian.net"
 project = "FLOW"

@@ -4,9 +4,11 @@ pub use crate::prompt::select;
 pub use crate::state::State;
 pub use crate::workflow::{Config, Step, Workflow};
 
+mod cargo;
 mod git;
 mod jira;
 mod prompt;
+mod semver;
 mod state;
 mod workflow;
 
@@ -27,5 +29,8 @@ fn run_step(step: Step, state: State) -> Result<State> {
         }
         Step::SwitchBranches => git::switch_branches(state).wrap_err("During SwitchBranches"),
         Step::RebaseBranch { to } => git::rebase_branch(state, to).wrap_err("During MergeBranch"),
+        Step::BumpVersion(rule) => {
+            crate::semver::bump_version(state, rule).wrap_err("During BumpVersion")
+        }
     }
 }

@@ -36,6 +36,7 @@ pub enum Step {
     TransitionIssue { status: String },
     SwitchBranches,
     RebaseBranch { to: String },
+    BumpVersion(crate::semver::Rule),
 }
 
 #[derive(Debug, Default, Deserialize)]
