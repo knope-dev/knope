@@ -1,7 +1,9 @@
+use crate::command::Variable;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use serde::export::Formatter;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 
 #[derive(Deserialize, Debug)]
@@ -32,11 +34,21 @@ impl std::fmt::Display for Workflow {
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Step {
-    SelectIssue { status: String },
-    TransitionIssue { status: String },
+    SelectIssue {
+        status: String,
+    },
+    TransitionIssue {
+        status: String,
+    },
     SwitchBranches,
-    RebaseBranch { to: String },
+    RebaseBranch {
+        to: String,
+    },
     BumpVersion(crate::semver::Rule),
+    Command {
+        command: String,
+        variables: Option<HashMap<String, Variable>>,
+    },
 }
 
 #[derive(Debug, Default, Deserialize)]

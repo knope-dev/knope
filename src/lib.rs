@@ -5,6 +5,7 @@ pub use crate::state::State;
 pub use crate::workflow::{Config, Step, Workflow};
 
 mod cargo;
+mod command;
 mod git;
 mod jira;
 mod prompt;
@@ -31,6 +32,9 @@ fn run_step(step: Step, state: State) -> Result<State> {
         Step::RebaseBranch { to } => git::rebase_branch(state, to).wrap_err("During MergeBranch"),
         Step::BumpVersion(rule) => {
             crate::semver::bump_version(state, rule).wrap_err("During BumpVersion")
+        }
+        Step::Command { command, variables } => {
+            command::run_command(state, command, variables).wrap_err("During Command")
         }
     }
 }

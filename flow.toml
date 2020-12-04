@@ -28,6 +28,28 @@ name = "Finish Development"
     rule = "Pre"
     value = "rc"
 
+    [[workflows.steps]]
+    type = "Command"
+    command = "git add Cargo.toml"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git commit -m \"bump to version\""
+    variables = {"version" = "Version"}
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git push && git fetch -p -P"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git tag v.version"
+    variables = {"version" = "Version"}
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git push --tags"
+
 
 [jira]
 url = "https://triaxtec.atlassian.net"

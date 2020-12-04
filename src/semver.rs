@@ -1,7 +1,9 @@
 use color_eyre::eyre::WrapErr;
 use color_eyre::eyre::{eyre, Result};
-use semver::{Identifier, Version};
+use semver::Identifier;
+use serde::export::Formatter;
 use serde::Deserialize;
+use std::fmt::Display;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "rule", content = "value")]
@@ -13,36 +15,88 @@ pub enum Rule {
     Release,
 }
 
+pub(crate) enum Version {
+    Cargo(semver::Version),
+}
+
+impl Version {
+    fn run_on_inner<F: FnOnce(semver::Version) -> Result<semver::Version>>(
+        self,
+        func: F,
+    ) -> Result<Self> {
+        Ok(match self {
+            Version::Cargo(version) => Version::Cargo(func(version)?),
+        })
+    }
+
+    fn reset_pre(self) -> Self {
+        match self {
+            Version::Cargo(mut version) => Version::Cargo({
+                version.pre = Vec::new();
+                version
+            }),
+        }
+    }
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Version::Cargo(v) => write!(f, "{}", v.to_string()),
+        }
+    }
+}
+
 pub(crate) fn bump_version(state: crate::State, rule: Rule) -> Result<crate::State> {
+    if let Ok(version) = get_version() {
+        let version = bump(version, &rule).wrap_err("While bumping version")?;
+        set_version(version)?;
+    }
+    Ok(state)
+}
+
+pub(crate) fn get_version() -> Result<Version> {
     if let Some(cargo_version) = crate::cargo::get_version() {
-        let version = Version::parse(&cargo_version).wrap_err_with(|| {
+        let version = semver::Version::parse(&cargo_version).wrap_err_with(|| {
             format!(
                 "Found {} in Cargo.toml which is not a valid version",
                 cargo_version
             )
         })?;
-        let version = bump(version, &rule).wrap_err("While bumping Cargo.toml")?;
-        crate::cargo::set_version(&version.to_string()).wrap_err("While bumping Cargo.toml")?;
+        Ok(Version::Cargo(version))
+    } else {
+        Err(eyre!("No supported metadata found to parse version from"))
     }
-    Ok(state)
 }
 
-fn bump(mut version: Version, rule: &Rule) -> Result<Version> {
+fn set_version(version: Version) -> Result<()> {
+    match version {
+        Version::Cargo(version) => {
+            crate::cargo::set_version(&version.to_string()).wrap_err("While bumping Cargo.toml")
+        }
+    }
+}
+
+fn bump(version: Version, rule: &Rule) -> Result<Version> {
     match rule {
-        Rule::Major => version.increment_major(),
-        Rule::Minor => version.increment_minor(),
-        Rule::Patch => version.increment_patch(),
-        Rule::Release => {
-            version.pre = Vec::new();
-        }
-        Rule::Pre(prefix) => {
-            version = bump_pre(version, prefix)?;
-        }
-    };
-    Ok(version)
+        Rule::Major => version.run_on_inner(|mut v| {
+            v.increment_major();
+            Ok(v)
+        }),
+        Rule::Minor => version.run_on_inner(|mut v| {
+            v.increment_minor();
+            Ok(v)
+        }),
+        Rule::Patch => version.run_on_inner(|mut v| {
+            v.increment_patch();
+            Ok(v)
+        }),
+        Rule::Release => Ok(version.reset_pre()),
+        Rule::Pre(prefix) => version.run_on_inner(|v| bump_pre(v, prefix)),
+    }
 }
 
-fn bump_pre(mut version: Version, prefix: &str) -> Result<Version> {
+fn bump_pre(mut version: semver::Version, prefix: &str) -> Result<semver::Version> {
     if version.pre.is_empty() {
         version.pre = vec![
             Identifier::AlphaNumeric(prefix.to_owned()),

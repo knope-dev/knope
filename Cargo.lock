@@ -269,6 +269,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "execute"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3edb78b01d2e376cce298c57f5d569e16705f4737c7afcd7f5da30079f4a1e3"
+dependencies = [
+ "execute-command-macro",
+ "execute-command-tokens",
+ "generic-array",
+]
+
+[[package]]
+name = "execute-command-macro"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab1325ccd13c04c9ef1bb5d51b5dec468699981831f78df28ca970cf23f3c143"
+dependencies = [
+ "execute-command-macro-impl",
+]
+
+[[package]]
+name = "execute-command-macro-impl"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "530d15a1a0052eee4f4a78916f4e89fb2fccc96d3967134b699ccdd97bec496f"
+dependencies = [
+ "execute-command-tokens",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "execute-command-tokens"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39b5a8386d3f481bd7c5dbc487c0d8d4ada0fd680625fd32147a87e123ebdf13"
+
+[[package]]
 name = "eyre"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -287,6 +324,7 @@ dependencies = [
  "console",
  "dialoguer",
  "dotenv",
+ "execute",
  "git2",
  "regex",
  "semver 0.11.0",
@@ -318,6 +356,16 @@ dependencies = [
  "log",
  "rustc_version",
  "winapi",
+]
+
+[[package]]
+name = "generic-array"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "501466ecc8a30d1d3b7fc9229b122b2ce8ed6e9d9223f1138d4babb253e51817"
+dependencies = [
+ "typenum",
+ "version_check",
 ]
 
 [[package]]
@@ -1093,6 +1141,12 @@ dependencies = [
  "thread_local",
  "tracing-core",
 ]
+
+[[package]]
+name = "typenum"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
 
 [[package]]
 name = "ucd-trie"
