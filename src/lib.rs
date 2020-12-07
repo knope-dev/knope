@@ -1,5 +1,6 @@
 use color_eyre::eyre::{Result, WrapErr};
 
+pub use crate::command::Variable;
 pub use crate::prompt::select;
 pub use crate::state::State;
 pub use crate::workflow::{Config, Step, Workflow};

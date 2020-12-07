@@ -1,10 +1,12 @@
-use crate::command::Variable;
+use std::collections::HashMap;
+use std::fs;
+
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use serde::export::Formatter;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::fs;
+
+use crate::command::Variable;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
@@ -31,9 +33,14 @@ impl std::fmt::Display for Workflow {
     }
 }
 
+/// Each variant describes an action you can take using Flow, they are used when defining your
+/// [`Workflow`] via whatever config format is being utilized.
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Step {
+    /// Search for Jira issues by status and display the list of them in the terminal.
+    /// User is allowed to select one issue which will then change the workflow's state to
+    /// [IssueSelected][`crate::State::IssueSelected`].
     SelectIssue {
         status: String,
     },
@@ -45,8 +52,26 @@ pub enum Step {
         to: String,
     },
     BumpVersion(crate::semver::Rule),
+    /// Run a command in your current shell after optionally replacing some variables.
+    ///
+    /// ## Example
+    /// If the current version for your project is "1.0.0", the following workflow step will run
+    /// `git tag v.1.0.0` in your current shell.
+    ///
+    /// ```toml
+    /// [[workflows.steps]]
+    /// type = "Command"
+    /// command = "git tag v.version"
+    /// variables = {"version" = "Version"}
+    /// ```
+    ///
+    /// Note that the key ("version" in the example) is completely up to you, make it whatever you
+    /// like, but if it's not found in the command string it won't be substituted correctly.
     Command {
+        /// The command to run, with any variable keys you wish to replace.
         command: String,
+        /// A map of value-to-replace to [Variable][`crate::command::Variable`] to replace
+        /// it with.
         variables: Option<HashMap<String, Variable>>,
     },
 }
