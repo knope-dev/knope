@@ -11,7 +11,7 @@ dotenv = "0.15.0"
 serde = { version = "1.0.117", features = ["derive"] }
 base64 = "0.13.0"
 color-eyre = "0.5.7"
-ureq = { version = "1.5.2", features = ["json"] }
+ureq = { version = "1.5.4", features = ["json"] }
 console = "0.13.0"
 dialoguer = "0.7.1"
 toml = "0.5.7"
