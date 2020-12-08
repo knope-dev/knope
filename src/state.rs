@@ -14,8 +14,13 @@ pub struct IssueSelected {
     pub issue: Issue,
 }
 
+/// The current state of the workflow. All workflows start in `Initial` state and can be transitioned
+/// to other States using certain [`crate::Step`]s.
 pub enum State {
+    /// The starting state for all workflows, contains some config information only.
     Initial(Initial),
+    /// Triggered by [`crate::Step::SelectIssue`], contains details of the Jira issue you're working
+    /// against.
     IssueSelected(IssueSelected),
 }
 

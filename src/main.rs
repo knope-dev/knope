@@ -22,7 +22,7 @@
 //! 4. Do whatever you want by running arbitrary shell commands and substituting data from the project!
 //!
 //! ## Concepts
-//! You define a [`Config'] which has some metadata (e.g. Jira details) about your project, as well
+//! You define a [`Config`] which has some metadata (e.g. Jira details) about your project, as well
 //! as a set of defined [`Workflow`]s. Each [`Workflow`] consists of a series of [`Step`]s that will
 //! execute in order, stopping if any step fails. Steps can affect the [`State`] of the workflow. Some
 //! [`Step`]s require that the workflow be in a specific [`State`] before they will work.
@@ -30,20 +30,24 @@
 use color_eyre::eyre::{Result, WrapErr};
 use dotenv::dotenv;
 
-pub use config::Config;
+pub use crate::semver::Rule;
+pub use command::Variable;
+pub use config::{Config, JiraConfig};
 use prompt::select;
-use state::State;
+pub use state::State;
+pub use step::Step;
+pub use workflow::Workflow;
 
 mod cargo;
-pub mod command;
-pub mod config;
+mod command;
+mod config;
 mod git;
 mod jira;
 mod prompt;
 mod semver;
-pub mod state;
-pub mod step;
-pub mod workflow;
+mod state;
+mod step;
+mod workflow;
 
 fn main() -> Result<()> {
     color_eyre::install().unwrap();
