@@ -1,29 +1,40 @@
-use std::collections::HashMap;
-use std::fs;
-
-use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use serde::export::Formatter;
 use serde::Deserialize;
 
-use crate::command::Variable;
+use crate::step::{run_step, Step};
+use crate::State;
 
-#[derive(Deserialize, Debug)]
-pub struct Config {
-    pub workflows: Vec<Workflow>,
-    pub jira: JiraConfig,
-}
-
-impl Config {
-    pub fn load(path: &str) -> Result<Self> {
-        let contents = fs::read_to_string(path).wrap_err("Could not find config file.")?;
-        toml::from_str(&contents).wrap_err("Failed to parse config file.")
+pub(crate) fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
+    for step in workflow.steps.into_iter() {
+        state = run_step(step, state)?;
     }
+    Ok(())
 }
 
+/// A workflow is the entrypoint to doing work with Flow. Once you start running `flow` you must
+/// immediately select a workflow (by name) to be executed. A workflow consists of a series of
+/// [`Step`]s that will run in order, stopping only if one step fails.
+///
+/// ## Example
+/// ```toml
+/// # flow.toml
+///
+/// [[workflows]]
+/// name = "My First Workflow"
+///     [[workflows.steps]]
+///     # First step details here
+///     [[workflows.steps]]
+///     # second step details here
+/// ```
+///
+/// ## See Also
+/// - [`Step`] for details on how each Step is defined.
 #[derive(Deserialize, Debug)]
 pub struct Workflow {
+    /// The display name of this Workflow. This is what you'll see when you go to select it.
     pub name: String,
+    /// A list of [`Step`]s to execute in order, stopping if any step fails.
     pub steps: Vec<Step>,
 }
 
@@ -31,53 +42,4 @@ impl std::fmt::Display for Workflow {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.name)
     }
-}
-
-/// Each variant describes an action you can take using Flow, they are used when defining your
-/// [`Workflow`] via whatever config format is being utilized.
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type")]
-pub enum Step {
-    /// Search for Jira issues by status and display the list of them in the terminal.
-    /// User is allowed to select one issue which will then change the workflow's state to
-    /// [IssueSelected][`crate::State::IssueSelected`].
-    SelectIssue {
-        status: String,
-    },
-    TransitionIssue {
-        status: String,
-    },
-    SwitchBranches,
-    RebaseBranch {
-        to: String,
-    },
-    BumpVersion(crate::semver::Rule),
-    /// Run a command in your current shell after optionally replacing some variables.
-    ///
-    /// ## Example
-    /// If the current version for your project is "1.0.0", the following workflow step will run
-    /// `git tag v.1.0.0` in your current shell.
-    ///
-    /// ```toml
-    /// [[workflows.steps]]
-    /// type = "Command"
-    /// command = "git tag v.version"
-    /// variables = {"version" = "Version"}
-    /// ```
-    ///
-    /// Note that the key ("version" in the example) is completely up to you, make it whatever you
-    /// like, but if it's not found in the command string it won't be substituted correctly.
-    Command {
-        /// The command to run, with any variable keys you wish to replace.
-        command: String,
-        /// A map of value-to-replace to [Variable][`crate::command::Variable`] to replace
-        /// it with.
-        variables: Option<HashMap<String, Variable>>,
-    },
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub struct JiraConfig {
-    pub url: String,
-    pub project: String,
 }

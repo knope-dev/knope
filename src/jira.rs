@@ -1,9 +1,9 @@
 use std::fmt;
 
+use crate::config::JiraConfig;
 use crate::prompt::select;
 use crate::state;
 use crate::state::{Initial, IssueSelected, State};
-use crate::workflow::JiraConfig;
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use serde::export::Formatter;
 use serde::{Deserialize, Serialize};

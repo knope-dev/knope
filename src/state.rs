@@ -1,4 +1,4 @@
-use crate::workflow::JiraConfig;
+use crate::config::JiraConfig;
 
 pub struct Initial {
     pub jira_config: JiraConfig,
