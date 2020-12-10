@@ -21,19 +21,19 @@ pub fn switch_branches(state: State) -> Result<State> {
             "Found existing branch named {}, switching to it.",
             new_branch_name
         );
-        switch_to_branch(&repo, existing)?;
+        switch_to_branch(&repo, &existing)?;
         return Ok(State::IssueSelected(data));
     }
 
     println!("Creating a new branch called {}", new_branch_name);
     let branch = select_branch(branches, "Which branch do you want to base off of?")?;
     let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
-    switch_to_branch(&repo, new_branch)?;
+    switch_to_branch(&repo, &new_branch)?;
     Ok(State::IssueSelected(data))
 }
 
 /// Rebase the current branch onto the selected one.
-pub fn rebase_branch(state: State, to: String) -> Result<State> {
+pub fn rebase_branch(state: State, to: &str) -> Result<State> {
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
     let ref_name = head.name().ok_or_else(|| {
@@ -45,7 +45,7 @@ pub fn rebase_branch(state: State, to: String) -> Result<State> {
     };
 
     let target_branch = repo
-        .find_branch(&to, BranchType::Local)
+        .find_branch(to, BranchType::Local)
         .wrap_err_with(|| format!("Could not find target branch {}, is it local?", to))?;
     let target = repo
         .reference_to_annotated_commit(target_branch.get())
@@ -59,7 +59,7 @@ pub fn rebase_branch(state: State, to: String) -> Result<State> {
         .wrap_err("Could not complete rebase")?;
 
     println!("Rebased current branch onto {}", to);
-    switch_to_branch(&repo, target_branch)?;
+    switch_to_branch(&repo, &target_branch)?;
     println!("Switched to branch {}, don't forget to push!", to);
 
     Ok(State::IssueSelected(data))
@@ -107,8 +107,8 @@ fn create_branch<'repo>(
 fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Branch<'repo>> {
     let branch_names: Vec<&str> = branches
         .iter()
-        .map(|b| b.name())
-        .filter_map(|name| name.ok())
+        .map(Branch::name)
+        .filter_map(Result::ok)
         .filter_map(|name| name)
         .collect();
 
@@ -122,7 +122,7 @@ fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Br
         .wrap_err("failed to select branch")
 }
 
-fn switch_to_branch(repo: &Repository, branch: Branch) -> Result<()> {
+fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
     let ref_name = branch
         .get()
         .name()
@@ -136,8 +136,13 @@ fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
         .branches(Some(BranchType::Local))
         .wrap_err("Could not list branches")?
         .into_iter()
-        .filter_map(|b| b.ok())
-        .map(|(b, _)| b)
+        .filter_map(|value| {
+            if let Ok((b, _)) = value {
+                Some(b)
+            } else {
+                None
+            }
+        })
         .collect())
 }
 

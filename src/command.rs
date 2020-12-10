@@ -37,7 +37,7 @@ pub(crate) fn run_command(
 
 /// Replace declared variables in the command string and return command.
 fn replace_variables(mut command: String, variables: HashMap<String, Variable>) -> Result<String> {
-    for (var_name, var_type) in variables.into_iter() {
+    for (var_name, var_type) in variables {
         match var_type {
             Variable::Version => command = command.replace(&var_name, &get_version()?.to_string()),
         }
@@ -48,6 +48,36 @@ fn replace_variables(mut command: String, variables: HashMap<String, Variable>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Jira;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_run_command() {
+        let file = NamedTempFile::new().unwrap();
+        let command = format!("cat {}", file.path().to_str().unwrap());
+        let result = run_command(
+            State::new(Jira {
+                url: "".to_string(),
+                project: "".to_string(),
+            }),
+            command.clone(),
+            None,
+        );
+
+        assert!(result.is_ok());
+
+        file.close().unwrap();
+
+        let result = run_command(
+            State::new(Jira {
+                url: "".to_string(),
+                project: "".to_string(),
+            }),
+            command,
+            None,
+        );
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_replace_variables() {

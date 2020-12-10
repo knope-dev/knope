@@ -81,16 +81,16 @@ impl Display for Version {
     }
 }
 
-pub(crate) fn bump_version(state: crate::State, rule: Rule) -> Result<crate::State> {
+pub(crate) fn bump_version(state: crate::State, rule: &Rule) -> Result<crate::State> {
     if let Ok(version) = get_version() {
-        let version = bump(version, &rule).wrap_err("While bumping version")?;
+        let version = bump(version, rule).wrap_err("While bumping version")?;
         set_version(version)?;
     }
     Ok(state)
 }
 
 pub(crate) fn get_version() -> Result<Version> {
-    if let Some(cargo_version) = crate::cargo::get_version() {
+    if let Some(cargo_version) = crate::cargo::get_version("Cargo.toml") {
         let version = semver::Version::parse(&cargo_version).wrap_err_with(|| {
             format!(
                 "Found {} in Cargo.toml which is not a valid version",
@@ -105,9 +105,8 @@ pub(crate) fn get_version() -> Result<Version> {
 
 fn set_version(version: Version) -> Result<()> {
     match version {
-        Version::Cargo(version) => {
-            crate::cargo::set_version(&version.to_string()).wrap_err("While bumping Cargo.toml")
-        }
+        Version::Cargo(version) => crate::cargo::set_version("Cargo.toml", &version.to_string())
+            .wrap_err("While bumping Cargo.toml"),
     }
 }
 
@@ -155,11 +154,10 @@ fn bump_pre(mut version: semver::Version, prefix: &str) -> Result<semver::Versio
             "A prerelease version already exists but could not be incremented"
         ));
     }
-    match version.pre.remove(1) {
-        Identifier::Numeric(pre_version) => {
-            version.pre.insert(1, Identifier::Numeric(pre_version + 1));
-            Ok(version)
-        }
-        _ => Err(eyre!("No numeric pre component to bump")),
+    if let Identifier::Numeric(pre_version) = version.pre.remove(1) {
+        version.pre.insert(1, Identifier::Numeric(pre_version + 1));
+        Ok(version)
+    } else {
+        Err(eyre!("No numeric pre component to bump"))
     }
 }

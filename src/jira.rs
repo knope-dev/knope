@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::config::JiraConfig;
+use crate::config::Jira;
 use crate::prompt::select;
 use crate::state;
 use crate::state::{Initial, IssueSelected, State};
@@ -36,7 +36,7 @@ struct SearchResponse {
     issues: Vec<Issue>,
 }
 
-pub fn select_issue(status: String, state: State) -> Result<State> {
+pub fn select_issue(status: &str, state: State) -> Result<State> {
     match state {
         State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
         State::Initial(Initial { jira_config }) => {
@@ -67,7 +67,7 @@ fn get_auth() -> Result<String> {
     ))
 }
 
-fn get_issues(jira_config: &JiraConfig, status: String) -> Result<Vec<Issue>> {
+fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>> {
     let auth = get_auth()?;
     let jql = format!("status = {} AND project = {}", status, jira_config.project);
     let url = format!("{}/rest/api/3/search", jira_config.url);
@@ -79,7 +79,7 @@ fn get_issues(jira_config: &JiraConfig, status: String) -> Result<Vec<Issue>> {
         .issues)
 }
 
-fn transition_issue(jira_config: &JiraConfig, issue_key: &str, status: &str) -> Result<()> {
+fn transition_issue(jira_config: &Jira, issue_key: &str, status: &str) -> Result<()> {
     let auth = get_auth()?; // TODO: get auth once and store in state
     let url = format!(
         "{}/rest/api/3/issue/{}/transitions",
@@ -130,14 +130,14 @@ struct PostTransitionBody {
     transition: Transition,
 }
 
-pub fn transition_selected_issue(status: String, state: State) -> Result<State> {
+pub fn transition_selected_issue(status: &str, state: State) -> Result<State> {
     match state {
         State::Initial(..) => Err(eyre!(
             "No issue selected, try running a SelectIssue step before this one"
         )),
         State::IssueSelected(IssueSelected { jira_config, issue }) => {
-            transition_issue(&jira_config, &issue.key, &status)?;
-            println!("{} transitioned to {}", &issue.key, &status);
+            transition_issue(&jira_config, &issue.key, status)?;
+            println!("{} transitioned to {}", &issue.key, status);
             Ok(State::IssueSelected(IssueSelected { jira_config, issue }))
         }
     }

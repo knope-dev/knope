@@ -6,19 +6,19 @@ use crate::step::{run_step, Step};
 use crate::State;
 
 pub(crate) fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
-    for step in workflow.steps.into_iter() {
+    for step in workflow.steps {
         state = run_step(step, state)?;
     }
     Ok(())
 }
 
-/// A workflow is the entrypoint to doing work with Flow. Once you start running `flow` you must
+/// A workflow is the entrypoint to doing work with Dobby. Once you start running `dobby` you must
 /// immediately select a workflow (by name) to be executed. A workflow consists of a series of
 /// [`Step`]s that will run in order, stopping only if one step fails.
 ///
 /// ## Example
 /// ```toml
-/// # flow.toml
+/// # dobby.toml
 ///
 /// [[workflows]]
 /// name = "My First Workflow"

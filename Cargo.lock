@@ -228,6 +228,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
+name = "dobby"
+version = "0.1.0-rc.0"
+dependencies = [
+ "base64",
+ "color-eyre",
+ "console",
+ "dialoguer",
+ "dotenv",
+ "execute",
+ "git2",
+ "regex",
+ "semver 0.11.0",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "toml_edit",
+ "ureq",
+]
+
+[[package]]
 name = "dotenv"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -299,26 +320,6 @@ checksum = "5f29abf4740a4778632fe27a4f681ef5b7a6f659aeba3330ac66f48e20cfa3b7"
 dependencies = [
  "indenter",
  "once_cell",
-]
-
-[[package]]
-name = "flow"
-version = "0.1.0-rc.0"
-dependencies = [
- "base64",
- "color-eyre",
- "console",
- "dialoguer",
- "dotenv",
- "execute",
- "git2",
- "regex",
- "semver 0.11.0",
- "serde",
- "serde_json",
- "toml",
- "toml_edit",
- "ureq",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
-use crate::config::JiraConfig;
+use crate::config::Jira;
 
 pub struct Initial {
-    pub jira_config: JiraConfig,
+    pub jira_config: Jira,
 }
 
 pub struct Issue {
@@ -10,7 +10,7 @@ pub struct Issue {
 }
 
 pub struct IssueSelected {
-    pub jira_config: JiraConfig,
+    pub jira_config: Jira,
     pub issue: Issue,
 }
 
@@ -25,7 +25,8 @@ pub enum State {
 }
 
 impl State {
-    pub fn new(jira_config: JiraConfig) -> Self {
+    #[must_use]
+    pub(crate) fn new(jira_config: Jira) -> Self {
         State::Initial(Initial { jira_config })
     }
 }

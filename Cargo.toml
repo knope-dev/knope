@@ -1,8 +1,13 @@
 [package]
-name = "flow"
+name = "dobby"
+description = "A command line tool for automating common development tasks"
 version = "0.1.0-rc.0"
-authors = ["Dylan Anthony <contact@dylananthony.com>"]
+authors = ["Dylan Anthony <danthony@triaxtec.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/triaxtec/dobby"
+keywords = ["jira", "git", "github", "workflow", "script"]
+categories = ["command-line-utilities", "development-tools"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,3 +26,6 @@ regex = "1.4.2"
 semver = "0.11.0"
 toml_edit = "0.2.0"
 execute = "0.2.8"
+
+[dev-dependencies]
+tempfile = "3.1.0"
