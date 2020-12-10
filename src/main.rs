@@ -33,7 +33,6 @@
 #![forbid(unsafe_code)]
 
 use color_eyre::eyre::{Result, WrapErr};
-use dotenv::dotenv;
 
 pub use crate::semver::Rule;
 pub use command::Variable;
@@ -43,6 +42,7 @@ pub use state::State;
 pub use step::Step;
 pub use workflow::Workflow;
 
+mod app_config;
 mod cargo;
 mod command;
 mod config;
@@ -56,7 +56,6 @@ mod workflow;
 
 fn main() -> Result<()> {
     color_eyre::install().expect("Could not set up error handling with color_eyre");
-    dotenv().ok();
 
     let Config { workflows, jira } =
         Config::load("dobby.toml").wrap_err("Could not load config file at dobby.toml")?;

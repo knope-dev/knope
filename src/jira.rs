@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token};
 use crate::config::Jira;
 use crate::prompt::select;
 use crate::state;
@@ -55,12 +56,8 @@ pub fn select_issue(status: &str, state: State) -> Result<State> {
 }
 
 fn get_auth() -> Result<String> {
-    // TODO: Handle this error and print out a useful message about generating a token (https://id.atlassian.com/manage-profile/security/api-tokens)
-    // TODO: store this in keychain instead of env var
-    let token = std::env::var("JIRA_TOKEN")
-        .wrap_err("You must have the JIRA_TOKEN variable set in .env or an environment variable")?;
-    let email = std::env::var("EMAIL")
-        .wrap_err("You must have the EMAIL variable set in .env or an environment variable")?;
+    let email = get_or_prompt_for_email()?;
+    let token = get_or_prompt_for_jira_token()?;
     Ok(format!(
         "Basic {}",
         base64::encode(format!("{}:{}", email, token))

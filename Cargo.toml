@@ -12,7 +12,6 @@ categories = ["command-line-utilities", "development-tools"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dotenv = "0.15.0"
 serde = { version = "1.0.118", features = ["derive"] }
 base64 = "0.13.0"
 color-eyre = "0.5.10"
@@ -26,6 +25,7 @@ regex = "1.4.2"
 semver = "0.11.0"
 toml_edit = "0.2.0"
 execute = "0.2.8"
+platform-dirs = "0.3.0"
 
 [dev-dependencies]
 tempfile = "3.1.0"
