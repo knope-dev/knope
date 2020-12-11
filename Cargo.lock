@@ -26,9 +26,9 @@ dependencies = [
 
 [[package]]
 name = "arc-swap"
-version = "1.1.0"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec5a4539a733493f412c4d0bb962748ea1f90f3dfdba9ff3ee18acbefc3b33f0"
+checksum = "dabe5a181f83789739c194cbe5a897dde195078fac08568d09221fd6137a7ba8"
 
 [[package]]
 name = "ascii"
@@ -903,7 +903,8 @@ checksum = "8d3b63360ec3cb337817c2dbd47ab4a0f170d285d8e5a2064600f3def1402397"
 [[package]]
 name = "octocrab"
 version = "0.8.1"
-source = "git+https://github.com/XAMPPRocky/octocrab#212c4efc9603c929b4c934ad084c64e9837984fe"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d3ebd03a84e1bbb92e26700e3a0c9c1f131dc1fa911c913de1e776d9f66e53"
 dependencies = [
  "arc-swap",
  "async-trait",

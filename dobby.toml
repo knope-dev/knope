@@ -2,8 +2,7 @@
 name = "Start New Task"
 
     [[workflows.steps]]
-    type = "SelectIssue"
-    status = "selected"
+    type = "SelectGitHubIssue"
 
     [[workflows.steps]]
     type = "SwitchBranches"

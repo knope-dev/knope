@@ -21,7 +21,7 @@ impl fmt::Display for Issue {
     }
 }
 
-pub(crate) async fn select_issue(status: &str, state: State) -> Result<State> {
+pub(crate) async fn select_jira_issue(status: &str, state: State) -> Result<State> {
     match state {
         State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
         State::Initial(Initial {
@@ -29,15 +29,33 @@ pub(crate) async fn select_issue(status: &str, state: State) -> Result<State> {
             github_state,
             github_config,
         }) => {
-            // TODO: Run issue getters in parallel
-            let jira_issues = match &jira_config {
-                Some(jira_config) => jira::get_issues(jira_config, status).await?,
-                None => vec![],
-            };
+            let jira_config = jira_config.ok_or_else(|| eyre!("Jira is not configured"))?;
+            let issues = jira::get_issues(&jira_config, status).await?;
+            let issue = select(issues, "Select an Issue")?;
+            println!("Selected item : {}", &issue);
+            Ok(State::IssueSelected(IssueSelected {
+                jira_config: Some(jira_config),
+                github_state,
+                github_config,
+                issue,
+            }))
+        }
+    }
+}
 
-            let (github_config, github_state, github_issues) =
-                github::list_issues(github_config, github_state).await?;
-            let issues = jira_issues.into_iter().chain(github_issues).collect();
+pub(crate) async fn select_github_issue(
+    labels: Option<Vec<String>>,
+    state: State,
+) -> Result<State> {
+    match state {
+        State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
+        State::Initial(Initial {
+            jira_config,
+            github_state,
+            github_config,
+        }) => {
+            let (github_config, github_state, issues) =
+                github::list_issues(github_config, github_state, labels).await?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue);
             Ok(State::IssueSelected(IssueSelected {
