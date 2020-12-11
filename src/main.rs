@@ -47,7 +47,7 @@ mod cargo;
 mod command;
 mod config;
 mod git;
-mod jira;
+mod issues;
 mod prompt;
 mod semver;
 mod state;

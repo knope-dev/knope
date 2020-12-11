@@ -2,8 +2,9 @@ use color_eyre::eyre::{eyre, ContextCompat, Result, WrapErr};
 use git2::{Branch, BranchType, Repository};
 use regex::Regex;
 
+use crate::issues::Issue;
 use crate::prompt::select;
-use crate::state::{Initial, Issue, IssueSelected, State};
+use crate::state::{Initial, IssueSelected, State};
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
@@ -91,7 +92,7 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
     println!("Auto-selecting issue {} from ref {}", &key, ref_name);
     Ok(IssueSelected {
         jira_config: data.jira_config,
-        issue: Issue { key, summary },
+        issue: Issue::Jira { key, summary },
     })
 }
 
@@ -147,7 +148,11 @@ fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
 }
 
 fn branch_name_from_issue(issue: &Issue) -> String {
-    format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(" ", "-")
+    match issue {
+        Issue::Jira { key, summary } => {
+            format!("{}-{}", key, summary.to_ascii_lowercase()).replace(" ", "-")
+        }
+    }
 }
 
 #[cfg(test)]
@@ -157,7 +162,7 @@ mod tests {
 
     #[test]
     fn branch_name_from_issue() {
-        let issue = Issue {
+        let issue = Issue::Jira {
             key: "FLOW-5".to_string(),
             summary: "A test issue".to_string(),
         };

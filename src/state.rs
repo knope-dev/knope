@@ -1,12 +1,8 @@
 use crate::config::Jira;
+use crate::issues::Issue;
 
 pub struct Initial {
     pub jira_config: Jira,
-}
-
-pub struct Issue {
-    pub key: String,
-    pub summary: String,
 }
 
 pub struct IssueSelected {

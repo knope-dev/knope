@@ -1,13 +1,9 @@
-use std::fmt;
+use color_eyre::eyre::{eyre, Result, WrapErr};
+use serde::{Deserialize, Serialize};
 
 use crate::app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token};
 use crate::config::Jira;
-use crate::prompt::select;
-use crate::state;
-use crate::state::{Initial, IssueSelected, State};
-use color_eyre::eyre::{eyre, Result, WrapErr};
-use serde::export::Formatter;
-use serde::{Deserialize, Serialize};
+use crate::issues::Issue;
 
 #[derive(Serialize, Debug)]
 struct SearchParams {
@@ -21,38 +17,14 @@ struct IssueFields {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Issue {
-    pub key: String,
+struct JiraIssue {
+    key: String,
     fields: IssueFields,
-}
-
-impl fmt::Display for Issue {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.key, self.fields.summary)
-    }
 }
 
 #[derive(Deserialize, Debug)]
 struct SearchResponse {
-    issues: Vec<Issue>,
-}
-
-pub fn select_issue(status: &str, state: State) -> Result<State> {
-    match state {
-        State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
-        State::Initial(Initial { jira_config }) => {
-            let issues = get_issues(&jira_config, status)?;
-            let issue = select(issues, "Select an Issue")?;
-            println!("Selected item : {}", &issue.key);
-            Ok(State::IssueSelected(IssueSelected {
-                jira_config,
-                issue: state::Issue {
-                    key: issue.key,
-                    summary: issue.fields.summary,
-                },
-            }))
-        }
-    }
+    issues: Vec<JiraIssue>,
 }
 
 fn get_auth() -> Result<String> {
@@ -64,7 +36,7 @@ fn get_auth() -> Result<String> {
     ))
 }
 
-fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>> {
+pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>> {
     let auth = get_auth()?;
     let jql = format!("status = {} AND project = {}", status, jira_config.project);
     let url = format!("{}/rest/api/3/search", jira_config.url);
@@ -73,10 +45,16 @@ fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>> {
         .send_json(serde_json::json!({"jql": jql, "fields": ["summary"]}))
         .into_json_deserialize::<SearchResponse>()
         .wrap_err("Could not request issues")?
-        .issues)
+        .issues
+        .into_iter()
+        .map(|jira_issue| Issue::Jira {
+            key: jira_issue.key,
+            summary: jira_issue.fields.summary,
+        })
+        .collect())
 }
 
-fn transition_issue(jira_config: &Jira, issue_key: &str, status: &str) -> Result<()> {
+pub(crate) fn transition_issue(jira_config: &Jira, issue_key: &str, status: &str) -> Result<()> {
     let auth = get_auth()?; // TODO: get auth once and store in state
     let url = format!(
         "{}/rest/api/3/issue/{}/transitions",
@@ -125,17 +103,4 @@ struct Transition {
 #[derive(Debug, Serialize)]
 struct PostTransitionBody {
     transition: Transition,
-}
-
-pub fn transition_selected_issue(status: &str, state: State) -> Result<State> {
-    match state {
-        State::Initial(..) => Err(eyre!(
-            "No issue selected, try running a SelectIssue step before this one"
-        )),
-        State::IssueSelected(IssueSelected { jira_config, issue }) => {
-            transition_issue(&jira_config, &issue.key, status)?;
-            println!("{} transitioned to {}", &issue.key, status);
-            Ok(State::IssueSelected(IssueSelected { jira_config, issue }))
-        }
-    }
 }
