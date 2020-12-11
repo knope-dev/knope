@@ -6,10 +6,6 @@ name = "Start New Task"
     status = "selected"
 
     [[workflows.steps]]
-    type = "TransitionIssue"
-    status = "Development"
-
-    [[workflows.steps]]
     type = "SwitchBranches"
 
 [[workflows]]
@@ -18,10 +14,6 @@ name = "Finish Development"
     [[workflows.steps]]
     type = "RebaseBranch"
     to = "main"
-
-    [[workflows.steps]]
-    type = "TransitionIssue"
-    status = "Done"
 
     [[workflows.steps]]
     type = "BumpVersion"
@@ -50,7 +42,6 @@ name = "Finish Development"
     type = "Command"
     command = "git push --tags"
 
-
-[jira]
-url = "https://triaxtec.atlassian.net"
-project = "FLOW"
+[github]
+owner = "triaxtec"
+repo = "dobby"

@@ -7,14 +7,14 @@ use serde::Deserialize;
 use crate::state::State;
 use crate::{command, git, issues, semver};
 
-pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
+pub(crate) async fn run_step(step: Step, state: State) -> Result<State> {
     match step {
-        Step::SelectIssue { status } => {
-            issues::select_issue(&status, state).wrap_err("During SelectIssue")
-        }
-        Step::TransitionIssue { status } => {
-            issues::transition_selected_issue(&status, state).wrap_err("During TransitionIssue")
-        }
+        Step::SelectIssue { status } => issues::select_issue(&status, state)
+            .await
+            .wrap_err("During SelectIssue"),
+        Step::TransitionIssue { status } => issues::transition_selected_issue(&status, state)
+            .await
+            .wrap_err("During TransitionIssue"),
         Step::SwitchBranches => git::switch_branches(state).wrap_err("During SwitchBranches"),
         Step::RebaseBranch { to } => git::rebase_branch(state, &to).wrap_err("During MergeBranch"),
         Step::BumpVersion(rule) => {

@@ -92,6 +92,8 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
     println!("Auto-selecting issue {} from ref {}", &key, ref_name);
     Ok(IssueSelected {
         jira_config: data.jira_config,
+        github_state: data.github_state,
+        github_config: data.github_config,
         issue: Issue::Jira { key, summary },
     })
 }
@@ -151,6 +153,9 @@ fn branch_name_from_issue(issue: &Issue) -> String {
     match issue {
         Issue::Jira { key, summary } => {
             format!("{}-{}", key, summary.to_ascii_lowercase()).replace(" ", "-")
+        }
+        Issue::GitHub { number, title } => {
+            format!("{}-{}", number, title.to_ascii_lowercase()).replace(" ", "-")
         }
     }
 }
