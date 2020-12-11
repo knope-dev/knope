@@ -5,9 +5,9 @@ use serde::Deserialize;
 use crate::step::{run_step, Step};
 use crate::State;
 
-pub(crate) fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
+pub(crate) async fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
     for step in workflow.steps {
-        state = run_step(step, state)?;
+        state = run_step(step, state).await?;
     }
     Ok(())
 }

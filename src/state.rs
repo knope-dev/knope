@@ -1,13 +1,18 @@
-use crate::config::Jira;
+use crate::config;
 use crate::issues::Issue;
+use octocrab::Octocrab;
 
 pub struct Initial {
-    pub jira_config: Jira,
+    pub(crate) jira_config: Option<config::Jira>,
+    pub(crate) github_state: GitHub,
+    pub(crate) github_config: Option<config::GitHub>,
 }
 
 pub struct IssueSelected {
-    pub jira_config: Jira,
-    pub issue: Issue,
+    pub(crate) jira_config: Option<config::Jira>,
+    pub(crate) github_state: GitHub,
+    pub(crate) github_config: Option<config::GitHub>,
+    pub(crate) issue: Issue,
 }
 
 /// The current state of the workflow. All workflows start in `Initial` state and can be transitioned
@@ -22,7 +27,19 @@ pub enum State {
 
 impl State {
     #[must_use]
-    pub(crate) fn new(jira_config: Jira) -> Self {
-        State::Initial(Initial { jira_config })
+    pub(crate) fn new(
+        jira_config: Option<config::Jira>,
+        github_config: Option<config::GitHub>,
+    ) -> Self {
+        State::Initial(Initial {
+            jira_config,
+            github_state: GitHub::New,
+            github_config,
+        })
     }
+}
+
+pub enum GitHub {
+    New,
+    Initialized { octocrab: Octocrab },
 }

@@ -36,14 +36,18 @@ fn get_auth() -> Result<String> {
     ))
 }
 
-pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>> {
+pub(crate) async fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>> {
     let auth = get_auth()?;
     let jql = format!("status = {} AND project = {}", status, jira_config.project);
     let url = format!("{}/rest/api/3/search", jira_config.url);
-    Ok(ureq::post(&url)
-        .set("Authorization", &auth)
-        .send_json(serde_json::json!({"jql": jql, "fields": ["summary"]}))
-        .into_json_deserialize::<SearchResponse>()
+    Ok(reqwest::Client::new()
+        .post(&url)
+        .header("Authorization", &auth)
+        .json(&serde_json::json!({"jql": jql, "fields": ["summary"]}))
+        .send()
+        .await?
+        .json::<SearchResponse>()
+        .await
         .wrap_err("Could not request issues")?
         .issues
         .into_iter()
@@ -54,36 +58,49 @@ pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>>
         .collect())
 }
 
-pub(crate) fn transition_issue(jira_config: &Jira, issue_key: &str, status: &str) -> Result<()> {
+pub(crate) async fn transition_issue(
+    jira_config: &Jira,
+    issue_key: &str,
+    status: &str,
+) -> Result<()> {
     let auth = get_auth()?; // TODO: get auth once and store in state
     let url = format!(
         "{}/rest/api/3/issue/{}/transitions",
         jira_config.url, issue_key
     );
-    let response = ureq::get(&url).set("Authorization", &auth).call();
-    if response.error() {
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&url)
+        .header("Authorization", &auth)
+        .send()
+        .await?;
+    if response.error_for_status_ref().is_err() {
         return Err(eyre!(
             "Received {} when transitioning issue with body {:#?}",
             response.status(),
-            response.into_json()?
+            response.json().await?
         ));
     }
     let response = response
-        .into_json_deserialize::<GetTransitionResponse>()
+        .json::<GetTransitionResponse>()
+        .await
         .wrap_err("Could not decode transitions")?;
     let transition = response
         .transitions
         .into_iter()
         .find(|transition| transition.name == status)
         .ok_or_else(|| eyre!("No matching transition found"))?;
-    let response = ureq::post(&url)
-        .set("Authorization", &auth)
-        .send_json(serde_json::json!({"transition": {"id": transition.id}}));
-    if response.error() {
+    let response = client
+        .post(&url)
+        .header("Authorization", &auth)
+        .json(&serde_json::json!({"transition": {"id": transition.id}}))
+        .send()
+        .await?;
+    if response.error_for_status_ref().is_err() {
         return Err(eyre!(
             "Received {} when transitioning issue with body {:#?}",
             response.status(),
-            response.into_json()?
+            response.json().await?
         ));
     }
     Ok(())

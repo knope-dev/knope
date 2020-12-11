@@ -31,8 +31,10 @@ use crate::workflow::Workflow;
 pub struct Config {
     /// The list of defined workflows that are selectable
     pub workflows: Vec<Workflow>,
-    /// Configuration for Jira
-    pub jira: Jira,
+    /// Optional configuration for Jira
+    pub jira: Option<Jira>,
+    /// Optional configuration to talk to GitHub
+    pub github: Option<GitHub>,
 }
 
 impl Config {
@@ -61,4 +63,20 @@ pub struct Jira {
     pub url: String,
     /// The key of the Jira project to filter on (the prefix of all issues)
     pub project: String,
+}
+
+/// Details needed to use steps that interact with GitHub.
+///
+/// ## Example
+/// ```TOML
+/// [github]
+/// owner = "triaxtec"
+/// repo = "dobby"
+/// ```
+#[derive(Debug, Default, Deserialize)]
+pub struct GitHub {
+    /// The user or organization that owns the `repo`.
+    pub owner: String,
+    /// The name of the repository in GitHub that this project is utilizing
+    pub repo: String,
 }

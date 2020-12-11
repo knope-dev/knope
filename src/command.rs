@@ -48,34 +48,19 @@ fn replace_variables(mut command: String, variables: HashMap<String, Variable>) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Jira;
     use tempfile::NamedTempFile;
 
     #[test]
     fn test_run_command() {
         let file = NamedTempFile::new().unwrap();
         let command = format!("cat {}", file.path().to_str().unwrap());
-        let result = run_command(
-            State::new(Jira {
-                url: "".to_string(),
-                project: "".to_string(),
-            }),
-            command.clone(),
-            None,
-        );
+        let result = run_command(State::new(None, None), command.clone(), None);
 
         assert!(result.is_ok());
 
         file.close().unwrap();
 
-        let result = run_command(
-            State::new(Jira {
-                url: "".to_string(),
-                project: "".to_string(),
-            }),
-            command,
-            None,
-        );
+        let result = run_command(State::new(None, None), command, None);
         assert!(result.is_err());
     }
 

@@ -7,14 +7,17 @@ use serde::Deserialize;
 use crate::state::State;
 use crate::{command, git, issues, semver};
 
-pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
+pub(crate) async fn run_step(step: Step, state: State) -> Result<State> {
     match step {
-        Step::SelectIssue { status } => {
-            issues::select_issue(&status, state).wrap_err("During SelectIssue")
-        }
-        Step::TransitionIssue { status } => {
-            issues::transition_selected_issue(&status, state).wrap_err("During TransitionIssue")
-        }
+        Step::SelectJiraIssue { status } => issues::select_jira_issue(&status, state)
+            .await
+            .wrap_err("During SelectJiraIssue"),
+        Step::SelectGitHubIssue { labels } => issues::select_github_issue(labels, state)
+            .await
+            .wrap_err("During SelectGitHubIssue"),
+        Step::TransitionJiraIssue { status } => issues::transition_selected_issue(&status, state)
+            .await
+            .wrap_err("During TransitionJiraIssue"),
         Step::SwitchBranches => git::switch_branches(state).wrap_err("During SwitchBranches"),
         Step::RebaseBranch { to } => git::rebase_branch(state, &to).wrap_err("During MergeBranch"),
         Step::BumpVersion(rule) => {
@@ -40,6 +43,7 @@ pub enum Step {
     /// 1. The workflow is already in [`State::IssueSelected`] before it executes.
     /// 2. Dobby cannot communicate with the configured Jira URL.
     /// 3. User does not select an issue.
+    /// 4. There is no [`crate::config::Jira`] set.
     ///
     /// ## Example
     /// ```toml
@@ -50,7 +54,7 @@ pub enum Step {
     ///     type = "SelectIssue"
     ///     status = "Backlog"
     /// ```
-    SelectIssue {
+    SelectJiraIssue {
         /// Issues with this status in Jira will be listed for the user to select.
         status: String,
     },
@@ -62,6 +66,7 @@ pub enum Step {
     ///     before this step).
     /// 2. Cannot communicate with Jira.
     /// 3. The configured status is invalid for the issue.
+    /// 4. The selected issue is a GitHub issue instead of a Jira issue.
     ///
     /// ## Example
     /// ```toml
@@ -69,16 +74,40 @@ pub enum Step {
     /// [[workflows]]
     /// name = "Start some work"
     ///     [[workflows.steps]]
-    ///     type = "SelectIssue"
+    ///     type = "SelectJiraIssue"
     ///     status = "Backlog"
     ///     
     ///     [[workflows.steps]]
-    ///     type = "TransitionIssue"
+    ///     type = "TransitionJiraIssue"
     ///     status = "In Progress"
     /// ```
-    TransitionIssue {
+    TransitionJiraIssue {
         /// The status to transition the current issue to.
         status: String,
+    },
+    /// Search for GitHub issues by status and display the list of them in the terminal.
+    /// User is allowed to select one issue which will then change the workflow's state to
+    /// [`State::IssueSelected`].
+    ///
+    /// ## Errors
+    /// This step will fail if any of the following are true:
+    /// 1. The workflow is already in [`State::IssueSelected`] before it executes.
+    /// 2. Dobby cannot communicate with GitHub.
+    /// 4. There is no [`crate::config::GitHub`] set.
+    /// 3. User does not select an issue.
+    ///
+    /// ## Example
+    /// ```toml
+    /// # dobby.toml
+    /// [[workflows]]
+    /// name = "Start some work"
+    ///     [[workflows.steps]]
+    ///     type = "SelectGitHubIssue"
+    ///     label = "selected"
+    /// ```
+    SelectGitHubIssue {
+        /// If provided, only issues with this label will be included
+        labels: Option<Vec<String>>,
     },
     /// Uses the name of the currently selected issue to checkout an existing or create a new
     /// branch for development. If an existing branch is not found, the user will be prompted to
