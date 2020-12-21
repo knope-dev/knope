@@ -11,8 +11,15 @@ name = "Start New Task"
 name = "Finish Development"
 
     [[workflows.steps]]
-    type = "RebaseBranch"
-    to = "main"
+    type = "Command"
+    command = "gh pr create --web -p WIP"
+
+[[workflows]]
+name = "Release"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git checkout main && git pull"
 
     [[workflows.steps]]
     type = "BumpVersion"
@@ -34,12 +41,13 @@ name = "Finish Development"
 
     [[workflows.steps]]
     type = "Command"
-    command = "git tag v.version"
+    command = "gh release create --title version v.version --draft"
     variables = {"version" = "Version"}
 
     [[workflows.steps]]
     type = "Command"
-    command = "git push --tags"
+    command = "gh release view --web v.version"
+    variables = {"version" = "Version"}
 
 [github]
 owner = "triaxtec"
