@@ -24,9 +24,13 @@ name = "Release"
     [[workflows.steps]]
     type = "UpdateProjectFromCommits"
 
+    [[workflow.steps]]
+    type = "Command"
+    command = "cargo check"
+
     [[workflows.steps]]
     type = "Command"
-    command = "git add Cargo.toml CHANGELOG.md"
+    command = "git add Cargo.toml Cargo.lock CHANGELOG.md"
 
     [[workflows.steps]]
     type = "Command"
@@ -39,7 +43,7 @@ name = "Release"
 
     [[workflows.steps]]
     type = "Command"
-    command = "gh release create --title version v.version --draft"
+    command = "gh release create v.version --title version --draft -F CHANGELOG.md"
     variables = {"version" = "Version"}
 
     [[workflows.steps]]
