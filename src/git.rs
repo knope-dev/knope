@@ -1,5 +1,5 @@
 use color_eyre::eyre::{eyre, ContextCompat, Result, WrapErr};
-use git2::{Branch, BranchType, Repository};
+use git2::{Branch, BranchType, DescribeFormatOptions, DescribeOptions, Repository};
 use regex::Regex;
 
 use crate::issues::Issue;
@@ -160,10 +160,45 @@ fn branch_name_from_issue(issue: &Issue) -> String {
     }
 }
 
+fn get_last_tag_name(repo: &Repository) -> Result<String> {
+    repo.describe(&DescribeOptions::new().describe_tags())
+        .wrap_err("Could not describe project, are there any tags?")?
+        .format(Some(DescribeFormatOptions::new().abbreviated_size(0)))
+        .wrap_err("Could not format description into tag.")
+}
+
+pub(crate) fn get_commit_messages_after_last_tag() -> Result<Vec<String>> {
+    let repo =
+        Repository::open(".").wrap_err("Could not open Git repository in working directory.")?;
+    let tag_name = get_last_tag_name(&repo)?;
+    let tag_ref = repo
+        .find_reference(&format!("refs/tags/{}", tag_name))
+        .wrap_err_with(|| format!("Could not find tag {}", tag_name))?;
+    let tag_oid = tag_ref
+        .target()
+        .ok_or_else(|| eyre!("Could not find object described by tag {}", tag_name))?;
+    let mut revwalk = repo.revwalk()?;
+    revwalk
+        .push_head()
+        .wrap_err("Could not start walking history from HEAD")?;
+    let messages: Vec<String> = revwalk
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+        .take_while(|oid| oid != &tag_oid)
+        .filter_map(|oid| {
+            if let Ok(commit) = repo.find_commit(oid) {
+                Some(commit.message().unwrap_or("").to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+    Ok(messages)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::Command;
 
     #[test]
     fn branch_name_from_issue() {

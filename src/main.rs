@@ -44,8 +44,10 @@ pub use workflow::Workflow;
 
 mod app_config;
 mod cargo;
+mod changelog;
 mod command;
 mod config;
+mod conventional_commits;
 mod git;
 mod issues;
 mod prompt;

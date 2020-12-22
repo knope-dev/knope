@@ -22,13 +22,11 @@ name = "Release"
     command = "git checkout main && git pull"
 
     [[workflows.steps]]
-    type = "BumpVersion"
-    rule = "Pre"
-    value = "rc"
+    type = "UpdateProjectFromCommits"
 
     [[workflows.steps]]
     type = "Command"
-    command = "git add Cargo.toml"
+    command = "git add Cargo.toml CHANGELOG.md"
 
     [[workflows.steps]]
     type = "Command"
