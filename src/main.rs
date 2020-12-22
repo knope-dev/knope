@@ -46,6 +46,7 @@ mod app_config;
 mod cargo;
 mod command;
 mod config;
+mod conventional_commits;
 mod git;
 mod issues;
 mod prompt;

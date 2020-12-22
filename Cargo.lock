@@ -252,6 +252,7 @@ dependencies = [
  "console",
  "dialoguer",
  "execute",
+ "git-conventional",
  "git2",
  "octocrab",
  "platform-dirs",
@@ -475,6 +476,17 @@ name = "gimli"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6503fe142514ca4799d4c26297c4248239fe8838d827db6bd6065c6ed29a6ce"
+
+[[package]]
+name = "git-conventional"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "826fd002d72f01f99b447b1ce8462402c0970dac714e2e89c19995d5bb3d7c59"
+dependencies = [
+ "doc-comment",
+ "nom",
+ "unicase",
+]
 
 [[package]]
 name = "git2"
@@ -863,6 +875,16 @@ dependencies = [
  "cfg-if 0.1.10",
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "nom"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+dependencies = [
+ "memchr",
+ "version_check",
 ]
 
 [[package]]
