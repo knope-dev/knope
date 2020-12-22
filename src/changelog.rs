@@ -103,9 +103,7 @@ fn unordered_list(items: Vec<String>) -> Block {
 
 #[cfg(test)]
 mod tests {
-    use crate::changelog::header_block;
     use markdown::{generate_markdown, Block, ListItem, Span};
-    use octocrab::models::pulls::ReviewState::ChangesRequested;
 
     #[test]
     fn changelog_from_markdown() {

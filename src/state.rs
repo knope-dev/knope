@@ -20,8 +20,9 @@ pub struct IssueSelected {
 pub enum State {
     /// The starting state for all workflows, contains some config information only.
     Initial(Initial),
-    /// Triggered by [`crate::Step::SelectIssue`], contains details of the Jira issue you're working
-    /// against.
+    /// Triggered by [`crate::Step::SelectJiraIssue`] or [`crate::Step::SelectGitHubIssue`],
+    /// contains details of the issue you're working against to use for things like transitioning
+    /// or creating branches.
     IssueSelected(IssueSelected),
 }
 

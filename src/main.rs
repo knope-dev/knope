@@ -19,7 +19,8 @@
 //! 1. Select issues from Jira to work on, transition and create branches from them.
 //! 2. Do some basic git commands like switching branches or rebasing.
 //! 3. Bump the version of your project using semantic rules.
-//! 4. Do whatever you want by running arbitrary shell commands and substituting data from the project!
+//! 4. Bump your version AND generate a Changelog entry from conventional commits.
+//! 5. Do whatever you want by running arbitrary shell commands and substituting data from the project!
 //!
 //! ## Concepts
 //! You define a [`Config`] which has some metadata (e.g. Jira details) about your project, as well
@@ -36,7 +37,7 @@ use color_eyre::eyre::{Result, WrapErr};
 
 pub use crate::semver::Rule;
 pub use command::Variable;
-pub use config::{Config, Jira};
+pub use config::{Config, GitHub, Jira};
 use prompt::select;
 pub use state::State;
 pub use step::Step;
@@ -50,7 +51,9 @@ mod config;
 mod conventional_commits;
 mod git;
 mod issues;
+mod package_json;
 mod prompt;
+mod pyproject;
 mod semver;
 mod state;
 mod step;

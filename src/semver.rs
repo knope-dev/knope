@@ -1,9 +1,12 @@
+use std::fmt::Display;
+
 use color_eyre::eyre::WrapErr;
 use color_eyre::eyre::{eyre, Result};
 use semver::Identifier;
 use serde::export::Formatter;
 use serde::Deserialize;
-use std::fmt::Display;
+
+use crate::{package_json, pyproject};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
@@ -51,6 +54,8 @@ pub enum Rule {
 
 pub(crate) enum Version {
     Cargo(semver::Version),
+    PyProject(semver::Version),
+    Package(semver::Version),
 }
 
 impl Version {
@@ -60,12 +65,22 @@ impl Version {
     ) -> Result<Self> {
         Ok(match self {
             Version::Cargo(version) => Version::Cargo(func(version)?),
+            Version::PyProject(version) => Version::PyProject(func(version)?),
+            Version::Package(version) => Version::Package(func(version)?),
         })
     }
 
     fn reset_pre(self) -> Self {
         match self {
             Version::Cargo(mut version) => Version::Cargo({
+                version.pre = Vec::new();
+                version
+            }),
+            Version::PyProject(mut version) => Version::PyProject({
+                version.pre = Vec::new();
+                version
+            }),
+            Version::Package(mut version) => Version::Package({
                 version.pre = Vec::new();
                 version
             }),
@@ -76,7 +91,9 @@ impl Version {
 impl Display for Version {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Version::Cargo(v) => write!(f, "{}", v.to_string()),
+            Version::Cargo(v) | Version::PyProject(v) | Version::Package(v) => {
+                write!(f, "{}", v.to_string())
+            }
         }
     }
 }
@@ -98,6 +115,22 @@ pub(crate) fn get_version() -> Result<Version> {
             )
         })?;
         Ok(Version::Cargo(version))
+    } else if let Some(pyproject_version) = pyproject::get_version("pyproject.toml") {
+        let version = semver::Version::parse(&pyproject_version).wrap_err_with(|| {
+            format!(
+                "Found {} in pyproject.toml which is not a valid version",
+                pyproject_version
+            )
+        })?;
+        Ok(Version::PyProject(version))
+    } else if let Some(package_version) = package_json::get_version("package.json") {
+        let version = semver::Version::parse(&package_version).wrap_err_with(|| {
+            format!(
+                "Found {} in package.json which is not a valid version",
+                package_version
+            )
+        })?;
+        Ok(Version::Package(version))
     } else {
         Err(eyre!("No supported metadata found to parse version from"))
     }
@@ -107,6 +140,14 @@ fn set_version(version: Version) -> Result<()> {
     match version {
         Version::Cargo(version) => crate::cargo::set_version("Cargo.toml", &version.to_string())
             .wrap_err("While bumping Cargo.toml"),
+        Version::PyProject(version) => {
+            pyproject::set_version("pyproject.toml", &version.to_string())
+                .wrap_err("While bumping pyproject.toml")
+        }
+        Version::Package(version) => {
+            package_json::set_version("package.json", &version.to_string())
+                .wrap_err("While bumping package.json")
+        }
     }
 }
 
