@@ -174,36 +174,4 @@ mod tests {
         let branch_name = super::branch_name_from_issue(&issue);
         assert_eq!(&branch_name, "FLOW-5-a-test-issue");
     }
-
-    #[test]
-    fn get_all_branches() {
-        let output = String::from_utf8(
-            Command::new("git")
-                .arg("branch")
-                .output()
-                .expect("Failed to execute command")
-                .stdout,
-        )
-        .expect("Output was not UTF-8");
-        let expected = output
-            .split("\n")
-            .filter(|b| !b.is_empty())
-            .map(|b| b.replace(" ", "").replace("*", ""))
-            .collect::<Vec<_>>();
-
-        let repo = Repository::open(".").expect("Could not open repo");
-        let actual = super::get_all_branches(&repo)
-            .expect("Could not list branches")
-            .into_iter()
-            .map(|branch| {
-                branch
-                    .name()
-                    .expect("Could not get name")
-                    .expect("No name")
-                    .to_string()
-            })
-            .collect::<Vec<_>>();
-
-        assert_eq!(expected, actual);
-    }
 }
