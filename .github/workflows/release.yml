@@ -38,5 +38,29 @@ jobs:
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: target/release/dobby
-          asset_name: dobby-macos-x86
+          asset_name: dobby-macos-x86-${{ steps.get_release.outputs.tag_name }}
+          asset_content_type: application/octet-stream
+
+  generate-windows-artifacts:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Compile
+        run: cargo build --release
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: target/release/dobby.exe
+          asset_name: dobby-windows-x86-${{ steps.get_release.outputs.tag_name }}.exe
           asset_content_type: application/octet-stream
