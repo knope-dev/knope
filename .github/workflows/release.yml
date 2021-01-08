@@ -5,29 +5,38 @@ on:
     types: [released, prereleased]
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+#  publish:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions-rs/toolchain@v1
+#        with:
+#          toolchain: stable
+#          override: true
+#      - uses: katyo/publish-crates@v1
+#        with:
+#          registry-token: ${{ secrets.CARGO_TOKEN }}
+
+  generate-macos-artifacts:
+    runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          override: true
-      - uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CARGO_TOKEN }}
-
-  generate-artifacts:
-    name: release ${{ matrix.target }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [ x86_64-pc-windows-gnu, x86_64-apple-darwin ]
-    steps:
-      - uses: actions/checkout@master
-      - name: Compile and release
-        uses: Douile/rust-build.action@v0.1.26
+      - name: Compile
+        run: cargo build --release
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUSTTARGET: ${{ matrix.target }}
-          EXTRA_FILES: "README.md"
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: target/release/dobby
+          asset_name: dobby-macos-x86
+          asset_content_type: application/octet-stream
