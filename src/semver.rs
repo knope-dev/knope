@@ -3,7 +3,6 @@ use std::fmt::Display;
 use color_eyre::eyre::WrapErr;
 use color_eyre::eyre::{eyre, Result};
 use semver::Identifier;
-use serde::export::Formatter;
 use serde::Deserialize;
 
 use crate::{package_json, pyproject};
@@ -89,7 +88,7 @@ impl Version {
 }
 
 impl Display for Version {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Version::Cargo(v) | Version::PyProject(v) | Version::Package(v) => {
                 write!(f, "{}", v.to_string())
