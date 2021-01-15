@@ -25,7 +25,7 @@ use crate::workflow::Workflow;
 /// ```
 ///
 /// ## See Also
-/// [`Workflow`] for details on defining entries to the `[[workflows]]` array and [`JiraConfig`]
+/// [`Workflow`] for details on defining entries to the `[[workflows]]` array and [`Jira`]
 /// for details on defining `[jira]`.
 #[derive(Deserialize, Debug)]
 pub struct Config {

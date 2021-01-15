@@ -54,7 +54,7 @@ pub enum Step {
     /// [[workflows]]
     /// name = "Start some work"
     ///     [[workflows.steps]]
-    ///     type = "SelectIssue"
+    ///     type = "SelectJiraIssue"
     ///     status = "Backlog"
     /// ```
     SelectJiraIssue {
@@ -65,7 +65,7 @@ pub enum Step {
     ///
     /// ## Errors
     /// This step will fail when any of the following are true:
-    /// 1. The workflow is not yet in [`State::IssueSelected`] ([`Step::SelectIssue`] was not run
+    /// 1. The workflow is not yet in [`State::IssueSelected`] ([`Step::SelectJiraIssue`] was not run
     ///     before this step).
     /// 2. Cannot communicate with Jira.
     /// 3. The configured status is invalid for the issue.
@@ -119,8 +119,8 @@ pub enum Step {
     ///
     /// ## Errors
     /// This step fails if any of the following are true.
-    /// 1. Workflow is not in [`State::IssueSelected`], as [`Step::SelectIssue`] was not run before
-    ///     this step.
+    /// 1. Workflow is not in [`State::IssueSelected`], as [`Step::SelectJiraIssue`] or [`Step::SelectGitHubIssue`]
+    ///     were not run before this step.
     /// 2. Current directory is not a Git repository
     ///
     /// ## Example
