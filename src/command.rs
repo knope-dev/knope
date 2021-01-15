@@ -62,14 +62,12 @@ fn replace_variables(
 }
 
 #[cfg(test)]
-mod tests {
+mod test_run_command {
     use super::*;
-    use crate::issues::Issue;
-    use crate::state::{GitHub, IssueSelected};
     use tempfile::NamedTempFile;
 
     #[test]
-    fn test_run_command() {
+    fn test() {
         let file = NamedTempFile::new().unwrap();
         let command = format!("cat {}", file.path().to_str().unwrap());
         let result = run_command(State::new(None, None), command.clone(), None);
@@ -81,9 +79,16 @@ mod tests {
         let result = run_command(State::new(None, None), command, None);
         assert!(result.is_err());
     }
+}
+
+#[cfg(test)]
+mod test_replace_variables {
+    use super::*;
+    use crate::issues::Issue;
+    use crate::state::{GitHub, Initial, IssueSelected};
 
     #[test]
-    fn test_replace_variables() {
+    fn multiple_variables() {
         let command = "blah $$ branch_name".to_string();
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::Version);
@@ -110,5 +115,46 @@ mod tests {
                 expected_branch_name
             )
         )
+    }
+
+    #[test]
+    fn replace_version() {
+        let command = "blah $$ other blah".to_string();
+        let mut variables = HashMap::new();
+        variables.insert("$$".to_string(), Variable::Version);
+        let state = State::Initial(Initial {
+            jira_config: None,
+            github_state: GitHub::New,
+            github_config: None,
+        });
+
+        let command = replace_variables(command, variables, &state).unwrap();
+
+        assert_eq!(
+            command,
+            format!("blah {} other blah", get_version().unwrap().to_string(),)
+        )
+    }
+
+    #[test]
+    fn replace_issue_branch() {
+        let command = "blah $$ other blah".to_string();
+        let mut variables = HashMap::new();
+        variables.insert("$$".to_string(), Variable::IssueBranch);
+        let issue = Issue::GitHub {
+            number: 13,
+            title: "1234".to_string(),
+        };
+        let expected_branch_name = branch_name_from_issue(&issue);
+        let state = State::IssueSelected(IssueSelected {
+            jira_config: None,
+            github_state: GitHub::New,
+            github_config: None,
+            issue,
+        });
+
+        let command = replace_variables(command, variables, &state).unwrap();
+
+        assert_eq!(command, format!("blah {} other blah", expected_branch_name))
     }
 }
