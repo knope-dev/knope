@@ -66,8 +66,31 @@ pub fn rebase_branch(state: State, to: &str) -> Result<State> {
     Ok(State::IssueSelected(data))
 }
 
+pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
+    let data = match state {
+        State::IssueSelected(IssueSelected {
+            jira_config,
+            github_state,
+            github_config,
+            ..
+        }) => Initial {
+            jira_config,
+            github_state,
+            github_config,
+        },
+        State::Initial(data) => data,
+    };
+    let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
+    let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
+    let ref_name = head.name().ok_or_else(|| {
+        eyre!("Could not get a name for current HEAD. Are you at the tip of a branch?")
+    })?;
+    let data = select_issue_from_branch_name(data, ref_name)?;
+    Ok(State::IssueSelected(data))
+}
+
 fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
-    let re = Regex::new("([A-Z]+-[0-9]+)(.*)").unwrap();
+    let re = Regex::new("(([A-Z]+-)?[0-9]+)-(.*)").unwrap();
     let caps = re.captures(ref_name).ok_or_else(|| {
         eyre!(
             "Current ref {} is not in the right format. Was it created with Flow?",
@@ -80,7 +103,7 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
         .as_str()
         .to_owned();
     let summary = caps
-        .get(2)
+        .get(3)
         .ok_or_else(|| {
             eyre!(
                 "Could not determine Jira issue summary from ref {}",
@@ -94,7 +117,7 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
         jira_config: data.jira_config,
         github_state: data.github_state,
         github_config: data.github_config,
-        issue: Issue::Jira { key, summary },
+        issue: Issue { key, summary },
     })
 }
 
@@ -150,14 +173,7 @@ fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
 }
 
 pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
-    match issue {
-        Issue::Jira { key, summary } => {
-            format!("{}-{}", key, summary.to_ascii_lowercase()).replace(" ", "-")
-        }
-        Issue::GitHub { number, title } => {
-            format!("{}-{}", number, title.to_ascii_lowercase()).replace(" ", "-")
-        }
-    }
+    format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(" ", "-")
 }
 
 fn get_last_tag_name(repo: &Repository) -> Result<String> {
@@ -202,11 +218,73 @@ mod tests {
 
     #[test]
     fn branch_name_from_issue() {
-        let issue = Issue::Jira {
+        let issue = Issue {
             key: "FLOW-5".to_string(),
             summary: "A test issue".to_string(),
         };
         let branch_name = super::branch_name_from_issue(&issue);
         assert_eq!(&branch_name, "FLOW-5-a-test-issue");
+    }
+}
+
+#[cfg(test)]
+mod test_select_issue_from_branch_name {
+    use super::*;
+    use crate::state::GitHub;
+
+    #[test]
+    fn jira_style() {
+        let data = select_issue_from_branch_name(
+            Initial {
+                jira_config: None,
+                github_state: GitHub::New,
+                github_config: None,
+            },
+            "ABC-123-some-summary",
+        )
+        .expect("Failed to parse branch name");
+
+        assert_eq!(
+            data.issue,
+            Issue {
+                key: "ABC-123".to_string(),
+                summary: "some-summary".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn github_style() {
+        let data = select_issue_from_branch_name(
+            Initial {
+                jira_config: None,
+                github_state: GitHub::New,
+                github_config: None,
+            },
+            "123-some-summary",
+        )
+        .expect("Failed to parse branch name");
+
+        assert_eq!(
+            data.issue,
+            Issue {
+                key: "123".to_string(),
+                summary: "some-summary".to_string()
+            }
+        )
+    }
+
+    #[test]
+    fn no_number() {
+        let result = select_issue_from_branch_name(
+            Initial {
+                jira_config: None,
+                github_state: GitHub::New,
+                github_config: None,
+            },
+            "some-summary",
+        );
+
+        assert!(result.is_err())
     }
 }
