@@ -149,7 +149,7 @@ fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
         .collect())
 }
 
-fn branch_name_from_issue(issue: &Issue) -> String {
+pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
     match issue {
         Issue::Jira { key, summary } => {
             format!("{}-{}", key, summary.to_ascii_lowercase()).replace(" ", "-")
