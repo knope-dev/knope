@@ -5,6 +5,7 @@ use regex::Regex;
 use crate::issues::Issue;
 use crate::prompt::select;
 use crate::state::{Initial, IssueSelected, State};
+use git2::build::CheckoutBuilder;
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
@@ -149,12 +150,31 @@ fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Br
 }
 
 fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
+    let statuses = repo.statuses(None).wrap_err("Could not get Git statuses")?;
+    let uncommitted_changes = statuses.iter().any(|status| {
+        if let Ok(path) = String::from_utf8(Vec::from(status.path_bytes())) {
+            if matches!(repo.status_should_ignore(path.as_ref()), Ok(false)) {
+                return true;
+            }
+        }
+        false
+    });
+    if uncommitted_changes {
+        return Err(eyre!(
+            "Cannot switch branches if you have uncommitted changes. Stash, then try again."
+        ));
+    }
     let ref_name = branch
         .get()
         .name()
         .ok_or_else(|| eyre!("problem checking out branch, could not parse name"))?;
     repo.set_head(ref_name)
-        .wrap_err_with(|| format!("Found branch {} but could not switch to it.", ref_name))
+        .wrap_err_with(|| format!("Found branch {} but could not switch to it.", ref_name))?;
+    repo.checkout_head(Some(CheckoutBuilder::new().force()))
+        .wrap_err(
+            "Switching branches failed, but HEAD was changed. You probably want to git switch back to the branch you were on",
+        )?;
+    Ok(())
 }
 
 fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
