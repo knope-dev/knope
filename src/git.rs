@@ -67,7 +67,7 @@ pub fn rebase_branch(state: State, to: &str) -> Result<State> {
 }
 
 pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
-    let data = match state {
+    let state_data = match state {
         State::IssueSelected(IssueSelected {
             jira_config,
             github_state,
@@ -85,8 +85,8 @@ pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
     let ref_name = head.name().ok_or_else(|| {
         eyre!("Could not get a name for current HEAD. Are you at the tip of a branch?")
     })?;
-    let data = select_issue_from_branch_name(data, ref_name)?;
-    Ok(State::IssueSelected(data))
+    let state_data = select_issue_from_branch_name(state_data, ref_name)?;
+    Ok(State::IssueSelected(state_data))
 }
 
 fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
