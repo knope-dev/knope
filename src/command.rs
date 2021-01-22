@@ -93,9 +93,9 @@ mod test_replace_variables {
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         variables.insert("branch_name".to_string(), Variable::IssueBranch);
-        let issue = Issue::GitHub {
-            number: 13,
-            title: "1234".to_string(),
+        let issue = Issue {
+            key: "13".to_string(),
+            summary: "1234".to_string(),
         };
         let expected_branch_name = branch_name_from_issue(&issue);
         let state = State::IssueSelected(IssueSelected {
@@ -141,9 +141,9 @@ mod test_replace_variables {
         let command = "blah $$ other blah".to_string();
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::IssueBranch);
-        let issue = Issue::GitHub {
-            number: 13,
-            title: "1234".to_string(),
+        let issue = Issue {
+            key: "13".to_string(),
+            summary: "1234".to_string(),
         };
         let expected_branch_name = branch_name_from_issue(&issue);
         let state = State::IssueSelected(IssueSelected {

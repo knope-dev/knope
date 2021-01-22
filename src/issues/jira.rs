@@ -51,7 +51,7 @@ pub(crate) async fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<I
         .wrap_err("Could not request issues")?
         .issues
         .into_iter()
-        .map(|jira_issue| Issue::Jira {
+        .map(|jira_issue| Issue {
             key: jira_issue.key,
             summary: jira_issue.fields.summary,
         })

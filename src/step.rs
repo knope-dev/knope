@@ -29,6 +29,9 @@ pub(crate) async fn run_step(step: Step, state: State) -> Result<State> {
         }
         Step::UpdateProjectFromCommits => update_project_from_conventional_commits(state)
             .wrap_err("During UpdateProjectFromCommits"),
+        Step::SelectIssueFromBranch => {
+            git::select_issue_from_current_branch(state).wrap_err("During SelectIssueFromBranch")
+        }
     }
 }
 
@@ -112,6 +115,27 @@ pub enum Step {
         /// If provided, only issues with this label will be included
         labels: Option<Vec<String>>,
     },
+    /// Attempt to parse issue info from the current branch name and change the workflow's state to
+    /// [`State::IssueSelected`].
+    ///
+    /// ## Errors
+    /// This step will fail if the current git branch cannot be determined or the name of that
+    /// branch does not match the expected format. This is only intended to be used on branches
+    /// which were created using the [`Step::SwitchBranches`] step.
+    ///
+    /// ## Example
+    /// ```toml
+    /// # dobby.toml
+    /// [[workflows]]
+    /// name = "Finish some work"
+    ///     [[workflows.steps]]
+    ///     type = "SelectIssueFromBranch"
+    ///     
+    ///     [[workflows.steps]]
+    ///     type = "TransitionJiraIssue"
+    ///     status = "QA"
+    /// ```
+    SelectIssueFromBranch,
     /// Uses the name of the currently selected issue to checkout an existing or create a new
     /// branch for development. If an existing branch is not found, the user will be prompted to
     /// select an existing local branch to base the new branch off of. Remote branches are not

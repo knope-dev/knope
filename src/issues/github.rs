@@ -27,9 +27,9 @@ pub(crate) async fn list_issues(
                 .into_iter()
                 .filter_map(|oc_issue| match oc_issue.pull_request {
                     Some(_) => None,
-                    None => Some(Issue::GitHub {
-                        number: oc_issue.number,
-                        title: oc_issue.title,
+                    None => Some(Issue {
+                        key: oc_issue.number.to_string(),
+                        summary: oc_issue.title,
                     }),
                 })
                 .collect();
