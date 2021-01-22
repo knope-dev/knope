@@ -90,7 +90,7 @@ pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
 }
 
 fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
-    let re = Regex::new("(([A-Z]+-)?[0-9]+)-(.*)").unwrap();
+    let re = Regex::new("((?:[A-Z]+-)?[0-9]+)-(.*)").unwrap();
     let caps = re.captures(ref_name).ok_or_else(|| {
         eyre!(
             "Current ref {} is not in the right format. Was it created with Flow?",
@@ -103,7 +103,7 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
         .as_str()
         .to_owned();
     let summary = caps
-        .get(3)
+        .get(2)
         .ok_or_else(|| {
             eyre!(
                 "Could not determine Jira issue summary from ref {}",
