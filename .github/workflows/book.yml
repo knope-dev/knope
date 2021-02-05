@@ -1,5 +1,8 @@
 name: Build Book
-on: push
+on:
+  push:
+    branches:
+      - main
 jobs:
   publish_book:
     runs-on: ubuntu-latest
