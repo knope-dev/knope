@@ -1,17 +1,12 @@
 #![warn(clippy::all, clippy::pedantic, clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)]
-#![deny(missing_docs)]
 #![forbid(unsafe_code)]
 
 use color_eyre::eyre::{Result, WrapErr};
 
-pub use crate::semver::Rule;
-pub use command::Variable;
-pub use config::{Config, GitHub, Jira};
+use crate::config::Config;
+use crate::state::State;
 use prompt::select;
-pub use state::State;
-pub use step::Step;
-pub use workflow::Workflow;
 
 mod app_config;
 mod cargo;

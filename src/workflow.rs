@@ -16,9 +16,9 @@ pub(crate) async fn run_workflow(workflow: Workflow, mut state: State) -> Result
 #[derive(Deserialize, Debug)]
 pub(crate) struct Workflow {
     /// The display name of this Workflow. This is what you'll see when you go to select it.
-    pub name: String,
+    pub(crate) name: String,
     /// A list of [`Step`]s to execute in order, stopping if any step fails.
-    pub steps: Vec<Step>,
+    pub(crate) steps: Vec<Step>,
 }
 
 impl std::fmt::Display for Workflow {

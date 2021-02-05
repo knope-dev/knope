@@ -14,6 +14,7 @@ use crate::{package_json, pyproject};
 pub(crate) enum Rule {
     Major,
     Minor,
+    Patch,
     Pre(String),
     Release,
 }

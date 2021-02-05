@@ -9,7 +9,7 @@ use git2::build::CheckoutBuilder;
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
-pub fn switch_branches(state: State) -> Result<State> {
+pub(crate) fn switch_branches(state: State) -> Result<State> {
     let data = match state {
         State::Initial(..) => return Err(eyre!("You must SelectIssue first.")),
         State::IssueSelected(data) => data,
@@ -35,7 +35,7 @@ pub fn switch_branches(state: State) -> Result<State> {
 }
 
 /// Rebase the current branch onto the selected one.
-pub fn rebase_branch(state: State, to: &str) -> Result<State> {
+pub(crate) fn rebase_branch(state: State, to: &str) -> Result<State> {
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
     let ref_name = head.name().ok_or_else(|| {
