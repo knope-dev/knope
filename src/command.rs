@@ -10,11 +10,8 @@ use crate::State;
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
 #[derive(Debug, Deserialize)]
-pub enum Variable {
+pub(crate) enum Variable {
     /// Uses the first supported version found in your project.
-    ///
-    /// ### Supported Formats
-    /// 1. Cargo.toml `package.version`
     Version,
     /// The generated branch name for the selected issue. Note that this means the workflow must
     /// already be in [`State::IssueSelected`] when this variable is used.

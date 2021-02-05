@@ -6,27 +6,6 @@ use serde::Deserialize;
 
 use crate::workflow::Workflow;
 
-/// This is the top level structure that your `dobby.toml` must adhere to to be valid. If config
-/// cannot be validated against the structures defined within Config, you'll get an error message
-/// right off the bat.
-///
-/// ## Example
-/// ```toml
-/// [[workflows]]
-/// name = "First Workflow"
-/// # Details here
-///
-/// [[workflows]]
-/// name = "Second Workflow"
-/// # Details here
-///
-/// [jira]
-/// # JiraConfig here
-/// ```
-///
-/// ## See Also
-/// [`Workflow`] for details on defining entries to the `[[workflows]]` array and [`Jira`]
-/// for details on defining `[jira]`.
 #[derive(Deserialize, Debug)]
 pub struct Config {
     /// The list of defined workflows that are selectable
@@ -49,14 +28,7 @@ impl Config {
     }
 }
 
-/// Details needed to use steps that reference Jira issues.
-///
-/// ## Example
-/// ```TOML
-/// [jira]
-/// url = "https://mysite.atlassian.net"
-/// project = "PRJ"  # where an example issue would be PRJ-123
-/// ```
+/// Config required for steps that interact with Jira.
 #[derive(Debug, Default, Deserialize)]
 pub struct Jira {
     /// The URL to your Atlassian instance running Jira
@@ -66,13 +38,6 @@ pub struct Jira {
 }
 
 /// Details needed to use steps that interact with GitHub.
-///
-/// ## Example
-/// ```TOML
-/// [github]
-/// owner = "triaxtec"
-/// repo = "dobby"
-/// ```
 #[derive(Debug, Default, Deserialize)]
 pub struct GitHub {
     /// The user or organization that owns the `repo`.

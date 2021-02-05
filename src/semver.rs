@@ -9,45 +9,12 @@ use crate::{package_json, pyproject};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
-///
-/// A Rule should be selected by using `rule = "{rule_variant}"` in the declaring step. If the
-/// variant requires an additional parameter (e.g. `Pre`), provide that with `value = "{param}"`.
-///
-/// ## Example
-/// ```toml
-/// [[workflows.steps]]
-/// type = "BumpVersion"
-/// rule = "Pre"
-/// value = "rc"
-/// ```
 #[derive(Debug, Deserialize)]
 #[serde(tag = "rule", content = "value")]
-pub enum Rule {
-    /// Increment the Major component of the semantic version and reset all other components.
-    ///
-    /// ## Example
-    /// 1.2.3-rc.4 -> 2.0.0
+pub(crate) enum Rule {
     Major,
-    /// Increment the Minor component of the semantic version and reset all lesser components.
-    ///
-    /// ## Example
-    /// 1.2.3-rc.4 -> 1.3.0
     Minor,
-    /// Increment the Patch component of the semantic version and reset all lesser components.
-    ///
-    /// ## Example
-    /// 1.2.3-rc.4 -> 1.2.4
-    Patch,
-    /// Increment the pre-release component of the semantic version or add it if missing.
-    ///
-    /// ## Example
-    /// 1.2.3-rc.4 -> 1.2.3-rc.5
-    /// 1.2.3 -> 1.2.3-rc.0
     Pre(String),
-    /// Remove the pre-release component of the semantic version.
-    ///
-    /// ## Example
-    /// 1.2.3-rc.4 -> 1.2.3
     Release,
 }
 

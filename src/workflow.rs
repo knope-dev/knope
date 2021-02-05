@@ -4,6 +4,7 @@ use serde::Deserialize;
 use crate::step::{run_step, Step};
 use crate::State;
 
+/// Run a [`Workflow`], updating the passed in `state` for each step.
 pub(crate) async fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
     for step in workflow.steps {
         state = run_step(step, state).await?;
@@ -11,26 +12,9 @@ pub(crate) async fn run_workflow(workflow: Workflow, mut state: State) -> Result
     Ok(())
 }
 
-/// A workflow is the entrypoint to doing work with Dobby. Once you start running `dobby` you must
-/// immediately select a workflow (by name) to be executed. A workflow consists of a series of
-/// [`Step`]s that will run in order, stopping only if one step fails.
-///
-/// ## Example
-/// ```toml
-/// # dobby.toml
-///
-/// [[workflows]]
-/// name = "My First Workflow"
-///     [[workflows.steps]]
-///     # First step details here
-///     [[workflows.steps]]
-///     # second step details here
-/// ```
-///
-/// ## See Also
-/// - [`Step`] for details on how each Step is defined.
+/// A workflow is basically the state machine to run for a single execution of Dobby.
 #[derive(Deserialize, Debug)]
-pub struct Workflow {
+pub(crate) struct Workflow {
     /// The display name of this Workflow. This is what you'll see when you go to select it.
     pub name: String,
     /// A list of [`Step`]s to execute in order, stopping if any step fails.
