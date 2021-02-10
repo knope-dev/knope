@@ -8,7 +8,7 @@ mod github;
 mod jira;
 
 #[derive(Debug, PartialEq)]
-pub struct Issue {
+pub(crate) struct Issue {
     pub(crate) key: String,
     pub(crate) summary: String,
 }
