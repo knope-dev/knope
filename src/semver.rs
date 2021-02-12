@@ -19,6 +19,7 @@ pub(crate) enum Rule {
     Release,
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) enum Version {
     Cargo(semver::Version),
     PyProject(semver::Version),
@@ -51,6 +52,14 @@ impl Version {
                 version.pre = Vec::new();
                 version
             }),
+        }
+    }
+
+    /// Is the current version's major component 0? Useful to apply special rules in the context of
+    /// [Semantic Versioning](https://semver.org/#spec-item-4).
+    fn is_0(&self) -> bool {
+        match self {
+            Version::Cargo(v) | Version::PyProject(v) | Version::Package(v) => v.major == 0,
         }
     }
 }
@@ -118,22 +127,102 @@ fn set_version(version: Version) -> Result<()> {
     }
 }
 
+/// Apply a Rule to a Version, incrementing & resetting the correct components.
+///
+/// ### Versions 0.x
+/// Versions with major component 0 have special meaning in Semantic Versioning and therefore have
+/// different behavior:
+/// 1. [`Rule::Major`] will bump the minor component.
+/// 2. [`Rule::Minor`] will bump the patch component.
 fn bump(version: Version, rule: &Rule) -> Result<Version> {
-    match rule {
-        Rule::Major => version.run_on_inner(|mut v| {
+    let is_0 = version.is_0();
+    match (rule, is_0) {
+        (Rule::Major, false) => version.run_on_inner(|mut v| {
             v.increment_major();
             Ok(v)
         }),
-        Rule::Minor => version.run_on_inner(|mut v| {
+        (Rule::Minor, false) | (Rule::Major, true) => version.run_on_inner(|mut v| {
             v.increment_minor();
             Ok(v)
         }),
-        Rule::Patch => version.run_on_inner(|mut v| {
+        (Rule::Patch, _) | (Rule::Minor, true) => version.run_on_inner(|mut v| {
             v.increment_patch();
             Ok(v)
         }),
-        Rule::Release => Ok(version.reset_pre()),
-        Rule::Pre(prefix) => version.run_on_inner(|v| bump_pre(v, prefix)),
+        (Rule::Release, _) => Ok(version.reset_pre()),
+        (Rule::Pre(prefix), _) => version.run_on_inner(|v| bump_pre(v, prefix)),
+    }
+}
+
+#[cfg(test)]
+mod test_bump {
+    use super::*;
+
+    #[test]
+    fn major() {
+        let version = Version::Cargo(semver::Version::new(1, 2, 3));
+        let version = bump(version, &Rule::Major).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(2, 0, 0)));
+    }
+
+    #[test]
+    fn major_0() {
+        let version = Version::Cargo(semver::Version::new(0, 1, 2));
+        let version = bump(version, &Rule::Major).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(0, 2, 0)));
+    }
+
+    #[test]
+    fn minor() {
+        let version = Version::Cargo(semver::Version::new(1, 2, 3));
+        let version = bump(version, &Rule::Minor).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(1, 3, 0)));
+    }
+
+    #[test]
+    fn minor_0() {
+        let version = Version::Cargo(semver::Version::new(0, 1, 2));
+        let version = bump(version, &Rule::Minor).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(0, 1, 3)));
+    }
+
+    #[test]
+    fn patch() {
+        let version = Version::Cargo(semver::Version::new(1, 2, 3));
+        let version = bump(version, &Rule::Patch).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(1, 2, 4)));
+    }
+
+    #[test]
+    fn patch_0() {
+        let version = Version::Cargo(semver::Version::new(1, 2, 3));
+        let version = bump(version, &Rule::Patch).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(1, 2, 4)));
+    }
+
+    #[test]
+    fn pre() {
+        let version = Version::Cargo(semver::Version::new(1, 2, 3));
+        let version = bump(version, &Rule::Pre("rc".to_string())).unwrap();
+
+        assert_eq!(
+            version,
+            Version::Cargo(semver::Version::parse("1.2.3-rc.0").unwrap())
+        );
+    }
+
+    #[test]
+    fn release() {
+        let version = Version::Cargo(semver::Version::parse("1.2.3-rc.0").unwrap());
+        let version = bump(version, &Rule::Release).unwrap();
+
+        assert_eq!(version, Version::Cargo(semver::Version::new(1, 2, 3)));
     }
 }
 
