@@ -55,7 +55,8 @@ impl Version {
         }
     }
 
-    /// Is the current version's major component 0? If so, rules are applied differently in `bump`.
+    /// Is the current version's major component 0? Useful to apply special rules in the context of
+    /// [Semantic Versioning](https://semver.org/#spec-item-4).
     fn is_0(&self) -> bool {
         match self {
             Version::Cargo(v) | Version::PyProject(v) | Version::Package(v) => v.major == 0,
@@ -127,6 +128,12 @@ fn set_version(version: Version) -> Result<()> {
 }
 
 /// Apply a Rule to a Version, incrementing & resetting the correct components.
+///
+/// ### Versions 0.x
+/// Versions with major component 0 have special meaning in Semantic Versioning and therefore have
+/// different behavior:
+/// 1. [`Rule::Major`] will bump the minor component.
+/// 2. [`Rule::Minor`] will bump the patch component.
 fn bump(version: Version, rule: &Rule) -> Result<Version> {
     let is_0 = version.is_0();
     match (rule, is_0) {
