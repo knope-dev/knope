@@ -26,7 +26,7 @@ or omit the `changelog_path`, which will default it to "CHANGELOG.md" in the cur
 The reasons this can fail:
 
 1. If there is no previous tag to base changes off of.
-1. There provided path to the changelog file could not be found.
+1. The provided path to the changelog file could not be found.
 1. The version could not be bumped for some reason.
 
 [semantic versioning]: https://semver.org
