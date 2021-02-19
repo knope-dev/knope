@@ -55,6 +55,7 @@ fn get_conventional_commits_after_last_tag() -> Result<ConventionalCommits> {
 
 pub(crate) fn update_project_from_conventional_commits(
     state: crate::State,
+    changelog_path: &str,
 ) -> Result<crate::State> {
     let ConventionalCommits {
         rule,
@@ -65,7 +66,7 @@ pub(crate) fn update_project_from_conventional_commits(
     let state = bump_version(state, &rule).wrap_err("While bumping version")?;
     let new_version = get_version().wrap_err("While getting new version")?;
     let changelog_text =
-        std::fs::read_to_string("CHANGELOG.md").wrap_err("While reading CHANGELOG.md")?;
+        std::fs::read_to_string(changelog_path).wrap_err("While reading CHANGELOG.md")?;
     let changelog = Changelog::from_markdown(&changelog_text);
     let changelog_version = Version {
         title: new_version.to_string(),
@@ -74,7 +75,7 @@ pub(crate) fn update_project_from_conventional_commits(
         breaking_changes,
     };
     let changelog = changelog.add_version(changelog_version);
-    std::fs::write("CHANGELOG.md", changelog.into_markdown())
-        .wrap_err("While writing to CHANGELOG.md")?;
+    std::fs::write(changelog_path, changelog.into_markdown())
+        .wrap_err_with(|| format!("While writing to {}", changelog_path))?;
     Ok(state)
 }
