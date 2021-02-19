@@ -27,8 +27,10 @@ pub(crate) async fn run_step(step: Step, state: State) -> Result<State> {
         Step::Command { command, variables } => {
             command::run_command(state, command, variables).wrap_err("During Command")
         }
-        Step::UpdateProjectFromCommits => update_project_from_conventional_commits(state)
-            .wrap_err("During UpdateProjectFromCommits"),
+        Step::UpdateProjectFromCommits { changelog_path } => {
+            update_project_from_conventional_commits(state, &changelog_path)
+                .wrap_err("During UpdateProjectFromCommits")
+        }
         Step::SelectIssueFromBranch => {
             git::select_issue_from_current_branch(state).wrap_err("During SelectIssueFromBranch")
         }
@@ -88,5 +90,12 @@ pub(crate) enum Step {
     /// then bump the project version (depending on the rule determined from the commits) and add
     /// a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/)
     /// format.
-    UpdateProjectFromCommits,
+    UpdateProjectFromCommits {
+        #[serde(default = "default_changelog")]
+        changelog_path: String,
+    },
+}
+
+fn default_changelog() -> String {
+    "CHANGELOG.md".to_string()
 }
