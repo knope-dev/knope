@@ -72,7 +72,7 @@ mod tests {
     }
 
     #[test]
-    fn test_retain_property_order() {
+    fn retain_property_order() {
         let file = NamedTempFile::new().unwrap();
         let content = r###"{
         "name": "tester",
