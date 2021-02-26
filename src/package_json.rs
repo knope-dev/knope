@@ -70,4 +70,25 @@ mod tests {
             .to_string();
         assert_eq!(std::fs::read_to_string(file).unwrap(), expected);
     }
+
+    #[test]
+    fn test_retain_property_order() {
+        let file = NamedTempFile::new().unwrap();
+        let content = r###"{
+        "name": "tester",
+        "version": "0.1.0-rc.0",
+        "dependencies": {}
+        }"###;
+        std::fs::write(&file, content).unwrap();
+
+        set_version(&file, "1.2.3-rc.4").unwrap();
+
+        let expected = r###"{
+  "name": "tester",
+  "version": "1.2.3-rc.4",
+  "dependencies": {}
+}"###
+            .to_string();
+        assert_eq!(std::fs::read_to_string(file).unwrap(), expected);
+    }
 }
