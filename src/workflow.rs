@@ -5,9 +5,9 @@ use crate::step::{run_step, Step};
 use crate::State;
 
 /// Run a [`Workflow`], updating the passed in `state` for each step.
-pub(crate) async fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
+pub(crate) fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
     for step in workflow.steps {
-        state = run_step(step, state).await?;
+        state = run_step(step, state)?;
     }
     Ok(())
 }
