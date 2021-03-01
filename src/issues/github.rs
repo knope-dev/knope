@@ -36,7 +36,7 @@ pub(crate) fn list_issues(
                 state::GitHub::New => get_or_prompt_for_github_token()?,
             };
             let response = ureq::post("https://api.github.com/graphql")
-                .set("Authorization", &format!("bearer {}", &token))
+                .set("Authorization", &format!("bearer {}", token))
                 .send_json(ureq::json!({
                     "query": ISSUES_QUERY,
                     "variables": {
@@ -66,7 +66,7 @@ pub(crate) fn list_issues(
 }
 
 fn decode_github_response(response: ureq::Response) -> Result<Vec<ResponseIssue>> {
-    let json_value = response.into_json::<serde_json::Value>()?;
+    let json_value: serde_json::Value = response.into_json()?;
     let json_issues = json_value.pointer("/data/repository/issues/nodes");
     match json_issues {
         Some(value) => serde_json::from_value(value.clone())
