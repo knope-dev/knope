@@ -8,17 +8,17 @@ use crate::conventional_commits::update_project_from_conventional_commits;
 use crate::state::State;
 use crate::{command, git, issues, semver};
 
-pub(crate) async fn run_step(step: Step, state: State) -> Result<State> {
+pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
     match step {
-        Step::SelectJiraIssue { status } => issues::select_jira_issue(&status, state)
-            .await
-            .wrap_err("During SelectJiraIssue"),
-        Step::SelectGitHubIssue { labels } => issues::select_github_issue(labels, state)
-            .await
-            .wrap_err("During SelectGitHubIssue"),
-        Step::TransitionJiraIssue { status } => issues::transition_selected_issue(&status, state)
-            .await
-            .wrap_err("During TransitionJiraIssue"),
+        Step::SelectJiraIssue { status } => {
+            issues::select_jira_issue(&status, state).wrap_err("During SelectJiraIssue")
+        }
+        Step::SelectGitHubIssue { labels } => {
+            issues::select_github_issue(labels.as_ref(), state).wrap_err("During SelectGitHubIssue")
+        }
+        Step::TransitionJiraIssue { status } => {
+            issues::transition_selected_issue(&status, state).wrap_err("During TransitionJiraIssue")
+        }
         Step::SwitchBranches => git::switch_branches(state).wrap_err("During SwitchBranches"),
         Step::RebaseBranch { to } => git::rebase_branch(state, &to).wrap_err("During MergeBranch"),
         Step::BumpVersion(rule) => {

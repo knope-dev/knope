@@ -24,8 +24,7 @@ mod state;
 mod step;
 mod workflow;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     color_eyre::install().expect("Could not set up error handling with color_eyre");
 
     let Config {
@@ -35,5 +34,5 @@ async fn main() -> Result<()> {
     } = Config::load("dobby.toml").wrap_err("Could not load config file at dobby.toml")?;
     let workflow = select(workflows, "Select a workflow")?;
     let state = State::new(jira, github);
-    workflow::run_workflow(workflow, state).await
+    workflow::run_workflow(workflow, state)
 }

@@ -19,7 +19,7 @@ impl fmt::Display for Issue {
     }
 }
 
-pub(crate) async fn select_jira_issue(status: &str, state: State) -> Result<State> {
+pub(crate) fn select_jira_issue(status: &str, state: State) -> Result<State> {
     match state {
         State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
         State::Initial(Initial {
@@ -28,7 +28,7 @@ pub(crate) async fn select_jira_issue(status: &str, state: State) -> Result<Stat
             github_config,
         }) => {
             let jira_config = jira_config.ok_or_else(|| eyre!("Jira is not configured"))?;
-            let issues = jira::get_issues(&jira_config, status).await?;
+            let issues = jira::get_issues(&jira_config, status)?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue);
             Ok(State::IssueSelected(IssueSelected {
@@ -41,10 +41,7 @@ pub(crate) async fn select_jira_issue(status: &str, state: State) -> Result<Stat
     }
 }
 
-pub(crate) async fn select_github_issue(
-    labels: Option<Vec<String>>,
-    state: State,
-) -> Result<State> {
+pub(crate) fn select_github_issue(labels: Option<&Vec<String>>, state: State) -> Result<State> {
     match state {
         State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
         State::Initial(Initial {
@@ -53,7 +50,7 @@ pub(crate) async fn select_github_issue(
             github_config,
         }) => {
             let (github_config, github_state, issues) =
-                github::list_issues(github_config, github_state, labels).await?;
+                github::list_issues(github_config, github_state, labels)?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue);
             Ok(State::IssueSelected(IssueSelected {
@@ -66,7 +63,7 @@ pub(crate) async fn select_github_issue(
     }
 }
 
-pub(crate) async fn transition_selected_issue(status: &str, state: State) -> Result<State> {
+pub(crate) fn transition_selected_issue(status: &str, state: State) -> Result<State> {
     match state {
         State::Initial(..) => Err(eyre!(
             "No issue selected, try running a SelectIssue step before this one"
@@ -78,7 +75,7 @@ pub(crate) async fn transition_selected_issue(status: &str, state: State) -> Res
             issue,
         }) => {
             let jira_config = jira_config.ok_or_else(|| eyre!("Jira is not configured"))?;
-            jira::transition_issue(&jira_config, &issue.key, status).await?;
+            jira::transition_issue(&jira_config, &issue.key, status)?;
             println!("{} transitioned to {}", &issue.key, status);
             Ok(State::IssueSelected(IssueSelected {
                 jira_config: Some(jira_config),

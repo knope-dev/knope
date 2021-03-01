@@ -1,6 +1,5 @@
 use crate::config;
 use crate::issues::Issue;
-use octocrab::Octocrab;
 
 pub(crate) struct Initial {
     pub(crate) jira_config: Option<config::Jira>,
@@ -42,5 +41,5 @@ impl State {
 
 pub(crate) enum GitHub {
     New,
-    Initialized { octocrab: Octocrab },
+    Initialized { token: String },
 }

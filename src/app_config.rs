@@ -2,8 +2,6 @@ use color_eyre::Result;
 use platform_dirs::AppDirs;
 
 use crate::prompt::get_input;
-use color_eyre::eyre::WrapErr;
-use octocrab::{Octocrab, OctocrabBuilder};
 
 /// For managing configuration of Dobby globally
 
@@ -15,16 +13,11 @@ pub(crate) fn get_or_prompt_for_jira_token() -> Result<String> {
     load_value_or_prompt("jira_token", "No Jira token found, generate one from https://id.atlassian.com/manage-profile/security/api-tokens and input here")
 }
 
-pub(crate) fn get_or_prompt_for_octocrab() -> Result<Octocrab> {
-    let token = load_value_or_prompt(
+pub(crate) fn get_or_prompt_for_github_token() -> Result<String> {
+    load_value_or_prompt(
         "github_token", 
         "No GitHub token found, generate one from https://github.com/settings/tokens with `repo` permissions and input here"
-    )?;
-
-    OctocrabBuilder::new()
-        .personal_token(token)
-        .build()
-        .wrap_err("Could not create GitHub client.")
+    )
 }
 
 pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String> {
