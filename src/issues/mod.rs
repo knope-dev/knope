@@ -41,7 +41,7 @@ pub(crate) fn select_jira_issue(status: &str, state: State) -> Result<State> {
     }
 }
 
-pub(crate) fn select_github_issue(labels: &Option<Vec<String>>, state: State) -> Result<State> {
+pub(crate) fn select_github_issue(labels: Option<&Vec<String>>, state: State) -> Result<State> {
     match state {
         State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
         State::Initial(Initial {

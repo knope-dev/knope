@@ -26,7 +26,7 @@ struct ResponseIssue {
 pub(crate) fn list_issues(
     github_config: Option<config::GitHub>,
     github_state: state::GitHub,
-    labels: &Option<Vec<String>>,
+    labels: Option<&Vec<String>>,
 ) -> Result<(Option<config::GitHub>, state::GitHub, Vec<Issue>)> {
     match github_config {
         None => Err(eyre!("GitHub is not configured")),

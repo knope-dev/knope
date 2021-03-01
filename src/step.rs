@@ -14,7 +14,7 @@ pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
             issues::select_jira_issue(&status, state).wrap_err("During SelectJiraIssue")
         }
         Step::SelectGitHubIssue { labels } => {
-            issues::select_github_issue(&labels, state).wrap_err("During SelectGitHubIssue")
+            issues::select_github_issue(labels.as_ref(), state).wrap_err("During SelectGitHubIssue")
         }
         Step::TransitionJiraIssue { status } => {
             issues::transition_selected_issue(&status, state).wrap_err("During TransitionJiraIssue")
