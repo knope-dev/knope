@@ -1,11 +1,11 @@
 use color_eyre::eyre::{eyre, ContextCompat, Result, WrapErr};
 use git2::{Branch, BranchType, DescribeFormatOptions, DescribeOptions, Repository};
-use regex::Regex;
 
 use crate::issues::Issue;
 use crate::prompt::select;
 use crate::state::{Initial, IssueSelected, State};
 use git2::build::CheckoutBuilder;
+use std::str::FromStr;
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
@@ -91,28 +91,18 @@ pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
 }
 
 fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
-    let re = Regex::new("((?:[A-Z]+-)?[0-9]+)-(.*)").unwrap();
-    let caps = re.captures(ref_name).ok_or_else(|| {
-        eyre!(
-            "Current ref {} is not in the right format. Was it created with Flow?",
-            ref_name
-        )
-    })?;
-    let key = caps
-        .get(1)
-        .ok_or_else(|| eyre!("Could not determine Jira issue key from ref {}", ref_name))?
-        .as_str()
-        .to_owned();
-    let summary = caps
-        .get(2)
-        .ok_or_else(|| {
-            eyre!(
-                "Could not determine Jira issue summary from ref {}",
-                ref_name
-            )
-        })?
-        .as_str()
-        .to_owned();
+    let parts: Vec<&str> = ref_name.split("-").collect();
+
+    let (key, summary) = if !parts.is_empty() && usize::from_str(parts[0]).is_ok() {
+        // GitHub style, like 42-some-description for issue #42
+        Ok((parts[0].to_string(), parts[1..].join("-")))
+    } else if parts.len() >= 2 && usize::from_str(parts[1]).is_ok() {
+        // Jira style, like PROJ-123-something-else where PROJ-123 is the issue key
+        Ok((parts[0..2].join("-"), parts[2..].join("-")))
+    } else {
+        Err(eyre!("Branch is not formatted properly. Was it created by Dobby?"))
+    }?;
+
     println!("Auto-selecting issue {} from ref {}", &key, ref_name);
     Ok(IssueSelected {
         jira_config: data.jira_config,
