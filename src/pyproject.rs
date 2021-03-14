@@ -17,11 +17,11 @@ pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
 pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: String) -> Result<()> {
     let mut toml: toml::Value = toml::from_str(&std::fs::read_to_string(&path)?)?;
     toml.get_mut("tool")
-        .ok_or(eyre!("TOML missing tool key"))?
+        .ok_or_else(|| eyre!("TOML missing tool key"))?
         .get_mut("poetry")
-        .ok_or(eyre!("TOML tool table missing poetry key"))?
+        .ok_or_else(|| eyre!("TOML tool table missing poetry key"))?
         .as_table_mut()
-        .ok_or(eyre!("TOML tool.poetry key was not a table"))?
+        .ok_or_else(|| eyre!("TOML tool.poetry key was not a table"))?
         .insert("version".to_string(), toml::Value::String(new_version));
     std::fs::write(path, toml::to_string_pretty(&toml)?)?;
     Ok(())
