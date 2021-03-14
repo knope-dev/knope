@@ -91,7 +91,7 @@ pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
 }
 
 fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
-    let parts: Vec<&str> = ref_name.split("-").collect();
+    let parts: Vec<&str> = ref_name.split('-').collect();
 
     let (key, summary) = if !parts.is_empty() && usize::from_str(parts[0]).is_ok() {
         // GitHub style, like 42-some-description for issue #42
@@ -100,7 +100,9 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
         // Jira style, like PROJ-123-something-else where PROJ-123 is the issue key
         Ok((parts[0..2].join("-"), parts[2..].join("-")))
     } else {
-        Err(eyre!("Branch is not formatted properly. Was it created by Dobby?"))
+        Err(eyre!(
+            "Branch is not formatted properly. Was it created by Dobby?"
+        ))
     }?;
 
     println!("Auto-selecting issue {} from ref {}", &key, ref_name);
