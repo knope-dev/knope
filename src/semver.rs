@@ -114,10 +114,10 @@ pub(crate) fn get_version() -> Result<Version> {
 
 fn set_version(version: Version) -> Result<()> {
     match version {
-        Version::Cargo(version) => crate::cargo::set_version("Cargo.toml", &version.to_string())
+        Version::Cargo(version) => crate::cargo::set_version("Cargo.toml", version.to_string())
             .wrap_err("While bumping Cargo.toml"),
         Version::PyProject(version) => {
-            pyproject::set_version("pyproject.toml", &version.to_string())
+            pyproject::set_version("pyproject.toml", version.to_string())
                 .wrap_err("While bumping pyproject.toml")
         }
         Version::Package(version) => {

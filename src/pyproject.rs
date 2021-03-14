@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use serde::Deserialize;
-use toml_edit::{value, Document};
 
 pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     Some(
@@ -14,11 +14,16 @@ pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     )
 }
 
-pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<()> {
-    let toml = std::fs::read_to_string(&path)?;
-    let mut doc = toml.parse::<Document>()?;
-    doc["tool"]["poetry"]["version"] = value(new_version);
-    std::fs::write(path, doc.to_string())?;
+pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: String) -> Result<()> {
+    let mut toml: toml::Value = toml::from_str(&std::fs::read_to_string(&path)?)?;
+    toml.get_mut("tool")
+        .ok_or(eyre!("TOML missing tool key"))?
+        .get_mut("poetry")
+        .ok_or(eyre!("TOML tool table missing poetry key"))?
+        .as_table_mut()
+        .ok_or(eyre!("TOML tool.poetry key was not a table"))?
+        .insert("version".to_string(), toml::Value::String(new_version));
+    std::fs::write(path, toml::to_string_pretty(&toml)?)?;
     Ok(())
 }
 
@@ -66,13 +71,12 @@ mod tests {
         "###;
         std::fs::write(&file, content).unwrap();
 
-        set_version(&file, "1.2.3-rc.4").unwrap();
+        set_version(&file, "1.2.3-rc.4".to_string()).unwrap();
 
-        let expected = r###"
-        [tool.poetry]
-        name = "tester"
-        version = "1.2.3-rc.4"
-        "###
+        let expected = r###"[tool.poetry]
+name = 'tester'
+version = '1.2.3-rc.4'
+"###
         .to_string();
         assert_eq!(std::fs::read_to_string(file).unwrap(), expected);
     }
