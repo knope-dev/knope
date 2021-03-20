@@ -20,7 +20,6 @@ dialoguer = "0.8.0"
 toml = "0.5.8"
 serde_json = { version = "1.0.64", features = ["preserve_order"] }
 git2 = "0.13.17"
-regex = "1.4.3"
 semver = "0.11.0"
 toml_edit = "0.2.0"
 execute = "0.2.8"

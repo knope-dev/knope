@@ -234,7 +234,6 @@ dependencies = [
  "http",
  "markdown",
  "platform-dirs",
- "regex",
  "semver",
  "serde",
  "serde_json",
