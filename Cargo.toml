@@ -22,7 +22,7 @@ serde_json = { version = "1.0.64", features = ["preserve_order"] }
 git2 = "0.13.18"
 semver = "0.11.0"
 toml_edit = "0.2.0"
-execute = "0.2.8"
+execute = "0.2.9"
 platform-dirs = "0.3.0"
 git-conventional = "0.9.1"
 markdown = "0.3.0"
