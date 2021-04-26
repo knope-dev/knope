@@ -26,7 +26,7 @@ name = "Release"
 
     [[workflow.steps]]
     type = "Command"
-    command = "cargo check"
+    command = "cargo update -w"
 
     [[workflows.steps]]
     type = "Command"
