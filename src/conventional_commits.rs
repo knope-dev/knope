@@ -48,7 +48,7 @@ fn get_conventional_commits_after_last_tag() -> Result<ConventionalCommits> {
         .wrap_err("Could not get commit messages after last tag.")?;
     let commits = commit_messages
         .iter()
-        .filter_map(|message| Commit::parse(message).ok())
+        .filter_map(|message| Commit::parse(message.trim()).ok())
         .collect();
     Ok(ConventionalCommits::from_commits(commits))
 }
