@@ -28,6 +28,7 @@ git-conventional = "0.9.1"
 markdown = "0.3.0"
 ureq = { version = "2.1.1", features = ["json"] }
 http = "0.2.4"
+clap = "2.33.3"
 
 [dev-dependencies]
 tempfile = "3.2.0"
