@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.3
+
+### Features
+
+- You can now pass the name of a workflow as an argument to Dobby to bypass the selection prompt (closes #24)
+
+### Fixes
+
+- Commits with extra whitespace at the end were not being recorded properly
+
 ## 0.1.2
 
 ### Fixes
