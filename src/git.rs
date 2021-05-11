@@ -128,7 +128,7 @@ fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Br
         .iter()
         .map(Branch::name)
         .filter_map(Result::ok)
-        .filter_map(|name| name)
+        .flatten()
         .collect();
 
     let base_branch_name = select(branch_names, prompt)
