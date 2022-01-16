@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use color_eyre::eyre::WrapErr;
 use color_eyre::eyre::{eyre, Result};
-use semver::Identifier;
+use semver::Prerelease;
 use serde::Deserialize;
 
 use crate::{package_json, pyproject};
@@ -41,15 +41,15 @@ impl Version {
     fn reset_pre(self) -> Self {
         match self {
             Version::Cargo(mut version) => Version::Cargo({
-                version.pre = Vec::new();
+                version.pre = Prerelease::EMPTY;
                 version
             }),
             Version::PyProject(mut version) => Version::PyProject({
-                version.pre = Vec::new();
+                version.pre = Prerelease::EMPTY;
                 version
             }),
             Version::Package(mut version) => Version::Package({
-                version.pre = Vec::new();
+                version.pre = Prerelease::EMPTY;
                 version
             }),
         }
@@ -138,15 +138,21 @@ fn bump(version: Version, rule: &Rule) -> Result<Version> {
     let is_0 = version.is_0();
     match (rule, is_0) {
         (Rule::Major, false) => version.run_on_inner(|mut v| {
-            v.increment_major();
+            v.major += 1;
+            v.minor = 0;
+            v.patch = 0;
+            v.pre = Prerelease::EMPTY;
             Ok(v)
         }),
         (Rule::Minor, false) | (Rule::Major, true) => version.run_on_inner(|mut v| {
-            v.increment_minor();
+            v.minor += 1;
+            v.patch = 0;
+            v.pre = Prerelease::EMPTY;
             Ok(v)
         }),
         (Rule::Patch, _) | (Rule::Minor, true) => version.run_on_inner(|mut v| {
-            v.increment_patch();
+            v.patch += 1;
+            v.pre = Prerelease::EMPTY;
             Ok(v)
         }),
         (Rule::Release, _) => Ok(version.reset_pre()),
@@ -228,33 +234,27 @@ mod test_bump {
 
 fn bump_pre(mut version: semver::Version, prefix: &str) -> Result<semver::Version> {
     if version.pre.is_empty() {
-        version.pre = vec![
-            Identifier::AlphaNumeric(prefix.to_owned()),
-            Identifier::Numeric(0),
-        ];
+        version.pre = Prerelease::new(&format!("{prefix}.0"))?;
         return Ok(version);
-    } else if version.pre.len() != 2 {
+    }
+
+    let pre_string = version.pre.as_str();
+    let parts = pre_string.split('.').collect::<Vec<_>>();
+
+    if parts.len() != 2 {
         return Err(eyre!(
             "A prerelease version already exists but could not be incremented"
         ));
     }
-    if let Some(Identifier::AlphaNumeric(existing_prefix)) = version.pre.get(0) {
-        if existing_prefix != prefix {
-            return Err(eyre!(
-                "Found prefix {} which does not match provided prefix {}",
-                existing_prefix,
-                prefix
-            ));
-        }
-    } else {
+
+    if parts[0] != prefix {
         return Err(eyre!(
-            "A prerelease version already exists but could not be incremented"
+            "Found prefix {} which does not match provided prefix {}",
+            parts[0],
+            prefix,
         ));
     }
-    if let Identifier::Numeric(pre_version) = version.pre.remove(1) {
-        version.pre.insert(1, Identifier::Numeric(pre_version + 1));
-        Ok(version)
-    } else {
-        Err(eyre!("No numeric pre component to bump"))
-    }
+    let pre_version = parts[1].parse::<u16>()?;
+    version.pre = Prerelease::new(&format!("{prefix}.{pre_version}"))?;
+    Ok(version)
 }
