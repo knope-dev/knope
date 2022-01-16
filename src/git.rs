@@ -189,7 +189,7 @@ pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
 }
 
 fn get_last_tag_name(repo: &Repository) -> Result<String> {
-    repo.describe(&DescribeOptions::new().describe_tags())
+    repo.describe(DescribeOptions::new().describe_tags())
         .wrap_err("Could not describe project, are there any tags?")?
         .format(Some(DescribeFormatOptions::new().abbreviated_size(0)))
         .wrap_err("Could not format description into tag.")

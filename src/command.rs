@@ -49,7 +49,7 @@ fn replace_variables(
                 match state {
                     State::Initial(_) => return Err(eyre!("Cannot use the variable IssueBranch unless the current workflow state is IssueSelected")),
                     State::IssueSelected(state_data) => {
-                        command = command.replace(&var_name, &branch_name_from_issue(&state_data.issue))
+                        command = command.replace(&var_name, &branch_name_from_issue(&state_data.issue));
                     }
                 }
             }
