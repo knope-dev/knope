@@ -68,7 +68,7 @@ impl Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Version::Cargo(v) | Version::PyProject(v) | Version::Package(v) => {
-                write!(f, "{}", v.to_string())
+                write!(f, "{}", v)
             }
         }
     }
@@ -234,7 +234,7 @@ mod test_bump {
 
 fn bump_pre(mut version: semver::Version, prefix: &str) -> Result<semver::Version> {
     if version.pre.is_empty() {
-        version.pre = Prerelease::new(&format!("{prefix}.0"))?;
+        version.pre = Prerelease::new(&format!("{}.0", prefix))?;
         return Ok(version);
     }
 
@@ -255,6 +255,6 @@ fn bump_pre(mut version: semver::Version, prefix: &str) -> Result<semver::Versio
         ));
     }
     let pre_version = parts[1].parse::<u16>()?;
-    version.pre = Prerelease::new(&format!("{prefix}.{pre_version}"))?;
+    version.pre = Prerelease::new(&format!("{}.{}", prefix, pre_version))?;
     Ok(version)
 }
