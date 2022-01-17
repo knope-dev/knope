@@ -14,3 +14,11 @@ args = ["serve", "docs", "--open"]
 [tasks.prettier]
 command = "npx"
 args = ["prettier", "**/*.md", "--write"]
+
+[tasks.deny]
+command = "cargo"
+args = ["deny", "--all-features", "check"]
+
+
+[tasks.pre-ci-flow]
+dependencies = ["deny", "clippy-flow"]

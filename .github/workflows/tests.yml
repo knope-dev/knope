@@ -1,69 +1,29 @@
-on: [push]
-
-name: Checks
+name: Run Checks
+on: [push, pull_request]
 
 jobs:
-  check:
-    name: Check
+  checks:
+    name: Run Checks
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
-          override: true
 
-      - name: Run cargo check
+      - uses: Swatinem/rust-cache@v1
+      - name: Install cargo-make
         uses: actions-rs/cargo@v1
         with:
-          command: check
-
-  lints:
-    name: Lints
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-
-      - name: Run cargo fmt
+          command: install
+          args: --debug cargo-make
+      - name: Run CI
         uses: actions-rs/cargo@v1
+        env:
+          CARGO_MAKE_RUN_CHECK_FORMAT: true
+          CARGO_MAKE_RUN_CLIPPY: true
+          CARGO_MAKE_BUILD_EXAMPLES: true
         with:
-          command: fmt
-          args: --all -- --check
-
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+          command: make
+          args: ci-flow
