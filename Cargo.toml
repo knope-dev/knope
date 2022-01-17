@@ -20,7 +20,7 @@ color-eyre = "0.6.0"
 console = "0.14.1"
 dialoguer = "0.8.0"
 toml = "0.5.8"
-serde_json = { version = "1.0.64", features = ["preserve_order"] }
+serde_json = { version = "1.0.75", features = ["preserve_order"] }
 git2 = "0.13.25"
 semver = "1.0.4"
 toml_edit = "0.13.0"
@@ -33,4 +33,4 @@ http = "0.2.6"
 clap = "2.33.3"
 
 [dev-dependencies]
-tempfile = "3.2.0"
+tempfile = "3.3.0"
