@@ -1,7 +1,16 @@
-[tasks.dev-book]
-	command = "mdbook"
-	args = ["watch", "docs", "--open"]
+[tasks.mdbook]
+install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = "help" }
+
+[tasks.book]
+dependencies = ["mdbook"]
+command = "mdbook"
+args = ["build", "docs"]
+
+[tasks.serve-book]
+dependencies = ["mdbook"]
+command = "mdbook"
+args = ["serve", "docs", "--open"]
 
 [tasks.prettier]
-	command = "npx"
-	args = ["prettier", "**/*.md", "--write"]
+command = "npx"
+args = ["prettier", "**/*.md", "--write"]
