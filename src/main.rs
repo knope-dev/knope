@@ -1,5 +1,6 @@
-#![warn(clippy::all, clippy::pedantic, clippy::cargo)]
-#![allow(clippy::multiple_crate_versions)]
+#![deny(clippy::all)]
+#![deny(clippy::pedantic)]
+#![deny(clippy::cargo)]
 #![forbid(unsafe_code)]
 
 use clap::{crate_authors, crate_description, crate_version, App, Arg};
