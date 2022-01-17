@@ -2,10 +2,10 @@
 name = "dobby"
 description = "A command line tool for automating common development tasks"
 version = "0.1.3"
-authors = ["Dylan Anthony <danthony@triaxtec.com>"]
+authors = ["Dylan Anthony <contact@dylananthony.com>"]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/triaxtec/dobby"
+repository = "https://github.com/dobby-dev/dobby"
 keywords = ["jira", "git", "github", "workflow", "script"]
 categories = ["command-line-utilities", "development-tools"]
 

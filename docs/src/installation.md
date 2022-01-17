@@ -10,15 +10,15 @@ Dobby is written in Rust and published on [crates.io](https://crates.io/crates/d
 ## Install from Source
 
 1. Install the current Rust stable toolchain via [Rustup]
-1. Clone [the GitHub repo](https://github.com/triaxtec/dobby/)
+1. Clone [the GitHub repo](https://github.com/dobby-dev/dobby/)
 1. `cargo install --path .` in the cloned directory
 
 ## Download a Binary
 
-We automatically build binaries for some platforms which can be found on the [Releases](https://github.com/triaxtec/dobby/releases) page.
+We automatically build binaries for some platforms which can be found on the [Releases](https://github.com/dobby-dev/dobby/releases) page.
 
 ## Other
 
-Have another method you'd prefer to use to install Dobby? Let us know by [opening a GitHub issue](https://github.com/triaxtec/dobby/issues).
+Have another method you'd prefer to use to install Dobby? Let us know by [opening a GitHub issue](https://github.com/dobby-dev/dobby/issues).
 
 [rustup]: https://rustup.rs

@@ -8,7 +8,7 @@ Details needed to use steps that reference GitHub repos.
 # dobby.toml
 
 [github]
-owner = "triaxtec"
+owner = "dobby-dev"
 repo = "dobby"
 ```
 
