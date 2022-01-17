@@ -29,16 +29,7 @@ mod workflow;
 fn main() -> Result<()> {
     color_eyre::install().expect("Could not set up error handling with color_eyre");
 
-    let matches = App::new("Dobby")
-        .version(crate_version!())
-        .author(crate_authors!())
-        .about(crate_description!())
-        .arg(
-            Arg::with_name("WORKFLOW")
-                .help("Name a workflow to bypass the interactive select and just run it.")
-                .index(1),
-        )
-        .get_matches();
+    let matches = app().get_matches();
 
     let preselected_workflow = matches.value_of("WORKFLOW");
 
@@ -58,4 +49,29 @@ fn main() -> Result<()> {
 
     let state = State::new(jira, github);
     workflow::run_workflow(workflow, state)
+}
+
+fn app() -> clap::App<'static> {
+    App::new("Dobby")
+        .version(crate_version!())
+        .author(crate_authors!())
+        .about(crate_description!())
+        .arg(
+            Arg::new("WORKFLOW")
+                .help(
+                    "Name a workflow to bypass the interactive select and just run it. \
+                        If not provided, you'll be asked to select one",
+                )
+                .index(1),
+        )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_app() {
+        app().debug_assert();
+    }
 }
