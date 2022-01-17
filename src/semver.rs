@@ -9,7 +9,7 @@ use crate::{package_json, pyproject};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(tag = "rule", content = "value")]
 pub(crate) enum Rule {
     Major,

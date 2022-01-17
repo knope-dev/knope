@@ -1,5 +1,5 @@
 use color_eyre::eyre::{Result, WrapErr};
-use git_conventional::{Commit, FEAT, FIX};
+use git_conventional::{Commit, Type};
 
 use crate::changelog::{Changelog, Version};
 use crate::git::get_commit_messages_after_last_tag;
@@ -21,15 +21,22 @@ impl ConventionalCommits {
         let mut breaking_changes = Vec::new();
 
         for commit in commits {
-            if commit.breaking() {
+            if let Some(breaking_message) = commit.breaking_description() {
                 rule = Rule::Major;
-                breaking_changes.push(commit.description().to_string());
-            } else if commit.type_() == FEAT {
+                breaking_changes.push(breaking_message.to_string());
+                if breaking_message == commit.description() {
+                    // There is no separate breaking change message, so the normal description is used.
+                    // Don't include the same message elsewhere.
+                    continue;
+                }
+            }
+
+            if commit.type_() == Type::FEAT {
                 features.push(commit.description().to_string());
                 if !matches!(rule, Rule::Major) {
                     rule = Rule::Minor;
                 }
-            } else if commit.type_() == FIX {
+            } else if commit.type_() == Type::FIX {
                 fixes.push(commit.description().to_string());
             }
         }
@@ -40,6 +47,151 @@ impl ConventionalCommits {
             fixes,
             breaking_changes,
         }
+    }
+}
+
+#[cfg(test)]
+mod test_conventional_commits {
+    use super::*;
+
+    #[test]
+    fn non_breaking_features() {
+        let commits = vec![
+            Commit::parse("feat: add a feature").unwrap(),
+            Commit::parse("feat: another feature").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Minor);
+        assert_eq!(
+            conventional_commits.features,
+            vec![
+                String::from("add a feature"),
+                String::from("another feature")
+            ]
+        );
+        assert_eq!(conventional_commits.fixes, Vec::<String>::new());
+        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
+    }
+
+    #[test]
+    fn non_breaking_fixes() {
+        let commits = vec![
+            Commit::parse("fix: a bug").unwrap(),
+            Commit::parse("fix: another bug").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Patch);
+        assert_eq!(
+            conventional_commits.fixes,
+            vec![String::from("a bug"), String::from("another bug")]
+        );
+        assert_eq!(conventional_commits.features, Vec::<String>::new());
+        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
+    }
+
+    #[test]
+    fn mixed_fixes_and_features() {
+        let commits = vec![
+            Commit::parse("fix: a bug").unwrap(),
+            Commit::parse("feat: add a feature").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Minor);
+        assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
+        assert_eq!(
+            conventional_commits.features,
+            vec![String::from("add a feature")]
+        );
+        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
+    }
+
+    #[test]
+    fn breaking_feature() {
+        let commits = vec![
+            Commit::parse("fix: a bug").unwrap(),
+            Commit::parse("feat!: add a feature").unwrap(),
+            Commit::parse("feat: add another feature").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
+        assert_eq!(
+            conventional_commits.features,
+            vec![String::from("add another feature")]
+        );
+        assert_eq!(
+            conventional_commits.breaking_changes,
+            vec![String::from("add a feature")]
+        );
+    }
+
+    #[test]
+    fn breaking_fix() {
+        let commits = vec![
+            Commit::parse("fix!: a bug").unwrap(),
+            Commit::parse("fix: another bug").unwrap(),
+            Commit::parse("feat: add a feature").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(
+            conventional_commits.fixes,
+            vec![String::from("another bug")]
+        );
+        assert_eq!(
+            conventional_commits.features,
+            vec![String::from("add a feature")]
+        );
+        assert_eq!(
+            conventional_commits.breaking_changes,
+            vec![String::from("a bug")]
+        );
+    }
+
+    #[test]
+    fn fix_with_separate_breaking_message() {
+        let commits = vec![
+            Commit::parse("fix: a bug\n\nBREAKING CHANGE: something broke").unwrap(),
+            Commit::parse("fix: another bug").unwrap(),
+            Commit::parse("feat: add a feature").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(
+            conventional_commits.fixes,
+            vec![String::from("a bug"), String::from("another bug")]
+        );
+        assert_eq!(
+            conventional_commits.features,
+            vec![String::from("add a feature")]
+        );
+        assert_eq!(
+            conventional_commits.breaking_changes,
+            vec![String::from("something broke")]
+        );
+    }
+
+    #[test]
+    fn feature_with_separate_breaking_message() {
+        let commits = vec![
+            Commit::parse("feat: add a feature\n\nBREAKING CHANGE: something broke").unwrap(),
+            Commit::parse("fix: a bug").unwrap(),
+            Commit::parse("feat: add another feature").unwrap(),
+        ];
+        let conventional_commits = ConventionalCommits::from_commits(commits);
+        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
+        assert_eq!(
+            conventional_commits.features,
+            vec![
+                String::from("add a feature"),
+                String::from("add another feature")
+            ]
+        );
+        assert_eq!(
+            conventional_commits.breaking_changes,
+            vec![String::from("something broke")]
+        );
     }
 }
 
