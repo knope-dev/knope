@@ -18,7 +18,7 @@ serde = { version = "1.0.133", features = ["derive"] }
 base64 = "0.13.0"
 color-eyre = "0.6.0"
 console = "0.14.1"
-dialoguer = "0.8.0"
+dialoguer = "0.9.0"
 toml = "0.5.8"
 serde_json = { version = "1.0.75", features = ["preserve_order"] }
 git2 = "0.13.25"
