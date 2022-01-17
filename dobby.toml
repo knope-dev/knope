@@ -30,7 +30,7 @@ name = "Prep Release"
 
     [[workflows.steps]]
     type = "Command"
-    command = "make prettier"
+    command = "cargo make prettier"
 
     [[workflows.steps]]
     type = "Command"
