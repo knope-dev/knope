@@ -6,6 +6,8 @@ authors = ["Dylan Anthony <contact@dylananthony.com>"]
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/dobby-dev/dobby"
+homepage = "https://dobby-dev.github.io/dobby/"
+documentation = "https://dobby-dev.github.io/dobby/"
 keywords = ["jira", "git", "github", "workflow", "script"]
 categories = ["command-line-utilities", "development-tools"]
 
