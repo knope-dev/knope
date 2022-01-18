@@ -26,7 +26,7 @@ semver = "1.0.4"
 toml_edit = "0.13.0"
 execute = "0.2.9"
 platform-dirs = "0.3.0"
-git-conventional = "0.11.1"
+git-conventional = "0.11.2"
 markdown = "0.3.0"
 ureq = { version = "2.4.0", features = ["json"] }
 http = "0.2.6"
