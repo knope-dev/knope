@@ -367,9 +367,9 @@ checksum = "f6503fe142514ca4799d4c26297c4248239fe8838d827db6bd6065c6ed29a6ce"
 
 [[package]]
 name = "git-conventional"
-version = "0.11.1"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e85b0054ddc3039f8c9dbf8c2235c51850bbcfe479b10ce61d951911001bb93"
+checksum = "f99a4ab940f75618c47d4a6875b728d1cf656cc0cc28a36ec7bc56ff7bd6127f"
 dependencies = [
  "doc-comment",
  "nom",
