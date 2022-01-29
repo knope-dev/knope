@@ -14,7 +14,7 @@ categories = ["command-line-utilities", "development-tools"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.133", features = ["derive"] }
+serde = { version = "1.0.136", features = ["derive"] }
 base64 = "0.13.0"
 color-eyre = "0.6.0"
 console = "0.15.0"
