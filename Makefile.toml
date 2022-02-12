@@ -19,6 +19,5 @@ args = ["prettier", "**/*.md", "--write"]
 command = "cargo"
 args = ["deny", "--all-features", "check"]
 
-
 [tasks.pre-ci-flow]
 dependencies = ["deny", "clippy-flow"]
