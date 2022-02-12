@@ -1,7 +1,7 @@
 use color_eyre::eyre::{Result, WrapErr};
 use git_conventional::{Commit, Type};
 
-use crate::changelog::{Changelog, Version};
+use crate::changelog::{add_version_to_changelog, Version};
 use crate::git::get_commit_messages_after_last_tag;
 use crate::semver::{bump_version, get_version, Rule};
 
@@ -219,15 +219,14 @@ pub(crate) fn update_project_from_conventional_commits(
     let new_version = get_version().wrap_err("While getting new version")?;
     let changelog_text =
         std::fs::read_to_string(changelog_path).wrap_err("While reading CHANGELOG.md")?;
-    let changelog = Changelog::from_markdown(&changelog_text);
     let changelog_version = Version {
         title: new_version.to_string(),
         fixes,
         features,
         breaking_changes,
     };
-    let changelog = changelog.add_version(changelog_version);
-    std::fs::write(changelog_path, changelog.into_markdown())
+    let changelog = add_version_to_changelog(&changelog_text, &changelog_version);
+    std::fs::write(changelog_path, changelog)
         .wrap_err_with(|| format!("While writing to {}", changelog_path))?;
     Ok(state)
 }
