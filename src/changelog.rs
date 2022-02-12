@@ -1,53 +1,32 @@
-use markdown::{generate_markdown, tokenize, Block, ListItem, Span};
+use std::iter::Map;
+use std::slice::Iter;
 
-#[derive(Debug)]
-pub(crate) struct Changelog {
-    header: Vec<Block>,
-    rest: Vec<Block>,
-}
+use itertools::Itertools;
 
-impl Changelog {
-    pub(crate) fn into_markdown(self) -> String {
-        let Self { header, rest } = self;
-        let blocks = header.into_iter().chain(rest.into_iter()).collect();
-        generate_markdown(blocks)
+/// Take in some existing markdown in the expected changelog format, find the top entry, and
+/// put the new version above it.
+pub(crate) fn add_version_to_changelog(existing: &str, version: &Version) -> String {
+    let new_changes = version.markdown_lines();
+
+    let mut lines = existing.lines();
+    let mut changelog = lines
+        .take_while_ref(|line| !line.starts_with("##"))
+        .chain(new_changes.iter().map(String::as_str))
+        .join("\n");
+
+    if let Some(existing) = lines.next() {
+        // Give an extra space between the new section and the existing section.
+        changelog.push('\n');
+        changelog.push_str(existing);
+        changelog.push('\n');
     }
+    changelog.push_str(&lines.join("\n"));
 
-    pub(crate) fn from_markdown(text: &str) -> Self {
-        let blocks = tokenize(text);
-        let (header, rest) = parse_header(blocks);
-
-        Self { header, rest }
+    if existing.ends_with('\n') && !changelog.ends_with('\n') {
+        // Preserve whitespace at end of the file.
+        changelog.push('\n');
     }
-
-    pub(crate) fn add_version(self, version: Version) -> Self {
-        let Self { header, rest } = self;
-        Self {
-            header,
-            rest: version
-                .into_markdown_blocks()
-                .into_iter()
-                .chain(rest.into_iter())
-                .collect(),
-        }
-    }
-}
-
-fn parse_header(mut blocks: Vec<Block>) -> (Vec<Block>, Vec<Block>) {
-    let end_index = blocks.iter().enumerate().find_map(|(idx, block)| {
-        if matches!(block, Block::Header(_, 2)) {
-            Some(idx)
-        } else {
-            None
-        }
-    });
-    match end_index {
-        Some(index) => {
-            let rest = blocks.split_off(index);
-            (blocks, rest)
-        }
-        None => (blocks, Vec::new()),
-    }
+    changelog
 }
 
 #[derive(Clone)]
@@ -59,8 +38,8 @@ pub(crate) struct Version {
 }
 
 impl Version {
-    fn into_markdown_blocks(self) -> Vec<Block> {
-        let headers_size = 4;
+    fn markdown_lines(&self) -> Vec<String> {
+        const HEADERS_AND_PADDING: usize = 10;
         let Self {
             title,
             fixes,
@@ -68,99 +47,41 @@ impl Version {
             breaking_changes,
         } = self;
         let mut blocks = Vec::with_capacity(
-            fixes.len() + features.len() + breaking_changes.len() + headers_size,
+            fixes.len() + features.len() + breaking_changes.len() + HEADERS_AND_PADDING,
         );
 
-        blocks.push(header_block(title, 2));
+        blocks.push(format!("## {}\n", title));
         if !breaking_changes.is_empty() {
-            blocks.push(header_block("Breaking Changes".to_string(), 3));
-            blocks.push(unordered_list(breaking_changes));
+            blocks.push(String::from("### Breaking Changes\n"));
+            blocks.extend(unordered_list(breaking_changes));
+            blocks.push(String::new());
         }
         if !features.is_empty() {
-            blocks.push(header_block("Features".to_string(), 3));
-            blocks.push(unordered_list(features));
+            blocks.push(String::from("### Features\n"));
+            blocks.extend(unordered_list(features));
+            blocks.push(String::new());
         }
         if !fixes.is_empty() {
-            blocks.push(header_block("Fixes".to_string(), 3));
-            blocks.push(unordered_list(fixes));
+            blocks.push(String::from("### Fixes\n"));
+            blocks.extend(unordered_list(fixes));
+            blocks.push(String::new());
         }
         blocks
     }
 }
 
-fn header_block(text: String, level: usize) -> Block {
-    Block::Header(vec![Span::Text(text)], level)
-}
-
-fn unordered_list(items: Vec<String>) -> Block {
-    Block::UnorderedList(
-        items
-            .into_iter()
-            .map(|note| ListItem::Simple(vec![Span::Text(note)]))
-            .collect(),
-    )
+fn unordered_list(items: &[String]) -> Map<Iter<String>, fn(&String) -> String> {
+    items.iter().map(|note| format!("- {}", note))
 }
 
 #[cfg(test)]
 mod tests {
-    use markdown::{generate_markdown, Block, ListItem, Span};
-
-    #[test]
-    fn changelog_from_markdown() {
-        let markdown = r##"
-# Changelog
-Some details about the keepachangelog format
-
-Sometimes a second paragraph
-
-## 0.1.0 - 2020-12-25
-### Features
-- Initial version
-
-[link]: some footer details
-"##;
-        let changelog = super::Changelog::from_markdown(markdown);
-        println!("{:#?}", changelog);
-        assert_eq!(changelog.header.len(), 3);
-        assert_eq!(changelog.rest.len(), 4);
-    }
-
-    #[test]
-    fn changelog_into_markdown() {
-        let expected = r##"# Changelog
-
-Some details about the keepachangelog format
-
-## 0.1.0 - 2020-12-25
-
-### Features
-
-* Initial version
-
-[link]: some footer details"##;
-        let changelog = super::Changelog {
-            header: vec![
-                Block::Header(vec![Span::Text("Changelog".to_string())], 1),
-                Block::Paragraph(vec![Span::Text(
-                    "Some details about the keepachangelog format".to_string(),
-                )]),
-            ],
-            rest: vec![
-                Block::Header(vec![Span::Text("0.1.0 - 2020-12-25".to_string())], 2),
-                Block::Header(vec![Span::Text("Features".to_string())], 3),
-                Block::UnorderedList(vec![ListItem::Simple(vec![Span::Text(
-                    "Initial version".to_string(),
-                )])]),
-                Block::Paragraph(vec![Span::Text("[link]: some footer details".to_string())]),
-            ],
-        };
-        assert_eq!(changelog.into_markdown(), expected);
-    }
+    use crate::changelog::add_version_to_changelog;
 
     #[test]
     fn changelog_add_version() {
-        let markdown = r##"
-# Changelog
+        const MARKDOWN: &str = r##"# Changelog
+
 Some details about the keepachangelog format
 
 Sometimes a second paragraph
@@ -171,53 +92,80 @@ Sometimes a second paragraph
 
 [link]: some footer details
 "##;
-        let changelog = super::Changelog::from_markdown(markdown);
-        let version = super::Version {
-            title: "0.2.0 - 2020-12-31".to_string(),
-            fixes: vec!["Fixed something".to_string()],
-            features: vec![],
-            breaking_changes: vec![],
-        };
-        let changelog = changelog.add_version(version.clone());
-        assert_eq!(changelog.rest.len(), 7);
-        assert_eq!(changelog.rest[0], version.into_markdown_blocks()[0])
-    }
+        const EXPECTED: &str = r##"# Changelog
 
-    #[test]
-    fn version_into_blocks() {
-        let version = super::Version {
-            title: "0.2.0 - 2020-12-31".to_string(),
-            fixes: vec![
-                "Fixed something".to_string(),
-                "Fixed something else".to_string(),
-            ],
-            features: vec![
-                "Added something".to_string(),
-                "Added something else".to_string(),
-            ],
-            breaking_changes: vec![
-                "Broke something".to_string(),
-                "Broke something else".to_string(),
-            ],
-        };
-        let expected = r##"## 0.2.0 - 2020-12-31
+Some details about the keepachangelog format
+
+Sometimes a second paragraph
+
+## 0.2.0 - 2020-12-31
 
 ### Breaking Changes
 
-* Broke something
-* Broke something else
+- Breaking change
 
 ### Features
 
-* Added something
-* Added something else
+- New Feature
 
 ### Fixes
 
-* Fixed something
-* Fixed something else"##;
+- Fixed something
 
-        let blocks = version.into_markdown_blocks();
-        assert_eq!(generate_markdown(blocks), expected);
+## 0.1.0 - 2020-12-25
+### Features
+- Initial version
+
+[link]: some footer details
+"##;
+
+        let version = super::Version {
+            title: "0.2.0 - 2020-12-31".to_string(),
+            fixes: vec!["Fixed something".to_string()],
+            features: vec![String::from("New Feature")],
+            breaking_changes: vec![String::from("Breaking change")],
+        };
+        let changelog = add_version_to_changelog(MARKDOWN, &version);
+        assert_eq!(changelog, EXPECTED);
+    }
+
+    #[test]
+    fn changelog_no_existing_version() {
+        const MARKDOWN: &str = r##"# Changelog
+
+Some details about the keepachangelog format
+
+Sometimes a second paragraph
+
+"##;
+        const EXPECTED: &str = r##"# Changelog
+
+Some details about the keepachangelog format
+
+Sometimes a second paragraph
+
+## 0.2.0 - 2020-12-31
+
+### Breaking Changes
+
+- Breaking change
+
+### Features
+
+- New Feature
+
+### Fixes
+
+- Fixed something
+"##;
+
+        let version = super::Version {
+            title: "0.2.0 - 2020-12-31".to_string(),
+            fixes: vec!["Fixed something".to_string()],
+            features: vec![String::from("New Feature")],
+            breaking_changes: vec![String::from("Breaking change")],
+        };
+        let changelog = add_version_to_changelog(MARKDOWN, &version);
+        assert_eq!(changelog, EXPECTED);
     }
 }
