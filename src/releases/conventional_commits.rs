@@ -3,14 +3,14 @@ use git_conventional::{Commit, Type};
 
 use crate::git::get_commit_messages_after_last_tag;
 use crate::releases::changelog::new_changelog_lines;
-use crate::semver::{bump_version, get_version, Rule};
+use crate::semver::{bump_version, get_version, ConventionalRule, Rule};
 use crate::state::{Initial, IssueSelected, ReleasePrepared, State};
 
 use super::changelog::add_version_to_changelog;
 
 #[derive(Debug)]
 struct ConventionalCommits {
-    rule: Rule,
+    rule: ConventionalRule,
     features: Vec<String>,
     fixes: Vec<String>,
     breaking_changes: Vec<String>,
@@ -18,14 +18,14 @@ struct ConventionalCommits {
 
 impl ConventionalCommits {
     fn from_commits(commits: Vec<Commit>) -> Self {
-        let mut rule = Rule::Patch;
+        let mut rule = ConventionalRule::Patch;
         let mut features = Vec::new();
         let mut fixes = Vec::new();
         let mut breaking_changes = Vec::new();
 
         for commit in commits {
             if let Some(breaking_message) = commit.breaking_description() {
-                rule = Rule::Major;
+                rule = ConventionalRule::Major;
                 breaking_changes.push(breaking_message.to_string());
                 if breaking_message == commit.description() {
                     // There is no separate breaking change message, so the normal description is used.
@@ -36,8 +36,8 @@ impl ConventionalCommits {
 
             if commit.type_() == Type::FEAT {
                 features.push(commit.description().to_string());
-                if !matches!(rule, Rule::Major) {
-                    rule = Rule::Minor;
+                if !matches!(rule, ConventionalRule::Major) {
+                    rule = ConventionalRule::Minor;
                 }
             } else if commit.type_() == Type::FIX {
                 fixes.push(commit.description().to_string());
@@ -64,7 +64,7 @@ mod test_conventional_commits {
             Commit::parse("feat: another feature").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Minor);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Minor);
         assert_eq!(
             conventional_commits.features,
             vec![
@@ -83,7 +83,7 @@ mod test_conventional_commits {
             Commit::parse("fix: another bug").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Patch);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Patch);
         assert_eq!(
             conventional_commits.fixes,
             vec![String::from("a bug"), String::from("another bug")]
@@ -99,7 +99,7 @@ mod test_conventional_commits {
             Commit::parse("feat: add a feature").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Minor);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Minor);
         assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
         assert_eq!(
             conventional_commits.features,
@@ -116,7 +116,7 @@ mod test_conventional_commits {
             Commit::parse("feat: add another feature").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Major);
         assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
         assert_eq!(
             conventional_commits.features,
@@ -136,7 +136,7 @@ mod test_conventional_commits {
             Commit::parse("feat: add a feature").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Major);
         assert_eq!(
             conventional_commits.fixes,
             vec![String::from("another bug")]
@@ -159,7 +159,7 @@ mod test_conventional_commits {
             Commit::parse("feat: add a feature").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Major);
         assert_eq!(
             conventional_commits.fixes,
             vec![String::from("a bug"), String::from("another bug")]
@@ -182,7 +182,7 @@ mod test_conventional_commits {
             Commit::parse("feat: add another feature").unwrap(),
         ];
         let conventional_commits = ConventionalCommits::from_commits(commits);
-        assert_eq!(conventional_commits.rule, Rule::Major);
+        assert_eq!(conventional_commits.rule, ConventionalRule::Major);
         assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
         assert_eq!(
             conventional_commits.features,
@@ -214,15 +214,20 @@ pub(crate) fn update_project_from_conventional_commits(
     prerelease_label: Option<String>,
 ) -> Result<crate::State> {
     let ConventionalCommits {
-        mut rule,
+        rule,
         features,
         fixes,
         breaking_changes,
     } = get_conventional_commits_after_last_tag()?;
-    if let Some(prerelease_label) = prerelease_label {
-        rule = Rule::Pre(prerelease_label);
+    let rule = if let Some(prefix) = prerelease_label {
+        Rule::Pre {
+            label: prefix,
+            fallback_rule: rule,
+        }
+    } else {
+        Rule::from(rule)
     };
-    let state = bump_version(state, &rule).wrap_err("While bumping version")?;
+    let state = bump_version(state, rule).wrap_err("While bumping version")?;
     let new_version = get_version().wrap_err("While getting new version")?;
     let changelog_text =
         std::fs::read_to_string(changelog_path).wrap_err("While reading CHANGELOG.md")?;

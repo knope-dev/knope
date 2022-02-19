@@ -33,7 +33,7 @@ impl Config {
 pub(crate) struct Jira {
     /// The URL to your Atlassian instance running Jira
     pub(crate) url: String,
-    /// The key of the Jira project to filter on (the prefix of all issues)
+    /// The key of the Jira project to filter on (the label of all issues)
     pub(crate) project: String,
 }
 
