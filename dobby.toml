@@ -48,6 +48,41 @@ name = "release"
     [[workflows.steps]]
     type = "Release"
 
+[[workflows]]
+name = "prerelease"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git checkout main && git pull"
+
+    [[workflows.steps]]
+    type = "PrepareRelease"
+    prerelease_label = "rc"
+
+    [[workflow.steps]]
+    type = "Command"
+    command = "cargo update -w"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "cargo make prettier"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git add Cargo.toml Cargo.lock CHANGELOG.md"
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git commit -m \"chore: Bump to version\""
+    variables = {"version" = "Version"}
+
+    [[workflows.steps]]
+    type = "Command"
+    command = "git push"
+
+    [[workflows.steps]]
+    type = "Release"
+
 [github]
 owner = "dobby-dev"
 repo = "dobby"
