@@ -208,13 +208,17 @@ fn get_conventional_commits_after_last_tag() -> Result<ConventionalCommits> {
 pub(crate) fn update_project_from_conventional_commits(
     state: crate::State,
     changelog_path: &str,
+    prerelease_label: Option<String>,
 ) -> Result<crate::State> {
     let ConventionalCommits {
-        rule,
+        mut rule,
         features,
         fixes,
         breaking_changes,
     } = get_conventional_commits_after_last_tag()?;
+    if let Some(prerelease_label) = prerelease_label {
+        rule = Rule::Pre(prerelease_label);
+    };
     let state = bump_version(state, &rule).wrap_err("While bumping version")?;
     let new_version = get_version().wrap_err("While getting new version")?;
     let changelog_text =

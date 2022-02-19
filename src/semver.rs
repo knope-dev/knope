@@ -228,6 +228,6 @@ fn bump_pre(mut version: Version, prefix: &str) -> Result<Version> {
         ));
     }
     let pre_version = parts[1].parse::<u16>()?;
-    version.pre = Prerelease::new(&format!("{}.{}", prefix, pre_version))?;
+    version.pre = Prerelease::new(&format!("{}.{}", prefix, pre_version + 1))?;
     Ok(version)
 }
