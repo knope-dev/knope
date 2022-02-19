@@ -19,6 +19,31 @@ fn test() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+    // Configure fake Git user.
+    let output = Command::new("git")
+        .arg("config")
+        .arg("user.email")
+        .arg("fake@dobby.dev")
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let output = Command::new("git")
+        .arg("config")
+        .arg("user.name")
+        .arg("Fake Dobby")
+        .current_dir(temp_dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let output = Command::new("git")
         .arg("commit")
         .arg("--allow-empty")
