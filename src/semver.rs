@@ -10,13 +10,41 @@ use crate::{package_json, pyproject};
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
 #[derive(Debug, Deserialize, PartialEq, Eq)]
-#[serde(tag = "rule", content = "value")]
+#[serde(tag = "rule")]
 pub(crate) enum Rule {
     Major,
     Minor,
     Patch,
-    Pre(String),
+    Pre {
+        label: String,
+        #[serde(skip_deserializing)]
+        fallback_rule: ConventionalRule,
+    },
     Release,
+}
+
+impl From<ConventionalRule> for Rule {
+    fn from(fallback_rule: ConventionalRule) -> Self {
+        match fallback_rule {
+            ConventionalRule::Major => Rule::Major,
+            ConventionalRule::Minor => Rule::Minor,
+            ConventionalRule::Patch => Rule::Patch,
+        }
+    }
+}
+
+/// The rules that can be derived from Conventional Commits.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum ConventionalRule {
+    Major,
+    Minor,
+    Patch,
+}
+
+impl Default for ConventionalRule {
+    fn default() -> Self {
+        ConventionalRule::Patch
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -38,7 +66,7 @@ impl Display for PackageVersion {
     }
 }
 
-pub(crate) fn bump_version(state: crate::State, rule: &Rule) -> Result<crate::State> {
+pub(crate) fn bump_version(state: crate::State, rule: Rule) -> Result<crate::State> {
     if let Ok(mut package_version) = get_version() {
         package_version.version =
             bump(package_version.version, rule).wrap_err("While bumping version")?;
@@ -107,7 +135,7 @@ fn set_version(version: &PackageVersion) -> Result<()> {
 /// different behavior:
 /// 1. [`Rule::Major`] will bump the minor component.
 /// 2. [`Rule::Minor`] will bump the patch component.
-fn bump(mut version: Version, rule: &Rule) -> Result<Version> {
+fn bump(mut version: Version, rule: Rule) -> Result<Version> {
     let is_0 = version.major == 0;
     match (rule, is_0) {
         (Rule::Major, false) => {
@@ -132,7 +160,13 @@ fn bump(mut version: Version, rule: &Rule) -> Result<Version> {
             version.pre = Prerelease::EMPTY;
             Ok(version)
         }
-        (Rule::Pre(prefix), _) => bump_pre(version, prefix),
+        (
+            Rule::Pre {
+                label: prefix,
+                fallback_rule,
+            },
+            _,
+        ) => bump_pre(version, &prefix, fallback_rule),
     }
 }
 
@@ -143,7 +177,7 @@ mod test_bump {
     #[test]
     fn major() {
         let version = Version::new(1, 2, 3);
-        let version = bump(version, &Rule::Major).unwrap();
+        let version = bump(version, Rule::Major).unwrap();
 
         assert_eq!(version, Version::new(2, 0, 0));
     }
@@ -151,7 +185,7 @@ mod test_bump {
     #[test]
     fn major_0() {
         let version = Version::new(0, 1, 2);
-        let version = bump(version, &Rule::Major).unwrap();
+        let version = bump(version, Rule::Major).unwrap();
 
         assert_eq!(version, Version::new(0, 2, 0));
     }
@@ -159,7 +193,7 @@ mod test_bump {
     #[test]
     fn minor() {
         let version = Version::new(1, 2, 3);
-        let version = bump(version, &Rule::Minor).unwrap();
+        let version = bump(version, Rule::Minor).unwrap();
 
         assert_eq!(version, Version::new(1, 3, 0));
     }
@@ -167,7 +201,7 @@ mod test_bump {
     #[test]
     fn minor_0() {
         let version = Version::new(0, 1, 2);
-        let version = bump(version, &Rule::Minor).unwrap();
+        let version = bump(version, Rule::Minor).unwrap();
 
         assert_eq!(version, Version::new(0, 1, 3));
     }
@@ -175,7 +209,7 @@ mod test_bump {
     #[test]
     fn patch() {
         let version = Version::new(1, 2, 3);
-        let version = bump(version, &Rule::Patch).unwrap();
+        let version = bump(version, Rule::Patch).unwrap();
 
         assert_eq!(version, Version::new(1, 2, 4));
     }
@@ -183,7 +217,7 @@ mod test_bump {
     #[test]
     fn patch_0() {
         let version = Version::new(1, 2, 3);
-        let version = bump(version, &Rule::Patch).unwrap();
+        let version = bump(version, Rule::Patch).unwrap();
 
         assert_eq!(version, Version::new(1, 2, 4));
     }
@@ -191,22 +225,43 @@ mod test_bump {
     #[test]
     fn pre() {
         let version = Version::new(1, 2, 3);
-        let version = bump(version, &Rule::Pre("rc".to_string())).unwrap();
+        let version = bump(
+            version,
+            Rule::Pre {
+                label: String::from("rc"),
+                fallback_rule: ConventionalRule::Minor,
+            },
+        )
+        .unwrap();
 
-        assert_eq!(version, Version::parse("1.2.3-rc.0").unwrap());
+        assert_eq!(version, Version::parse("1.3.0-rc.0").unwrap());
     }
 
     #[test]
     fn release() {
         let version = Version::parse("1.2.3-rc.0").unwrap();
-        let version = bump(version, &Rule::Release).unwrap();
+        let version = bump(version, Rule::Release).unwrap();
 
         assert_eq!(version, Version::new(1, 2, 3));
     }
 }
 
-fn bump_pre(mut version: Version, prefix: &str) -> Result<Version> {
+/// Bumps the pre-release component of a [`Version`].
+///
+/// If the existing [`Version`] has no pre-release,
+/// `semantic_rule` will be used to bump to primary components before the
+/// pre-release component is added.
+///
+/// # Errors
+///
+/// Can fail if there is an existing pre-release component that can't be incremented.
+fn bump_pre(
+    mut version: Version,
+    prefix: &str,
+    fallback_rule: ConventionalRule,
+) -> Result<Version> {
     if version.pre.is_empty() {
+        let mut version = bump(version, fallback_rule.into())?;
         version.pre = Prerelease::new(&format!("{}.0", prefix))?;
         return Ok(version);
     }

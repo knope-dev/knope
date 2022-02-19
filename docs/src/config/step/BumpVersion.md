@@ -16,10 +16,10 @@ These are the types of files that this step knows how to search for a semantic v
 [[workflows.steps]]
 type = "BumpVersion"
 rule = "Pre"
-value = "rc"
+label = "rc"
 ```
 
-Where `rule` defines the [Semantic Versioning] rule to use and `value` is optional depending on the `rule`.
+Where `rule` defines the [Semantic Versioning] rule to use and `label` is optional depending on the `rule`.
 
 ## Rules
 
@@ -37,7 +37,7 @@ Increment the Patch component of the semantic version and reset all lesser compo
 
 ### Pre
 
-Increment the pre-release component of the semantic version or add it if missing. You must also provide a `value` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `value` "rc" would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.3-rc.0".
+Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` "rc" would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.4-rc.0".
 
 ### A Note on 0.x Versions
 

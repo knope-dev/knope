@@ -20,9 +20,7 @@ pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
         }
         Step::SwitchBranches => git::switch_branches(state).wrap_err("During SwitchBranches"),
         Step::RebaseBranch { to } => git::rebase_branch(state, &to).wrap_err("During MergeBranch"),
-        Step::BumpVersion(rule) => {
-            semver::bump_version(state, &rule).wrap_err("During BumpVersion")
-        }
+        Step::BumpVersion(rule) => semver::bump_version(state, rule).wrap_err("During BumpVersion"),
         Step::Command { command, variables } => {
             command::run_command(state, command, variables).wrap_err("During Command")
         }
