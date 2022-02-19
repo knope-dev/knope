@@ -15,14 +15,14 @@ name = "Finish Development"
     command = "gh pr create --web -p WIP"
 
 [[workflows]]
-name = "Prep Release"
+name = "release"
 
     [[workflows.steps]]
     type = "Command"
     command = "git checkout main && git pull"
 
     [[workflows.steps]]
-    type = "UpdateProjectFromCommits"
+    type = "PrepareRelease"
 
     [[workflow.steps]]
     type = "Command"
@@ -36,9 +36,6 @@ name = "Prep Release"
     type = "Command"
     command = "git add Cargo.toml Cargo.lock CHANGELOG.md"
 
-[[workflows]]
-name = "Finish Release"
-
     [[workflows.steps]]
     type = "Command"
     command = "git commit -m \"chore: Bump to version\""
@@ -49,14 +46,7 @@ name = "Finish Release"
     command = "git push"
 
     [[workflows.steps]]
-    type = "Command"
-    command = "gh release create v.version --title version --draft -F CHANGELOG.md"
-    variables = {"version" = "Version"}
-
-    [[workflows.steps]]
-    type = "Command"
-    command = "gh release view --web v.version"
-    variables = {"version" = "Version"}
+    type = "Release"
 
 [github]
 owner = "dobby-dev"

@@ -21,7 +21,7 @@ pub(crate) enum Rule {
 
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct PackageVersion {
-    version: Version,
+    pub(crate) version: Version,
     package_manager: PackageManager,
 }
 

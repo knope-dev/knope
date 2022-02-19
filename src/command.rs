@@ -47,7 +47,7 @@ fn replace_variables(
             Variable::Version => command = command.replace(&var_name, &get_version()?.to_string()),
             Variable::IssueBranch => {
                 match state {
-                    State::Initial(_) => return Err(eyre!("Cannot use the variable IssueBranch unless the current workflow state is IssueSelected")),
+                    State::Initial(_) | State::ReleasePrepared(..) => return Err(eyre!("Cannot use the variable IssueBranch unless the current workflow state is IssueSelected")),
                     State::IssueSelected(state_data) => {
                         command = command.replace(&var_name, &branch_name_from_issue(&state_data.issue));
                     }
@@ -60,8 +60,9 @@ fn replace_variables(
 
 #[cfg(test)]
 mod test_run_command {
-    use super::*;
     use tempfile::NamedTempFile;
+
+    use super::*;
 
     #[test]
     fn test() {
@@ -80,9 +81,10 @@ mod test_run_command {
 
 #[cfg(test)]
 mod test_replace_variables {
-    use super::*;
     use crate::issues::Issue;
     use crate::state::{GitHub, Initial, IssueSelected};
+
+    use super::*;
 
     #[test]
     fn multiple_variables() {
@@ -106,12 +108,8 @@ mod test_replace_variables {
 
         assert_eq!(
             command,
-            format!(
-                "blah {} {}",
-                get_version().unwrap().to_string(),
-                expected_branch_name
-            )
-        )
+            format!("blah {} {}", get_version().unwrap(), expected_branch_name)
+        );
     }
 
     #[test]
@@ -129,8 +127,8 @@ mod test_replace_variables {
 
         assert_eq!(
             command,
-            format!("blah {} other blah", get_version().unwrap().to_string(),)
-        )
+            format!("blah {} other blah", get_version().unwrap(),)
+        );
     }
 
     #[test]
@@ -152,6 +150,6 @@ mod test_replace_variables {
 
         let command = replace_variables(command, variables, &state).unwrap();
 
-        assert_eq!(command, format!("blah {} other blah", expected_branch_name))
+        assert_eq!(command, format!("blah {} other blah", expected_branch_name));
     }
 }

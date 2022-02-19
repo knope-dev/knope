@@ -24,6 +24,6 @@ Where `type` matches one of the available steps listed below. Some steps also ca
 - [RebaseBranch](./RebaseBranch.md)
 - [BumpVersion](./BumpVersion.md)
 - [Command](./Command.md)
-- [UpdateProjectFromCommits](./UpdateProjectFromCommits.md)
+- [PrepareRelease](./PrepareRelease.md)
 
 [workflow]: ../workflow.md

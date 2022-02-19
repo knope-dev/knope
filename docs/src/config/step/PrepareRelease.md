@@ -1,4 +1,4 @@
-# UpdateProjectFromCommits step
+# PrepareRelease step
 
 This will look through all commits since the last tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the project version (depending on the [Semantic Versioning] rule determined from the commits) and add a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
@@ -19,7 +19,7 @@ You can either provide an explicit path when declaring the step, like this:
 name = "Release"
 
     [[workflows.steps]]
-    type = "UpdateProjectFromCommits"
+    type = "PrepareRelease"
     changelog_path = "docs/CHANGELOG.md"
 ```
 
@@ -34,7 +34,7 @@ If you include the `prerelease_label` option, the version created will be a pre-
 name = "prerelease"
 
     [[workflows.steps]]
-    type = "UpdateProjectFromCommits"
+    type = "PrepareRelease"
     prerelease_label = "rc"
 ```
 
