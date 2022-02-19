@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.5-rc.0
+
+### Breaking Changes
+
+- `UpdateProjectFromCommits` step has been renamed to `PrepareRelease`.
+
+### Features
+
+- Add a `Release` step for generating GitHub releases. (#136)
+- Support pre-releases in `UpdateProjectFromCommits`. (#132)
+
+### Fixes
+
+- Stop parsing Markdown in Changelogs to avoid errors in unimplemented features. (#127)
+
 ## 0.1.5
 
 ### Fixes
