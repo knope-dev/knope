@@ -1,9 +1,12 @@
 use color_eyre::eyre::{Result, WrapErr};
 use git_conventional::{Commit, Type};
 
-use crate::changelog::{add_version_to_changelog, Version};
 use crate::git::get_commit_messages_after_last_tag;
+use crate::releases::changelog::new_changelog_lines;
 use crate::semver::{bump_version, get_version, Rule};
+use crate::state::{Initial, IssueSelected, ReleasePrepared, State};
+
+use super::changelog::add_version_to_changelog;
 
 #[derive(Debug)]
 struct ConventionalCommits {
@@ -223,14 +226,36 @@ pub(crate) fn update_project_from_conventional_commits(
     let new_version = get_version().wrap_err("While getting new version")?;
     let changelog_text =
         std::fs::read_to_string(changelog_path).wrap_err("While reading CHANGELOG.md")?;
-    let changelog_version = Version {
-        title: new_version.to_string(),
-        fixes,
-        features,
-        breaking_changes,
-    };
-    let changelog = add_version_to_changelog(&changelog_text, &changelog_version);
+    let new_version_string = new_version.to_string();
+    let new_changes =
+        new_changelog_lines(&new_version_string, &fixes, &features, &breaking_changes);
+    let changelog = add_version_to_changelog(&changelog_text, &new_changes);
     std::fs::write(changelog_path, changelog)
         .wrap_err_with(|| format!("While writing to {}", changelog_path))?;
-    Ok(state)
+    match state {
+        State::Initial(Initial {
+            jira_config,
+            github_state,
+            github_config,
+        })
+        | State::IssueSelected(IssueSelected {
+            jira_config,
+            github_state,
+            github_config,
+            ..
+        })
+        | State::ReleasePrepared(ReleasePrepared {
+            jira_config,
+            github_state,
+            github_config,
+            ..
+        }) => Ok(State::ReleasePrepared(ReleasePrepared {
+            jira_config,
+            github_state,
+            github_config,
+            release_notes: new_changes.join("\n"),
+            new_version: new_version_string,
+            is_prerelease: !new_version.version.pre.is_empty(),
+        })),
+    }
 }

@@ -1,8 +1,9 @@
+use std::fmt;
+
 use color_eyre::eyre::{eyre, Result};
 
 use crate::prompt::select;
-use crate::state::{Initial, IssueSelected, State};
-use std::fmt;
+use crate::state::{Initial, IssueSelected, ReleasePrepared, State};
 
 mod github;
 mod jira;
@@ -26,6 +27,12 @@ pub(crate) fn select_jira_issue(status: &str, state: State) -> Result<State> {
             jira_config,
             github_state,
             github_config,
+        })
+        | State::ReleasePrepared(ReleasePrepared {
+            jira_config,
+            github_state,
+            github_config,
+            ..
         }) => {
             let jira_config = jira_config.ok_or_else(|| eyre!("Jira is not configured"))?;
             let issues = jira::get_issues(&jira_config, status)?;
@@ -48,6 +55,12 @@ pub(crate) fn select_github_issue(labels: Option<&Vec<String>>, state: State) ->
             jira_config,
             github_state,
             github_config,
+        })
+        | State::ReleasePrepared(ReleasePrepared {
+            jira_config,
+            github_state,
+            github_config,
+            ..
         }) => {
             let (github_config, github_state, issues) =
                 github::list_issues(github_config, github_state, labels)?;
@@ -65,9 +78,6 @@ pub(crate) fn select_github_issue(labels: Option<&Vec<String>>, state: State) ->
 
 pub(crate) fn transition_selected_issue(status: &str, state: State) -> Result<State> {
     match state {
-        State::Initial(..) => Err(eyre!(
-            "No issue selected, try running a SelectIssue step before this one"
-        )),
         State::IssueSelected(IssueSelected {
             jira_config,
             github_state,
@@ -84,5 +94,8 @@ pub(crate) fn transition_selected_issue(status: &str, state: State) -> Result<St
                 issue,
             }))
         }
+        State::Initial(..) | State::ReleasePrepared(..) => Err(eyre!(
+            "No issue selected, try running a SelectIssue step before this one"
+        )),
     }
 }

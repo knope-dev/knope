@@ -1,17 +1,20 @@
+use std::str::FromStr;
+
 use color_eyre::eyre::{eyre, ContextCompat, Result, WrapErr};
+use git2::build::CheckoutBuilder;
 use git2::{Branch, BranchType, DescribeFormatOptions, DescribeOptions, Repository};
 
 use crate::issues::Issue;
 use crate::prompt::select;
-use crate::state::{Initial, IssueSelected, State};
-use git2::build::CheckoutBuilder;
-use std::str::FromStr;
+use crate::state::{Initial, IssueSelected, ReleasePrepared, State};
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
 pub(crate) fn switch_branches(state: State) -> Result<State> {
     let data = match state {
-        State::Initial(..) => return Err(eyre!("You must SelectIssue first.")),
+        State::Initial(..) | State::ReleasePrepared(..) => {
+            return Err(eyre!("You must SelectIssue first."))
+        }
         State::IssueSelected(data) => data,
     };
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
@@ -43,6 +46,19 @@ pub(crate) fn rebase_branch(state: State, to: &str) -> Result<State> {
     })?;
     let data = match state {
         State::Initial(data) => select_issue_from_branch_name(data, ref_name)?,
+        State::ReleasePrepared(ReleasePrepared {
+            jira_config,
+            github_state,
+            github_config,
+            ..
+        }) => {
+            let initial = Initial {
+                jira_config,
+                github_state,
+                github_config,
+            };
+            select_issue_from_branch_name(initial, ref_name)?
+        }
         State::IssueSelected(data) => data,
     };
 
@@ -70,6 +86,12 @@ pub(crate) fn rebase_branch(state: State, to: &str) -> Result<State> {
 pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
     let state_data = match state {
         State::IssueSelected(IssueSelected {
+            jira_config,
+            github_state,
+            github_config,
+            ..
+        })
+        | State::ReleasePrepared(ReleasePrepared {
             jira_config,
             github_state,
             github_config,
@@ -241,8 +263,9 @@ mod tests {
 
 #[cfg(test)]
 mod test_select_issue_from_branch_name {
-    use super::*;
     use crate::state::GitHub;
+
+    use super::*;
 
     #[test]
     fn jira_style() {

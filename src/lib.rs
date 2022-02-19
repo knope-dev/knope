@@ -13,15 +13,14 @@ use crate::state::State;
 
 mod app_config;
 mod cargo;
-mod changelog;
 mod command;
 mod config;
-mod conventional_commits;
 mod git;
 mod issues;
 mod package_json;
 mod prompt;
 mod pyproject;
+mod releases;
 mod semver;
 mod state;
 mod step;

@@ -4,9 +4,8 @@ use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use serde::Deserialize;
 
-use crate::conventional_commits::update_project_from_conventional_commits;
 use crate::state::State;
-use crate::{command, git, issues, semver};
+use crate::{command, git, issues, releases, semver};
 
 pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
     match step {
@@ -27,14 +26,15 @@ pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
         Step::Command { command, variables } => {
             command::run_command(state, command, variables).wrap_err("During Command")
         }
-        Step::UpdateProjectFromCommits {
+        Step::PrepareRelease {
             changelog_path,
             prerelease_label,
-        } => update_project_from_conventional_commits(state, &changelog_path, prerelease_label)
-            .wrap_err("During UpdateProjectFromCommits"),
+        } => releases::prepare_release(state, &changelog_path, prerelease_label)
+            .wrap_err("During PrepareRelease"),
         Step::SelectIssueFromBranch => {
             git::select_issue_from_current_branch(state).wrap_err("During SelectIssueFromBranch")
         }
+        Step::Release => releases::release(state).wrap_err("During Release"),
     }
 }
 
@@ -91,12 +91,16 @@ pub(crate) enum Step {
     /// then bump the project version (depending on the rule determined from the commits) and add
     /// a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/)
     /// format.
-    UpdateProjectFromCommits {
+    PrepareRelease {
         #[serde(default = "default_changelog")]
         changelog_path: String,
         /// If set, the user wants to create a pre-release version using the selected label.
         prerelease_label: Option<String>,
     },
+    /// This will create a new release on GitHub using the current project version.
+    ///
+    /// Requires that GitHub details be configured.
+    Release,
 }
 
 fn default_changelog() -> String {
