@@ -27,10 +27,11 @@ pub(crate) fn run_step(step: Step, state: State) -> Result<State> {
         Step::Command { command, variables } => {
             command::run_command(state, command, variables).wrap_err("During Command")
         }
-        Step::UpdateProjectFromCommits { changelog_path } => {
-            update_project_from_conventional_commits(state, &changelog_path)
-                .wrap_err("During UpdateProjectFromCommits")
-        }
+        Step::UpdateProjectFromCommits {
+            changelog_path,
+            prerelease_label,
+        } => update_project_from_conventional_commits(state, &changelog_path, prerelease_label)
+            .wrap_err("During UpdateProjectFromCommits"),
         Step::SelectIssueFromBranch => {
             git::select_issue_from_current_branch(state).wrap_err("During SelectIssueFromBranch")
         }
@@ -93,6 +94,8 @@ pub(crate) enum Step {
     UpdateProjectFromCommits {
         #[serde(default = "default_changelog")]
         changelog_path: String,
+        /// If set, the user wants to create a pre-release version using the selected label.
+        prerelease_label: Option<String>,
     },
 }
 

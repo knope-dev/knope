@@ -10,6 +10,8 @@ The CHANGELOG format is pretty strict, it needs to have at least one version alr
 
 ## Examples
 
+### Specifying Changelog Path
+
 You can either provide an explicit path when declaring the step, like this:
 
 ```toml
@@ -22,6 +24,21 @@ name = "Release"
 ```
 
 or omit the `changelog_path`, which will default it to "CHANGELOG.md" in the current directory.
+
+### Creating a Pre-release Version
+
+If you include the `prerelease_label` option, the version created will be a pre-release version (treated like `Pre` rule in [Bumpversion]). This allows you to collect the commits _so far_ to an impending future version to get them out earlier.
+
+```toml
+[[workflows]]
+name = "prerelease"
+
+    [[workflows.steps]]
+    type = "UpdateProjectFromCommits"
+    prerelease_label = "rc"
+```
+
+Note that after you've done this, the final release created later will not include change notes from the intermediate pre-release versions.
 
 ## Errors
 

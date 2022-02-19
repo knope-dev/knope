@@ -1,0 +1,6 @@
+[[workflows]]
+name = "prerelease"
+
+[[workflows.steps]]
+type = "UpdateProjectFromCommits"
+prerelease_label = "rc"
