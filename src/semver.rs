@@ -276,11 +276,8 @@ fn bump_pre(
     }
 
     if parts[0] != prefix {
-        return Err(eyre!(
-            "Found prefix {} which does not match provided prefix {}",
-            parts[0],
-            prefix,
-        ));
+        version.pre = Prerelease::new(&format!("{}.0", prefix))?;
+        return Ok(version);
     }
     let pre_version = parts[1].parse::<u16>()?;
     version.pre = Prerelease::new(&format!("{}.{}", prefix, pre_version + 1))?;
