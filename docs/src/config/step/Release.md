@@ -52,4 +52,4 @@ type = "Release"
 
 [issueselected]: ../../state/IssueSelected.md
 [github config]: ../github.md
-[PrepareRelease]: PrepareRelease.md
+[preparerelease]: PrepareRelease.md
