@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 /// Take in some existing markdown in the expected changelog format, find the top entry, and
 /// put the new version above it.
-pub(crate) fn add_version_to_changelog(existing: &str, new_changes: &[String]) -> String {
+pub(super) fn add_version_to_changelog(existing: &str, new_changes: &[String]) -> String {
     let mut lines = existing.lines();
     let mut changelog = lines
         .take_while_ref(|line| !line.starts_with("##"))
@@ -27,7 +27,7 @@ pub(crate) fn add_version_to_changelog(existing: &str, new_changes: &[String]) -
     changelog
 }
 
-pub(crate) fn new_changelog_lines(
+pub(super) fn new_changelog_lines(
     title: &str,
     fixes: &[String],
     features: &[String],

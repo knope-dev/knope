@@ -2,74 +2,22 @@
 
 use std::env::set_current_dir;
 use std::io::Write;
-use std::process::Command;
 
 use dobby::{command, run};
+use git_repo_helpers::*;
+
+mod git_repo_helpers;
 
 #[test]
 fn test() {
     // Arrange a git repo which has an existing commit and release tag.
     let temp_dir = tempfile::tempdir().unwrap();
-    let output = Command::new("git")
-        .arg("init")
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    // Configure fake Git user.
-    let output = Command::new("git")
-        .arg("config")
-        .arg("user.email")
-        .arg("fake@dobby.dev")
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let output = Command::new("git")
-        .arg("config")
-        .arg("user.name")
-        .arg("Fake Dobby")
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let output = Command::new("git")
-        .arg("commit")
-        .arg("--allow-empty")
-        .arg("-m")
-        .arg("feat: New feature in existing release")
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let output = Command::new("git")
-        .arg("tag")
-        .arg("1.1.0")
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    // Create a changelog which contains that pre-release.
+    let path = temp_dir.path();
+    init(path);
+    commit(path, "feat: New feature in existing release");
+    tag(path, "1.1.0");
+
+    // Create a changelog which contains that release.
     let changelog = temp_dir.path().join("CHANGELOG.md");
     let mut changelog_file = std::fs::File::create(&changelog).unwrap();
     writeln!(&mut changelog_file, "## 1.1.0\n").unwrap();
@@ -77,19 +25,7 @@ fn test() {
     writeln!(&mut changelog_file, "- New feature in exsting release\n").unwrap();
 
     // Add a new commit which should be included in the new pre-release.
-    let output = Command::new("git")
-        .arg("commit")
-        .arg("--allow-empty")
-        .arg("-m")
-        .arg("feat!: Breaking feature in new RC")
-        .current_dir(temp_dir.path())
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    commit(path, "feat!: Breaking feature in new RC");
 
     // Copy a dobby.toml into the new repo which defines the `prerelease` task.
     let dobby_toml = temp_dir.path().join("dobby.toml");
@@ -106,11 +42,6 @@ fn test() {
     run(&matches).unwrap();
 
     // Assert.
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
     let changelog_contents = std::fs::read_to_string(changelog).unwrap();
     let lines = changelog_contents.lines().collect::<Vec<_>>();
     assert_eq!(lines[0], "## 2.0.0-rc.0");

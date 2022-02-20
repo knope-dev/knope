@@ -5,7 +5,7 @@ use color_eyre::eyre::{eyre, Result};
 use semver::{Prerelease, Version};
 use serde::Deserialize;
 
-use crate::{package_json, pyproject};
+use crate::{package_json, pyproject, state};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
@@ -66,12 +66,22 @@ impl Display for PackageVersion {
     }
 }
 
-pub(crate) fn bump_version(state: crate::State, rule: Rule) -> Result<crate::State> {
-    if let Ok(mut package_version) = get_version() {
-        package_version.version =
-            bump(package_version.version, rule).wrap_err("While bumping version")?;
+pub(super) fn bump_version(rule: Rule, dry_run: bool) -> Result<semver::Version> {
+    let mut package_version = get_version()?;
+    package_version.version =
+        bump(package_version.version, rule).wrap_err("While bumping version")?;
+    if !dry_run {
         set_version(&package_version)?;
     }
+    Ok(package_version.version)
+}
+
+pub(crate) fn bump_version_and_update_state(
+    mut state: state::State,
+    rule: Rule,
+) -> Result<state::State> {
+    let version = bump_version(rule, false)?;
+    state.release = state::Release::Bumped(version);
     Ok(state)
 }
 

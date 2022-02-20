@@ -3,7 +3,7 @@ use std::fmt;
 use color_eyre::eyre::{eyre, Result};
 
 use crate::prompt::select;
-use crate::state::{Initial, IssueSelected, ReleasePrepared, State};
+use crate::state::{self, State};
 
 mod github;
 mod jira;
@@ -21,80 +21,57 @@ impl fmt::Display for Issue {
 }
 
 pub(crate) fn select_jira_issue(status: &str, state: State) -> Result<State> {
-    match state {
-        State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
-        State::Initial(Initial {
-            jira_config,
-            github_state,
-            github_config,
-        })
-        | State::ReleasePrepared(ReleasePrepared {
-            jira_config,
-            github_state,
-            github_config,
-            ..
-        }) => {
-            let jira_config = jira_config.ok_or_else(|| eyre!("Jira is not configured"))?;
+    match state.issue {
+        state::Issue::Selected(..) => Err(eyre!("You've already selected an issue!")),
+        state::Issue::Initial => {
+            let jira_config = state
+                .jira_config
+                .ok_or_else(|| eyre!("Jira is not configured"))?;
             let issues = jira::get_issues(&jira_config, status)?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue);
-            Ok(State::IssueSelected(IssueSelected {
+            Ok(State {
                 jira_config: Some(jira_config),
-                github_state,
-                github_config,
-                issue,
-            }))
+                github: state.github,
+                github_config: state.github_config,
+                issue: state::Issue::Selected(issue),
+                release: state.release,
+            })
         }
     }
 }
 
 pub(crate) fn select_github_issue(labels: Option<&Vec<String>>, state: State) -> Result<State> {
-    match state {
-        State::IssueSelected(..) => Err(eyre!("You've already selected an issue!")),
-        State::Initial(Initial {
-            jira_config,
-            github_state,
-            github_config,
-        })
-        | State::ReleasePrepared(ReleasePrepared {
-            jira_config,
-            github_state,
-            github_config,
-            ..
-        }) => {
-            let (github_config, github_state, issues) =
-                github::list_issues(github_config, github_state, labels)?;
+    match state.issue {
+        state::Issue::Selected(..) => Err(eyre!("You've already selected an issue!")),
+        state::Issue::Initial => {
+            let (github_config, github, issues) =
+                github::list_issues(state.github_config, state.github, labels)?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue);
-            Ok(State::IssueSelected(IssueSelected {
-                jira_config,
-                github_state,
+            Ok(State {
+                jira_config: state.jira_config,
+                github,
                 github_config,
-                issue,
-            }))
+                issue: state::Issue::Selected(issue),
+                release: state.release,
+            })
         }
     }
 }
 
 pub(crate) fn transition_selected_issue(status: &str, state: State) -> Result<State> {
-    match state {
-        State::IssueSelected(IssueSelected {
-            jira_config,
-            github_state,
-            github_config,
-            issue,
-        }) => {
-            let jira_config = jira_config.ok_or_else(|| eyre!("Jira is not configured"))?;
-            jira::transition_issue(&jira_config, &issue.key, status)?;
+    match &state.issue {
+        state::Issue::Selected(issue) => {
+            let jira_config = state
+                .jira_config
+                .as_ref()
+                .ok_or_else(|| eyre!("Jira is not configured"))?;
+            jira::transition_issue(jira_config, &issue.key, status)?;
             println!("{} transitioned to {}", &issue.key, status);
-            Ok(State::IssueSelected(IssueSelected {
-                jira_config: Some(jira_config),
-                github_state,
-                github_config,
-                issue,
-            }))
+            Ok(state)
         }
-        State::Initial(..) | State::ReleasePrepared(..) => Err(eyre!(
+        state::Issue::Initial => Err(eyre!(
             "No issue selected, try running a SelectIssue step before this one"
         )),
     }

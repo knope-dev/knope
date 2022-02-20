@@ -21,7 +21,6 @@ mod package_json;
 mod prompt;
 mod pyproject;
 mod releases;
-mod semver;
 mod state;
 mod step;
 mod workflow;

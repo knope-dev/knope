@@ -6,19 +6,17 @@ use git2::{Branch, BranchType, DescribeFormatOptions, DescribeOptions, Repositor
 
 use crate::issues::Issue;
 use crate::prompt::select;
-use crate::state::{Initial, IssueSelected, ReleasePrepared, State};
+use crate::state::{self, State};
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
 pub(crate) fn switch_branches(state: State) -> Result<State> {
-    let data = match state {
-        State::Initial(..) | State::ReleasePrepared(..) => {
-            return Err(eyre!("You must SelectIssue first."))
-        }
-        State::IssueSelected(data) => data,
+    let issue = match &state.issue {
+        state::Issue::Initial => return Err(eyre!("You must SelectIssue first.")),
+        state::Issue::Selected(issue) => issue,
     };
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
-    let new_branch_name = branch_name_from_issue(&data.issue);
+    let new_branch_name = branch_name_from_issue(issue);
     let branches = get_all_branches(&repo)?;
 
     if let Ok(existing) = repo.find_branch(&new_branch_name, BranchType::Local) {
@@ -27,40 +25,20 @@ pub(crate) fn switch_branches(state: State) -> Result<State> {
             new_branch_name
         );
         switch_to_branch(&repo, &existing)?;
-        return Ok(State::IssueSelected(data));
+        return Ok(state);
     }
 
     println!("Creating a new branch called {}", new_branch_name);
     let branch = select_branch(branches, "Which branch do you want to base off of?")?;
     let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
     switch_to_branch(&repo, &new_branch)?;
-    Ok(State::IssueSelected(data))
+    Ok(state)
 }
 
 /// Rebase the current branch onto the selected one.
 pub(crate) fn rebase_branch(state: State, to: &str) -> Result<State> {
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
-    let ref_name = head.name().ok_or_else(|| {
-        eyre!("Could not get a name for current HEAD. Are you at the tip of a branch?")
-    })?;
-    let data = match state {
-        State::Initial(data) => select_issue_from_branch_name(data, ref_name)?,
-        State::ReleasePrepared(ReleasePrepared {
-            jira_config,
-            github_state,
-            github_config,
-            ..
-        }) => {
-            let initial = Initial {
-                jira_config,
-                github_state,
-                github_config,
-            };
-            select_issue_from_branch_name(initial, ref_name)?
-        }
-        State::IssueSelected(data) => data,
-    };
 
     let target_branch = repo
         .find_branch(to, BranchType::Local)
@@ -80,39 +58,21 @@ pub(crate) fn rebase_branch(state: State, to: &str) -> Result<State> {
     switch_to_branch(&repo, &target_branch)?;
     println!("Switched to branch {}, don't forget to push!", to);
 
-    Ok(State::IssueSelected(data))
+    Ok(state)
 }
 
-pub(crate) fn select_issue_from_current_branch(state: State) -> Result<State> {
-    let state_data = match state {
-        State::IssueSelected(IssueSelected {
-            jira_config,
-            github_state,
-            github_config,
-            ..
-        })
-        | State::ReleasePrepared(ReleasePrepared {
-            jira_config,
-            github_state,
-            github_config,
-            ..
-        }) => Initial {
-            jira_config,
-            github_state,
-            github_config,
-        },
-        State::Initial(data) => data,
-    };
+pub(crate) fn select_issue_from_current_branch(mut state: State) -> Result<State> {
     let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
     let ref_name = head.name().ok_or_else(|| {
         eyre!("Could not get a name for current HEAD. Are you at the tip of a branch?")
     })?;
-    let state_data = select_issue_from_branch_name(state_data, ref_name)?;
-    Ok(State::IssueSelected(state_data))
+    let issue = select_issue_from_branch_name(ref_name)?;
+    state.issue = state::Issue::Selected(issue);
+    Ok(state)
 }
 
-fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueSelected> {
+fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue> {
     let parts: Vec<&str> = ref_name.split('-').collect();
 
     let (key, summary) = if !parts.is_empty() && usize::from_str(parts[0]).is_ok() {
@@ -128,12 +88,7 @@ fn select_issue_from_branch_name(data: Initial, ref_name: &str) -> Result<IssueS
     }?;
 
     println!("Auto-selecting issue {} from ref {}", &key, ref_name);
-    Ok(IssueSelected {
-        jira_config: data.jira_config,
-        github_state: data.github_state,
-        github_config: data.github_config,
-        issue: Issue { key, summary },
-    })
+    Ok(Issue { key, summary })
 }
 
 fn create_branch<'repo>(
@@ -263,63 +218,40 @@ mod tests {
 
 #[cfg(test)]
 mod test_select_issue_from_branch_name {
-    use crate::state::GitHub;
-
     use super::*;
 
     #[test]
     fn jira_style() {
-        let data = select_issue_from_branch_name(
-            Initial {
-                jira_config: None,
-                github_state: GitHub::New,
-                github_config: None,
-            },
-            "ABC-123-some-summary",
-        )
-        .expect("Failed to parse branch name");
+        let issue = select_issue_from_branch_name("ABC-123-some-summary")
+            .expect("Failed to parse branch name");
 
         assert_eq!(
-            data.issue,
+            issue,
             Issue {
                 key: "ABC-123".to_string(),
                 summary: "some-summary".to_string()
             }
-        )
+        );
     }
 
     #[test]
     fn github_style() {
-        let data = select_issue_from_branch_name(
-            Initial {
-                jira_config: None,
-                github_state: GitHub::New,
-                github_config: None,
-            },
-            "123-some-summary",
-        )
-        .expect("Failed to parse branch name");
+        let issue =
+            select_issue_from_branch_name("123-some-summary").expect("Failed to parse branch name");
 
         assert_eq!(
-            data.issue,
+            issue,
             Issue {
                 key: "123".to_string(),
                 summary: "some-summary".to_string()
             }
-        )
+        );
     }
 
     #[test]
     fn no_number() {
-        let result = select_issue_from_branch_name(
-            Initial {
-                jira_config: None,
-                github_state: GitHub::New,
-                github_config: None,
-            },
-            "some-summary",
-        );
+        let result = select_issue_from_branch_name("some-summary");
 
-        assert!(result.is_err())
+        assert!(result.is_err());
     }
 }

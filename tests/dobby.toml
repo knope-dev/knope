@@ -6,6 +6,13 @@ type = "PrepareRelease"
 prerelease_label = "rc"
 
 [[workflows]]
+name = "prepare-release-dry-run"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+dry_run = true
+
+[[workflows]]
 name = "bump-major"
 
 [[workflows.steps]]
