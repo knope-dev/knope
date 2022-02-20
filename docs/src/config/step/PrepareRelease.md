@@ -40,6 +40,19 @@ name = "prerelease"
 
 Note that after you've done this, the final release created later will not include change notes from the intermediate pre-release versions.
 
+### Doing a Dry Run
+
+Sometimes you might want to run the step to see what would change without actually modifying the files. You can do this by adding the `dry_run` option:
+
+```toml
+[[workflows]]
+name = "Release Dry-Run"
+
+    [[workflows.steps]]
+    type = "PrepareRelease"
+    dry_run = true
+```
+
 ## Errors
 
 The reasons this can fail:

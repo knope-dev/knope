@@ -3,19 +3,19 @@ use color_eyre::Result;
 use serde_json::json;
 
 use crate::app_config::get_or_prompt_for_github_token;
-use crate::state::{GitHub, ReleasePrepared, State};
+use crate::state::{GitHub, Release, State};
 
 pub(crate) fn release(state: State) -> Result<State> {
-    let release_prepared = match state {
-        State::ReleasePrepared(release_prepared) => release_prepared,
-        _ => return Err(eyre!("PrepareRelease needs to be called before Release")),
+    let release = match state.release {
+        Release::Prepared(release) => release,
+        _ => return Err(eyre!("PrepareRelease needs to be called before Release.")),
     };
-    let github_config = if let Some(github_config) = release_prepared.github_config {
+    let github_config = if let Some(github_config) = state.github_config {
         github_config
     } else {
-        return Err(eyre!("PrepareRelease needs to be called before Release"));
+        return Err(eyre!("GitHub needs to be configured."));
     };
-    let token = match release_prepared.github_state {
+    let token = match state.github {
         GitHub::Initialized { token } => token,
         GitHub::New => get_or_prompt_for_github_token()?,
     };
@@ -27,13 +27,14 @@ pub(crate) fn release(state: State) -> Result<State> {
     );
     let token_header = format!("token {}", &token);
 
+    let version_string = release.version.to_string();
     let response = ureq::post(&url)
         .set("Authorization", &token_header)
         .send_json(json!({
-            "tag_name": &release_prepared.new_version,
-            "name": &release_prepared.new_version,
-            "body": &release_prepared.release_notes,
-            "prerelease": release_prepared.is_prerelease,
+            "tag_name": &version_string,
+            "name": &version_string,
+            "body": &release.changelog,
+            "prerelease": !release.version.pre.is_empty(),
         }))
         .wrap_err("Could not send release request to GitHub")?;
 
@@ -44,12 +45,11 @@ pub(crate) fn release(state: State) -> Result<State> {
         ));
     }
 
-    Ok(State::ReleasePrepared(ReleasePrepared {
-        jira_config: release_prepared.jira_config,
-        github_state: GitHub::Initialized { token },
+    Ok(State {
+        jira_config: state.jira_config,
+        github: GitHub::Initialized { token },
         github_config: Some(github_config),
-        release_notes: release_prepared.release_notes,
-        new_version: release_prepared.new_version,
-        is_prerelease: release_prepared.is_prerelease,
-    }))
+        issue: state.issue,
+        release: Release::Prepared(release),
+    })
 }

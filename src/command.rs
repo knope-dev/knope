@@ -5,8 +5,8 @@ use execute::shell;
 use serde::Deserialize;
 
 use crate::git::branch_name_from_issue;
-use crate::semver::get_version;
-use crate::State;
+use crate::releases::get_version;
+use crate::{state, State};
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
 #[derive(Debug, Deserialize)]
@@ -46,10 +46,10 @@ fn replace_variables(
         match var_type {
             Variable::Version => command = command.replace(&var_name, &get_version()?.to_string()),
             Variable::IssueBranch => {
-                match state {
-                    State::Initial(_) | State::ReleasePrepared(..) => return Err(eyre!("Cannot use the variable IssueBranch unless the current workflow state is IssueSelected")),
-                    State::IssueSelected(state_data) => {
-                        command = command.replace(&var_name, &branch_name_from_issue(&state_data.issue));
+                match &state.issue {
+                    state::Issue::Initial => return Err(eyre!("Cannot use the variable IssueBranch unless the current workflow state is IssueSelected")),
+                    state::Issue::Selected(issue) => {
+                        command = command.replace(&var_name, &branch_name_from_issue(issue));
                     }
                 }
             }
@@ -82,7 +82,6 @@ mod test_run_command {
 #[cfg(test)]
 mod test_replace_variables {
     use crate::issues::Issue;
-    use crate::state::{GitHub, Initial, IssueSelected};
 
     use super::*;
 
@@ -97,12 +96,13 @@ mod test_replace_variables {
             summary: "1234".to_string(),
         };
         let expected_branch_name = branch_name_from_issue(&issue);
-        let state = State::IssueSelected(IssueSelected {
+        let state = State {
             jira_config: None,
-            github_state: GitHub::New,
+            github: state::GitHub::New,
             github_config: None,
-            issue,
-        });
+            issue: state::Issue::Selected(issue),
+            release: state::Release::Initial,
+        };
 
         let command = replace_variables(command, variables, &state).unwrap();
 
@@ -117,11 +117,7 @@ mod test_replace_variables {
         let command = "blah $$ other blah".to_string();
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let state = State::Initial(Initial {
-            jira_config: None,
-            github_state: GitHub::New,
-            github_config: None,
-        });
+        let state = State::new(None, None);
 
         let command = replace_variables(command, variables, &state).unwrap();
 
@@ -141,12 +137,13 @@ mod test_replace_variables {
             summary: "1234".to_string(),
         };
         let expected_branch_name = branch_name_from_issue(&issue);
-        let state = State::IssueSelected(IssueSelected {
+        let state = State {
             jira_config: None,
-            github_state: GitHub::New,
+            github: state::GitHub::New,
             github_config: None,
-            issue,
-        });
+            issue: state::Issue::Selected(issue),
+            release: state::Release::Initial,
+        };
 
         let command = replace_variables(command, variables, &state).unwrap();
 
