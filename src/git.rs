@@ -162,7 +162,7 @@ fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
 }
 
 pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
-    format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(" ", "-")
+    format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(' ', "-")
 }
 
 fn get_last_tag_name(repo: &Repository) -> Result<String> {
