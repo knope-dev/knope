@@ -16,7 +16,7 @@ categories = ["command-line-utilities", "development-tools"]
 [dependencies]
 serde = { version = "1.0.136", features = ["derive"] }
 base64 = "0.13.0"
-color-eyre = "0.6.0"
+color-eyre = "0.6.1"
 console = "0.15.0"
 dialoguer = "0.10.0"
 toml = "0.5.8"
