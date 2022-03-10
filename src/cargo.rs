@@ -2,22 +2,29 @@ use std::path::Path;
 
 use color_eyre::Result;
 use serde::Deserialize;
-use toml_edit::{value, Document};
+use toml::Spanned;
 
 pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     Some(
         toml::from_str::<Cargo>(&std::fs::read_to_string(path).ok()?)
             .ok()?
             .package
-            .version,
+            .version
+            .into_inner(),
     )
 }
 
 pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<()> {
-    let toml = std::fs::read_to_string(&path)?;
-    let mut doc = toml.parse::<Document>()?;
-    doc["package"]["version"] = value(new_version);
-    std::fs::write(path, doc.to_string())?;
+    let mut toml = std::fs::read_to_string(&path)?;
+    let doc: Cargo = toml::from_str(&toml)?;
+
+    // Account for quotes with +- 1
+    let start = doc.package.version.start() + 1;
+    let end = doc.package.version.end() - 1;
+
+    toml.replace_range(start..end, new_version);
+
+    std::fs::write(path, toml)?;
     Ok(())
 }
 
@@ -28,7 +35,7 @@ struct Cargo {
 
 #[derive(Debug, Deserialize)]
 struct Package {
-    version: String,
+    version: Spanned<String>,
 }
 
 #[cfg(test)]
@@ -47,7 +54,7 @@ mod tests {
         "###;
         std::fs::write(&file, content).unwrap();
 
-        assert_eq!(get_version(file), Some("0.1.0-rc.0".to_string()))
+        assert_eq!(get_version(file), Some("0.1.0-rc.0".to_string()));
     }
 
     #[test]
@@ -62,12 +69,7 @@ mod tests {
 
         set_version(&file, "1.2.3-rc.4").unwrap();
 
-        let expected = r###"
-        [package]
-        name = "tester"
-        version = "1.2.3-rc.4"
-        "###
-        .to_string();
+        let expected = content.replace("0.1.0-rc.0", "1.2.3-rc.4");
         assert_eq!(std::fs::read_to_string(file).unwrap(), expected);
     }
 }

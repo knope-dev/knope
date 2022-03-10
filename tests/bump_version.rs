@@ -41,7 +41,10 @@ fn tests() {
         let cargo_contents = std::fs::read_to_string(&cargo_toml).unwrap();
         assert_eq!(
             cargo_contents,
-            format!("[package]\nversion = \"{}\"\n", expected_version)
+            format!(
+                "[package]\nversion = \"{expected_version}\"",
+                expected_version = expected_version
+            )
         );
     }
 }
