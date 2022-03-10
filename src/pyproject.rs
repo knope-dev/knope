@@ -2,7 +2,7 @@ use std::path::Path;
 
 use color_eyre::Result;
 use serde::Deserialize;
-use toml_edit::{value, Document};
+use toml::Spanned;
 
 pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     Some(
@@ -10,15 +10,21 @@ pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
             .ok()?
             .tool
             .poetry
-            .version,
+            .version
+            .into_inner(),
     )
 }
 
 pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<()> {
-    let toml = std::fs::read_to_string(&path)?;
-    let mut doc = toml.parse::<Document>()?;
-    doc["tool"]["poetry"]["version"] = value(new_version);
-    std::fs::write(path, doc.to_string())?;
+    let mut toml = std::fs::read_to_string(&path)?;
+    let doc: PyProject = toml::from_str(&toml)?;
+
+    // Account for quotes around value with +- 1
+    let start = doc.tool.poetry.version.start() + 1;
+    let end = doc.tool.poetry.version.end() - 1;
+
+    toml.replace_range(start..end, new_version);
+    std::fs::write(path, toml)?;
     Ok(())
 }
 
@@ -34,7 +40,7 @@ struct Tool {
 
 #[derive(Debug, Deserialize)]
 struct Poetry {
-    version: String,
+    version: Spanned<String>,
 }
 
 #[cfg(test)]
@@ -53,7 +59,7 @@ mod tests {
         "###;
         std::fs::write(&file, content).unwrap();
 
-        assert_eq!(get_version(file), Some("0.1.0-rc.0".to_string()))
+        assert_eq!(get_version(file), Some("0.1.0-rc.0".to_string()));
     }
 
     #[test]
