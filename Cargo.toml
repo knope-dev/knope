@@ -20,7 +20,7 @@ console = "0.15.0"
 dialoguer = "0.10.0"
 toml = "0.5.8"
 serde_json = { version = "1.0.79", features = ["preserve_order"] }
-git2 = "0.14.1"
+git2 = "0.14.2"
 semver = "1.0.6"
 execute = "0.2.9"
 platform-dirs = "0.3.0"
