@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::state::RunType;
 use crate::{command, git, issues, releases};
 
-/// Each variant describes an action you can take using Dobby, they are used when defining your
+/// Each variant describes an action you can take using knope, they are used when defining your
 /// [`crate::Workflow`] via whatever config format is being utilized.
 #[derive(Deserialize, Debug, Serialize)]
 #[serde(tag = "type")]
@@ -104,21 +104,21 @@ pub(super) enum StepError {
     #[diagnostic(
         code(step::jira_not_configured),
         help("Jira must be configured in order to call this step"),
-        url("https://dobby-dev.github.io/dobby/config/jira.html")
+        url("https://knope-dev.github.io/knope/config/jira.html")
     )]
     JiraNotConfigured,
     #[error("The specified transition name was not found in the Jira project")]
     #[diagnostic(
         code(step::invalid_jira_transition),
         help("The `transition` field in TransitionJiraIssue must correspond to a valid transition in the Jira project"),
-        url("https://dobby-dev.github.io/dobby/config/jira.html")
+        url("https://knope-dev.github.io/knope/config/jira.html")
     )]
     InvalidJiraTransition,
     #[error("GitHub is not configured")]
     #[diagnostic(
         code(step::github_not_configured),
         help("GitHub must be configured in order to call this step"),
-        url("https://dobby-dev.github.io/dobby/config/github.html")
+        url("https://knope-dev.github.io/knope/config/github.html")
     )]
     GitHubNotConfigured,
     #[error("Could not increment pre-release version {0}")]
@@ -128,14 +128,14 @@ pub(super) enum StepError {
             "The pre-release component of a version must be in the format of `-<label>.N` \
             where <label> is a string and `N` is an integer"
         ),
-        url("https://dobby-dev.github.io/dobby/config/step/BumpVersion.html#pre")
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
     )]
     InvalidPreReleaseVersion(String),
     #[error("Found invalid semantic version {version} in {file_name}")]
     #[diagnostic(
         code(step::invalid_semantic_version),
         help("The version must be a valid Semantic Version"),
-        url("https://dobby-dev.github.io/dobby/config/step/BumpVersion.html")
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
     )]
     InvalidSemanticVersion {
         version: String,
@@ -145,31 +145,31 @@ pub(super) enum StepError {
     #[diagnostic(
         code(step::no_metadata_file),
         help("In order to use version-related steps, you must have one of the supported metadata files in your project"),
-        url("https://dobby-dev.github.io/dobby/config/step/BumpVersion.html#supported-formats")
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
     )]
     NoMetadataFileFound,
     #[error("The package.json file was an incorrect format")]
     #[diagnostic(
         code(step::invalid_package_json),
-        help("Dobby expects the package.json file to be an object with a top level `version` property"),
-        url("https://dobby-dev.github.io/dobby/config/step/BumpVersion.html#supported-formats")
+        help("knope expects the package.json file to be an object with a top level `version` property"),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
     )]
     InvalidPackageJson,
     #[error("The pyproject.toml file was an incorrect format")]
     #[diagnostic(
         code(step::invalid_pyproject),
         help(
-            "Dobby expects the pyproject.toml file to have a `tool.poetry.version` property. \
+            "knope expects the pyproject.toml file to have a `tool.poetry.version` property. \
             If you use a different location for your version, please open an issue to add support."
         ),
-        url("https://dobby-dev.github.io/dobby/config/step/BumpVersion.html#supported-formats")
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
     )]
     InvalidPyProject,
     #[error("The Cargo.toml file was an incorrect format")]
     #[diagnostic(
         code(step::invalid_cargo_toml),
-        help("Dobby expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
-        url("https://dobby-dev.github.io/dobby/config/step/BumpVersion.html#supported-formats")
+        help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
     )]
     InvalidCargoToml,
     #[error("Trouble communicating with a remote API")]
@@ -218,14 +218,14 @@ pub(super) enum StepError {
     #[diagnostic(
         code(step::bad_branch_name),
         help("The branch name was not formatted correctly."),
-        url("https://dobby-dev.github.io/dobby/config/step/SelectIssueFromBranch.html")
+        url("https://knope-dev.github.io/knope/config/step/SelectIssueFromBranch.html")
     )]
     BadGitBranchName,
     #[error("Uncommitted changes")]
     #[diagnostic(
         code(step::uncommitted_changes),
         help("You need to commit your changes before running this step."),
-        url("https://dobby-dev.github.io/dobby/config/step/SwitchBranches.html")
+        url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
     )]
     UncommittedChanges,
     #[error("Could not complete checkout")]
@@ -239,7 +239,7 @@ pub(super) enum StepError {
     #[diagnostic(
         code(step::list_tags_error),
         help("We couldn't list the tags for the project. This step requires at least one existing tag."),
-        url("https://dobby-dev.github.io/dobby/config/step/PrepareRelease.html")
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
     )]
     ListTagsError(#[source] git2::Error),
     #[error("Unknown Git error.")]
@@ -266,15 +266,15 @@ pub(super) enum StepError {
     #[error("This is a bug!")]
     #[diagnostic(
         code(step::bug),
-        help("If you see this error, it's a bug in Dobby! Please report it in GitHub."),
-        url("https://github.com/dobby-dev/dobby/issues")
+        help("If you see this error, it's a bug in knope! Please report it in GitHub."),
+        url("https://github.com/knope-dev/knope/issues")
     )]
     Bug(#[source] Box<dyn std::error::Error + Send + Sync>),
     #[error("PrepareRelease needs to occur before this step")]
     #[diagnostic(
         code(step::release_not_prepared),
         help("You must call the PrepareRelease step before this one."),
-        url("https://dobby-dev.github.io/dobby/config/step/PrepareRelease.html")
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
     )]
     ReleaseNotPrepared,
 }

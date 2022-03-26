@@ -19,7 +19,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    const CONFIG_PATH: &'static str = "dobby.toml";
+    const CONFIG_PATH: &'static str = "knope.toml";
 
     /// Create a Config from a TOML file.
     ///

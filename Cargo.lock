@@ -207,32 +207,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dobby"
-version = "0.1.5"
-dependencies = [
- "base64",
- "clap",
- "console",
- "dialoguer",
- "execute",
- "git-conventional",
- "git2",
- "http",
- "itertools",
- "miette",
- "platform-dirs",
- "semver",
- "serde",
- "serde_json",
- "snapbox",
- "tempfile",
- "thiserror",
- "toml",
- "ureq",
- "velcro",
-]
-
-[[package]]
 name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -476,6 +450,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a38fc24e30fd564ce974c02bf1d337caddff65be6cc4735a1f7eab22a7440f04"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "knope"
+version = "0.1.5"
+dependencies = [
+ "base64",
+ "clap",
+ "console",
+ "dialoguer",
+ "execute",
+ "git-conventional",
+ "git2",
+ "http",
+ "itertools",
+ "miette",
+ "platform-dirs",
+ "semver",
+ "serde",
+ "serde_json",
+ "snapbox",
+ "tempfile",
+ "thiserror",
+ "toml",
+ "ureq",
+ "velcro",
 ]
 
 [[package]]

@@ -84,5 +84,5 @@ name = "prerelease"
     type = "Release"
 
 [github]
-owner = "dobby-dev"
-repo = "dobby"
+owner = "knope-dev"
+repo = "knope"

@@ -8,7 +8,7 @@ Search for GitHub issues by status and display the list of them in the terminal.
 This step will fail if any of the following are true:
 
 1. The workflow is already in [IssueSelected] state before it executes.
-2. Dobby cannot communicate with GitHub.
+2. knope cannot communicate with GitHub.
 3. There is no [GitHub config] set.
 4. User does not select an issue.
 

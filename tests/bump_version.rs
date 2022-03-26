@@ -1,18 +1,18 @@
-//! An integration test which runs the `prerelease` task defined in `dobby.toml`.
+//! An integration test which runs the `prerelease` task defined in `knope.toml`.
 
 use std::env::set_current_dir;
 
 use clap::Parser;
 
-use dobby::{run, Cli};
+use knope::{run, Cli};
 
 #[test]
 fn tests() {
-    // Arrange a folder with a dobby file configured to bump versions and a file dobby knows how to bump.
+    // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
     let temp_dir = tempfile::tempdir().unwrap();
 
-    let dobby_toml = temp_dir.path().join("dobby.toml");
-    std::fs::copy("tests/dobby.toml", dobby_toml).unwrap();
+    let knope_toml = temp_dir.path().join("knope.toml");
+    std::fs::copy("tests/knope.toml", knope_toml).unwrap();
 
     set_current_dir(temp_dir.path()).unwrap();
 
@@ -38,7 +38,7 @@ fn tests() {
         )
         .unwrap();
 
-        let cli = Cli::parse_from(["dobby", workflow]);
+        let cli = Cli::parse_from(["knope", workflow]);
         run(cli).unwrap();
         let cargo_contents = std::fs::read_to_string(&cargo_toml).unwrap();
         assert_eq!(

@@ -1,10 +1,7 @@
-# Dobby
+# Knope
 
-A command line tool to make common development tasks much easier, with just a little bit of ✨magic✨.
-
-**⚠️This project is under early development and may have some bugs. Use with caution.⚠️**
+A command line tool that happily completes the tasks which most developers find tedious.
 
 ## TL;DR
 
-Put a `dobby.toml` in your project which defines some workflows, then run them with `dobby`.
-Check out the file by the same name in this project for an example, or [read the docs](https://dobby-dev.github.io/dobby/) for more info.
+Put a `knope.toml` in your project which defines some workflows, then run them with `knope`. Check out the file by the same name in this project for an example, or [read the docs](https://knope-dev.github.io/knope/) for more info.

@@ -28,8 +28,8 @@ jobs:
           command: make
           args: ci-flow
 
-  validate-dobby:
-    name: Validate Dobby Config
+  validate-config:
+    name: Validate Knope Config
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

@@ -4,7 +4,7 @@ Bump the version of the project in any supported formats found using a [Semantic
 
 ## Supported Formats
 
-These are the types of files that this step knows how to search for a semantic version and bump. Dobby currently will only search the current directory for these files.
+These are the types of files that this step knows how to search for a semantic version and bump. knope currently will only search the current directory for these files.
 
 1. Cargo.toml for Rust projects
 1. pyproject.toml for Python projects (using [Poetry's metadata](https://python-poetry.org))
@@ -41,7 +41,7 @@ Increment the pre-release component of the semantic version or add it if missing
 
 ### A Note on 0.x Versions
 
-[Semantic versioning] dictates different handling of any version which has a major component of 0 (e.g. 0.1.2). This major version should not be incremented to 1 until the project has reached a stable state. As such, it would be irresponsible (and probably incorrect) for Dobby to increment to version 1.0.0 the first time there is a breaking change in a 0.x project. As such, any `Major` rule applied to a 0.x project will increment the `Minor` component, and any `Minor` rule will increment the `Patch` component. This effectively means that for the version `0.1.2`:
+[Semantic versioning] dictates different handling of any version which has a major component of 0 (e.g. 0.1.2). This major version should not be incremented to 1 until the project has reached a stable state. As such, it would be irresponsible (and probably incorrect) for knope to increment to version 1.0.0 the first time there is a breaking change in a 0.x project. As such, any `Major` rule applied to a 0.x project will increment the `Minor` component, and any `Minor` rule will increment the `Patch` component. This effectively means that for the version `0.1.2`:
 
 1. The first component (`0`) is ignored
 2. The second component (`1`) serves as the `Major` component, and will be incremented whenever the `Major` rule is applied.

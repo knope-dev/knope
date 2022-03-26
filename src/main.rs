@@ -7,7 +7,7 @@
 use clap::Parser;
 use miette::Result;
 
-use dobby::{run, Cli};
+use knope::{run, Cli};
 
 fn main() -> Result<()> {
     run(Cli::parse())

@@ -17,7 +17,7 @@ pub fn init(path: &Path) {
     let output = Command::new("git")
         .arg("config")
         .arg("user.email")
-        .arg("fake@dobby.dev")
+        .arg("fake@knope.dev")
         .current_dir(path)
         .output()
         .unwrap();
@@ -29,7 +29,7 @@ pub fn init(path: &Path) {
     let output = Command::new("git")
         .arg("config")
         .arg("user.name")
-        .arg("Fake Dobby")
+        .arg("Fake knope")
         .current_dir(path)
         .output()
         .unwrap();

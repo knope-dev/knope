@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-- You can now pass the name of a workflow as an argument to Dobby to bypass the selection prompt (closes #24)
+- You can now pass the name of a workflow as an argument to bypass the selection prompt (closes #24)
 
 ### Fixes
 
