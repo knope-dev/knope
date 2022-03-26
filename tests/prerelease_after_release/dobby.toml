@@ -1,0 +1,6 @@
+[[workflows]]
+name = "prerelease"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+prerelease_label = "rc"

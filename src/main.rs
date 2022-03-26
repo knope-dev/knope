@@ -1,14 +1,14 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::cargo)]
+#![allow(clippy::multiple_crate_versions)] // Let cargo-deny handle this
 #![forbid(unsafe_code)]
 
-use color_eyre::Result;
+use clap::Parser;
+use miette::Result;
 
-use dobby::{command, run};
+use dobby::{run, Cli};
 
 fn main() -> Result<()> {
-    color_eyre::install().expect("Could not set up error handling with color_eyre");
-
-    run(&command().get_matches())
+    run(Cli::parse())
 }

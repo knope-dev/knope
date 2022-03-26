@@ -9,6 +9,7 @@ mod conventional_commits;
 mod github;
 mod semver;
 
+#[derive(Clone, Debug)]
 pub(crate) struct Release {
     pub(crate) version: ::semver::Version,
     pub(crate) changelog: String,

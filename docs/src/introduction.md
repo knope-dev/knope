@@ -8,6 +8,19 @@ Basically you create a file called `dobby.toml` in your project directory which 
 
 Once you've got a config set up, you just run this program (`dobby` if you installed normally via cargo). That will prompt you to select one of your configured workflows. Do that and you're off to the races!
 
+## CLI Arguments
+
+Running `dobby` on its own will prompt you to select a defined workflow (if any). You can quickly run a workflow by passing the workflow's `name` as a positional argument. This is the only positional argument `dobby` accepts, so `dobby release` expects there to be a workflow named `release` and will try to run that workflow.
+
+### Options
+
+There are a few options you can pass to `dobby` to control how it behaves.
+
+1. `--help` prints out a help message and exits.
+2. `--version` prints out the version of `dobby` and exits.
+3. `--validate` will check your `dobby.toml` to make sure every workflow in it is valid, then exit. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid.
+4. `--dry-run` will pretend to run the selected workflow (either via arg or prompt), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout.
+
 ## Features
 
 More detail on everything this program can do can be found by digging into [config] but here's a rough (incomplete) summary:

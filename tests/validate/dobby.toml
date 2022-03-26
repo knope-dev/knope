@@ -1,0 +1,29 @@
+[[workflows]]
+name = "Cannot SelectJiraIssue without Jira config "
+steps = [{type = "SelectJiraIssue", status = "open"}]
+
+[[workflows]]
+name = "Cannot TransitionJiraIssue without SelectJiraIssue "
+steps = [{type = "TransitionJiraIssue", status = "closed"}]
+
+[[workflows]]
+name = "Cannot SelectGitHubIssue without GitHub config"
+steps = [{type = "SelectGitHubIssue"}]
+
+[[workflows]]
+name = "Cannot SwitchBranches without first selecting an issue"
+steps = [{type = "SwitchBranches"}]
+
+[[workflows]]
+name = "Cannot use Version variable when no metadata file is found"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo"
+variables = {version="Version"}
+
+[[workflows]]
+name = "Cannot release without PreRelease"
+
+[[workflows.steps]]
+type = "Release"

@@ -1,0 +1,8 @@
+Would bump version to 1.1.0-rc.2
+Would add the following to CHANGELOG.md: 
+## 1.1.0-rc.2
+
+### Features
+
+- New feature in second RC
+
