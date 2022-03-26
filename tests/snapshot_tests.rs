@@ -15,7 +15,7 @@ fn test_validate() {
         .arg("--validate")
         .current_dir("tests/validate")
         .assert();
-    assert.failure().stderr_eq_path("validate/output.txt");
+    assert.failure().stderr_eq_path("tests/validate/output.txt");
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release.
