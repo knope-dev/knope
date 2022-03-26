@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use miette::Diagnostic;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::state::RunType;
@@ -9,7 +9,7 @@ use crate::{command, git, issues, releases};
 
 /// Each variant describes an action you can take using Dobby, they are used when defining your
 /// [`crate::Workflow`] via whatever config format is being utilized.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(tag = "type")]
 pub(crate) enum Step {
     /// Search for Jira issues by status and display the list of them in the terminal.
@@ -280,7 +280,7 @@ pub(super) enum StepError {
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct PrepareRelease {
     #[serde(default = "default_changelog")]
     pub(crate) changelog_path: String,

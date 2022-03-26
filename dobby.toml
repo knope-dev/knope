@@ -15,13 +15,6 @@ name = "Finish Development"
     command = "gh pr create --web -p WIP"
 
 [[workflows]]
-name = "dry-release"
-
-    [[workflows.steps]]
-    type = "PrepareRelease"
-    dry_run = true
-
-[[workflows]]
 name = "release"
 
     [[workflows.steps]]

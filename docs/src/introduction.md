@@ -18,8 +18,9 @@ There are a few options you can pass to `dobby` to control how it behaves.
 
 1. `--help` prints out a help message and exits.
 2. `--version` prints out the version of `dobby` and exits.
-3. `--validate` will check your `dobby.toml` to make sure every workflow in it is valid, then exit. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid.
-4. `--dry-run` will pretend to run the selected workflow (either via arg or prompt), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout.
+3. `--generate` will generate a `dobby.toml` file in the current directory.
+4. `--validate` will check your `dobby.toml` to make sure every workflow in it is valid, then exit. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid.
+5. `--dry-run` will pretend to run the selected workflow (either via arg or prompt), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout.
 
 ## Features
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use execute::shell;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::git::branch_name_from_issue;
 use crate::releases::get_version;
@@ -9,7 +9,7 @@ use crate::step::StepError;
 use crate::{state, RunType, State};
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) enum Variable {
     /// Uses the first supported version found in your project.
     Version,

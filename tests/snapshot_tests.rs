@@ -8,6 +8,56 @@ use git_repo_helpers::*;
 
 mod git_repo_helpers;
 
+/// Run `--generate` on a repo with no remote.
+#[test]
+fn generate_no_remote() {
+    // Arrange
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/generate_no_remote");
+    init(temp_path);
+
+    // Act
+    let assert = Command::new(cargo_bin!("dobby"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert
+    assert.success().stdout_eq("Generating a dobby.toml file\n");
+    assert_eq_path(
+        source_path.join("dobby.toml"),
+        read_to_string(temp_path.join("dobby.toml")).unwrap(),
+    );
+}
+
+/// Run `--generate` on a repo with a GitHub remote.
+#[test]
+fn generate_github() {
+    // Arrange
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/generate_github");
+    init(temp_path);
+    add_remote(temp_path, "github.com/dobby-dev/dobby");
+
+    // Act
+    let assert = Command::new(cargo_bin!("dobby"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert
+    assert
+        .success()
+        .stdout_eq("Generating a dobby.toml file\n")
+        .stderr_eq("");
+    assert_eq_path(
+        source_path.join("dobby.toml"),
+        read_to_string(temp_path.join("dobby.toml")).unwrap(),
+    );
+}
+
 /// Run `--validate` with a config file that has lots of problems.
 #[test]
 fn test_validate() {

@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
 use semver::{Prerelease, Version};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::step::StepError;
 use crate::{package_json, pyproject, state, RunType};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(tag = "rule")]
 pub(crate) enum Rule {
     Major,
@@ -16,7 +16,7 @@ pub(crate) enum Rule {
     Patch,
     Pre {
         label: String,
-        #[serde(skip_deserializing)]
+        #[serde(skip)]
         fallback_rule: ConventionalRule,
     },
     Release,
