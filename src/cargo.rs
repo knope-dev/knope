@@ -1,8 +1,9 @@
 use std::path::Path;
 
-use color_eyre::Result;
 use serde::Deserialize;
 use toml::Spanned;
+
+use crate::step::StepError;
 
 pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     Some(
@@ -14,9 +15,9 @@ pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     )
 }
 
-pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<()> {
+pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<(), StepError> {
     let mut toml = std::fs::read_to_string(&path)?;
-    let doc: Cargo = toml::from_str(&toml)?;
+    let doc: Cargo = toml::from_str(&toml).map_err(|_| StepError::InvalidCargoToml)?;
 
     // Account for quotes with +- 1
     let start = doc.package.version.start() + 1;

@@ -1,8 +1,11 @@
+use std::io::Write;
+
 use crate::config;
 use crate::issues;
 use crate::releases;
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
+#[derive(Clone, Debug)]
 pub(crate) struct State {
     pub(crate) jira_config: Option<config::Jira>,
     pub(crate) github: GitHub,
@@ -27,7 +30,29 @@ impl State {
     }
 }
 
+/// The type of state—an outer enum to make sure that dry-runs are handled appropriately.
+pub(crate) enum RunType {
+    /// Signifies that this is a dry run of a workflow. No I/O should happen—just pretend to run the
+    /// workflow and output the results.
+    DryRun {
+        state: State,
+        stdout: Box<dyn Write>,
+    },
+    /// This is a real run of a workflow, actually do the thing.
+    Real(State),
+}
+
+impl RunType {
+    pub(crate) fn decompose(self) -> (State, Option<Box<dyn Write>>) {
+        match self {
+            RunType::DryRun { state, stdout } => (state, Some(stdout)),
+            RunType::Real(state) => (state, None),
+        }
+    }
+}
+
 /// Tracks what's been done with respect to issues in this workflow.
+#[derive(Clone, Debug)]
 pub(crate) enum Issue {
     /// All workflows start here—no issue has been selected yet.
     Initial,
@@ -38,6 +63,7 @@ pub(crate) enum Issue {
 }
 
 /// Tracks what's been done with respect to releases in this workflow.
+#[derive(Clone, Debug)]
 pub(crate) enum Release {
     /// All workflows start here—no release has been created yet.
     Initial,
@@ -48,6 +74,7 @@ pub(crate) enum Release {
     Prepared(releases::Release),
 }
 
+#[derive(Clone, Debug)]
 pub(crate) enum GitHub {
     New,
     Initialized { token: String },

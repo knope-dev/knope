@@ -1,16 +1,14 @@
-use color_eyre::Result;
+use std::fmt::Debug;
+use std::io::sink;
+
+use itertools::Itertools;
+use miette::Diagnostic;
 use serde::Deserialize;
+use thiserror::Error;
 
-use crate::step::{run_step, Step};
+use crate::state::RunType;
+use crate::step::{Step, StepError};
 use crate::State;
-
-/// Run a [`Workflow`], updating the passed in `state` for each step.
-pub(crate) fn run_workflow(workflow: Workflow, mut state: State) -> Result<()> {
-    for step in workflow.steps {
-        state = run_step(step, state)?;
-    }
-    Ok(())
-}
 
 /// A workflow is basically the state machine to run for a single execution of Dobby.
 #[derive(Deserialize, Debug)]
@@ -19,6 +17,65 @@ pub(crate) struct Workflow {
     pub(crate) name: String,
     /// A list of [`Step`]s to execute in order, stopping if any step fails.
     pub(crate) steps: Vec<Step>,
+}
+
+/// A collection of errors from running with the `--validate` option.
+#[derive(Debug, Error, Diagnostic)]
+#[error("There are problems with the defined workflows")]
+pub struct ValidationErrorCollection {
+    #[related]
+    errors: Vec<Error>,
+}
+
+/// An error from running or validating a single workflow.
+#[derive(Debug, thiserror::Error, Diagnostic)]
+#[error("Problem with workflow {name}")]
+pub struct Error {
+    name: String,
+    #[related]
+    inner: [StepError; 1],
+}
+
+/// Run a series of [`Step`], each of which updates `state`.
+pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
+    for step in workflow.steps {
+        state = match step.run(state) {
+            Ok(state) => state,
+            Err(err) => {
+                return Err(Error {
+                    name: workflow.name,
+                    inner: [err],
+                });
+            }
+        };
+    }
+    Ok(())
+}
+
+#[allow(clippy::needless_pass_by_value)] // Lifetime errors if State is passed by ref.
+pub(crate) fn validate(
+    workflows: Vec<Workflow>,
+    state: State,
+) -> Result<(), ValidationErrorCollection> {
+    let errors = workflows
+        .into_iter()
+        .filter_map(|workflow| {
+            run(
+                workflow,
+                RunType::DryRun {
+                    state: state.clone(),
+                    stdout: Box::new(sink()),
+                },
+            )
+            .err()
+        })
+        .collect_vec();
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ValidationErrorCollection { errors })
+    }
 }
 
 impl std::fmt::Display for Workflow {

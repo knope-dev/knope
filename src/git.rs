@@ -1,22 +1,33 @@
 use std::str::FromStr;
 
-use color_eyre::eyre::{eyre, ContextCompat, Result, WrapErr};
 use git2::build::CheckoutBuilder;
 use git2::{Branch, BranchType, DescribeFormatOptions, DescribeOptions, Repository};
 
 use crate::issues::Issue;
 use crate::prompt::select;
-use crate::state::{self, State};
+use crate::state;
+use crate::step::StepError;
+use crate::RunType;
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
-pub(crate) fn switch_branches(state: State) -> Result<State> {
+pub(crate) fn switch_branches(run_type: RunType) -> Result<RunType, StepError> {
+    let (state, dry_run_stdout) = run_type.decompose();
     let issue = match &state.issue {
-        state::Issue::Initial => return Err(eyre!("You must SelectIssue first.")),
+        state::Issue::Initial => return Err(StepError::NoIssueSelected),
         state::Issue::Selected(issue) => issue,
     };
-    let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
     let new_branch_name = branch_name_from_issue(issue);
+    if let Some(mut stdout) = dry_run_stdout {
+        writeln!(
+            stdout,
+            "Would switch to or create a branch named {}",
+            new_branch_name
+        )?;
+        return Ok(RunType::DryRun { state, stdout });
+    }
+
+    let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
     let branches = get_all_branches(&repo)?;
 
     if let Ok(existing) = repo.find_branch(&new_branch_name, BranchType::Local) {
@@ -25,54 +36,66 @@ pub(crate) fn switch_branches(state: State) -> Result<State> {
             new_branch_name
         );
         switch_to_branch(&repo, &existing)?;
-        return Ok(state);
+    } else {
+        println!("Creating a new branch called {}", new_branch_name);
+        let branch = select_branch(branches, "Which branch do you want to base off of?")?;
+        let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
+        switch_to_branch(&repo, &new_branch)?;
     }
 
-    println!("Creating a new branch called {}", new_branch_name);
-    let branch = select_branch(branches, "Which branch do you want to base off of?")?;
-    let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
-    switch_to_branch(&repo, &new_branch)?;
-    Ok(state)
+    Ok(RunType::Real(state))
 }
 
 /// Rebase the current branch onto the selected one.
-pub(crate) fn rebase_branch(state: State, to: &str) -> Result<State> {
-    let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
-    let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
+pub(crate) fn rebase_branch(to: &str, mut run_type: RunType) -> Result<RunType, StepError> {
+    if let RunType::DryRun { stdout, .. } = &mut run_type {
+        writeln!(stdout, "Would rebase current branch onto {}", to)?;
+        return Ok(run_type);
+    }
 
-    let target_branch = repo
-        .find_branch(to, BranchType::Local)
-        .wrap_err_with(|| format!("Could not find target branch {}, is it local?", to))?;
-    let target = repo
-        .reference_to_annotated_commit(target_branch.get())
-        .wrap_err("Could not retrieve annotated commit from target to rebase")?;
-    let source = repo
-        .reference_to_annotated_commit(&head)
-        .wrap_err("Could not retrieve annotated commit from source to rebase")?;
-    repo.rebase(Some(&target), None, Some(&source), None)
-        .wrap_err("Failed to start rebase")?
-        .finish(None)
-        .wrap_err("Could not complete rebase")?;
+    let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
+    let head = repo.head()?;
+
+    let target_branch = repo.find_branch(to, BranchType::Local)?;
+    let target = repo.reference_to_annotated_commit(target_branch.get())?;
+    let source = repo.reference_to_annotated_commit(&head)?;
+    repo.rebase(Some(&target), None, Some(&source), None)?
+        .finish(None)?;
 
     println!("Rebased current branch onto {}", to);
     switch_to_branch(&repo, &target_branch)?;
     println!("Switched to branch {}, don't forget to push!", to);
-
-    Ok(state)
+    Ok(run_type)
 }
 
-pub(crate) fn select_issue_from_current_branch(mut state: State) -> Result<State> {
-    let repo = Repository::open(".").wrap_err("Could not find Git repo in this directory")?;
-    let head = repo.head().wrap_err("Could not resolve Repo HEAD")?;
-    let ref_name = head.name().ok_or_else(|| {
-        eyre!("Could not get a name for current HEAD. Are you at the tip of a branch?")
-    })?;
-    let issue = select_issue_from_branch_name(ref_name)?;
-    state.issue = state::Issue::Selected(issue);
-    Ok(state)
+pub(crate) fn select_issue_from_current_branch(run_type: RunType) -> Result<RunType, StepError> {
+    match run_type {
+        RunType::DryRun {
+            mut state,
+            mut stdout,
+        } => {
+            writeln!(
+                stdout,
+                "Would attempt to parse current branch name to select current issue"
+            )?;
+            state.issue = state::Issue::Selected(Issue {
+                key: String::from("123"),
+                summary: String::from("Fake Issue"),
+            });
+            Ok(RunType::DryRun { state, stdout })
+        }
+        RunType::Real(mut state) => {
+            let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
+            let head = repo.head()?;
+            let ref_name = head.name().ok_or(StepError::NotOnAGitBranch)?;
+            let issue = select_issue_from_branch_name(ref_name)?;
+            state.issue = state::Issue::Selected(issue);
+            Ok(RunType::Real(state))
+        }
+    }
 }
 
-fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue> {
+fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, StepError> {
     let parts: Vec<&str> = ref_name.split('-').collect();
 
     let (key, summary) = if !parts.is_empty() && usize::from_str(parts[0]).is_ok() {
@@ -82,9 +105,7 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue> {
         // Jira style, like PROJ-123-something-else where PROJ-123 is the issue key
         Ok((parts[0..2].join("-"), parts[2..].join("-")))
     } else {
-        Err(eyre!(
-            "Branch is not formatted properly. Was it created by Dobby?"
-        ))
+        Err(StepError::BadGitBranchName)
     }?;
 
     println!("Auto-selecting issue {} from ref {}", &key, ref_name);
@@ -95,12 +116,15 @@ fn create_branch<'repo>(
     repo: &'repo Repository,
     name: &str,
     branch: &Branch,
-) -> Result<Branch<'repo>> {
+) -> Result<Branch<'repo>, StepError> {
     repo.branch(name, &branch.get().peel_to_commit()?, false)
-        .wrap_err_with(|| format!("Failed to create new branch {}", name))
+        .map_err(StepError::from)
 }
 
-fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Branch<'repo>> {
+fn select_branch<'repo>(
+    branches: Vec<Branch<'repo>>,
+    prompt: &str,
+) -> Result<Branch<'repo>, StepError> {
     let branch_names: Vec<&str> = branches
         .iter()
         .map(Branch::name)
@@ -108,18 +132,16 @@ fn select_branch<'repo>(branches: Vec<Branch<'repo>>, prompt: &str) -> Result<Br
         .flatten()
         .collect();
 
-    let base_branch_name = select(branch_names, prompt)
-        .wrap_err("failed to select branch")?
-        .to_owned();
+    let base_branch_name = select(branch_names, prompt)?.to_owned();
 
     branches
         .into_iter()
         .find(|b| b.name().ok() == Some(Some(&base_branch_name)))
-        .wrap_err("failed to select branch")
+        .ok_or(StepError::BadGitBranchName)
 }
 
-fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
-    let statuses = repo.statuses(None).wrap_err("Could not get Git statuses")?;
+fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<(), StepError> {
+    let statuses = repo.statuses(None)?;
     let uncommitted_changes = statuses.iter().any(|status| {
         if let Ok(path) = String::from_utf8(Vec::from(status.path_bytes())) {
             if matches!(repo.status_should_ignore(path.as_ref()), Ok(false)) {
@@ -129,27 +151,18 @@ fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<()> {
         false
     });
     if uncommitted_changes {
-        return Err(eyre!(
-            "Cannot switch branches if you have uncommitted changes. Stash, then try again."
-        ));
+        return Err(StepError::UncommittedChanges);
     }
-    let ref_name = branch
-        .get()
-        .name()
-        .ok_or_else(|| eyre!("problem checking out branch, could not parse name"))?;
-    repo.set_head(ref_name)
-        .wrap_err_with(|| format!("Found branch {} but could not switch to it.", ref_name))?;
+    let ref_name = branch.get().name().ok_or(StepError::BadGitBranchName)?;
+    repo.set_head(ref_name)?;
     repo.checkout_head(Some(CheckoutBuilder::new().force()))
-        .wrap_err(
-            "Switching branches failed, but HEAD was changed. You probably want to git switch back to the branch you were on",
-        )?;
+        .map_err(StepError::IncompleteCheckout)?;
     Ok(())
 }
 
-fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>> {
+fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>, StepError> {
     Ok(repo
-        .branches(Some(BranchType::Local))
-        .wrap_err("Could not list branches")?
+        .branches(Some(BranchType::Local))?
         .into_iter()
         .filter_map(|value| {
             if let Ok((b, _)) = value {
@@ -165,27 +178,20 @@ pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
     format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(' ', "-")
 }
 
-fn get_last_tag_name(repo: &Repository) -> Result<String> {
+fn get_last_tag_name(repo: &Repository) -> Result<String, StepError> {
     repo.describe(DescribeOptions::new().describe_tags())
-        .wrap_err("Could not describe project, are there any tags?")?
+        .map_err(StepError::ListTagsError)?
         .format(Some(DescribeFormatOptions::new().abbreviated_size(0)))
-        .wrap_err("Could not format description into tag.")
+        .map_err(StepError::from)
 }
 
-pub(crate) fn get_commit_messages_after_last_tag() -> Result<Vec<String>> {
-    let repo =
-        Repository::open(".").wrap_err("Could not open Git repository in working directory.")?;
+pub(crate) fn get_commit_messages_after_last_tag() -> Result<Vec<String>, StepError> {
+    let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
     let tag_name = get_last_tag_name(&repo)?;
-    let tag_ref = repo
-        .find_reference(&format!("refs/tags/{}", tag_name))
-        .wrap_err_with(|| format!("Could not find tag {}", tag_name))?;
-    let tag_oid = tag_ref
-        .target()
-        .ok_or_else(|| eyre!("Could not find object described by tag {}", tag_name))?;
+    let tag_ref = repo.find_reference(&format!("refs/tags/{}", tag_name))?;
+    let tag_oid = tag_ref.target().ok_or(StepError::GitError(None))?;
     let mut revwalk = repo.revwalk()?;
-    revwalk
-        .push_head()
-        .wrap_err("Could not start walking history from HEAD")?;
+    revwalk.push_head()?;
     let messages: Vec<String> = revwalk
         .into_iter()
         .filter_map(std::result::Result::ok)

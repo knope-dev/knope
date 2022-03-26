@@ -1,8 +1,9 @@
 use std::path::Path;
 
-use color_eyre::Result;
 use serde::Deserialize;
 use toml::Spanned;
+
+use crate::step::StepError;
 
 pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     Some(
@@ -15,9 +16,9 @@ pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     )
 }
 
-pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<()> {
+pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<(), StepError> {
     let mut toml = std::fs::read_to_string(&path)?;
-    let doc: PyProject = toml::from_str(&toml)?;
+    let doc: PyProject = toml::from_str(&toml).map_err(|_| StepError::InvalidPyProject)?;
 
     // Account for quotes around value with +- 1
     let start = doc.tool.poetry.version.start() + 1;

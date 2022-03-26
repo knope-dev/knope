@@ -1,8 +1,9 @@
 use std::path::Path;
 
-use color_eyre::eyre::{eyre, Result};
 use serde::Deserialize;
 use serde_json::Value;
+
+use crate::step::StepError;
 
 pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     Some(
@@ -12,20 +13,24 @@ pub(crate) fn get_version<P: AsRef<Path>>(path: P) -> Option<String> {
     )
 }
 
-pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<()> {
+pub(crate) fn set_version<P: AsRef<Path>>(path: P, new_version: &str) -> Result<(), StepError> {
     let json = std::fs::read_to_string(&path)?;
-    let json = match serde_json::from_str::<Value>(&json)? {
-        Value::Object(mut data) => {
-            data.insert(
-                "version".to_string(),
-                Value::String(new_version.to_string()),
-            );
-            Some(Value::Object(data))
+    let json =
+        match serde_json::from_str::<Value>(&json).map_err(|_| StepError::InvalidPackageJson)? {
+            Value::Object(mut data) => {
+                data.insert(
+                    "version".to_string(),
+                    Value::String(new_version.to_string()),
+                );
+                Some(Value::Object(data))
+            }
+            _ => None,
         }
-        _ => None,
-    }
-    .ok_or_else(|| eyre!("Invalid package.json contents"))?;
-    std::fs::write(path, serde_json::to_string_pretty(&json)?)?;
+        .ok_or(StepError::InvalidPackageJson)?;
+    std::fs::write(
+        path,
+        serde_json::to_string_pretty(&json).map_err(|e| StepError::Bug(Box::new(e)))?,
+    )?;
     Ok(())
 }
 

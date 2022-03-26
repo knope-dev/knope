@@ -1,31 +1,29 @@
 use std::fmt::Display;
 
-use color_eyre::eyre::{eyre, Result, WrapErr};
 use console::Term;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, Select};
+use miette::Result;
 
-// TODO: Switch this to use references instead of owned types to avoid copies
+use crate::step::StepError;
 
-pub(crate) fn select<T: Display>(mut items: Vec<T>, prompt: &str) -> Result<T> {
+pub(crate) fn select<T: Display>(mut items: Vec<T>, prompt: &str) -> Result<T, StepError> {
     let selection = Select::with_theme(&ColorfulTheme::default())
         .items(&items)
         .default(0)
         .with_prompt(prompt)
-        .interact_on_opt(&Term::stdout())?;
+        .interact_on_opt(&Term::stdout())
+        .map_err(|e| StepError::UserInput(Some(e)))?;
 
     match selection {
-        Some(index) => {
-            let item = items.remove(index);
-            Ok(item)
-        }
-        None => Err(eyre!("No option selected")),
+        Some(index) => Ok(items.remove(index)),
+        None => Err(StepError::UserInput(None)),
     }
 }
 
-pub(crate) fn get_input(prompt: &str) -> Result<String> {
+pub(crate) fn get_input(prompt: &str) -> Result<String, StepError> {
     Input::with_theme(&ColorfulTheme::default())
         .with_prompt(prompt)
         .interact_text()
-        .wrap_err("Failed to get input from user")
+        .map_err(|e| StepError::UserInput(Some(e)))
 }

@@ -2,7 +2,9 @@
 
 use std::env::set_current_dir;
 
-use dobby::{command, run};
+use clap::Parser;
+
+use dobby::{run, Cli};
 
 #[test]
 fn tests() {
@@ -36,8 +38,8 @@ fn tests() {
         )
         .unwrap();
 
-        let matches = command().get_matches_from(["dobby", workflow]);
-        run(&matches).unwrap();
+        let cli = Cli::parse_from(["dobby", workflow]);
+        run(cli).unwrap();
         let cargo_contents = std::fs::read_to_string(&cargo_toml).unwrap();
         assert_eq!(
             cargo_contents,

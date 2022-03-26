@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use color_eyre::eyre::{eyre, Result, WrapErr};
 use execute::shell;
 use serde::Deserialize;
 
 use crate::git::branch_name_from_issue;
 use crate::releases::get_version;
-use crate::{state, State};
+use crate::step::StepError;
+use crate::{state, RunType, State};
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
 #[derive(Debug, Deserialize)]
@@ -21,19 +21,26 @@ pub(crate) enum Variable {
 /// Run the command string `command` in the current shell after replacing the keys of `variables`
 /// with the values that the [`Variable`]s represent.
 pub(crate) fn run_command(
-    state: State,
+    mut run_type: RunType,
     mut command: String,
     variables: Option<HashMap<String, Variable>>,
-) -> Result<State> {
+) -> Result<RunType, StepError> {
+    let (state, dry_run_stdout) = match &mut run_type {
+        RunType::DryRun { state, stdout } => (state, Some(stdout)),
+        RunType::Real(state) => (state, None),
+    };
     if let Some(variables) = variables {
-        command = replace_variables(command, variables, &state)
-            .wrap_err("While getting current version")?;
+        command = replace_variables(command, variables, state)?;
+    }
+    if let Some(stdout) = dry_run_stdout {
+        writeln!(stdout, "Would run {}", command)?;
+        return Ok(run_type);
     }
     let status = shell(command).status()?;
     if status.success() {
-        return Ok(state);
+        return Ok(run_type);
     }
-    Err(eyre!("Got error status {} when running command", status))
+    Err(StepError::CommandError(status))
 }
 
 /// Replace declared variables in the command string and return command.
@@ -41,18 +48,16 @@ fn replace_variables(
     mut command: String,
     variables: HashMap<String, Variable>,
     state: &State,
-) -> Result<String> {
+) -> Result<String, StepError> {
     for (var_name, var_type) in variables {
         match var_type {
             Variable::Version => command = command.replace(&var_name, &get_version()?.to_string()),
-            Variable::IssueBranch => {
-                match &state.issue {
-                    state::Issue::Initial => return Err(eyre!("Cannot use the variable IssueBranch unless the current workflow state is IssueSelected")),
-                    state::Issue::Selected(issue) => {
-                        command = command.replace(&var_name, &branch_name_from_issue(issue));
-                    }
+            Variable::IssueBranch => match &state.issue {
+                state::Issue::Initial => return Err(StepError::NoIssueSelected),
+                state::Issue::Selected(issue) => {
+                    command = command.replace(&var_name, &branch_name_from_issue(issue));
                 }
-            }
+            },
         }
     }
     Ok(command)
@@ -62,19 +67,21 @@ fn replace_variables(
 mod test_run_command {
     use tempfile::NamedTempFile;
 
+    use crate::State;
+
     use super::*;
 
     #[test]
     fn test() {
         let file = NamedTempFile::new().unwrap();
         let command = format!("cat {}", file.path().to_str().unwrap());
-        let result = run_command(State::new(None, None), command.clone(), None);
+        let result = run_command(RunType::Real(State::new(None, None)), command.clone(), None);
 
         assert!(result.is_ok());
 
         file.close().unwrap();
 
-        let result = run_command(State::new(None, None), command, None);
+        let result = run_command(RunType::Real(State::new(None, None)), command, None);
         assert!(result.is_err());
     }
 }

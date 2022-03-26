@@ -1,7 +1,6 @@
 use std::fs;
 
-use color_eyre::eyre::WrapErr;
-use color_eyre::Result;
+use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::Deserialize;
 
 use crate::workflow::Workflow;
@@ -17,19 +16,30 @@ pub(crate) struct Config {
 }
 
 impl Config {
+    const CONFIG_PATH: &'static str = "dobby.toml";
+
     /// Create a Config from a TOML file.
     ///
     /// ## Errors
     /// 1. Provided path is not found
     /// 2. Cannot parse file contents into a Config
-    pub(crate) fn load(path: &str) -> Result<Self> {
-        let contents = fs::read_to_string(path).wrap_err("Could not find config file.")?;
-        toml::from_str(&contents).wrap_err("Failed to parse config file.")
+    pub(crate) fn load() -> Result<Self> {
+        let contents = fs::read_to_string(Self::CONFIG_PATH)
+            .into_diagnostic()
+            .wrap_err_with(|| {
+                format!(
+                    "Could not find {CONFIG_PATH}",
+                    CONFIG_PATH = Self::CONFIG_PATH
+                )
+            })?;
+        toml::from_str(&contents)
+            .into_diagnostic()
+            .wrap_err("Invalid TOML when parsing config")
     }
 }
 
 /// Config required for steps that interact with Jira.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub(crate) struct Jira {
     /// The URL to your Atlassian instance running Jira
     pub(crate) url: String,
@@ -38,7 +48,7 @@ pub(crate) struct Jira {
 }
 
 /// Details needed to use steps that interact with GitHub.
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub(crate) struct GitHub {
     /// The user or organization that owns the `repo`.
     pub(crate) owner: String,

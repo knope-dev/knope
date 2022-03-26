@@ -1,0 +1,51 @@
+Error: 
+  × There are problems with the defined workflows
+
+Error: 
+  × Problem with workflow Cannot SelectJiraIssue without Jira config
+
+Error: step::jira_not_configured (https://dobby-dev.github.io/dobby/config/jira.html)
+
+  × Jira is not configured
+  help: Jira must be configured in order to call this step
+Error: 
+  × Problem with workflow Cannot TransitionJiraIssue without SelectJiraIssue
+
+Error: step::no_issue_selected
+
+  × No issue selected
+  help: You must call SelectJiraIssue or SelectGitHubIssue before calling
+        this step
+Error: 
+  × Problem with workflow Cannot SelectGitHubIssue without GitHub config
+
+Error: step::github_not_configured (https://dobby-dev.github.io/dobby/config/github.html)
+
+  × GitHub is not configured
+  help: GitHub must be configured in order to call this step
+Error: 
+  × Problem with workflow Cannot SwitchBranches without first selecting an
+  │ issue
+
+Error: step::no_issue_selected
+
+  × No issue selected
+  help: You must call SelectJiraIssue or SelectGitHubIssue before calling
+        this step
+Error: 
+  × Problem with workflow Cannot use Version variable when no metadata file
+  │ is found
+
+Error: step::no_metadata_file (https://dobby-dev.github.io/dobby/config/step/BumpVersion.html#supported-formats)
+
+  × Could not find a supported metadata file to use for versioning
+  help: In order to use version-related steps, you must have one of the
+        supported metadata files in your project
+Error: 
+  × Problem with workflow Cannot release without PreRelease
+
+Error: step::release_not_prepared (https://dobby-dev.github.io/dobby/config/step/PrepareRelease.html)
+
+  × PrepareRelease needs to occur before this step
+  help: You must call the PrepareRelease step before this one.
+

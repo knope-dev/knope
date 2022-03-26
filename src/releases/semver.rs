@@ -1,11 +1,10 @@
 use std::fmt::Display;
 
-use color_eyre::eyre::WrapErr;
-use color_eyre::eyre::{eyre, Result};
 use semver::{Prerelease, Version};
 use serde::Deserialize;
 
-use crate::{package_json, pyproject, state};
+use crate::step::StepError;
+use crate::{package_json, pyproject, state, RunType};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
@@ -66,10 +65,9 @@ impl Display for PackageVersion {
     }
 }
 
-pub(super) fn bump_version(rule: Rule, dry_run: bool) -> Result<semver::Version> {
+pub(super) fn bump_version(rule: Rule, dry_run: bool) -> Result<semver::Version, StepError> {
     let mut package_version = get_version()?;
-    package_version.version =
-        bump(package_version.version, rule).wrap_err("While bumping version")?;
+    package_version.version = bump(package_version.version, rule)?;
     if !dry_run {
         set_version(&package_version)?;
     }
@@ -77,62 +75,72 @@ pub(super) fn bump_version(rule: Rule, dry_run: bool) -> Result<semver::Version>
 }
 
 pub(crate) fn bump_version_and_update_state(
-    mut state: state::State,
+    run_type: RunType,
     rule: Rule,
-) -> Result<state::State> {
-    let version = bump_version(rule, false)?;
-    state.release = state::Release::Bumped(version);
-    Ok(state)
+) -> Result<RunType, StepError> {
+    match run_type {
+        RunType::DryRun {
+            mut state,
+            mut stdout,
+        } => {
+            let version = bump_version(rule, true)?;
+            writeln!(stdout, "Would bump version to {}", version)?;
+            state.release = state::Release::Bumped(version);
+            Ok(RunType::DryRun { state, stdout })
+        }
+        RunType::Real(mut state) => {
+            let version = bump_version(rule, false)?;
+            state.release = state::Release::Bumped(version);
+            Ok(RunType::Real(state))
+        }
+    }
 }
 
-pub(crate) fn get_version() -> Result<PackageVersion> {
+pub(crate) fn get_version() -> Result<PackageVersion, StepError> {
     if let Some(cargo_version) = crate::cargo::get_version("Cargo.toml") {
-        let version = semver::Version::parse(&cargo_version).wrap_err_with(|| {
-            format!(
-                "Found {} in Cargo.toml which is not a valid version",
-                cargo_version
-            )
+        let version = semver::Version::parse(&cargo_version).map_err(|_| {
+            StepError::InvalidSemanticVersion {
+                version: cargo_version,
+                file_name: "Cargo.toml",
+            }
         })?;
         Ok(PackageVersion {
             version,
             package_manager: PackageManager::Cargo,
         })
     } else if let Some(pyproject_version) = pyproject::get_version("pyproject.toml") {
-        let version = semver::Version::parse(&pyproject_version).wrap_err_with(|| {
-            format!(
-                "Found {} in pyproject.toml which is not a valid version",
-                pyproject_version
-            )
+        let version = semver::Version::parse(&pyproject_version).map_err(|_| {
+            StepError::InvalidSemanticVersion {
+                version: pyproject_version,
+                file_name: "pyproject.toml",
+            }
         })?;
         Ok(PackageVersion {
             version,
             package_manager: PackageManager::Poetry,
         })
     } else if let Some(package_version) = package_json::get_version("package.json") {
-        let version = semver::Version::parse(&package_version).wrap_err_with(|| {
-            format!(
-                "Found {} in package.json which is not a valid version",
-                package_version
-            )
+        let version = semver::Version::parse(&package_version).map_err(|_| {
+            StepError::InvalidSemanticVersion {
+                version: package_version,
+                file_name: "package.json",
+            }
         })?;
         Ok(PackageVersion {
             version,
             package_manager: PackageManager::JavaScript,
         })
     } else {
-        Err(eyre!("No supported metadata found to parse version from"))
+        Err(StepError::NoMetadataFileFound)
     }
 }
 
-fn set_version(version: &PackageVersion) -> Result<()> {
+fn set_version(version: &PackageVersion) -> Result<(), StepError> {
     match version.package_manager {
-        PackageManager::Cargo => crate::cargo::set_version("Cargo.toml", &version.to_string())
-            .wrap_err("While bumping Cargo.toml"),
-        PackageManager::Poetry => pyproject::set_version("pyproject.toml", &version.to_string())
-            .wrap_err("While bumping pyproject.toml"),
+        PackageManager::Cargo => crate::cargo::set_version("Cargo.toml", &version.to_string()),
+        PackageManager::Poetry => pyproject::set_version("pyproject.toml", &version.to_string()),
         PackageManager::JavaScript => {
             package_json::set_version("package.json", &version.to_string())
-                .wrap_err("While bumping package.json")
         }
     }
 }
@@ -145,7 +153,7 @@ fn set_version(version: &PackageVersion) -> Result<()> {
 /// different behavior:
 /// 1. [`Rule::Major`] will bump the minor component.
 /// 2. [`Rule::Minor`] will bump the patch component.
-fn bump(mut version: Version, rule: Rule) -> Result<Version> {
+fn bump(mut version: Version, rule: Rule) -> Result<Version, StepError> {
     let is_0 = version.major == 0;
     match (rule, is_0) {
         (Rule::Major, false) => {
@@ -269,10 +277,12 @@ fn bump_pre(
     mut version: Version,
     prefix: &str,
     fallback_rule: ConventionalRule,
-) -> Result<Version> {
+) -> Result<Version, StepError> {
     if version.pre.is_empty() {
         let mut version = bump(version, fallback_rule.into())?;
-        version.pre = Prerelease::new(&format!("{}.0", prefix))?;
+        let pre_release_version = format!("{}.0", prefix);
+        version.pre = Prerelease::new(&pre_release_version)
+            .map_err(|_| StepError::InvalidPreReleaseVersion(pre_release_version))?;
         return Ok(version);
     }
 
@@ -280,16 +290,22 @@ fn bump_pre(
     let parts = pre_string.split('.').collect::<Vec<_>>();
 
     if parts.len() != 2 {
-        return Err(eyre!(
-            "A prerelease version already exists but could not be incremented"
-        ));
+        return Err(StepError::InvalidPreReleaseVersion(String::from(
+            pre_string,
+        )));
     }
 
     if parts[0] != prefix {
-        version.pre = Prerelease::new(&format!("{}.0", prefix))?;
+        let pre_release_version = format!("{}.0", prefix);
+        version.pre = Prerelease::new(&pre_release_version)
+            .map_err(|_| StepError::InvalidPreReleaseVersion(pre_release_version))?;
         return Ok(version);
     }
-    let pre_version = parts[1].parse::<u16>()?;
-    version.pre = Prerelease::new(&format!("{}.{}", prefix, pre_version + 1))?;
+    let pre_version = parts[1]
+        .parse::<u16>()
+        .map_err(|_| StepError::InvalidPreReleaseVersion(String::from(pre_string)))?;
+    let pre_release_version = format!("{}.{}", prefix, pre_version + 1);
+    version.pre = Prerelease::new(&pre_release_version)
+        .map_err(|_| StepError::InvalidPreReleaseVersion(pre_release_version))?;
     Ok(version)
 }
