@@ -1,6 +1,6 @@
 # Config
 
-This is the top level structure that your `dobby.toml` must adhere to to be valid. If you don't have a `dobby.toml` in the working directory or it isn't valid, you'll get an error right off the bat.
+This is the top level structure that your `knope.toml` must adhere to to be valid. If you don't have a `knope.toml` in the working directory, or it isn't valid, you'll get an error right off the bat.
 
 ## Example
 
@@ -20,7 +20,7 @@ name = "Second Workflow"
 # GitHub config here
 ```
 
-When you first start `dobby`, you will be asked to select a [workflow] to run. In the above example, this would look something like:
+When you first start `knope`, you will be asked to select a [workflow] to run. In the above example, this would look something like:
 
 ```
 ? Select a workflow

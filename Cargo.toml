@@ -1,13 +1,13 @@
 [package]
-name = "dobby"
+name = "knope"
 description = "A command line tool for automating common development tasks"
 version = "0.1.5"
 authors = ["Dylan Anthony <contact@dylananthony.com>"]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/dobby-dev/dobby"
-homepage = "https://dobby-dev.github.io/dobby/"
-documentation = "https://dobby-dev.github.io/dobby/"
+repository = "https://github.com/knope-dev/knope"
+homepage = "https://knope-dev.github.io/knope/"
+documentation = "https://knope-dev.github.io/knope/"
 keywords = ["jira", "git", "github", "workflow", "script"]
 categories = ["command-line-utilities", "development-tools"]
 

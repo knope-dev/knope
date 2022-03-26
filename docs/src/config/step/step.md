@@ -1,6 +1,6 @@
 # Step
 
-A step is the atomic unit of work that Dobby operates on. In a [workflow], steps will be executed sequentially until one fails or all steps are completed.
+A step is the atomic unit of work that knope operates on. In a [workflow], steps will be executed sequentially until one fails or all steps are completed.
 
 In it's simplest form, a step is declared in a [workflow] like this:
 

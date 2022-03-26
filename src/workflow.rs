@@ -10,7 +10,7 @@ use crate::state::RunType;
 use crate::step::{Step, StepError};
 use crate::State;
 
-/// A workflow is basically the state machine to run for a single execution of Dobby.
+/// A workflow is basically the state machine to run for a single execution of knope.
 #[derive(Deserialize, Debug, Serialize)]
 pub(crate) struct Workflow {
     /// The display name of this Workflow. This is what you'll see when you go to select it.

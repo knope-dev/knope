@@ -7,13 +7,13 @@ Create a new GitHub release with the new version and release notes created in [P
 This step will fail if any of the following are true:
 
 1. [PrepareRelease] has not run before this step.
-2. Dobby cannot communicate with GitHub.
+2. knope cannot communicate with GitHub.
 3. There is no [GitHub config] set.
 4. User does not select an issue.
 
 ## Example
 
-Here's a simplified version of the release workflow used for Dobby.
+Here's a simplified version of the release workflow used for knope.
 
 ```toml
 [[workflows]]

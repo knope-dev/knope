@@ -37,8 +37,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: target/release/dobby
-          asset_name: dobby-macos-x86-${{ steps.get_release.outputs.tag_name }}
+          asset_path: target/release/knope
+          asset_name: knope-macos-x86-${{ steps.get_release.outputs.tag_name }}
           asset_content_type: application/octet-stream
 
   generate-windows-artifacts:
@@ -61,6 +61,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: target/release/dobby.exe
-          asset_name: dobby-windows-x86-${{ steps.get_release.outputs.tag_name }}.exe
+          asset_path: target/release/knope.exe
+          asset_name: knope-windows-x86-${{ steps.get_release.outputs.tag_name }}.exe
           asset_content_type: application/octet-stream

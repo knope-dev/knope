@@ -1,6 +1,6 @@
 # Command step
 
-Run a command in your current shell after optionally replacing some variables. This step is here to cover the infinite things you might want to do that Dobby does not yet know how to do itself. If you have a lot of these steps or a complex `command`, we recommend you write a script in something like Bash or Python, then simply call that script with a command.
+Run a command in your current shell after optionally replacing some variables. This step is here to cover the infinite things you might want to do that knope does not yet know how to do itself. If you have a lot of these steps or a complex `command`, we recommend you write a script in something like Bash or Python, then simply call that script with a command.
 
 ## Example
 

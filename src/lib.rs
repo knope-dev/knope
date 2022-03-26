@@ -32,13 +32,13 @@ mod workflow;
 ///
 /// # Errors
 ///
-/// 1. `dobby.toml` not found
-/// 2. `dobby.toml` not valid
+/// 1. `knope.toml` not found
+/// 2. `knope.toml` not valid
 /// 3. Selected workflow not found
 /// 4. Passthrough errors of selected workflow
 pub fn run(cli: Cli) -> Result<()> {
     if cli.generate {
-        println!("Generating a dobby.toml file");
+        println!("Generating a knope.toml file");
         return config::generate();
     }
 
@@ -92,7 +92,7 @@ pub struct Cli {
     workflow: Option<String>,
 
     #[clap(long)]
-    /// Check that the `dobby.toml` file is valid.
+    /// Check that the `knope.toml` file is valid.
     validate: bool,
 
     #[clap(long)]
@@ -100,7 +100,7 @@ pub struct Cli {
     dry_run: bool,
 
     #[clap(long)]
-    /// Generate a new `dobby.toml` file.
+    /// Generate a new `knope.toml` file.
     generate: bool,
 }
 

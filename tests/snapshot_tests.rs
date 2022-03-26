@@ -18,16 +18,16 @@ fn generate_no_remote() {
     init(temp_path);
 
     // Act
-    let assert = Command::new(cargo_bin!("dobby"))
+    let assert = Command::new(cargo_bin!("knope"))
         .arg("--generate")
         .current_dir(temp_path)
         .assert();
 
     // Assert
-    assert.success().stdout_eq("Generating a dobby.toml file\n");
+    assert.success().stdout_eq("Generating a knope.toml file\n");
     assert_eq_path(
-        source_path.join("dobby.toml"),
-        read_to_string(temp_path.join("dobby.toml")).unwrap(),
+        source_path.join("knope.toml"),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
 
@@ -39,10 +39,10 @@ fn generate_github() {
     let temp_path = temp_dir.path();
     let source_path = Path::new("tests/generate_github");
     init(temp_path);
-    add_remote(temp_path, "github.com/dobby-dev/dobby");
+    add_remote(temp_path, "github.com/knope-dev/knope");
 
     // Act
-    let assert = Command::new(cargo_bin!("dobby"))
+    let assert = Command::new(cargo_bin!("knope"))
         .arg("--generate")
         .current_dir(temp_path)
         .assert();
@@ -50,18 +50,18 @@ fn generate_github() {
     // Assert
     assert
         .success()
-        .stdout_eq("Generating a dobby.toml file\n")
+        .stdout_eq("Generating a knope.toml file\n")
         .stderr_eq("");
     assert_eq_path(
-        source_path.join("dobby.toml"),
-        read_to_string(temp_path.join("dobby.toml")).unwrap(),
+        source_path.join("knope.toml"),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
 
 /// Run `--validate` with a config file that has lots of problems.
 #[test]
 fn test_validate() {
-    let assert = Command::new(cargo_bin!("dobby"))
+    let assert = Command::new(cargo_bin!("knope"))
         .arg("--validate")
         .current_dir("tests/validate")
         .assert();
@@ -81,16 +81,16 @@ fn prerelease_after_release() {
     tag(temp_path, "1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["dobby.toml", "CHANGELOG.md", "Cargo.toml"] {
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("dobby"))
+    let assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .current_dir(temp_dir.path())
         .assert();
-    let dry_run_assert = Command::new(cargo_bin!("dobby"))
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .arg("--dry-run")
         .current_dir(temp_dir.path())
@@ -127,17 +127,17 @@ fn second_prerelease() {
     tag(temp_path, "1.1.0-rc.1");
     commit(temp_path, "feat: New feature in second RC");
 
-    for file in ["dobby.toml", "CHANGELOG.md", "Cargo.toml"] {
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
 
     // Act.
-    let dry_run_assert = Command::new(cargo_bin!("dobby"))
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .arg("--dry-run")
         .current_dir(temp_dir.path())
         .assert();
-    let actual_assert = Command::new(cargo_bin!("dobby"))
+    let actual_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .current_dir(temp_dir.path())
         .assert();

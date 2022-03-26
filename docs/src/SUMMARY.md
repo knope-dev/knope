@@ -2,7 +2,7 @@
 
 - [Introduction](introduction.md)
 - [Installation](installation.md)
-- [dobby.toml](config/config.md)
+- [knope.toml](config/config.md)
   - [Workflows](config/workflow.md)
   - [Steps](config/step/step.md)
     - [SelectJiraIssue](config/step/SelectJiraIssue.md)
