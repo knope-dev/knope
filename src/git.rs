@@ -95,6 +95,16 @@ pub(crate) fn select_issue_from_current_branch(run_type: RunType) -> Result<RunT
     }
 }
 
+/// Get the first remote of the Git repo, if any.
+pub(crate) fn get_first_remote() -> Option<String> {
+    let repo = Repository::open(".").ok()?;
+    let remotes = repo.remotes().ok()?;
+    let remote_name = remotes.get(0)?;
+    repo.find_remote(remote_name)
+        .ok()
+        .and_then(|remote| remote.url().map(String::from))
+}
+
 fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, StepError> {
     let parts: Vec<&str> = ref_name.split('-').collect();
 

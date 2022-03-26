@@ -3,7 +3,7 @@ use std::io::sink;
 
 use itertools::Itertools;
 use miette::Diagnostic;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::state::RunType;
@@ -11,7 +11,7 @@ use crate::step::{Step, StepError};
 use crate::State;
 
 /// A workflow is basically the state machine to run for a single execution of Dobby.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub(crate) struct Workflow {
     /// The display name of this Workflow. This is what you'll see when you go to select it.
     pub(crate) name: String,

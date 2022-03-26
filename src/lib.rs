@@ -37,6 +37,11 @@ mod workflow;
 /// 3. Selected workflow not found
 /// 4. Passthrough errors of selected workflow
 pub fn run(cli: Cli) -> Result<()> {
+    if cli.generate {
+        println!("Generating a dobby.toml file");
+        return config::generate();
+    }
+
     let preselected_workflow = cli.workflow;
 
     let config = Config::load()?;
@@ -93,6 +98,10 @@ pub struct Cli {
     #[clap(long)]
     /// Pretend to run a workflow, outputting what _would_ happen without actually doing it.
     dry_run: bool,
+
+    #[clap(long)]
+    /// Generate a new `dobby.toml` file.
+    generate: bool,
 }
 
 #[cfg(test)]
