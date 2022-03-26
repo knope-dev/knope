@@ -27,3 +27,20 @@ jobs:
         with:
           command: make
           args: ci-flow
+
+  validate-dobby:
+    name: Validate Dobby Config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v1
+      - name: Run --validate
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: -- --validate
