@@ -1,4 +1,4 @@
-name: Final Release
+name: Prerelease
 
 on:
   workflow_dispatch
@@ -13,6 +13,6 @@ jobs:
           toolchain: stable
           override: true
       - run: |
-          cargo run -- release
+          cargo run -- prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
