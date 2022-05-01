@@ -24,7 +24,7 @@ git2 = "0.14.2"
 semver = "1.0.6"
 execute = "0.2.10"
 platform-dirs = "0.3.0"
-git-conventional = "0.11.2"
+git-conventional = "0.11.3"
 ureq = { version = "2.4.0", features = ["json"] }
 http = "0.2.7"
 clap = { version = "3.1.6", features = ["cargo", "derive"] }
