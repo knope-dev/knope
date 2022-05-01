@@ -18,10 +18,6 @@ name = "Finish Development"
 name = "release"
 
     [[workflows.steps]]
-    type = "Command"
-    command = "git checkout main && git pull"
-
-    [[workflows.steps]]
     type = "PrepareRelease"
 
     [[workflow.steps]]
@@ -30,7 +26,7 @@ name = "release"
 
     [[workflows.steps]]
     type = "Command"
-    command = "cargo make prettier"
+    command = "npx -y prettier **/*.md --write"
 
     [[workflows.steps]]
     type = "Command"
@@ -52,10 +48,6 @@ name = "release"
 name = "prerelease"
 
     [[workflows.steps]]
-    type = "Command"
-    command = "git checkout main && git pull"
-
-    [[workflows.steps]]
     type = "PrepareRelease"
     prerelease_label = "rc"
 
@@ -65,7 +57,7 @@ name = "prerelease"
 
     [[workflows.steps]]
     type = "Command"
-    command = "cargo make prettier"
+    command = "npx -y prettier **/*.md --write"
 
     [[workflows.steps]]
     type = "Command"

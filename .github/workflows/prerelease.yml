@@ -1,4 +1,4 @@
-name: Final Release
+name: Prerelease
 
 on:
   workflow_dispatch
@@ -23,6 +23,6 @@ jobs:
           git_commit_gpgsign: true
           git_push_gpgsign: false
       - run: |
-          cargo run -- release
+          cargo run -- prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}

@@ -14,10 +14,12 @@ pub(crate) fn get_or_prompt_for_jira_token() -> Result<String, StepError> {
 }
 
 pub(crate) fn get_or_prompt_for_github_token() -> Result<String, StepError> {
-    load_value_or_prompt(
-        "github_token", 
-        "No GitHub token found, generate one from https://github.com/settings/tokens with `repo` permissions and input here"
-    )
+    std::env::var("GITHUB_TOKEN").or_else(|_| {
+        load_value_or_prompt(
+            "github_token",
+            "No GitHub token found, generate one from https://github.com/settings/tokens with `repo` permissions and input here",
+        )
+    })
 }
 
 pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String, StepError> {
