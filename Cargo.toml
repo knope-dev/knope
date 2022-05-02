@@ -34,7 +34,7 @@ thiserror = "1.0.31"
 velcro = "0.5.3"
 
 [dev-dependencies]
-snapbox = "0.2.9"
+snapbox = "0.2.10"
 tempfile = "3.3.0"
 
 [features]
