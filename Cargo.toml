@@ -18,7 +18,7 @@ serde = { version = "1.0.137", features = ["derive"] }
 base64 = "0.13.0"
 console = "0.15.0"
 dialoguer = "0.10.0"
-toml = "0.5.8"
+toml = "0.5.9"
 serde_json = { version = "1.0.80", features = ["preserve_order"] }
 git2 = "0.14.3"
 semver = "1.0.7"
