@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{command, git, issues, releases};
+use crate::releases::suggested_package_toml;
 use crate::state::RunType;
 
 /// Each variant describes an action you can take using knope, they are used when defining your
@@ -277,11 +278,13 @@ pub(super) enum StepError {
     ReleaseNotPrepared,
     #[error("No packages are defined")]
     #[diagnostic(
-    code(step::no_defined_packages),
-    help("You must define at least one package in the [[packages]] section of knope.toml."),
-    url("https://knope-dev.github.io/knope/config/packages.html")
+        code(step::no_defined_packages),
+        help("You must define at least one package in the [[packages]] section of knope.toml. {package_suggestion}"),
+        url("https://knope-dev.github.io/knope/config/packages.html")
     )]
-    NoDefinedPackages,
+    NoDefinedPackages {
+        package_suggestion: String,
+    },
     #[error("Too many packages defined")]
     #[diagnostic(
     code(step::too_many_packages),
@@ -309,6 +312,14 @@ pub(super) enum StepError {
     help("Attempted to interact with a file that doesn't exist in the current directory.")
     )]
     FileNotFound(PathBuf),
+}
+
+impl StepError {
+    pub fn no_defined_packages_with_help() -> Self {
+        Self::NoDefinedPackages {
+            package_suggestion: suggested_package_toml(),
+        }
+    }
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.

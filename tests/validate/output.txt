@@ -40,7 +40,16 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
 
   × No packages are defined
   help: You must define at least one package in the [[packages]] section
-        of knope.toml.
+        of knope.toml. No supported package managers found in current
+        directory. The supported formats are Cargo.toml, pyproject.toml,
+        package.json. Here's how you might define a package for
+        `Cargo.toml`:
+        
+        ```
+        [[packages]]
+        versioned_files = ["Cargo.toml"]
+        changelog = "CHANGELOG.md"
+        ```
 Error: 
   × Problem with workflow Cannot release without PrepareRelease
 
@@ -55,5 +64,14 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
 
   × No packages are defined
   help: You must define at least one package in the [[packages]] section
-        of knope.toml.
+        of knope.toml. No supported package managers found in current
+        directory. The supported formats are Cargo.toml, pyproject.toml,
+        package.json. Here's how you might define a package for
+        `Cargo.toml`:
+        
+        ```
+        [[packages]]
+        versioned_files = ["Cargo.toml"]
+        changelog = "CHANGELOG.md"
+        ```
 

@@ -114,7 +114,7 @@ pub(crate) fn bump_version_and_update_state(
 
 pub(crate) fn get_version(packages: &[Package]) -> Result<PackageVersion, StepError> {
     if packages.is_empty() {
-        return Err(StepError::NoDefinedPackages);
+        return Err(StepError::no_defined_packages_with_help());
     }
     if packages.len() > 1 {
         return Err(StepError::TooManyPackages);

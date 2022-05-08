@@ -227,7 +227,7 @@ pub(crate) fn update_project_from_conventional_commits(
     };
 
    let changelog_path = if state.packages.is_empty() {
-        return Err(StepError::NoDefinedPackages);
+        return Err(StepError::no_defined_packages_with_help());
     } else if state.packages.len() > 1 {
         return Err(StepError::TooManyPackages);
     } else {

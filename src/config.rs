@@ -1,14 +1,13 @@
 use std::fs;
-use std::path::{Path, PathBuf};
 
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
 
-use crate::releases::Package;
+use crate::{command, git};
+use crate::releases::{find_packages, Package};
 use crate::step::{PrepareRelease, Step};
 use crate::workflow::Workflow;
-use crate::{command, git};
 
 #[derive(Deserialize, Debug, Serialize)]
 pub(crate) struct Config {
@@ -61,7 +60,7 @@ pub(crate) fn generate() -> Result<()> {
                 },
                 Step::Release,
             ]
-        },
+        }
         _ => vec![
             Step::Command {
                 command: String::from("git add . && git commit -m \"chore: prepare release $version\" && git push && git tag -m $version && git push --tags"),
@@ -84,27 +83,8 @@ pub(crate) fn generate() -> Result<()> {
         github: None,
         packages: find_packages(),
     })
-    .unwrap();
+        .unwrap();
     fs::write(Config::CONFIG_PATH, contents).into_diagnostic()
-}
-
-/// Find the first supported package manager in the current directory that can be added to generated config.
-fn find_packages() -> Vec<Package> {
-    let changelog = if Path::exists(&PathBuf::from("CHANGELOG.md")) {
-        Some(String::from("CHANGELOG.md"))
-    } else {
-        None
-    };
-
-    for supported in ["Cargo.toml", "pyproject.toml", "package.json"].map(PathBuf::from) {
-        if Path::exists(&supported) {
-            return vec![Package {
-                versioned_files: vec![supported],
-                changelog,
-            }];
-        }
-    }
-    return vec![];
 }
 
 /// Config required for steps that interact with Jira.
