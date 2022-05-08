@@ -1,4 +1,4 @@
-use std::fs::{copy, read_to_string};
+use std::fs::{copy, read_to_string, write};
 use std::path::Path;
 
 use rstest::rstest;
@@ -28,6 +28,65 @@ fn generate_no_remote() {
     assert.success().stdout_eq("Generating a knope.toml file\n");
     assert_eq_path(
         source_path.join("knope.toml"),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
+    );
+}
+
+/// Run `--generate` on a repo with supported metadata files.
+#[rstest]
+#[case(&["Cargo.toml"], "Cargo.toml_knope.toml")]
+#[case(&["pyproject.toml"], "pyproject.toml_knope.toml")]
+#[case(&["package.json"], "package.json_knope.toml")]
+#[case(&["Cargo.toml", "pyproject.toml", "package.json"], "Cargo.toml_knope.toml")]
+fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
+    // Arrange
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/generate_packages");
+    init(temp_path);
+    for source_file in source_files {
+        copy(source_path.join(source_file), temp_path.join(source_file)).unwrap();
+    }
+
+    // Act
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert
+    assert.success().stdout_eq("Generating a knope.toml file\n");
+    assert_eq_path(
+        source_path.join(target_file),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
+    );
+}
+
+/// Run `--generate` on a repo with supported metadata and optional CHANGELOG.md.
+#[rstest]
+#[case(true, "changelog_knope.toml")]
+#[case(false, "no_changelog_knope.toml")]
+fn generate_packages_changelog(#[case] has_changelog: bool, #[case] target_file: &str) {
+    // Arrange
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/generate_package_changelog");
+    init(temp_path);
+    copy(source_path.join("Cargo.toml"), temp_path.join("Cargo.toml")).unwrap();
+    if has_changelog {
+        write(temp_path.join("CHANGELOG.md"), "").unwrap();
+    }
+
+    // Act
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert
+    assert.success().stdout_eq("Generating a knope.toml file\n");
+    assert_eq_path(
+        source_path.join(target_file),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
