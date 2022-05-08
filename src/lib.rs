@@ -15,14 +15,11 @@ use crate::config::Config;
 use crate::state::{RunType, State};
 
 mod app_config;
-mod cargo;
 mod command;
 mod config;
 mod git;
 mod issues;
-mod package_json;
 mod prompt;
-mod pyproject;
 mod releases;
 mod state;
 mod step;
@@ -45,7 +42,7 @@ pub fn run(cli: Cli) -> Result<()> {
     let preselected_workflow = cli.workflow;
 
     let config = Config::load()?;
-    let state = State::new(config.jira, config.github);
+    let state = State::new(config.jira, config.github, config.packages);
 
     if cli.validate {
         workflow::validate(config.workflows, state)?;

@@ -235,7 +235,7 @@ pub(crate) fn update_project_from_conventional_commits(
     } else {
         Rule::from(rule)
     };
-    let new_version = bump_version(rule, dry_run_stdout.is_some())?;
+    let new_version = bump_version(rule, dry_run_stdout.is_some(), &state.packages)?;
     let new_version_string = new_version.to_string();
     let new_changes =
         new_changelog_lines(&new_version_string, &fixes, &features, &breaking_changes);

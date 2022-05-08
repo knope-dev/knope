@@ -1,10 +1,9 @@
 [[packages]]
-versioned_files = ["Cargo.toml"]
+versioned_files = ["pyproject.toml"]
 changelog = "CHANGELOG.md"
 
 [[workflows]]
-name = "prerelease"
+name = "release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
-prerelease_label = "rc"

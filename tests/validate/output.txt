@@ -36,16 +36,24 @@ Error:
   × Problem with workflow Cannot use Version variable when no metadata file
   │ is found
 
-Error: step::no_metadata_file (https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats)
+Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 
-  × Could not find a supported metadata file to use for versioning
-  help: In order to use version-related steps, you must have one of the
-        supported metadata files in your project
+  × No packages are defined
+  help: You must define at least one package in the [[packages]] section
+        of knope.toml.
 Error: 
-  × Problem with workflow Cannot release without PreRelease
+  × Problem with workflow Cannot release without PrepareRelease
 
 Error: step::release_not_prepared (https://knope-dev.github.io/knope/config/step/PrepareRelease.html)
 
   × PrepareRelease needs to occur before this step
   help: You must call the PrepareRelease step before this one.
+Error: 
+  × Problem with workflow Cannot PrepareRelease with no configured packages
+
+Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
+
+  × No packages are defined
+  help: You must define at least one package in the [[packages]] section
+        of knope.toml.
 

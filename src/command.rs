@@ -51,7 +51,12 @@ fn replace_variables(
 ) -> Result<String, StepError> {
     for (var_name, var_type) in variables {
         match var_type {
-            Variable::Version => command = command.replace(&var_name, &get_version()?.to_string()),
+            Variable::Version => {
+                command = command.replace(
+                    &var_name,
+                    &get_version(&state.packages)?.version.to_string(),
+                );
+            }
             Variable::IssueBranch => match &state.issue {
                 state::Issue::Initial => return Err(StepError::NoIssueSelected),
                 state::Issue::Selected(issue) => {
@@ -75,13 +80,21 @@ mod test_run_command {
     fn test() {
         let file = NamedTempFile::new().unwrap();
         let command = format!("cat {}", file.path().to_str().unwrap());
-        let result = run_command(RunType::Real(State::new(None, None)), command.clone(), None);
+        let result = run_command(
+            RunType::Real(State::new(None, None, Vec::new())),
+            command.clone(),
+            None,
+        );
 
         assert!(result.is_ok());
 
         file.close().unwrap();
 
-        let result = run_command(RunType::Real(State::new(None, None)), command, None);
+        let result = run_command(
+            RunType::Real(State::new(None, None, Vec::new())),
+            command,
+            None,
+        );
         assert!(result.is_err());
     }
 }
@@ -89,8 +102,17 @@ mod test_run_command {
 #[cfg(test)]
 mod test_replace_variables {
     use crate::issues::Issue;
+    use crate::releases::Package;
+    use std::path::PathBuf;
 
     use super::*;
+
+    fn packages() -> Vec<Package> {
+        vec![Package {
+            versioned_files: vec![PathBuf::from("Cargo.toml")],
+            changelog: Some(String::from("CHANGELOG.md")),
+        }]
+    }
 
     #[test]
     fn multiple_variables() {
@@ -109,13 +131,18 @@ mod test_replace_variables {
             github_config: None,
             issue: state::Issue::Selected(issue),
             release: state::Release::Initial,
+            packages: packages(),
         };
 
         let command = replace_variables(command, variables, &state).unwrap();
 
         assert_eq!(
             command,
-            format!("blah {} {}", get_version().unwrap(), expected_branch_name)
+            format!(
+                "blah {} {}",
+                get_version(&state.packages).unwrap(),
+                expected_branch_name
+            )
         );
     }
 
@@ -124,13 +151,13 @@ mod test_replace_variables {
         let command = "blah $$ other blah".to_string();
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let state = State::new(None, None);
+        let state = State::new(None, None, packages());
 
         let command = replace_variables(command, variables, &state).unwrap();
 
         assert_eq!(
             command,
-            format!("blah {} other blah", get_version().unwrap(),)
+            format!("blah {} other blah", get_version(&state.packages).unwrap(),)
         );
     }
 
@@ -150,6 +177,7 @@ mod test_replace_variables {
             github_config: None,
             issue: state::Issue::Selected(issue),
             release: state::Release::Initial,
+            packages: Vec::new(),
         };
 
         let command = replace_variables(command, variables, &state).unwrap();

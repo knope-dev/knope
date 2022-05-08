@@ -3,8 +3,7 @@ versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 
 [[workflows]]
-name = "prerelease"
+name = "release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
-prerelease_label = "rc"

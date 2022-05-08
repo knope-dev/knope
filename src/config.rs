@@ -4,6 +4,7 @@ use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
 
+use crate::releases::Package;
 use crate::step::{PrepareRelease, Step};
 use crate::workflow::Workflow;
 use crate::{command, git};
@@ -16,6 +17,9 @@ pub(crate) struct Config {
     pub(crate) jira: Option<Jira>,
     /// Optional configuration to talk to GitHub
     pub(crate) github: Option<GitHub>,
+    /// A list of defined packages within this project which can be updated via PrepareRelease or BumpVersion
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) packages: Vec<Package>,
 }
 
 impl Config {
@@ -78,6 +82,8 @@ pub(crate) fn generate() -> Result<()> {
         }],
         jira: None,
         github: None,
+        // TODO: Figure out packages to generate, if any
+        packages: vec![],
     })
     .unwrap();
     fs::write(Config::CONFIG_PATH, contents).into_diagnostic()

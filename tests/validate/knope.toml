@@ -23,7 +23,13 @@ command = "echo"
 variables = {version="Version"}
 
 [[workflows]]
-name = "Cannot release without PreRelease"
+name = "Cannot release without PrepareRelease"
 
 [[workflows.steps]]
 type = "Release"
+
+[[workflows]]
+name = "Cannot PrepareRelease with no configured packages"
+
+[[workflows.steps]]
+type = "PrepareRelease"
