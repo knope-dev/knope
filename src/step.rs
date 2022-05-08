@@ -314,12 +314,6 @@ pub(super) enum StepError {
 /// The inner content of a [`Step::PrepareRelease`] step.
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct PrepareRelease {
-    #[serde(default = "default_changelog")]
-    pub(crate) changelog_path: String,
     /// If set, the user wants to create a pre-release version using the selected label.
     pub(crate) prerelease_label: Option<String>,
-}
-
-fn default_changelog() -> String {
-    "CHANGELOG.md".to_string()
 }

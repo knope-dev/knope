@@ -74,7 +74,6 @@ pub(crate) fn generate() -> Result<()> {
             name: String::from("release"),
             steps: vec![
                 Step::PrepareRelease(PrepareRelease {
-                    changelog_path: String::from("CHANGELOG.md"),
                     prerelease_label: None,
                 }),
                 ..release_steps,

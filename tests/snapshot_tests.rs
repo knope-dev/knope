@@ -235,3 +235,71 @@ fn prepare_release_selects_files(#[case] versioned_file: &str) {
         );
     }
 }
+
+/// Run a `PrepareRelease` in a repo and verify that the changelog is updated based on config.
+#[rstest]
+#[case(Some("CHANGELOG.md"))]
+#[case(Some("CHANGES.md"))]  // A non-default name
+#[case(None)]
+fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release_changelog_selection");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "1.0.0");
+    commit(temp_path, "feat: New feature");
+    let all_changelogs = ["CHANGELOG.md", "CHANGES.md"];
+
+    for file in all_changelogs {
+        copy(source_path.join("CHANGELOG.md"), temp_path.join(file)).unwrap();
+    }
+    if let Some(changelog_name) = changelog {
+        copy(source_path.join(format!("{changelog_name}_knope.toml")), temp_path.join("knope.toml")).unwrap();
+    } else {
+        copy(source_path.join("None_knope.toml"), temp_path.join("knope.toml")).unwrap();
+    }
+    copy(source_path.join("Cargo.toml"), temp_path.join("Cargo.toml")).unwrap();
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join(format!("dry_run_output_{changelog:?}.txt")));
+    actual_assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+
+    for changelog_name in all_changelogs {
+        match changelog {
+            Some(changelog) if changelog_name == changelog => {
+                assert_eq_path(
+                    source_path.join("EXPECTED_CHANGELOG.md"),
+                    read_to_string(temp_path.join(changelog_name)).unwrap(),
+                );
+            },
+            _ => {
+                assert_eq_path(
+                    source_path.join("CHANGELOG.md"),
+                    read_to_string(temp_path.join(changelog_name)).unwrap(),
+                );
+            }
+        }
+    }
+    assert_eq_path(
+        source_path.join("expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}

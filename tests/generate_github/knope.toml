@@ -3,7 +3,6 @@ name = "release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
-changelog_path = "CHANGELOG.md"
 
 [[workflows.steps]]
 type = "Command"
