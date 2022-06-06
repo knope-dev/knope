@@ -6,7 +6,7 @@ Transition a Jira issue to a new status.
 
 This step will fail when any of the following are true:
 
-1. The workflow is not yet in [IssueSelected] state.
+1. An issue was not previously selected in this workflow using [`SelectJiraIssue`] or [`SelectIssueFromBranch`].
 2. Cannot communicate with Jira.
 3. The configured status is invalid for the issue.
 
@@ -24,4 +24,5 @@ name = "Start some work"
     status = "In Progress"
 ```
 
-[issueselected]: ../../state/IssueSelected.md
+[`selectjiraissue`]: ./SelectJiraIssue.md
+[`selectissuefrombranch`]: ./SelectIssueFromBranch.md

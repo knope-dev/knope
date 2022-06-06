@@ -1,16 +1,14 @@
 # SelectGitHubIssue Step
 
-Search for GitHub issues by status and display the list of them in the terminal. User is allowed to select one issue which will then change the workflow's state to
-[IssueSelected].
+Search for GitHub issues by status and display the list of them in the terminal. Selecting an issue allows for other steps to use the issue's information (e.g., [`SwitchBranches`]).
 
 ## Errors
 
 This step will fail if any of the following are true:
 
-1. The workflow is already in [IssueSelected] state before it executes.
-2. knope cannot communicate with GitHub.
-3. There is no [GitHub config] set.
-4. User does not select an issue.
+1. knope cannot communicate with GitHub.
+2. There is no [GitHub config] set.
+3. User does not select an issue.
 
 ## Example
 
@@ -22,5 +20,5 @@ name = "Start some work"
     label = "selected"
 ```
 
-[issueselected]: ../../state/IssueSelected.md
 [github config]: ../github.md
+[`switchbranches`]: ./SwitchBranches.md

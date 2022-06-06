@@ -1,6 +1,6 @@
 # SelectIssueFromBranch step
 
-Attempt to parse issue info from the current branch name and change the workflow's state to [IssueSelected].
+Attempt to parse issue info from the current branch for use in other steps (e.g., [`Command`]).
 
 ## Errors
 
@@ -19,5 +19,5 @@ name = "Finish some work"
     status = "QA"
 ```
 
-[issueselected]: ../../state/IssueSelected.md
+[`command`]: ./Command.md
 [switchbranches]: ./SwitchBranches.md

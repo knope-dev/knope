@@ -1,25 +1,23 @@
 # BumpVersion step
 
-Bump the version of the project in any supported formats found using a [Semantic Versioning] rule.
-
-## Supported Formats
-
-These are the types of files that this step knows how to search for a semantic version and bump. knope currently will only search the current directory for these files.
-
-1. Cargo.toml for Rust projects
-1. pyproject.toml for Python projects (using [Poetry's metadata](https://python-poetry.org))
-1. package.json for Node projects
+Bump the version of the project in a [supported format] using a [Semantic Versioning] rule. A [`package`] must be defined for this step to operate on.
 
 ## Example
 
 ```toml
+[[packages]]
+versioned_files = ["Cargo.toml"]
+
+[[workflows]]
+name = "pre-release"
+
 [[workflows.steps]]
 type = "BumpVersion"
 rule = "Pre"
 label = "rc"
 ```
 
-Where `rule` defines the [Semantic Versioning] rule to use and `label` is optional depending on the `rule`.
+Where `rule` defines the [Semantic Versioning] rule to use and `label` is optional depending on the `rule`. With this particular example, running `knope pre-release` would bump the version in `Cargo.toml` using the "pre" rule and the "rc" label. So if the version _was_ `0.1.2-rc.0`, it would be bumped to `0.1.2-rc.1`.
 
 ## Rules
 
@@ -56,5 +54,8 @@ Remove the pre-release component of the semantic version (e.g. 1.2.3-rc.4 -> 1.2
 This step will fail if any of the following are true:
 
 1. A malformed version string is found while attempting to bump.
+2. The `[[packages]]` section is missing or invalid.
 
 [semantic versioning]: https://semver.org
+[supported format]: ../packages.md#supported-formats-for-versioning
+[`package`]: ../packages.md

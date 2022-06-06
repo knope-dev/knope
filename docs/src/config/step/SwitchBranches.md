@@ -6,7 +6,7 @@ Uses the name of the currently selected issue to checkout an existing or create 
 
 This step fails if any of the following are true.
 
-1. Workflow is not in [IssueSelected] state.
+1. An issue was not previously selected in this workflow using [`SelectJiraIssue`] or [`SelectGitHubIssue`].
 1. Current directory is not a Git repository
 1. There is uncommitted work on the current branch. You must manually stash or commit any changes before performing this step.
 
@@ -23,4 +23,5 @@ name = "Start some work"
     type = "SwitchBranches"
 ```
 
-[issueselected]: ../../state/IssueSelected.md
+[`selectjiraissue`]: ./SelectJiraIssue.md
+[`selectgithubissue`]: ./SelectGitHubIssue.md

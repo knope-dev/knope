@@ -50,6 +50,5 @@ command = "git push"
 type = "Release"
 ```
 
-[issueselected]: ../../state/IssueSelected.md
 [github config]: ../github.md
 [preparerelease]: PrepareRelease.md

@@ -7,13 +7,22 @@ CARGO_MAKE_RUN_CLIPPY = true
 [tasks.mdbook]
 install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = "help" }
 
+[tasks.mdbook-admonish]
+install_crate = { crate_name = "mdbook-admonish", binary = "mdbook-admonish", test_arg = "help" }
+
+[tasks.mdbook-linkcheck]
+install_crate = { crate_name = "mdbook-linkcheck", binary = "mdbook-linkcheck", test_arg = "--help" }
+
+[tasks.book-dependencies]
+dependencies = ["mdbook", "mdbook-admonish", "mdbook-linkcheck"]
+
 [tasks.book]
-dependencies = ["mdbook"]
+dependencies = ["book-dependencies"]
 command = "mdbook"
 args = ["build", "docs"]
 
 [tasks.serve-book]
-dependencies = ["mdbook"]
+dependencies = ["book-dependencies"]
 command = "mdbook"
 args = ["serve", "docs", "--open"]
 
