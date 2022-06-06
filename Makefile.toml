@@ -1,8 +1,6 @@
 [env]
 RUST_BACKTRACE = 0
 CARGO_MAKE_CARGO_VERBOSE_FLAGS = ""
-CARGO_MAKE_RUN_CHECK_FORMAT = true
-CARGO_MAKE_RUN_CLIPPY = true
 
 [tasks.mdbook]
 install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = "help" }
