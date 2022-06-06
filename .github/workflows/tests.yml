@@ -21,12 +21,15 @@ jobs:
       - name: Run CI
         uses: actions-rs/cargo@v1
         env:
-          CARGO_MAKE_RUN_CHECK_FORMAT: true
-          CARGO_MAKE_RUN_CLIPPY: true
           CARGO_MAKE_BUILD_EXAMPLES: true
         with:
           command: make
           args: ci-flow
+      - name: Test building the book
+        uses: actions-rs/cargo@v1
+        with:
+          command: make
+          args: book
 
   validate-config:
     name: Validate Knope Config

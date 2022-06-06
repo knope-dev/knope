@@ -3,18 +3,29 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch: {}
 jobs:
   publish_book:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
+      - uses: actions-rs/toolchain@v1
         with:
-          mdbook-version: 'latest'
+          profile: minimal
+          toolchain: stable
 
-      - run: mdbook build docs
+      - uses: Swatinem/rust-cache@v1
+      - name: Install cargo-make
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --debug cargo-make
+
+      - name: Build the book
+        uses: actions-rs/cargo@v1
+        with:
+          command: make
+          args: book
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
