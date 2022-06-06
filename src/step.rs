@@ -144,14 +144,14 @@ pub(super) enum StepError {
     #[diagnostic(
         code(step::versioned_file_format),
         help("All filed included in [[packages]] versioned_files must be a supported format"),
-        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     VersionedFileFormat(String),
     #[error("The package.json file was an incorrect format")]
     #[diagnostic(
-    code(step::invalid_package_json),
-    help("knope expects the package.json file to be an object with a top level `version` property"),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
+        code(step::invalid_package_json),
+        help("knope expects the package.json file to be an object with a top level `version` property"),
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     InvalidPackageJson,
     #[error("The pyproject.toml file was an incorrect format")]
@@ -161,14 +161,14 @@ pub(super) enum StepError {
             "knope expects the pyproject.toml file to have a `tool.poetry.version` property. \
             If you use a different location for your version, please open an issue to add support."
         ),
-        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     InvalidPyProject,
     #[error("The Cargo.toml file was an incorrect format")]
     #[diagnostic(
-    code(step::invalid_cargo_toml),
-    help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
+        code(step::invalid_cargo_toml),
+        help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     InvalidCargoToml,
     #[error("Trouble communicating with a remote API")]
