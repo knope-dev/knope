@@ -26,7 +26,11 @@ args = ["serve", "docs", "--open"]
 
 [tasks.prettier]
 command = "npx"
-args = ["prettier", "**/*.md", "--write"]
+args = ["prettier", "**/*.md", "--write", "--prose-wrap=never"]
+
+[tasks.prettier-check]
+command = "npx"
+args = ["prettier", "**/*.md", "--list-different", "--prose-wrap=never"]
 
 [tasks.deny]
 command = "cargo"
@@ -37,6 +41,7 @@ dependencies = [
   "deny",
   "format-flow",
   "format-toml-flow",
+  "prettier",
   "clippy-flow",
   "pre-build",
   "build",
