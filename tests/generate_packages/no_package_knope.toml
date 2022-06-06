@@ -1,0 +1,6 @@
+[[workflows]]
+
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

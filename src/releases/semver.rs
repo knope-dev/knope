@@ -1,10 +1,15 @@
+use std::ffi::OsStr;
 use std::fmt::Display;
+use std::fs::{read_to_string, write};
+use std::path::Path;
 
 use semver::{Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
 use crate::step::StepError;
-use crate::{package_json, pyproject, state, RunType};
+use crate::{state, RunType};
+
+use super::{cargo, package_json, pyproject, Package};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
@@ -47,31 +52,42 @@ impl Default for ConventionalRule {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct PackageVersion {
+pub(crate) struct PackageVersion<'path> {
+    /// The version that was parsed from the package manager file.
     pub(crate) version: Version,
-    package_manager: PackageManager,
+    /// The type of file format that `content` is.
+    pub(crate) format: PackageFormat,
+    /// The path to the file that was parsed.
+    path: &'path Path,
+    /// The raw content of the package manager file so it doesn't have to be read again.
+    content: String,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub(crate) enum PackageManager {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum PackageFormat {
     Cargo,
     Poetry,
     JavaScript,
 }
 
-impl Display for PackageVersion {
+impl Display for PackageVersion<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.version)
     }
 }
 
-pub(super) fn bump_version(rule: Rule, dry_run: bool) -> Result<semver::Version, StepError> {
-    let mut package_version = get_version()?;
+pub(super) fn bump_version(
+    rule: Rule,
+    dry_run: bool,
+    packages: &[Package],
+) -> Result<Version, StepError> {
+    let mut package_version = get_version(packages)?;
     package_version.version = bump(package_version.version, rule)?;
-    if !dry_run {
-        set_version(&package_version)?;
+    if dry_run {
+        Ok(package_version.version)
+    } else {
+        set_version(package_version)
     }
-    Ok(package_version.version)
 }
 
 pub(crate) fn bump_version_and_update_state(
@@ -83,66 +99,84 @@ pub(crate) fn bump_version_and_update_state(
             mut state,
             mut stdout,
         } => {
-            let version = bump_version(rule, true)?;
+            let version = bump_version(rule, true, &state.packages)?;
             writeln!(stdout, "Would bump version to {}", version)?;
             state.release = state::Release::Bumped(version);
             Ok(RunType::DryRun { state, stdout })
         }
         RunType::Real(mut state) => {
-            let version = bump_version(rule, false)?;
+            let version = bump_version(rule, false, &state.packages)?;
             state.release = state::Release::Bumped(version);
             Ok(RunType::Real(state))
         }
     }
 }
 
-pub(crate) fn get_version() -> Result<PackageVersion, StepError> {
-    if let Some(cargo_version) = crate::cargo::get_version("Cargo.toml") {
-        let version = semver::Version::parse(&cargo_version).map_err(|_| {
-            StepError::InvalidSemanticVersion {
-                version: cargo_version,
-                file_name: "Cargo.toml",
-            }
-        })?;
-        Ok(PackageVersion {
-            version,
-            package_manager: PackageManager::Cargo,
-        })
-    } else if let Some(pyproject_version) = pyproject::get_version("pyproject.toml") {
-        let version = semver::Version::parse(&pyproject_version).map_err(|_| {
-            StepError::InvalidSemanticVersion {
-                version: pyproject_version,
-                file_name: "pyproject.toml",
-            }
-        })?;
-        Ok(PackageVersion {
-            version,
-            package_manager: PackageManager::Poetry,
-        })
-    } else if let Some(package_version) = package_json::get_version("package.json") {
-        let version = semver::Version::parse(&package_version).map_err(|_| {
-            StepError::InvalidSemanticVersion {
-                version: package_version,
-                file_name: "package.json",
-            }
-        })?;
-        Ok(PackageVersion {
-            version,
-            package_manager: PackageManager::JavaScript,
-        })
-    } else {
-        Err(StepError::NoMetadataFileFound)
+pub(crate) fn get_version(packages: &[Package]) -> Result<PackageVersion, StepError> {
+    if packages.is_empty() {
+        return Err(StepError::no_defined_packages_with_help());
     }
+    if packages.len() > 1 {
+        return Err(StepError::TooManyPackages);
+    }
+    let package = &packages[0];
+    if package.versioned_files.is_empty() {
+        return Err(StepError::NoVersionedFiles);
+    }
+    if package.versioned_files.len() > 1 {
+        return Err(StepError::TooManyVersionedFiles);
+    }
+    let versioned_file = &package.versioned_files[0];
+
+    let content = read_to_string(versioned_file)
+        .map_err(|_| StepError::FileNotFound(versioned_file.clone()))?;
+
+    let file_name = versioned_file
+        .file_name()
+        .and_then(OsStr::to_str)
+        .ok_or_else(|| StepError::FileNotFound(versioned_file.clone()))?;
+
+    let (version_string, format) = match file_name {
+        "Cargo.toml" => (cargo::get_version(&content)?, PackageFormat::Cargo),
+        "pyproject.toml" => (pyproject::get_version(&content)?, PackageFormat::Poetry),
+        "package.json" => (
+            package_json::get_version(&content)?,
+            PackageFormat::JavaScript,
+        ),
+        other => {
+            return Err(StepError::VersionedFileFormat(String::from(other)));
+        }
+    };
+    let version =
+        Version::parse(&version_string).map_err(|_| StepError::InvalidSemanticVersion {
+            version: version_string,
+            file_name: versioned_file.clone(),
+        })?;
+
+    Ok(PackageVersion {
+        version,
+        path: versioned_file.as_path(),
+        content,
+        format,
+    })
 }
 
-fn set_version(version: &PackageVersion) -> Result<(), StepError> {
-    match version.package_manager {
-        PackageManager::Cargo => crate::cargo::set_version("Cargo.toml", &version.to_string()),
-        PackageManager::Poetry => pyproject::set_version("pyproject.toml", &version.to_string()),
-        PackageManager::JavaScript => {
-            package_json::set_version("package.json", &version.to_string())
-        }
-    }
+/// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
+/// that was written.
+fn set_version(version: PackageVersion) -> Result<Version, StepError> {
+    let PackageVersion {
+        version,
+        format,
+        content,
+        path,
+    } = version;
+    let new_content = match format {
+        PackageFormat::Cargo => cargo::set_version(content, &version.to_string()),
+        PackageFormat::Poetry => pyproject::set_version(content, &version.to_string()),
+        PackageFormat::JavaScript => package_json::set_version(&content, &version.to_string()),
+    }?;
+    write(path, &new_content).map_err(|_| StepError::FileNotFound(path.to_path_buf()))?;
+    Ok(version)
 }
 
 /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.

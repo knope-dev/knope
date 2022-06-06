@@ -217,14 +217,19 @@ pub(crate) fn update_project_from_conventional_commits(
         fixes,
         breaking_changes,
     } = get_conventional_commits_after_last_tag()?;
-    let step::PrepareRelease {
-        changelog_path,
-        prerelease_label,
-    } = prepare_release;
+    let step::PrepareRelease { prerelease_label } = prepare_release;
 
     let (mut state, dry_run_stdout) = match run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
+    };
+
+    let changelog_path = if state.packages.is_empty() {
+        return Err(StepError::no_defined_packages_with_help());
+    } else if state.packages.len() > 1 {
+        return Err(StepError::TooManyPackages);
+    } else {
+        state.packages.first().unwrap().changelog.as_ref()
     };
 
     let rule = if let Some(prefix) = prerelease_label {
@@ -235,7 +240,7 @@ pub(crate) fn update_project_from_conventional_commits(
     } else {
         Rule::from(rule)
     };
-    let new_version = bump_version(rule, dry_run_stdout.is_some())?;
+    let new_version = bump_version(rule, dry_run_stdout.is_some(), &state.packages)?;
     let new_version_string = new_version.to_string();
     let new_changes =
         new_changelog_lines(&new_version_string, &fixes, &features, &breaking_changes);
@@ -247,17 +252,21 @@ pub(crate) fn update_project_from_conventional_commits(
 
     if let Some(mut stdout) = dry_run_stdout {
         writeln!(stdout, "Would bump version to {}", &new_version_string)?;
-        writeln!(
-            stdout,
-            "Would add the following to {}: \n{}",
-            &changelog_path,
-            new_changes.join("\n")
-        )?;
+        if let Some(changelog_path) = changelog_path {
+            writeln!(
+                stdout,
+                "Would add the following to {}: \n{}",
+                &changelog_path,
+                new_changes.join("\n")
+            )?;
+        }
         Ok(RunType::DryRun { state, stdout })
     } else {
-        let changelog_text = std::fs::read_to_string(&changelog_path)?;
-        let changelog = add_version_to_changelog(&changelog_text, &new_changes);
-        std::fs::write(&changelog_path, changelog)?;
+        if let Some(changelog_path) = changelog_path {
+            let changelog_text = std::fs::read_to_string(&changelog_path)?;
+            let changelog = add_version_to_changelog(&changelog_text, &new_changes);
+            std::fs::write(&changelog_path, changelog)?;
+        }
         Ok(RunType::Real(state))
     }
 }

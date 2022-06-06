@@ -4,12 +4,16 @@ use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
 
+use crate::releases::{find_packages, Package};
 use crate::step::{PrepareRelease, Step};
 use crate::workflow::Workflow;
 use crate::{command, git};
 
 #[derive(Deserialize, Debug, Serialize)]
 pub(crate) struct Config {
+    /// A list of defined packages within this project which can be updated via PrepareRelease or BumpVersion
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) packages: Vec<Package>,
     /// The list of defined workflows that are selectable
     pub(crate) workflows: Vec<Workflow>,
     /// Optional configuration for Jira
@@ -56,7 +60,7 @@ pub(crate) fn generate() -> Result<()> {
                 },
                 Step::Release,
             ]
-        },
+        }
         _ => vec![
             Step::Command {
                 command: String::from("git add . && git commit -m \"chore: prepare release $version\" && git push && git tag -m $version && git push --tags"),
@@ -70,7 +74,6 @@ pub(crate) fn generate() -> Result<()> {
             name: String::from("release"),
             steps: vec![
                 Step::PrepareRelease(PrepareRelease {
-                    changelog_path: String::from("CHANGELOG.md"),
                     prerelease_label: None,
                 }),
                 ..release_steps,
@@ -78,6 +81,7 @@ pub(crate) fn generate() -> Result<()> {
         }],
         jira: None,
         github: None,
+        packages: find_packages(),
     })
     .unwrap();
     fs::write(Config::CONFIG_PATH, contents).into_diagnostic()

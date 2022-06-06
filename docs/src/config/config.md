@@ -5,6 +5,9 @@ This is the top level structure that your `knope.toml` must adhere to to be vali
 ## Example
 
 ```toml
+[[packages]]
+# Defined sets of files to bump using semantic versioning and conventional commits.
+
 [[workflows]]
 name = "First Workflow"
 # Details here

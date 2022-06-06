@@ -1,0 +1,9 @@
+[[packages]]
+versioned_files = ["pyproject.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

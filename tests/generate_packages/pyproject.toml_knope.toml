@@ -1,0 +1,15 @@
+[[packages]]
+versioned_files = ["pyproject.toml"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add . && git commit -m \"chore: prepare release $version\" && git push && git tag -m $version && git push --tags"
+
+[workflows.steps.variables]
+"$version" = "Version"

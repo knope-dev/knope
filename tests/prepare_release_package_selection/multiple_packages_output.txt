@@ -1,0 +1,8 @@
+Error: 
+  × Problem with workflow release
+
+Error: step::too_many_packages (https://github.com/knope-dev/knope/issues/153)
+
+  × Too many packages defined
+  help: Only one package in [[packages]] is currently supported.
+

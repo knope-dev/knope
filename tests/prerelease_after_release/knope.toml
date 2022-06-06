@@ -1,3 +1,7 @@
+[[packages]]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
 [[workflows]]
 name = "prerelease"
 

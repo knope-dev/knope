@@ -1,0 +1,9 @@
+[[packages]]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGES.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
