@@ -46,7 +46,11 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
     init(temp_path);
     commit(temp_path, "feat: Existing Feature");
     tag(temp_path, "v1.0.0");
-    copy(source_path.join("no_package_knope.toml"), temp_path.join("knope.toml")).unwrap();
+    copy(
+        source_path.join("no_package_knope.toml"),
+        temp_path.join("knope.toml"),
+    )
+    .unwrap();
     for source_file in source_files {
         copy(source_path.join(source_file), temp_path.join(source_file)).unwrap();
     }
@@ -64,7 +68,9 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
         .assert();
 
     // Assert
-    validate_assert.failure().stderr_eq_path(source_path.join(format!("{case}_stderr.txt", case = target_file)));
+    validate_assert
+        .failure()
+        .stderr_eq_path(source_path.join(format!("{case}_stderr.txt", case = target_file)));
     assert.success().stdout_eq("Generating a knope.toml file\n");
     assert_eq_path(
         source_path.join(target_file),
@@ -305,10 +311,66 @@ fn prepare_release_selects_files(#[case] versioned_file: &str) {
     }
 }
 
+/// Run a `PrepareRelease` in a repo with multiple packages set to verify error message.
+#[test]
+fn test_prepare_release_multiple_packages() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release_package_selection");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    let knope_toml = "multiple_packages_knope.toml";
+    copy(source_path.join(&knope_toml), temp_path.join("knope.toml")).unwrap();
+    for file in [
+        "CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+        "package.json",
+    ] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .failure()
+        .stderr_eq_path(source_path.join("multiple_packages_dry_run_output.txt"));
+    actual_assert
+        .failure()
+        .stderr_eq_path(source_path.join("multiple_packages_output.txt"));
+
+    // Nothing should change because it errored.
+    assert_eq_path(
+        source_path.join("CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
+        assert_eq_path(
+            source_path.join(file),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
 /// Run a `PrepareRelease` in a repo and verify that the changelog is updated based on config.
 #[rstest]
 #[case(Some("CHANGELOG.md"))]
-#[case(Some("CHANGES.md"))]  // A non-default name
+#[case(Some("CHANGES.md"))] // A non-default name
 #[case(None)]
 fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
     // Arrange.
@@ -326,9 +388,17 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
         copy(source_path.join("CHANGELOG.md"), temp_path.join(file)).unwrap();
     }
     if let Some(changelog_name) = changelog {
-        copy(source_path.join(format!("{changelog_name}_knope.toml")), temp_path.join("knope.toml")).unwrap();
+        copy(
+            source_path.join(format!("{changelog_name}_knope.toml")),
+            temp_path.join("knope.toml"),
+        )
+        .unwrap();
     } else {
-        copy(source_path.join("None_knope.toml"), temp_path.join("knope.toml")).unwrap();
+        copy(
+            source_path.join("None_knope.toml"),
+            temp_path.join("knope.toml"),
+        )
+        .unwrap();
     }
     copy(source_path.join("Cargo.toml"), temp_path.join("Cargo.toml")).unwrap();
 
@@ -358,7 +428,7 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
                     source_path.join("EXPECTED_CHANGELOG.md"),
                     read_to_string(temp_path.join(changelog_name)).unwrap(),
                 );
-            },
+            }
             _ => {
                 assert_eq_path(
                     source_path.join("CHANGELOG.md"),

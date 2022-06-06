@@ -6,10 +6,10 @@ use std::path::Path;
 use semver::{Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
-use crate::{RunType, state};
 use crate::step::StepError;
+use crate::{state, RunType};
 
-use super::{cargo, Package, package_json, pyproject};
+use super::{cargo, package_json, pyproject, Package};
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
