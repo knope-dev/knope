@@ -5,9 +5,9 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{command, git, issues, releases};
 use crate::releases::suggested_package_toml;
 use crate::state::RunType;
+use crate::{command, git, issues, releases};
 
 /// Each variant describes an action you can take using knope, they are used when defining your
 /// [`crate::Workflow`] via whatever config format is being utilized.
@@ -98,15 +98,15 @@ impl Step {
 pub(super) enum StepError {
     #[error("No issue selected")]
     #[diagnostic(
-    code(step::no_issue_selected),
-    help("You must call SelectJiraIssue or SelectGitHubIssue before calling this step")
+        code(step::no_issue_selected),
+        help("You must call SelectJiraIssue or SelectGitHubIssue before calling this step")
     )]
     NoIssueSelected,
     #[error("Jira is not configured")]
     #[diagnostic(
-    code(step::jira_not_configured),
-    help("Jira must be configured in order to call this step"),
-    url("https://knope-dev.github.io/knope/config/jira.html")
+        code(step::jira_not_configured),
+        help("Jira must be configured in order to call this step"),
+        url("https://knope-dev.github.io/knope/config/jira.html")
     )]
     JiraNotConfigured,
     #[error("The specified transition name was not found in the Jira project")]
@@ -118,33 +118,33 @@ pub(super) enum StepError {
     InvalidJiraTransition,
     #[error("GitHub is not configured")]
     #[diagnostic(
-    code(step::github_not_configured),
-    help("GitHub must be configured in order to call this step"),
-    url("https://knope-dev.github.io/knope/config/github.html")
+        code(step::github_not_configured),
+        help("GitHub must be configured in order to call this step"),
+        url("https://knope-dev.github.io/knope/config/github.html")
     )]
     GitHubNotConfigured,
     #[error("Could not increment pre-release version {0}")]
     #[diagnostic(
-    code(step::invalid_pre_release_version),
-    help(
-    "The pre-release component of a version must be in the format of `-<label>.N` \
+        code(step::invalid_pre_release_version),
+        help(
+            "The pre-release component of a version must be in the format of `-<label>.N` \
             where <label> is a string and `N` is an integer"
-    ),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
+        ),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
     )]
     InvalidPreReleaseVersion(String),
     #[error("Found invalid semantic version {version} in {file_name}")]
     #[diagnostic(
-    code(step::invalid_semantic_version),
-    help("The version must be a valid Semantic Version"),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
+        code(step::invalid_semantic_version),
+        help("The version must be a valid Semantic Version"),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
     )]
     InvalidSemanticVersion { version: String, file_name: PathBuf },
     #[error("The versioned file {0} is not a supported format")]
     #[diagnostic(
-    code(step::versioned_file_format),
-    help("All filed included in [[packages]] versioned_files must be a supported format"),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
+        code(step::versioned_file_format),
+        help("All filed included in [[packages]] versioned_files must be a supported format"),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
     )]
     VersionedFileFormat(String),
     #[error("The package.json file was an incorrect format")]
@@ -156,12 +156,12 @@ pub(super) enum StepError {
     InvalidPackageJson,
     #[error("The pyproject.toml file was an incorrect format")]
     #[diagnostic(
-    code(step::invalid_pyproject),
-    help(
-    "knope expects the pyproject.toml file to have a `tool.poetry.version` property. \
+        code(step::invalid_pyproject),
+        help(
+            "knope expects the pyproject.toml file to have a `tool.poetry.version` property. \
             If you use a different location for your version, please open an issue to add support."
-    ),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
+        ),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#supported-formats")
     )]
     InvalidPyProject,
     #[error("The Cargo.toml file was an incorrect format")]
@@ -173,12 +173,12 @@ pub(super) enum StepError {
     InvalidCargoToml,
     #[error("Trouble communicating with a remote API")]
     #[diagnostic(
-    code(step::api_request_error),
-    help(
-    "This occurred during a step that requires communicating with a remote API \
+        code(step::api_request_error),
+        help(
+            "This occurred during a step that requires communicating with a remote API \
              (e.g., GitHub or Jira). The problem could be an invalid authentication token or a \
              network issue."
-    )
+        )
     )]
     ApiRequestError(#[from] ureq::Error),
     #[error("Trouble decoding the response from a remote API")]
@@ -192,11 +192,11 @@ pub(super) enum StepError {
     ApiResponseError(#[source] Option<serde_json::Error>),
     #[error("I/O error")]
     #[diagnostic(
-    code(step::io_error),
-    help(
-    "This occurred during a step that requires reading or writing to... something. The \
+        code(step::io_error),
+        help(
+            "This occurred during a step that requires reading or writing to... something. The \
             problem could be a network issue or a file permission issue."
-    )
+        )
     )]
     IoError(#[from] std::io::Error),
     #[error("Not a Git repo.")]
@@ -209,22 +209,22 @@ pub(super) enum StepError {
     NotAGitRepo,
     #[error("Not on the tip of a Git branch.")]
     #[diagnostic(
-    code(step::not_on_a_git_branch),
-    help("In order to run this step, you need to be on the very tip of a Git branch.")
+        code(step::not_on_a_git_branch),
+        help("In order to run this step, you need to be on the very tip of a Git branch.")
     )]
     NotOnAGitBranch,
     #[error("Bad branch name")]
     #[diagnostic(
-    code(step::bad_branch_name),
-    help("The branch name was not formatted correctly."),
-    url("https://knope-dev.github.io/knope/config/step/SelectIssueFromBranch.html")
+        code(step::bad_branch_name),
+        help("The branch name was not formatted correctly."),
+        url("https://knope-dev.github.io/knope/config/step/SelectIssueFromBranch.html")
     )]
     BadGitBranchName,
     #[error("Uncommitted changes")]
     #[diagnostic(
-    code(step::uncommitted_changes),
-    help("You need to commit your changes before running this step."),
-    url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
+        code(step::uncommitted_changes),
+        help("You need to commit your changes before running this step."),
+        url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
     )]
     UncommittedChanges,
     #[error("Could not complete checkout")]
@@ -252,8 +252,8 @@ pub(super) enum StepError {
     GitError(#[from] Option<git2::Error>),
     #[error("Command returned non-zero exit code")]
     #[diagnostic(
-    code(step::command_failed),
-    help("The command failed to execute. Try running it manually to get more information.")
+        code(step::command_failed),
+        help("The command failed to execute. Try running it manually to get more information.")
     )]
     CommandError(std::process::ExitStatus),
     #[error("Failed to get user input")]
@@ -264,16 +264,16 @@ pub(super) enum StepError {
     UserInput(#[source] Option<std::io::Error>),
     #[error("This is a bug!")]
     #[diagnostic(
-    code(step::bug),
-    help("If you see this error, it's a bug in knope! Please report it in GitHub."),
-    url("https://github.com/knope-dev/knope/issues")
+        code(step::bug),
+        help("If you see this error, it's a bug in knope! Please report it in GitHub."),
+        url("https://github.com/knope-dev/knope/issues")
     )]
     Bug(#[source] Box<dyn std::error::Error + Send + Sync>),
     #[error("PrepareRelease needs to occur before this step")]
     #[diagnostic(
-    code(step::release_not_prepared),
-    help("You must call the PrepareRelease step before this one."),
-    url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
+        code(step::release_not_prepared),
+        help("You must call the PrepareRelease step before this one."),
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
     )]
     ReleaseNotPrepared,
     #[error("No packages are defined")]
@@ -282,21 +282,19 @@ pub(super) enum StepError {
         help("You must define at least one package in the [[packages]] section of knope.toml. {package_suggestion}"),
         url("https://knope-dev.github.io/knope/config/packages.html")
     )]
-    NoDefinedPackages {
-        package_suggestion: String,
-    },
+    NoDefinedPackages { package_suggestion: String },
     #[error("Too many packages defined")]
     #[diagnostic(
-    code(step::too_many_packages),
-    help("Only one package in [[packages]] is currently supported."),
-    url("https://github.com/knope-dev/knope/issues/153")
+        code(step::too_many_packages),
+        help("Only one package in [[packages]] is currently supported."),
+        url("https://github.com/knope-dev/knope/issues/153")
     )]
     TooManyPackages,
     #[error("Too many versioned files defined")]
     #[diagnostic(
-    code(step::too_many_versioned_files),
-    help("Only one versioned_file per package is currently supported."),
-    url("https://github.com/knope-dev/knope/issues/149")
+        code(step::too_many_versioned_files),
+        help("Only one versioned_file per package is currently supported."),
+        url("https://github.com/knope-dev/knope/issues/149")
     )]
     TooManyVersionedFiles,
     #[error("No versioned files defined")]
@@ -308,8 +306,8 @@ pub(super) enum StepError {
     NoVersionedFiles,
     #[error("File {0} does not exist")]
     #[diagnostic(
-    code(step::file_not_found),
-    help("Attempted to interact with a file that doesn't exist in the current directory.")
+        code(step::file_not_found),
+        help("Attempted to interact with a file that doesn't exist in the current directory.")
     )]
     FileNotFound(PathBuf),
 }

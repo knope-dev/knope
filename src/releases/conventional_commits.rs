@@ -217,22 +217,20 @@ pub(crate) fn update_project_from_conventional_commits(
         fixes,
         breaking_changes,
     } = get_conventional_commits_after_last_tag()?;
-    let step::PrepareRelease {
-        prerelease_label,
-    } = prepare_release;
+    let step::PrepareRelease { prerelease_label } = prepare_release;
 
     let (mut state, dry_run_stdout) = match run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
     };
 
-   let changelog_path = if state.packages.is_empty() {
+    let changelog_path = if state.packages.is_empty() {
         return Err(StepError::no_defined_packages_with_help());
     } else if state.packages.len() > 1 {
         return Err(StepError::TooManyPackages);
     } else {
-       state.packages.first().unwrap().changelog.as_ref()
-   };
+        state.packages.first().unwrap().changelog.as_ref()
+    };
 
     let rule = if let Some(prefix) = prerelease_label {
         Rule::Pre {
