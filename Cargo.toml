@@ -27,7 +27,7 @@ execute = "0.2.11"
 platform-dirs = "0.3.0"
 git-conventional = "0.11.3"
 ureq = { version = "2.4.0", features = ["json"] }
-http = "0.2.7"
+http = "0.2.8"
 clap = { version = "3.1.18", features = ["cargo", "derive"] }
 itertools = "0.10.3"
 miette = { version = "4.7.1", features = ["fancy"] }
