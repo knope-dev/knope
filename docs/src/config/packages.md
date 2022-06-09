@@ -3,7 +3,7 @@
 The `[[packages]]` array is where you tell `knope` about the packages (programs, libraries, modules, etc.) you want to manage using it. This array is required to direct [`BumpVersion`] and [`PrepareRelease`] to modify the correct files.
 
 ```admonish warning
-Currently only [one package](https://github.com/knope-dev/knope/issues/153) and [one file per package](https://github.com/knope-dev/knope/issues/149) is supported.
+Currently only [one package](https://github.com/knope-dev/knope/issues/153) at a time is supported.
 ```
 
 ## Syntax
@@ -22,13 +22,34 @@ changelog = "CHANGELOG.md"
 
 This is the relevant part of Knope's own `knope.toml`, where we keep release notes in a file called `CHANGELOG.md` at the root of the project and version the project using `Cargo.toml` (as this is a Rust project).
 
-## Supported Formats for Versioning
+### `versioned_files`
 
-These are the types of files that can be added to `versioned_files` (and targetted using steps like [`BumpVersion`] and [`PrepareRelease`]. The file must be named exactly the way that `knope` expects, but it can be in nested directories.
+A package, by Knope's definition, has a single version. There can, however, be multiple files which contain this version (e.g., `Cargo.toml` for a Rust crate and `pyproject.toml` for a Python wrapper around it). As such, you can define an array of `versioned_files` for each package as long as they all have the same version and all are supported formats. The file must be named exactly the way that `knope` expects, but it can be in nested directories. The supported file types (and names) are:
 
 1. `Cargo.toml` for Rust projects
 2. `pyproject.toml` for Python projects (using [Poetry's metadata](https://python-poetry.org))
 3. `package.json` for Node projects
 
+Want to bump the version of a file that isn't natively supported? [Request it as a feature] and, in the mean time, you can write a script to manually bump that file with the version produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
+
+```toml
+[[packages]]
+versioned_files = ["Cargo.toml"]  # there must still be at least one supported file to read the current version from
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "my-command-which-bumps-a-custom-file-with version"
+variables = { "version" = "Version" }
+```
+
 [`bumpversion`]: ./step/BumpVersion.md
 [`preparerelease`]: ./step/PrepareRelease.md
+[`command`]: ./step/Command.md
+[request it as a feature]: https://github.com/knope-dev/knope/issues

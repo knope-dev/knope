@@ -256,7 +256,7 @@ pub(crate) fn update_project_from_conventional_commits(
             writeln!(
                 stdout,
                 "Would add the following to {}: \n{}",
-                &changelog_path,
+                changelog_path.display(),
                 new_changes.join("\n")
             )?;
         }

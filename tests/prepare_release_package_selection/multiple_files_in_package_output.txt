@@ -1,8 +1,0 @@
-Error: 
-  × Problem with workflow release
-
-Error: step::too_many_versioned_files (https://github.com/knope-dev/knope/issues/149)
-
-  × Too many versioned files defined
-  help: Only one versioned_file per package is currently supported.
-

@@ -1,15 +1,13 @@
-use std::ffi::OsStr;
 use std::fmt::Display;
-use std::fs::{read_to_string, write};
-use std::path::Path;
 
 use semver::{Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
+use crate::releases::package::{Package, VersionedFile};
 use crate::step::StepError;
 use crate::{state, RunType};
 
-use super::{cargo, package_json, pyproject, Package};
+use super::PackageConfig;
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
@@ -52,25 +50,14 @@ impl Default for ConventionalRule {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct PackageVersion<'path> {
+pub(crate) struct PackageVersion {
     /// The version that was parsed from the package manager file.
     pub(crate) version: Version,
-    /// The type of file format that `content` is.
-    pub(crate) format: PackageFormat,
-    /// The path to the file that was parsed.
-    path: &'path Path,
-    /// The raw content of the package manager file so it doesn't have to be read again.
-    content: String,
+    /// The package from which the version was derived (and the package that should be bumped).
+    pub(crate) package: Package,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum PackageFormat {
-    Cargo,
-    Poetry,
-    JavaScript,
-}
-
-impl Display for PackageVersion<'_> {
+impl Display for PackageVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.version)
     }
@@ -79,7 +66,7 @@ impl Display for PackageVersion<'_> {
 pub(super) fn bump_version(
     rule: Rule,
     dry_run: bool,
-    packages: &[Package],
+    packages: &[PackageConfig],
 ) -> Result<Version, StepError> {
     let mut package_version = get_version(packages)?;
     package_version.version = bump(package_version.version, rule)?;
@@ -112,7 +99,7 @@ pub(crate) fn bump_version_and_update_state(
     }
 }
 
-pub(crate) fn get_version(packages: &[Package]) -> Result<PackageVersion, StepError> {
+pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, StepError> {
     if packages.is_empty() {
         return Err(StepError::no_defined_packages_with_help());
     }
@@ -123,59 +110,37 @@ pub(crate) fn get_version(packages: &[Package]) -> Result<PackageVersion, StepEr
     if package.versioned_files.is_empty() {
         return Err(StepError::NoVersionedFiles);
     }
-    if package.versioned_files.len() > 1 {
-        return Err(StepError::TooManyVersionedFiles);
-    }
-    let versioned_file = &package.versioned_files[0];
+    let package = Package::try_from(package.clone())?;
 
-    let content = read_to_string(versioned_file)
-        .map_err(|_| StepError::FileNotFound(versioned_file.clone()))?;
+    let version_string = package
+        .versioned_files
+        .iter()
+        .map(VersionedFile::get_version)
+        .reduce(|accumulator, version| match (version, accumulator) {
+            (Ok(version), Ok(accumulator)) => {
+                if version == accumulator {
+                    Ok(accumulator)
+                } else {
+                    Err(StepError::InconsistentVersions(version, accumulator))
+                }
+            }
+            (_, Err(err)) | (Err(err), _) => Err(err),
+        })
+        .ok_or(StepError::NoVersionedFiles)??;
+    let version = Version::parse(&version_string)
+        .map_err(|_| StepError::InvalidSemanticVersion(version_string))?;
 
-    let file_name = versioned_file
-        .file_name()
-        .and_then(OsStr::to_str)
-        .ok_or_else(|| StepError::FileNotFound(versioned_file.clone()))?;
-
-    let (version_string, format) = match file_name {
-        "Cargo.toml" => (cargo::get_version(&content)?, PackageFormat::Cargo),
-        "pyproject.toml" => (pyproject::get_version(&content)?, PackageFormat::Poetry),
-        "package.json" => (
-            package_json::get_version(&content)?,
-            PackageFormat::JavaScript,
-        ),
-        other => {
-            return Err(StepError::VersionedFileFormat(String::from(other)));
-        }
-    };
-    let version =
-        Version::parse(&version_string).map_err(|_| StepError::InvalidSemanticVersion {
-            version: version_string,
-            file_name: versioned_file.clone(),
-        })?;
-
-    Ok(PackageVersion {
-        version,
-        path: versioned_file.as_path(),
-        content,
-        format,
-    })
+    Ok(PackageVersion { version, package })
 }
 
 /// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
 /// that was written.
 fn set_version(version: PackageVersion) -> Result<Version, StepError> {
-    let PackageVersion {
-        version,
-        format,
-        content,
-        path,
-    } = version;
-    let new_content = match format {
-        PackageFormat::Cargo => cargo::set_version(content, &version.to_string()),
-        PackageFormat::Poetry => pyproject::set_version(content, &version.to_string()),
-        PackageFormat::JavaScript => package_json::set_version(&content, &version.to_string()),
-    }?;
-    write(path, &new_content).map_err(|_| StepError::FileNotFound(path.to_path_buf()))?;
+    let PackageVersion { version, package } = version;
+    let version_str = version.to_string();
+    for versioned_file in package.versioned_files {
+        versioned_file.set_version(&version_str)?;
+    }
     Ok(version)
 }
 
