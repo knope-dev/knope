@@ -1,9 +1,0 @@
-Error: 
-  × Problem with workflow release
-
-Error: step::versioned_file_format (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
-
-  × The versioned file setup.py is not a supported format
-  help: All filed included in [[packages]] versioned_files must be a
-        supported format
-

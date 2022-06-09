@@ -247,10 +247,11 @@ fn second_prerelease() {
 /// Run a `PrepareRelease` in a repo with multiple versionable files—verify only the selected
 /// one is modified.
 #[rstest]
-#[case("Cargo.toml")]
-#[case("pyproject.toml")]
-#[case("package.json")]
-fn prepare_release_selects_files(#[case] versioned_file: &str) {
+#[case("Cargo.toml_knope.toml", &["Cargo.toml"])]
+#[case("pyproject.toml_knope.toml", &["pyproject.toml"])]
+#[case("package.json_knope.toml", &["package.json"])]
+#[case("multiple_files_in_package_knope.toml", &["Cargo.toml", "pyproject.toml"])]
+fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_files: &[&str]) {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -261,8 +262,7 @@ fn prepare_release_selects_files(#[case] versioned_file: &str) {
     tag(temp_path, "1.0.0");
     commit(temp_path, "feat: New feature");
 
-    let knope_toml = format!("{versioned_file}_knope.toml");
-    copy(source_path.join(&knope_toml), temp_path.join("knope.toml")).unwrap();
+    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
     for file in [
         "CHANGELOG.md",
         "Cargo.toml",
@@ -295,17 +295,14 @@ fn prepare_release_selects_files(#[case] versioned_file: &str) {
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 
-    assert_eq_path(
-        source_path.join(&format!("expected_{versioned_file}")),
-        read_to_string(temp_path.join(versioned_file)).unwrap(),
-    );
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        if file == versioned_file {
-            // This one should actually have changed
-            continue;
-        }
+        let expected_path = if versioned_files.contains(&file) {
+            format!("expected_{file}")
+        } else {
+            String::from(file)
+        };
         assert_eq_path(
-            source_path.join(file),
+            source_path.join(&expected_path),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -349,7 +346,7 @@ fn test_prepare_release_multiple_packages() {
     // Assert.
     dry_run_assert
         .failure()
-        .stderr_eq_path(source_path.join("multiple_packages_dry_run_output.txt"));
+        .stderr_eq_path(source_path.join("multiple_packages_output.txt"));
     actual_assert
         .failure()
         .stderr_eq_path(source_path.join("multiple_packages_output.txt"));
@@ -367,9 +364,9 @@ fn test_prepare_release_multiple_packages() {
     }
 }
 
-/// Run a `PrepareRelease` in a repo with multiple files in a package set to verify error message.
+/// Run a `PrepareRelease` in a repo with multiple files that have different versions
 #[test]
-fn test_prepare_release_multiple_files_in_package() {
+fn test_prepare_release_multiple_files_inconsistent_versions() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -382,12 +379,12 @@ fn test_prepare_release_multiple_files_in_package() {
 
     let knope_toml = "multiple_files_in_package_knope.toml";
     copy(source_path.join(&knope_toml), temp_path.join("knope.toml")).unwrap();
-    for file in [
-        "CHANGELOG.md",
-        "Cargo.toml",
-        "pyproject.toml",
-        "package.json",
-    ] {
+    copy(
+        source_path.join("Cargo_different_version.toml"),
+        temp_path.join("Cargo.toml"),
+    )
+    .unwrap();
+    for file in ["CHANGELOG.md", "pyproject.toml", "package.json"] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
 
@@ -403,19 +400,19 @@ fn test_prepare_release_multiple_files_in_package() {
         .assert();
 
     // Assert.
-    dry_run_assert
-        .failure()
-        .stderr_eq_path(source_path.join("multiple_files_in_package_dry_run_output.txt"));
-    actual_assert
-        .failure()
-        .stderr_eq_path(source_path.join("multiple_files_in_package_output.txt"));
+    dry_run_assert.failure().stderr_eq_path(
+        source_path.join("test_prepare_release_multiple_files_inconsistent_versions.txt"),
+    );
+    actual_assert.failure().stderr_eq_path(
+        source_path.join("test_prepare_release_multiple_files_inconsistent_versions.txt"),
+    );
 
     // Nothing should change because it errored.
     assert_eq_path(
-        source_path.join("CHANGELOG.md"),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+        source_path.join("Cargo_different_version.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
-    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
+    for file in ["pyproject.toml", "package.json", "CHANGELOG.md"] {
         assert_eq_path(
             source_path.join(file),
             read_to_string(temp_path.join(file)).unwrap(),
@@ -462,7 +459,7 @@ fn test_prepare_release_invalid_versioned_file_format() {
     // Assert.
     dry_run_assert
         .failure()
-        .stderr_eq_path(source_path.join("invalid_versioned_file_format_knope_dry_run_output.txt"));
+        .stderr_eq_path(source_path.join("invalid_versioned_file_format_knope_output.txt"));
     actual_assert
         .failure()
         .stderr_eq_path(source_path.join("invalid_versioned_file_format_knope_output.txt"));

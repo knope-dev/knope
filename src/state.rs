@@ -3,7 +3,7 @@ use std::io::Write;
 use crate::config;
 use crate::issues;
 use crate::releases;
-use crate::releases::Package;
+use crate::releases::PackageConfig;
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
 #[derive(Clone, Debug)]
@@ -13,7 +13,7 @@ pub(crate) struct State {
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
     pub(crate) release: Release,
-    pub(crate) packages: Vec<Package>,
+    pub(crate) packages: Vec<PackageConfig>,
 }
 
 impl State {
@@ -21,7 +21,7 @@ impl State {
     pub(crate) fn new(
         jira_config: Option<config::Jira>,
         github_config: Option<config::GitHub>,
-        packages: Vec<Package>,
+        packages: Vec<PackageConfig>,
     ) -> Self {
         State {
             jira_config,

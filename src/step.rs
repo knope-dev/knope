@@ -133,20 +133,27 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
     )]
     InvalidPreReleaseVersion(String),
-    #[error("Found invalid semantic version {version} in {file_name}")]
+    #[error("Found invalid semantic version {0}")]
     #[diagnostic(
         code(step::invalid_semantic_version),
         help("The version must be a valid Semantic Version"),
+        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
+    )]
+    InvalidSemanticVersion(String),
+    #[error("Versioned files within the same package must have the same version. Found {0} which does not match {1}")]
+    #[diagnostic(
+        code(step::inconsistent_versions),
+        help("Manually update all versioned_files to have the correct version"),
         url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
     )]
-    InvalidSemanticVersion { version: String, file_name: PathBuf },
+    InconsistentVersions(String, String),
     #[error("The versioned file {0} is not a supported format")]
     #[diagnostic(
         code(step::versioned_file_format),
         help("All filed included in [[packages]] versioned_files must be a supported format"),
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
-    VersionedFileFormat(String),
+    VersionedFileFormat(PathBuf),
     #[error("The package.json file was an incorrect format")]
     #[diagnostic(
         code(step::invalid_package_json),
@@ -290,13 +297,6 @@ pub(super) enum StepError {
         url("https://github.com/knope-dev/knope/issues/153")
     )]
     TooManyPackages,
-    #[error("Too many versioned files defined")]
-    #[diagnostic(
-        code(step::too_many_versioned_files),
-        help("Only one versioned_file per package is currently supported."),
-        url("https://github.com/knope-dev/knope/issues/149")
-    )]
-    TooManyVersionedFiles,
     #[error("No versioned files defined")]
     #[diagnostic(
     code(step::no_versioned_files),

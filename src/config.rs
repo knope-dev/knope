@@ -4,7 +4,7 @@ use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
 
-use crate::releases::{find_packages, Package};
+use crate::releases::{find_packages, PackageConfig};
 use crate::step::{PrepareRelease, Step};
 use crate::workflow::Workflow;
 use crate::{command, git};
@@ -13,7 +13,7 @@ use crate::{command, git};
 pub(crate) struct Config {
     /// A list of defined packages within this project which can be updated via PrepareRelease or BumpVersion
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) packages: Vec<Package>,
+    pub(crate) packages: Vec<PackageConfig>,
     /// The list of defined workflows that are selectable
     pub(crate) workflows: Vec<Workflow>,
     /// Optional configuration for Jira

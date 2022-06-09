@@ -102,15 +102,15 @@ mod test_run_command {
 #[cfg(test)]
 mod test_replace_variables {
     use crate::issues::Issue;
-    use crate::releases::Package;
+    use crate::releases::PackageConfig;
     use std::path::PathBuf;
 
     use super::*;
 
-    fn packages() -> Vec<Package> {
-        vec![Package {
+    fn packages() -> Vec<PackageConfig> {
+        vec![PackageConfig {
             versioned_files: vec![PathBuf::from("Cargo.toml")],
-            changelog: Some(String::from("CHANGELOG.md")),
+            changelog: Some(PathBuf::from("CHANGELOG.md")),
         }]
     }
 
