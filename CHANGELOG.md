@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.0
+
+### Breaking Changes
+
+- `BumpVersion` and `PrepareRelease` now require setting a `[[packages]]` field in `knope.toml`. The path to a changelog file is no longer defined with `changelog_path` in the `PrepareRelease` step. Instead, it is set as `changelog` in `[[packages]]`.
+
+### Features
+
+- Support multiple versioned_files in one package.
+- Specify which versioned file to bump instead of picking automatically. (#182)
+- Support loading GitHub credentials from `GITHUB_TOKEN` env var (#172)
+
+### Fixes
+
+- update rust crate thiserror to 1.0.31 (#171)
+
 ## 0.2.1-rc.0
 
 ### Features
