@@ -3,7 +3,11 @@ RUST_BACKTRACE = 0
 CARGO_MAKE_CARGO_VERBOSE_FLAGS = ""
 
 [tasks.mdbook]
+install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = ["serve", "--help"] }
+
+[tasks.mdbook-minimal]
 install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = "help" }
+install_crate_args = ["--no-default-features", "--features=search", "--vers=^0.4"]
 
 [tasks.mdbook-admonish]
 install_crate = { crate_name = "mdbook-admonish", binary = "mdbook-admonish", test_arg = "help" }
@@ -12,15 +16,15 @@ install_crate = { crate_name = "mdbook-admonish", binary = "mdbook-admonish", te
 install_crate = { crate_name = "mdbook-linkcheck", binary = "mdbook-linkcheck", test_arg = "--help" }
 
 [tasks.book-dependencies]
-dependencies = ["mdbook", "mdbook-admonish", "mdbook-linkcheck"]
+dependencies = ["mdbook-admonish", "mdbook-linkcheck"]
 
 [tasks.book]
-dependencies = ["book-dependencies"]
+dependencies = ["mdbook-minimal", "book-dependencies"]
 command = "mdbook"
 args = ["build", "docs"]
 
 [tasks.serve-book]
-dependencies = ["book-dependencies"]
+dependencies = ["mdbook", "book-dependencies"]
 command = "mdbook"
 args = ["serve", "docs", "--open"]
 
