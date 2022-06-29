@@ -20,7 +20,7 @@ base64 = "0.13.0"
 console = "0.15.0"
 dialoguer = "0.10.1"
 toml = "0.5.9"
-serde_json = { version = "1.0.81", features = ["preserve_order"] }
+serde_json = { version = "1.0.82", features = ["preserve_order"] }
 git2 = "0.14.4"
 semver = "1.0.9"
 execute = "0.2.11"
