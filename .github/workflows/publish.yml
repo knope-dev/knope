@@ -80,14 +80,14 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           zip -r ${{ env.archive_name }}.zip ${{ env.archive_name }}
-          echo "artifact_name=${{{ env.archive_name }}.zip" >> $GITHUB_ENV
+          echo "artifact_name=${{ env.archive_name }}.zip" >> $GITHUB_ENV
           echo "content_type=application/zip" >> $GITHUB_ENV
 
       - name: Create Tar Archive
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
           tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
-          echo "artifact_name=${{{ env.archive_name }}.tgz" >> $GITHUB_ENV
+          echo "artifact_name=${{ env.archive_name }}.tgz" >> $GITHUB_ENV
           echo "content_type=application/gzip" >> $GITHUB_ENV
 
       - name: Upload Release Asset
