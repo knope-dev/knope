@@ -39,4 +39,5 @@ rstest = "0.15.0"
 snapbox = "0.2.10"
 tempfile = "3.3.0"
 
-[features]
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
