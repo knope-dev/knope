@@ -18,15 +18,15 @@ binary = "mdbook-linkcheck"
 test_arg = "--help"
 
 [tasks.book-dependencies]
-dependencies = ["mdbook-admonish", "mdbook-linkcheck"]
+dependencies = ["mdbook", "mdbook-admonish", "mdbook-linkcheck"]
 
 [tasks.book]
-dependencies = ["mdbook-minimal", "book-dependencies"]
+dependencies = ["book-dependencies"]
 command = "mdbook"
 args = ["build", "docs"]
 
 [tasks.serve-book]
-dependencies = ["mdbook", "book-dependencies"]
+dependencies = ["book-dependencies"]
 command = "mdbook"
 args = ["serve", "docs", "--open"]
 

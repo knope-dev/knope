@@ -36,6 +36,10 @@ jobs:
         with:
           command: make
           args: ci-flow
+
+      - name: Preinstall mdbook dependencies
+        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck
+
       - name: Test building the book
         uses: actions-rs/cargo@v1
         with:
