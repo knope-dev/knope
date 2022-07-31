@@ -16,7 +16,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     let version_string = release.version.to_string();
 
     let github_release = GitHubRelease {
-        tag_name: &version_string,
+        tag_name: &format!("v{version_string}"),
         name: &version_string,
         body: &release.changelog,
         prerelease: !release.version.pre.is_empty(),
