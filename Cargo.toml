@@ -38,6 +38,3 @@ velcro = "0.5.3"
 rstest = "0.15.0"
 snapbox = "0.2.10"
 tempfile = "3.3.0"
-
-[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
-pkg-fmt = "zip"
