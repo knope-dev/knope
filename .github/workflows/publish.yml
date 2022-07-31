@@ -13,6 +13,7 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - uses: Swatinem/rust-cache@v1
       - uses: katyo/publish-crates@v1
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}
@@ -24,6 +25,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - uses: Swatinem/rust-cache@v1
       - name: Compile
         run: cargo build --release
       - name: Get release
@@ -48,6 +50,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - uses: Swatinem/rust-cache@v1
       - name: Compile
         run: cargo build --release
       - name: Get release
