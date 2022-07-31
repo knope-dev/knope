@@ -24,7 +24,10 @@ jobs:
           cp cargo-binstall $HOME/.cargo/bin
 
       - name: Install cargo-make
-        run: cargo-binstall cargo-make
+        run: cargo-binstall --no-confirm cargo-make
+
+      - name: Preinstall cargo-deny
+        run: cargo-binstall --no-confirm cargo-deny
 
       - name: Run CI
         uses: actions-rs/cargo@v1
