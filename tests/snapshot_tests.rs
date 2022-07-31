@@ -524,9 +524,14 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
         .assert();
 
     // Assert.
+    let expected_dry_run_output = if let Some(changelog_name) = changelog {
+        source_path.join(format!("dry_run_output_{changelog_name}.txt"))
+    } else {
+        source_path.join("dry_run_output_None.txt")
+    };
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join(format!("dry_run_output_{changelog:?}.txt")));
+        .stdout_eq_path(expected_dry_run_output);
     actual_assert
         .success()
         .stdout_eq_path(source_path.join("output.txt"));
