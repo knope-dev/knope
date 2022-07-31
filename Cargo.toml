@@ -15,27 +15,27 @@ rust-version = "1.60"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.137", features = ["derive"] }
+serde = { version = "1.0.140", features = ["derive"] }
 base64 = "0.13.0"
 console = "0.15.0"
-dialoguer = "0.10.1"
+dialoguer = "0.10.2"
 toml = "0.5.9"
 serde_json = { version = "1.0.82", features = ["preserve_order"] }
-git2 = "0.14.4"
-semver = "1.0.9"
+git2 = "0.15.0"
+semver = "1.0.12"
 execute = "0.2.11"
 platform-dirs = "0.3.0"
-git-conventional = "0.11.3"
+git-conventional = "0.12.0"
 ureq = { version = "2.4.0", features = ["json"] }
 http = "0.2.8"
-clap = { version = "3.1.18", features = ["cargo", "derive"] }
+clap = { version = "3.2.16", features = ["cargo", "derive"] }
 itertools = "0.10.3"
 miette = { version = "4.7.1", features = ["fancy"] }
 thiserror = "1.0.31"
 velcro = "0.5.3"
 
 [dev-dependencies]
-rstest = "0.12.0"
+rstest = "0.15.0"
 snapbox = "0.2.10"
 tempfile = "3.3.0"
 
