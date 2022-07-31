@@ -1,7 +1,6 @@
 [[packages]]
 versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
-version_prefix = "v."
 
 [[workflows]]
 name = "Start New Task"
