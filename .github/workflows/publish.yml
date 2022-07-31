@@ -62,8 +62,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Set Archive Name
-        run: echo "archive_name=knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}" >> $GITHUB_ENV
+      - name: Set Archive Name (Non-Windows)
+        id: archive
+        run: echo "::set-output name=name::knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}"
+
+      - name: Set Archive Name (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: echo "archive_name=knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Create Archive Folder
         run: mkdir ${{ env.archive_name }}
@@ -80,8 +85,8 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
           zip -r ${{ env.archive_name }}.zip ${{ env.archive_name }}
-          echo "artifact_name=${{ env.archive_name }}.zip" >> $GITHUB_ENV
-          echo "content_type=application/zip" >> $GITHUB_ENV
+          echo "artifact_name=${{ env.archive_name }}.zip" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+          echo "content_type=application/zip" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Create Tar Archive
         if: ${{ matrix.os != 'windows-latest' }}
