@@ -2,18 +2,23 @@
 RUST_BACKTRACE = 0
 CARGO_MAKE_CARGO_VERBOSE_FLAGS = ""
 
-[tasks.mdbook]
-install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = ["serve", "--help"] }
+[tasks.mdbook.install_crate]
+crate_name = "mdbook"
+binary = "mdbook"
+test_arg = ["serve", "--help"]
+install_command = "cargo-binstall"
 
-[tasks.mdbook-minimal]
-install_crate = { crate_name = "mdbook", binary = "mdbook", test_arg = "help" }
-install_crate_args = ["--no-default-features", "--features=search", "--vers=^0.4"]
+[tasks.mdbook-admonish.install_crate]
+crate_name = "mdbook-admonish"
+binary = "mdbook-admonish"
+test_arg = "help"
+install_command = "cargo-binstall"
 
-[tasks.mdbook-admonish]
-install_crate = { crate_name = "mdbook-admonish", binary = "mdbook-admonish", test_arg = "help" }
-
-[tasks.mdbook-linkcheck]
-install_crate = { crate_name = "mdbook-linkcheck", binary = "mdbook-linkcheck", test_arg = "--help" }
+[tasks.mdbook-linkcheck.install_crate]
+crate_name = "mdbook-linkcheck"
+binary = "mdbook-linkcheck"
+test_arg = "--help"
+install_command = "cargo-binstall"
 
 [tasks.book-dependencies]
 dependencies = ["mdbook-admonish", "mdbook-linkcheck"]

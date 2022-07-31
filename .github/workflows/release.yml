@@ -22,6 +22,7 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_push_gpgsign: false
+      - uses: Swatinem/rust-cache@v1
       - run: |
           cargo run -- release
         env:
@@ -36,11 +37,13 @@ jobs:
           toolchain: stable
 
       - uses: Swatinem/rust-cache@v1
+      - name: Install cargo-binstall
+        run: |
+          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
+          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
+
       - name: Install cargo-make
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --debug cargo-make
+        run: cargo-binstall cargo-make
 
       - name: Build the book
         uses: actions-rs/cargo@v1
