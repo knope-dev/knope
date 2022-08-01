@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::path::Path;
 use std::process::Command;
 
@@ -87,4 +89,19 @@ pub fn tag(path: &Path, label: &str) {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+/// Get the current tag, panicking if there is no tag.
+pub fn describe(path: &Path) -> String {
+    let output = Command::new("git")
+        .arg("describe")
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_string()
 }

@@ -10,14 +10,8 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git add . && git commit -m \"chore: prepare release $version\""
-
-[workflows.steps.variables]
-"$version" = "Version"
+command = "git add Cargo.toml && git commit -m \"chore: Bump to version\""
+variables = { "version" = "Version" }
 
 [[workflows.steps]]
 type = "Release"
-
-[[workflows.steps]]
-type = "Command"
-command = "git push && git push --tags"

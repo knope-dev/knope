@@ -6,7 +6,14 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git add . && git commit -m \"chore: prepare release $version\" && git push && git tag -m $version && git push --tags"
+command = "git add . && git commit -m \"chore: prepare release $version\""
 
 [workflows.steps.variables]
 "$version" = "Version"
+
+[[workflows.steps]]
+type = "Release"
+
+[[workflows.steps]]
+type = "Command"
+command = "git push && git push --tags"

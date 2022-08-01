@@ -50,9 +50,14 @@ pub(crate) fn generate() -> Result<()> {
     let variables = hash_map! {
         String::from("$version"): command::Variable::Version,
     };
+    let mut github = None;
 
     let release_steps = match git::get_first_remote() {
         Some(remote) if remote.contains("github.com") => {
+            let parts = remote.split('/').collect::<Vec<_>>();
+            let owner = parts[parts.len() - 2].to_string();
+            let repo = parts[parts.len() - 1].to_string();
+            github = Some(GitHub { owner, repo });
             vec![
                 Step::Command {
                     command: String::from("git add . && git commit -m \"chore: prepare release $version\" && git push"),
@@ -63,9 +68,16 @@ pub(crate) fn generate() -> Result<()> {
         }
         _ => vec![
             Step::Command {
-                command: String::from("git add . && git commit -m \"chore: prepare release $version\" && git push && git tag -m $version && git push --tags"),
+                command: String::from(
+                    "git add . && git commit -m \"chore: prepare release $version\"",
+                ),
                 variables: Some(variables),
-            }
+            },
+            Step::Release,
+            Step::Command {
+                command: String::from("git push && git push --tags"),
+                variables: None,
+            },
         ],
     };
 
@@ -80,7 +92,7 @@ pub(crate) fn generate() -> Result<()> {
             ],
         }],
         jira: None,
-        github: None,
+        github,
         packages: find_packages(),
     })
     .unwrap();
