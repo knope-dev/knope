@@ -1,3 +1,5 @@
+use git_repository::reference::head_commit;
+use git_repository::tag;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -257,6 +259,18 @@ pub(super) enum StepError {
     )
     )]
     GitError(#[from] Option<git2::Error>),
+    #[error("Could not get head commit")]
+    #[diagnostic(
+        code(step::head_commit_error),
+        help("This step requires HEAD to point to a commit—it was not.")
+    )]
+    HeadCommitError(#[from] head_commit::Error),
+    #[error("Could not create a tag")]
+    #[diagnostic(
+        code(step::create_tag_error),
+        help("A Git tag could not be created for the release.")
+    )]
+    CreateTagError(#[from] tag::Error),
     #[error("Command returned non-zero exit code")]
     #[diagnostic(
         code(step::command_failed),

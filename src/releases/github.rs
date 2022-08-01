@@ -1,18 +1,20 @@
+use std::io::Write;
+
 use serde::Serialize;
 
 use crate::app_config::get_or_prompt_for_github_token;
-use crate::state::{GitHub, Release};
+use crate::config::GitHub;
+use crate::releases::Release;
+use crate::state::GitHub::{Initialized, New};
 use crate::step::StepError;
-use crate::RunType;
+use crate::{RunType, State};
 
-pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
-    let (mut state, dry_run_stdout) = run_type.decompose();
-
-    let release = match &state.release {
-        Release::Prepared(release) => release,
-        _ => return Err(StepError::ReleaseNotPrepared),
-    };
-
+pub(crate) fn release(
+    mut state: State,
+    dry_run_stdout: Option<Box<dyn Write>>,
+    github_config: &GitHub,
+    release: &Release,
+) -> Result<RunType, StepError> {
     let version_string = release.version.to_string();
 
     let github_release = GitHubRelease {
@@ -21,11 +23,6 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
         body: &release.changelog,
         prerelease: !release.version.pre.is_empty(),
     };
-
-    let github_config = state
-        .github_config
-        .as_ref()
-        .ok_or(StepError::GitHubNotConfigured)?;
 
     if let Some(mut stdout) = dry_run_stdout {
         let release_type = if github_release.prerelease {
@@ -42,8 +39,8 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     }
 
     let token = match state.github {
-        GitHub::Initialized { token } => token,
-        GitHub::New => get_or_prompt_for_github_token()?,
+        Initialized { token } => token,
+        New => get_or_prompt_for_github_token()?,
     };
 
     let url = format!(
@@ -60,7 +57,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     if response.status() != 201 {
         return Err(StepError::ApiResponseError(None));
     }
-    state.github = GitHub::Initialized { token };
+    state.github = Initialized { token };
     Ok(RunType::Real(state))
 }
 
