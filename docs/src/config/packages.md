@@ -24,17 +24,17 @@ This is the relevant part of Knope's own `knope.toml`, where we keep release not
 
 ### `versioned_files`
 
-A package, by Knope's definition, has a single version. There can, however, be multiple files which contain this version (e.g., `Cargo.toml` for a Rust crate and `pyproject.toml` for a Python wrapper around it). As such, you can define an array of `versioned_files` for each package as long as they all have the same version and all are supported formats. The file must be named exactly the way that `knope` expects, but it can be in nested directories. The supported file types (and names) are:
+A package, by Knope's definition, has a single version. There can, however, be multiple files which contain this version (e.g., `Cargo.toml` for a Rust crate and `pyproject.toml` for a Python wrapper around it). As such, you can define an array of `versioned_files` for each package as long as they all have the same version and all are supported formats. If no file is included in `versioned_files`, the latest Git tag in the format created by the [`Release`] step will be used. The file must be named exactly the way that `knope` expects, but it can be in nested directories. The supported file types (and names) are:
 
 1. `Cargo.toml` for Rust projects
 2. `pyproject.toml` for Python projects (using [Poetry's metadata](https://python-poetry.org))
 3. `package.json` for Node projects
 
-Want to bump the version of a file that isn't natively supported? [Request it as a feature] and, in the mean time, you can write a script to manually bump that file with the version produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
+Want to bump the version of a file that isn't natively supported? [Request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
 
 ```toml
 [[packages]]
-versioned_files = ["Cargo.toml"]  # there must still be at least one supported file to read the current version from
+versioned_files = []  # With no versioned_files, the version will be determined via Git tag
 changelog = "CHANGELOG.md"
 
 [[workflows]]

@@ -9,32 +9,13 @@ use git_repo_helpers::*;
 
 mod git_repo_helpers;
 
-/// Run `--validate` with a config file that has lots of problems.
-#[test]
-fn test_validate() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/validate");
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "1.0.0");
-    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
-
-    let assert = Command::new(cargo_bin!("knope"))
-        .arg("--validate")
-        .current_dir(temp_path)
-        .assert();
-    assert.failure().stderr_eq_path("tests/validate/output.txt");
-}
-
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release.
 #[test]
 fn prerelease_after_release() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prerelease_after_release");
+    let source_path = Path::new("tests/prepare_release/prerelease_after_release");
 
     init(temp_path);
     commit(temp_path, "feat: New feature in existing release");
@@ -80,7 +61,7 @@ fn second_prerelease() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/second_prerelease");
+    let source_path = Path::new("tests/prepare_release/second_prerelease");
 
     init(temp_path);
     commit(temp_path, "feat: New feature in first RC");
@@ -130,7 +111,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release_package_selection");
+    let source_path = Path::new("tests/prepare_release/package_selection");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -189,7 +170,7 @@ fn test_prepare_release_multiple_packages() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release_package_selection");
+    let source_path = Path::new("tests/prepare_release/package_selection");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -245,7 +226,7 @@ fn test_prepare_release_multiple_files_inconsistent_versions() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release_package_selection");
+    let source_path = Path::new("tests/prepare_release/package_selection");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -301,7 +282,7 @@ fn test_prepare_release_invalid_versioned_file_format() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release_package_selection");
+    let source_path = Path::new("tests/prepare_release/package_selection");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -361,7 +342,7 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release_changelog_selection");
+    let source_path = Path::new("tests/prepare_release/changelog_selection");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -431,4 +412,54 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
         source_path.join("expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
+}
+
+/// If `PrepareRelease` is run with no `versioned_files`, it should determine the version from the
+/// previous valid tag.
+#[test]
+fn no_versioned_files() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/no_versioned_files");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
+    copy(
+        source_path.join("CHANGELOG.md"),
+        temp_path.join("CHANGELOG.md"),
+    )
+    .unwrap();
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+
+    // The release step should have created a tag with the right new version.
+    let expected_tag = "v1.1.0";
+    let actual_tag = describe(temp_path);
+    assert_eq!(expected_tag, actual_tag);
 }
