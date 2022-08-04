@@ -15,7 +15,7 @@ fn generate_no_remote() {
     // Arrange
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/generate_no_remote");
+    let source_path = Path::new("tests/generate/no_remote");
     init(temp_path);
 
     // Act
@@ -42,7 +42,7 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
     // Arrange
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/generate_packages");
+    let source_path = Path::new("tests/generate/packages");
     init(temp_path);
     commit(temp_path, "feat: Existing Feature");
     tag(temp_path, "v1.0.0");
@@ -86,7 +86,7 @@ fn generate_packages_changelog(#[case] has_changelog: bool, #[case] target_file:
     // Arrange
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/generate_package_changelog");
+    let source_path = Path::new("tests/generate/package_changelog");
     init(temp_path);
     copy(source_path.join("Cargo.toml"), temp_path.join("Cargo.toml")).unwrap();
     if has_changelog {
@@ -113,7 +113,7 @@ fn generate_github() {
     // Arrange
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/generate_github");
+    let source_path = Path::new("tests/generate/github");
     init(temp_path);
     add_remote(temp_path, "github.com/knope-dev/knope");
 

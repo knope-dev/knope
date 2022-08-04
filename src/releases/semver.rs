@@ -3,6 +3,7 @@ use std::fmt::Display;
 use semver::{Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
+use crate::releases::git::get_current_version_from_tag;
 use crate::releases::package::{Package, VersionedFile};
 use crate::step::StepError;
 use crate::{state, RunType};
@@ -107,12 +108,9 @@ pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, 
         return Err(StepError::TooManyPackages);
     }
     let package = &packages[0];
-    if package.versioned_files.is_empty() {
-        return Err(StepError::NoVersionedFiles);
-    }
     let package = Package::try_from(package.clone())?;
 
-    let version_string = package
+    let version = package
         .versioned_files
         .iter()
         .map(VersionedFile::get_version)
@@ -126,9 +124,12 @@ pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, 
             }
             (_, Err(err)) | (Err(err), _) => Err(err),
         })
-        .ok_or(StepError::NoVersionedFiles)??;
-    let version = Version::parse(&version_string)
-        .map_err(|_| StepError::InvalidSemanticVersion(version_string))?;
+        .map_or_else(get_current_version_from_tag, |version_result| {
+            version_result.and_then(|version_string| {
+                Version::parse(&version_string)
+                    .map_err(|_| StepError::InvalidSemanticVersion(version_string))
+            })
+        })?;
 
     Ok(PackageVersion { version, package })
 }

@@ -245,9 +245,9 @@ pub(super) enum StepError {
     IncompleteCheckout(#[source] git2::Error),
     #[error("Could not list tags for the project")]
     #[diagnostic(
-    code(step::list_tags_error),
-    help("We couldn't list the tags for the project. This step requires at least one existing tag."),
-    url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
+        code(step::list_tags_error),
+        help("We couldn't list the tags for the project. This step requires at least one existing tag."),
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
     )]
     ListTagsError(#[source] git2::Error),
     #[error("Unknown Git error.")]
@@ -311,13 +311,6 @@ pub(super) enum StepError {
         url("https://github.com/knope-dev/knope/issues/153")
     )]
     TooManyPackages,
-    #[error("No versioned files defined")]
-    #[diagnostic(
-    code(step::no_versioned_files),
-    help("You must define at least one versioned_files per package in the [[packages]] section of knope.toml."),
-    url("https://knope-dev.github.io/knope/config/packages.html")
-    )]
-    NoVersionedFiles,
     #[error("File {0} does not exist")]
     #[diagnostic(
         code(step::file_not_found),
