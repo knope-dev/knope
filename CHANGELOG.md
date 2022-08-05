@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0
+
+### Breaking Changes
+
+- Always read all commits from previous stable release tag—not from most recent tag. This tag must be in the format v<semantic_version> (e.g., v1.2.3). If your last tag does not match that format, add a new tag before running the new version of Knope.
+- When creating GitHub releases, prefix the tag with `v` (e.g., `v1.2.3) as is the custom for most tools.
+
+### Features
+
+- Support reading commits from projects with no tags yet. (#225)
+- Support pulling current version from tags. (#224)
+- Allow the `Release` step to run without GitHub config—creating a tag on release. (#216)
+- Support installs from cargo-binstall
+
+### Fixes
+
+- update rust crate git-conventional to 0.12.0 (#203)
+
 ## 0.4.0-rc.4
 
 ## 0.4.0-rc.3
