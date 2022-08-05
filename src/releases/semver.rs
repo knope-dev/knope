@@ -206,7 +206,13 @@ fn bump(mut version: CurrentVersions, rule: Rule) -> Result<CurrentVersions, Ste
             Ok(version)
         }
         (Rule::Release, _) => {
-            stable.pre = Prerelease::EMPTY;
+            let mut prerelease = prerelease.ok_or_else(|| {
+                StepError::InvalidPreReleaseVersion(
+                    "No prerelease version found, but a Release rule was requested".to_string(),
+                )
+            })?;
+            prerelease.pre = Prerelease::EMPTY;
+            *stable = prerelease;
             Ok(version)
         }
         (Rule::Pre { label, stable_rule }, _) => bump_pre(version, prerelease, &label, stable_rule),
