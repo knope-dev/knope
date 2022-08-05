@@ -6,7 +6,7 @@ use git_repository::open;
 use git_repository::refs::transaction::PreviousValue;
 use semver::Version;
 
-use crate::releases::Release;
+use crate::releases::{CurrentVersions, Release};
 use crate::step::StepError;
 use crate::{RunType, State};
 
@@ -30,10 +30,10 @@ pub(crate) fn release(
     Ok(RunType::Real(state))
 }
 
-pub(crate) fn get_current_version_from_tag() -> Result<Version, StepError> {
+pub(crate) fn get_current_versions_from_tag() -> Result<Option<CurrentVersions>, StepError> {
     let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
-    repo.references()
-        .map_err(|_e| StepError::NotAGitRepo)?
+    let references = repo.references().map_err(|_e| StepError::NotAGitRepo)?;
+    let tags = references
         .tags()
         .map_err(|_e| StepError::NotAGitRepo)?
         .flat_map(|tag| {
@@ -47,12 +47,22 @@ pub(crate) fn get_current_version_from_tag() -> Result<Version, StepError> {
                     .map(String::from)
             })
         })
-        .flatten()
-        .find_map(|version_string| {
-            version_string
-                .starts_with('v')
-                .then(|| Version::parse(&version_string[1..version_string.len()]).ok())
-        })
-        .flatten()
-        .map_or_else(|| Ok(Version::new(0, 0, 0)), Ok)
+        .flatten();
+    let mut stable = None;
+    let mut prerelease = None;
+    for tag in tags {
+        if !tag.starts_with('v') {
+            continue;
+        }
+        if let Ok(version) = Version::parse(&tag[1..tag.len()]) {
+            if version.pre.is_empty() {
+                // Stop at newest stable version. Don't consider pre-releases or stable versions
+                // older than this point.
+                stable = Some(version);
+                break;
+            }
+            prerelease.get_or_insert(version);
+        }
+    }
+    Ok(stable.map(|stable| CurrentVersions { stable, prerelease }))
 }

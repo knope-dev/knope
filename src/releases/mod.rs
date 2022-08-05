@@ -1,9 +1,11 @@
+use ::semver::Version;
 pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
 
 use crate::state::Release::Prepared;
 use crate::step::StepError;
 use crate::RunType;
 
+pub(crate) use self::git::get_current_versions_from_tag;
 pub(crate) use self::package::{find_packages, suggested_package_toml, PackageConfig};
 pub(crate) use self::semver::bump_version_and_update_state as bump_version;
 pub(crate) use self::semver::{get_version, Rule};
@@ -20,8 +22,14 @@ mod semver;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Release {
-    pub(crate) version: ::semver::Version,
+    pub(crate) version: Version,
     pub(crate) changelog: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct CurrentVersions {
+    pub(crate) stable: Version,
+    pub(crate) prerelease: Option<Version>,
 }
 
 /// Create a release for the package.

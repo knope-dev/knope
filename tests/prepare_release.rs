@@ -19,7 +19,7 @@ fn prerelease_after_release() {
 
     init(temp_path);
     commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "1.1.0");
+    tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
     for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
@@ -65,7 +65,8 @@ fn second_prerelease() {
 
     init(temp_path);
     commit(temp_path, "feat: New feature in first RC");
-    tag(temp_path, "1.1.0-rc.1");
+    tag(temp_path, "v1.0.0");
+    tag(temp_path, "v1.1.0-rc.1");
     commit(temp_path, "feat: New feature in second RC");
 
     for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
@@ -115,7 +116,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "1.0.0");
+    tag(temp_path, "v1.0.0");
     commit(temp_path, "feat: New feature");
 
     copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
@@ -346,7 +347,7 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "1.0.0");
+    tag(temp_path, "v1.0.0");
     commit(temp_path, "feat: New feature");
     let all_changelogs = ["CHANGELOG.md", "CHANGES.md"];
 
@@ -462,4 +463,52 @@ fn no_versioned_files() {
     let expected_tag = "v1.1.0";
     let actual_tag = describe(temp_path);
     assert_eq!(expected_tag, actual_tag);
+}
+
+/// If `PrepareRelease` is run with no `prerelease_label`, it should skip any prerelease tags
+/// when parsing commits, as well as determine the next version from the previous released version
+/// (not from the pre-release version).
+#[test]
+fn release_after_prerelease() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/release_after_prerelease");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0"); // Here is the last released version
+    commit(temp_path, "feat!: Breaking change");
+    commit(temp_path, "feat: New feature");
+    // Here is the pre-release version, intentionally wrong to test that all the commits are re-parsed
+    tag(temp_path, "v1.1.0-rc.1");
+
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("Expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
 }

@@ -243,13 +243,6 @@ pub(super) enum StepError {
         to the branch you were on."),
     )]
     IncompleteCheckout(#[source] git2::Error),
-    #[error("Could not list tags for the project")]
-    #[diagnostic(
-        code(step::list_tags_error),
-        help("We couldn't list the tags for the project. This step requires at least one existing tag."),
-        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
-    )]
-    ListTagsError(#[source] git2::Error),
     #[error("Unknown Git error.")]
     #[diagnostic(
     code(step::git_error),

@@ -6,10 +6,18 @@ use clap::Parser;
 
 use knope::{run, Cli};
 
+use git_repo_helpers::*;
+
+mod git_repo_helpers;
+
 #[test]
 fn tests() {
     // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
     let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.2.3"); // Need to have stable version as tag if pre version in Cargo.toml.
 
     let knope_toml = temp_dir.path().join("knope.toml");
     std::fs::copy("tests/knope.toml", knope_toml).unwrap();
@@ -21,7 +29,8 @@ fn tests() {
     // Use a poor excuse for parametrization because setting the current dir doesn't work in parallel.
     let test_cases = [
         ("bump-pre", "1.2.3", "1.2.4-rc.0"),
-        ("bump-pre", "1.2.3-rc.0", "1.2.3-rc.1"),
+        ("bump-pre", "1.2.3-rc.0", "1.2.4-rc.0"),
+        ("bump-pre", "1.2.4-rc.0", "1.2.4-rc.1"),
         ("bump-release", "1.2.3-rc.0", "1.2.3"),
         ("bump-patch", "1.2.3", "1.2.4"),
         ("bump-minor", "1.2.3", "1.3.0"),

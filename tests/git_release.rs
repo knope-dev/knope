@@ -22,7 +22,7 @@ fn git_release() {
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.1.0");
+    tag(temp_path, "v1.0.0");
     commit(temp_path, "feat: New feature");
 
     for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {

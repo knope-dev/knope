@@ -6,9 +6,13 @@
 
 use clap::Parser;
 use miette::Result;
+use std::env::var;
 
 use knope::{run, Cli};
 
 fn main() -> Result<()> {
+    if var("RUST_LOG").is_ok() {
+        env_logger::init();
+    }
     run(Cli::parse())
 }
