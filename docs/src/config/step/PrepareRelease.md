@@ -1,11 +1,11 @@
 # PrepareRelease step
 
-This will look through all commits since the last tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the project version (depending on the [Semantic Versioning] rule determined from the commits) and add a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
+This will look through all commits since the version tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the project version (depending on the [Semantic Versioning] rule determined from the commits) and add a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
 The version bumping follows the same rules and logic as the [BumpVersion] step, with the rule selected for you automatically. Which files are edited (both for versioning and changelog) is determined by the [`packages`] section.
 
 ```admonish note
-While the most recent tag is used to select commits, the current version is determined by the `versioned_files` in the [`packages`] section. The content of the tag is irrelevant.
+The last "version tag" is used as the starting point to read commits—that's the most recent tag that looks like v<semantic_version>. v1.2.3 and v1.2.3-rc.1 are both valid version tags. However, if you are releasing a non-pre version (no `prerelease_label` is set for the step), prerelease tags are ignored. See examples below for more detail.
 ```
 
 ## Limitations
@@ -31,7 +31,51 @@ type = "PrepareRelease"
 prerelease_label = "rc"
 ```
 
-Note that after you've done this, the final release created later will not include change notes from the intermediate pre-release versions.
+### Going from Pre-release to Full Release
+
+Let's say that in addition to the configuration from the above example, you also have a section like this:
+
+```toml
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+```
+
+And your changelog looks like this (describing some pre-releases you already have):
+
+```md
+## 2.0.0-rc.1
+
+### Bug Fixes
+
+- A bug in the first `rc` that we fixed.
+
+## 2.0.0-rc.0
+
+### Breaking Changes
+
+- Cool new API
+
+## 1.14.0
+
+The last 1.x release.
+```
+
+Now you're ready to release 2.0.0—the version that's going to come after 2.0.0-rc.1. If you run the defined `release` rule, it will go all the way back to the tag `v1.14.0` and use the commits from that point to create the new version. In the end, you'll get version 2.0.0 with a new changelog entry like this:
+
+```md
+## 2.0.0
+
+### Breaking Changes
+
+- Cool new API
+
+### Bug Fixes
+
+- A bug in the first `rc` that we fixed.
+```
 
 ## Errors
 

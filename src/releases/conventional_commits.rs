@@ -1,6 +1,7 @@
 use git_conventional::{Commit, Type};
+use log::debug;
 
-use crate::git::get_commit_messages_after_last_tag;
+use crate::git::get_commit_messages_after_last_stable_version;
 use crate::step::StepError;
 use crate::{state, step, RunType};
 
@@ -25,7 +26,13 @@ impl ConventionalCommits {
 
         for commit in commits {
             if let Some(breaking_message) = commit.breaking_description() {
-                rule = ConventionalRule::Major;
+                if !matches!(rule, ConventionalRule::Major) {
+                    debug!(
+                        "breaking change \"{}\" results in Major rule selection",
+                        breaking_message
+                    );
+                    rule = ConventionalRule::Major;
+                }
                 breaking_changes.push(breaking_message.to_string());
                 if breaking_message == commit.description() {
                     // There is no separate breaking change message, so the normal description is used.
@@ -37,6 +44,10 @@ impl ConventionalCommits {
             if commit.type_() == Type::FEAT {
                 features.push(commit.description().to_string());
                 if !matches!(rule, ConventionalRule::Major) {
+                    debug!(
+                        "commit \"{}\" results in Minor rule selection",
+                        commit.description()
+                    );
                     rule = ConventionalRule::Minor;
                 }
             } else if commit.type_() == Type::FIX {
@@ -198,12 +209,13 @@ mod test_conventional_commits {
     }
 }
 
-fn get_conventional_commits_after_last_tag() -> Result<ConventionalCommits, StepError> {
-    let commit_messages = get_commit_messages_after_last_tag()?;
+fn get_conventional_commits_after_last_stable_version() -> Result<ConventionalCommits, StepError> {
+    let commit_messages = get_commit_messages_after_last_stable_version()?;
     let commits = commit_messages
         .iter()
         .filter_map(|message| Commit::parse(message.trim()).ok())
         .collect();
+    debug!("Selected commits: {:?}", commits);
     Ok(ConventionalCommits::from_commits(commits))
 }
 
@@ -216,26 +228,22 @@ pub(crate) fn update_project_from_conventional_commits(
         features,
         fixes,
         breaking_changes,
-    } = get_conventional_commits_after_last_tag()?;
-    let step::PrepareRelease { prerelease_label } = prepare_release;
+    } = get_conventional_commits_after_last_stable_version()?;
 
     let (mut state, dry_run_stdout) = match run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
     };
 
-    let changelog_path = if state.packages.is_empty() {
-        return Err(StepError::no_defined_packages_with_help());
-    } else if state.packages.len() > 1 {
-        return Err(StepError::TooManyPackages);
-    } else {
-        state.packages.first().unwrap().changelog.as_ref()
-    };
+    let changelog_path = state
+        .packages
+        .first()
+        .and_then(|package| package.changelog.as_ref());
 
-    let rule = if let Some(prefix) = prerelease_label {
+    let rule = if let Some(label) = prepare_release.prerelease_label {
         Rule::Pre {
-            label: prefix,
-            fallback_rule: rule,
+            label,
+            stable_rule: rule,
         }
     } else {
         Rule::from(rule)

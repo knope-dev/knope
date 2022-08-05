@@ -1,10 +1,12 @@
 use std::str::FromStr;
 
 use git2::build::CheckoutBuilder;
-use git2::{Branch, BranchType, DescribeFormatOptions, DescribeOptions, Repository};
+use git2::{Branch, BranchType, Repository};
+use log::trace;
 
 use crate::issues::Issue;
 use crate::prompt::select;
+use crate::releases::get_current_versions_from_tag;
 use crate::state;
 use crate::step::StepError;
 use crate::RunType;
@@ -188,27 +190,27 @@ pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
     format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(' ', "-")
 }
 
-fn get_last_tag_name(repo: &Repository) -> Result<String, StepError> {
-    repo.describe(DescribeOptions::new().describe_tags())
-        .map_err(StepError::ListTagsError)?
-        .format(Some(DescribeFormatOptions::new().abbreviated_size(0)))
-        .map_err(StepError::from)
-}
-
-pub(crate) fn get_commit_messages_after_last_tag() -> Result<Vec<String>, StepError> {
+pub(crate) fn get_commit_messages_after_last_stable_version() -> Result<Vec<String>, StepError> {
+    let target_version =
+        get_current_versions_from_tag()?.map(|current_version| current_version.stable);
     let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
-    let tag_name = get_last_tag_name(&repo)?;
-    let tag_ref = repo.find_reference(&format!("refs/tags/{}", tag_name))?;
-    let tag_oid = tag_ref.target().ok_or(StepError::GitError(None))?;
+    let tag_ref = target_version
+        .map(|version| repo.find_reference(&format!("refs/tags/v{}", version)))
+        .transpose()?;
+    let tag_oid = tag_ref
+        .map(|tag| tag.target().ok_or(StepError::GitError(None)))
+        .transpose()?;
     let mut revwalk = repo.revwalk()?;
     revwalk.push_head()?;
     let messages: Vec<String> = revwalk
         .into_iter()
-        .filter_map(std::result::Result::ok)
-        .take_while(|oid| oid != &tag_oid)
+        .filter_map(Result::ok)
+        .take_while(|oid| tag_oid.as_ref() != Some(oid))
         .filter_map(|oid| {
             if let Ok(commit) = repo.find_commit(oid) {
-                Some(commit.message().unwrap_or("").to_string())
+                let commit_message = commit.message().unwrap_or("").to_string();
+                trace!("Checking commit message: {}", &commit_message);
+                Some(commit_message)
             } else {
                 None
             }
