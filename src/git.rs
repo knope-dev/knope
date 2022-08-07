@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use git2::build::CheckoutBuilder;
 use git2::{Branch, BranchType, Repository};
-use log::trace;
+use log::{debug, trace, warn};
 
 use crate::issues::Issue;
 use crate::prompt::select;
@@ -193,9 +193,20 @@ pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
 pub(crate) fn get_commit_messages_after_last_stable_version() -> Result<Vec<String>, StepError> {
     let target_version =
         get_current_versions_from_tag()?.map(|current_version| current_version.stable);
+    let reference = match &target_version {
+        Some(version) => {
+            debug!("Processing all commits since tag v{}", version);
+            Some(format!("refs/tags/v{}", version))
+        }
+        None => {
+            warn!("No stable version tag found, processing all commits.");
+            None
+        }
+    };
     let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
-    let tag_ref = target_version
-        .map(|version| repo.find_reference(&format!("refs/tags/v{}", version)))
+    let tag_ref = reference
+        .as_ref()
+        .map(|reference| repo.find_reference(reference))
         .transpose()?;
     let tag_oid = tag_ref
         .map(|tag| tag.target().ok_or(StepError::GitError(None)))

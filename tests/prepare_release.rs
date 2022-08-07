@@ -18,6 +18,8 @@ fn prerelease_after_release() {
     let source_path = Path::new("tests/prepare_release/prerelease_after_release");
 
     init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
     commit(temp_path, "feat: New feature in existing release");
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
