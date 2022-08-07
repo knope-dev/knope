@@ -51,5 +51,6 @@ variables = { "version" = "Version" }
 
 [`bumpversion`]: ./step/BumpVersion.md
 [`preparerelease`]: ./step/PrepareRelease.md
+[`release`]: ./step/Release.md
 [`command`]: ./step/Command.md
 [request it as a feature]: https://github.com/knope-dev/knope/issues
