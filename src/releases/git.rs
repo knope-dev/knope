@@ -56,12 +56,11 @@ pub(crate) fn get_current_versions_from_tag() -> Result<Option<CurrentVersions>,
         }
         if let Ok(version) = Version::parse(&tag[1..tag.len()]) {
             if version.pre.is_empty() {
-                // Stop at newest stable version. Don't consider pre-releases or stable versions
-                // older than this point.
                 stable = Some(version);
-                break;
+                prerelease = None; // Don't consider prereleases older than the stable version.
+            } else {
+                prerelease.get_or_insert(version);
             }
-            prerelease.get_or_insert(version);
         }
     }
     Ok(stable.map(|stable| CurrentVersions { stable, prerelease }))
