@@ -15,6 +15,7 @@ mod changelog;
 mod conventional_commits;
 mod git;
 mod github;
+mod go;
 mod package;
 mod package_json;
 mod pyproject;
@@ -30,6 +31,25 @@ pub(crate) struct Release {
 pub(crate) struct CurrentVersions {
     pub(crate) stable: Version,
     pub(crate) prerelease: Option<Version>,
+}
+
+impl CurrentVersions {
+    pub(crate) fn latest(&self) -> &Version {
+        self.prerelease.as_ref().unwrap_or(&self.stable)
+    }
+
+    pub(crate) fn into_latest(self) -> Version {
+        self.prerelease.unwrap_or(self.stable)
+    }
+}
+
+impl Default for CurrentVersions {
+    fn default() -> Self {
+        Self {
+            stable: Version::new(0, 0, 0),
+            prerelease: None,
+        }
+    }
 }
 
 /// Create a release for the package.

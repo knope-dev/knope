@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use git2::build::CheckoutBuilder;
 use git2::{Branch, BranchType, Repository};
-use log::{debug, trace, warn};
+use log::{debug, error, trace, warn};
 
 use crate::issues::Issue;
 use crate::prompt::select;
@@ -203,30 +203,40 @@ pub(crate) fn get_commit_messages_after_last_stable_version() -> Result<Vec<Stri
             None
         }
     };
-    let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
+    let repo = git_repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
     let tag_ref = reference
         .as_ref()
         .map(|reference| repo.find_reference(reference))
-        .transpose()?;
+        .transpose()
+        .expect("Could not find Git reference that was previously seen.");
     let tag_oid = tag_ref
-        .map(|tag| tag.target().ok_or(StepError::GitError(None)))
+        .map(git_repository::Reference::into_fully_peeled_id)
         .transpose()?;
-    let mut revwalk = repo.revwalk()?;
-    revwalk.push_head()?;
-    let messages: Vec<String> = revwalk
-        .into_iter()
-        .filter_map(Result::ok)
-        .take_while(|oid| tag_oid.as_ref() != Some(oid))
-        .filter_map(|oid| {
-            if let Ok(commit) = repo.find_commit(oid) {
-                let commit_message = commit.message().unwrap_or("").to_string();
-                trace!("Checking commit message: {}", &commit_message);
-                Some(commit_message)
-            } else {
-                None
+    if reference.is_some() && tag_oid.is_none() {
+        error!(
+            "Found tagged version {}, but could not parse it within Git",
+            reference.unwrap()
+        );
+    }
+    let commit = repo.head_commit()?;
+    let mut messages = vec![];
+    for item in commit.ancestors().all()?.error_on_missing_commit() {
+        let id = item?;
+        if let Some(tag_id) = tag_oid {
+            if id == tag_id {
+                break;
             }
-        })
-        .collect();
+        }
+        if let Some(commit) = repo
+            .find_object(id)
+            .ok()
+            .and_then(|object| object.try_into_commit().ok())
+        {
+            let message = commit.decode()?.message.to_string();
+            trace!("Checking commit message: {}", &message);
+            messages.push(message);
+        }
+    }
     Ok(messages)
 }
 

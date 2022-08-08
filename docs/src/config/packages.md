@@ -29,6 +29,7 @@ A package, by Knope's definition, has a single version. There can, however, be m
 1. `Cargo.toml` for Rust projects
 2. `pyproject.toml` for Python projects (using [Poetry's metadata](https://python-poetry.org))
 3. `package.json` for Node projects
+4. `go.mod` for Go projects using [modules](https://go.dev/ref/mod)
 
 Want to bump the version of a file that isn't natively supported? [Request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
 

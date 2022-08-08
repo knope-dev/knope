@@ -1,5 +1,7 @@
-use git_repository::reference::head_commit;
+use git_object::decode;
+use git_repository::reference::{head_commit, peel};
 use git_repository::tag;
+use git_traverse::commit::ancestors;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -270,6 +272,24 @@ pub(super) enum StepError {
         help("The command failed to execute. Try running it manually to get more information.")
     )]
     CommandError(std::process::ExitStatus),
+    #[error("Failed to peel tag, could not proceed with processing commits.")]
+    #[diagnostic(
+        code(step::peel_tag_error),
+        help("In order to process commits for a release, we need to peel the tag. If this fails, it may be a bug."),
+    )]
+    PeelTagError(#[from] peel::Error),
+    #[error("Could not walk backwards from HEAD commit")]
+    #[diagnostic(
+        code(step::walk_backwards_error),
+        help("This step requires walking backwards from HEAD to find the previous release commit. If this fails, make sure HEAD is on a branch."),
+    )]
+    AncestorsError(#[from] ancestors::Error),
+    #[error("Could not decode commit")]
+    #[diagnostic(
+        code(step::decode_commit_error),
+        help("This step requires decoding a commit message. If this fails, it may be a bug.")
+    )]
+    DecodeError(#[from] decode::Error),
     #[error("Failed to get user input")]
     #[diagnostic(
     code(step::user_input_error),
@@ -310,6 +330,18 @@ pub(super) enum StepError {
         help("Attempted to interact with a file that doesn't exist in the current directory.")
     )]
     FileNotFound(PathBuf),
+    #[error("No module line found in go.mod file")]
+    #[diagnostic(
+        code(step::no_module_line),
+        help("The go.mod file does not contain a module line. This is required for the step to work."),
+    )]
+    MissingModuleLine,
+    #[error("The module line {0} in go.mod could not be parsed")]
+    #[diagnostic(
+        code(step::malformed_module_line),
+        help("The go.mod file contains an invalid module line.")
+    )]
+    MalformedModuleLine(String),
 }
 
 impl StepError {

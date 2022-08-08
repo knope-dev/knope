@@ -39,11 +39,11 @@ Error:
 Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 
   × No packages are defined
-  help: You must define at least one package in the [[packages]] section
-        of knope.toml. No supported package managers found in current
-        directory. The supported formats are Cargo.toml, pyproject.toml,
-        package.json. Here's how you might define a package for
-        `Cargo.toml`:
+  help: You must define at least one package in the [[packages]]
+        section of knope.toml. No supported package managers found in
+        current directory. The supported formats are Cargo.toml, go.mod,
+        package.json, pyproject.toml. Here's how you might define a package
+        for `Cargo.toml`:
         
         ```
         [[packages]]
@@ -63,11 +63,11 @@ Error:
 Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 
   × No packages are defined
-  help: You must define at least one package in the [[packages]] section
-        of knope.toml. No supported package managers found in current
-        directory. The supported formats are Cargo.toml, pyproject.toml,
-        package.json. Here's how you might define a package for
-        `Cargo.toml`:
+  help: You must define at least one package in the [[packages]]
+        section of knope.toml. No supported package managers found in
+        current directory. The supported formats are Cargo.toml, go.mod,
+        package.json, pyproject.toml. Here's how you might define a package
+        for `Cargo.toml`:
         
         ```
         [[packages]]

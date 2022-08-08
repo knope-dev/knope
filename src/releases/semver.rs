@@ -59,10 +59,7 @@ pub(crate) struct PackageVersion {
 
 impl PackageVersion {
     pub(crate) fn latest_version(&self) -> &Version {
-        self.version
-            .prerelease
-            .as_ref()
-            .unwrap_or(&self.version.stable)
+        self.version.latest()
     }
 }
 
@@ -133,10 +130,7 @@ pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, 
         .transpose()?;
 
     let version = match stable_version {
-        None => get_current_versions_from_tag()?.unwrap_or_else(|| CurrentVersions {
-            stable: Version::new(0, 0, 0),
-            prerelease: None,
-        }),
+        None => get_current_versions_from_tag()?.unwrap_or_default(),
         Some(stable) if stable.pre.is_empty() => CurrentVersions {
             stable,
             prerelease: None,
@@ -167,9 +161,8 @@ fn set_version(package_version: PackageVersion, dry_run: bool) -> Result<Version
     if dry_run {
         return Ok(version);
     }
-    let version_str = version.to_string();
     for versioned_file in package.versioned_files {
-        versioned_file.set_version(&version_str)?;
+        versioned_file.set_version(&version)?;
     }
     Ok(version)
 }
