@@ -1,11 +1,13 @@
-use itertools::Itertools;
 use std::ffi::OsStr;
 use std::fs::{read_to_string, write};
 use std::path::{Path, PathBuf};
 
-use crate::releases::{cargo, package_json, pyproject};
-use crate::step::StepError;
+use itertools::Itertools;
+use semver::Version;
 use serde::{Deserialize, Serialize};
+
+use crate::releases::{cargo, get_current_versions_from_tag, go, package_json, pyproject};
+use crate::step::StepError;
 
 /// Represents an entry in the `[[packages]]` section of `knope.toml`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -68,7 +70,7 @@ impl VersionedFile {
         self.format.get_version(&self.content)
     }
 
-    pub(crate) fn set_version(self, version_str: &str) -> Result<(), StepError> {
+    pub(crate) fn set_version(self, version_str: &Version) -> Result<(), StepError> {
         let new_content = self.format.set_version(self.content, version_str)?;
         write(&self.path, new_content)?;
         Ok(())
@@ -93,8 +95,9 @@ impl TryFrom<PathBuf> for Changelog {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum PackageFormat {
     Cargo,
-    Poetry,
+    Go,
     JavaScript,
+    Poetry,
 }
 
 impl TryFrom<&PathBuf> for PackageFormat {
@@ -119,29 +122,39 @@ impl PackageFormat {
             PackageFormat::Cargo => cargo::get_version(content),
             PackageFormat::Poetry => pyproject::get_version(content),
             PackageFormat::JavaScript => package_json::get_version(content),
+            PackageFormat::Go => get_current_versions_from_tag().map(|current_versions| {
+                current_versions
+                    .unwrap_or_default()
+                    .into_latest()
+                    .to_string()
+            }),
         }
     }
 
     pub(crate) fn set_version(
         self,
         content: String,
-        new_version: &str,
+        new_version: &Version,
     ) -> Result<String, StepError> {
         match self {
-            PackageFormat::Cargo => cargo::set_version(content, new_version),
-            PackageFormat::Poetry => pyproject::set_version(content, new_version),
-            PackageFormat::JavaScript => package_json::set_version(&content, new_version),
+            PackageFormat::Cargo => cargo::set_version(content, &new_version.to_string()),
+            PackageFormat::Poetry => pyproject::set_version(content, &new_version.to_string()),
+            PackageFormat::JavaScript => {
+                package_json::set_version(&content, &new_version.to_string())
+            }
+            PackageFormat::Go => go::set_version(content, new_version),
         }
     }
 }
 
-const ALL_PACKAGE_FORMATS: [PackageFormat; 3] = [
+const ALL_PACKAGE_FORMATS: [PackageFormat; 4] = [
     PackageFormat::Cargo,
-    PackageFormat::Poetry,
+    PackageFormat::Go,
     PackageFormat::JavaScript,
+    PackageFormat::Poetry,
 ];
 const PACKAGE_FORMAT_FILE_NAMES: [&str; ALL_PACKAGE_FORMATS.len()] =
-    ["Cargo.toml", "pyproject.toml", "package.json"];
+    ["Cargo.toml", "go.mod", "package.json", "pyproject.toml"];
 
 /// Find the first supported package manager in the current directory that can be added to generated config.
 pub(crate) fn find_packages() -> Vec<PackageConfig> {

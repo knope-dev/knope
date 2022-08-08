@@ -109,6 +109,7 @@ fn second_prerelease() {
 #[case("Cargo.toml_knope.toml", &["Cargo.toml"])]
 #[case("pyproject.toml_knope.toml", &["pyproject.toml"])]
 #[case("package.json_knope.toml", &["package.json"])]
+#[case("go.mod_knope.toml", &["go.mod"])]
 #[case("multiple_files_in_package_knope.toml", &["Cargo.toml", "pyproject.toml"])]
 fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_files: &[&str]) {
     // Arrange.
@@ -125,6 +126,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     for file in [
         "CHANGELOG.md",
         "Cargo.toml",
+        "go.mod",
         "pyproject.toml",
         "package.json",
     ] {
@@ -154,7 +156,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 
-    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
+    for file in ["Cargo.toml", "pyproject.toml", "package.json", "go.mod"] {
         let expected_path = if versioned_files.contains(&file) {
             format!("expected_{file}")
         } else {
@@ -513,4 +515,80 @@ fn release_after_prerelease() {
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
+}
+
+/// Go modules have a peculiar way of versioning in that only the major version is recorded to the
+/// `go.mod` file and only for major versions >1. This tests that.
+#[test]
+fn go_modules() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/go_modules");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    for file in ["knope.toml", "CHANGELOG.md", "go.mod"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act 1—version stays at 1.x
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert 1—version stays at 1.x
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("1.1_dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert_eq_path(
+        source_path.join("EXPECTED_1.1_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_1.1_go.mod"),
+        read_to_string(temp_path.join("go.mod")).unwrap(),
+    );
+    let tag = describe(temp_path);
+    assert_eq!("v1.1.0", tag);
+
+    // Arrange 2—version goes to 2.0
+    commit(temp_path, "feat!: Breaking change");
+
+    // Act 2—version goes to 2.0
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert 2—version goes to 2.0
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("2.0_dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert_eq_path(
+        source_path.join("EXPECTED_2.0_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_2.0_go.mod"),
+        read_to_string(temp_path.join("go.mod")).unwrap(),
+    );
+    let tag = describe(temp_path);
+    assert_eq!("v2.0.0", tag);
 }

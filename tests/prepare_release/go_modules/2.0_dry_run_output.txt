@@ -1,0 +1,9 @@
+Would bump version to 2.0.0
+Would add the following to CHANGELOG.md: 
+## 2.0.0
+
+### Breaking Changes
+
+- Breaking change
+
+Would create Git tag v2.0.0
