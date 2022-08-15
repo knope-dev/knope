@@ -1241,7 +1241,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "base64",
  "clap",
@@ -1861,9 +1861,9 @@ checksum = "f67ad224767faa3c7d8b6d91985b78e70a1324408abcb1cfcc2be4c06bc06043"
 
 [[package]]
 name = "snapbox"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fc9baeba95b47156f9673960cfa1ab0609408d72ba4a860a98c0530f628e0eb"
+checksum = "44d199ccf8f606592df2d145db26f2aa45344e23c64b074cc5a4047f1d99b0f7"
 dependencies = [
  "concolor",
  "normalize-line-endings",
