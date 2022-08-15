@@ -220,7 +220,6 @@ fn prepare_release_versioned_file_not_found(#[case] knope_toml: &str) {
 #[case("Cargo.toml_knope.toml")]
 #[case("pyproject.toml_knope.toml")]
 #[case("package.json_knope.toml")]
-#[case("go.mod_knope.toml")]
 #[case("multiple_files_in_package_knope.toml")]
 fn prepare_release_invalid_versioned_files(#[case] knope_toml: &str) {
     // Arrange.
