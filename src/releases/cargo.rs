@@ -1,16 +1,15 @@
 use serde::Deserialize;
 use toml::Spanned;
 
-use crate::step::StepError;
-
-pub(crate) fn get_version(content: &str) -> Result<String, StepError> {
-    toml::from_str::<Cargo>(content)
-        .map_err(|_| StepError::InvalidCargoToml)
-        .map(|cargo| cargo.package.version.into_inner())
+pub(crate) fn get_version(content: &str) -> Result<String, toml::de::Error> {
+    toml::from_str::<Cargo>(content).map(|cargo| cargo.package.version.into_inner())
 }
 
-pub(crate) fn set_version(mut cargo_toml: String, new_version: &str) -> Result<String, StepError> {
-    let doc: Cargo = toml::from_str(&cargo_toml).map_err(|_| StepError::InvalidCargoToml)?;
+pub(crate) fn set_version(
+    mut cargo_toml: String,
+    new_version: &str,
+) -> Result<String, toml::de::Error> {
+    let doc: Cargo = toml::from_str(&cargo_toml)?;
 
     // Account for quotes with +- 1
     let start = doc.package.version.start() + 1;

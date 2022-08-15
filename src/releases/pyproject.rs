@@ -1,20 +1,15 @@
 use serde::Deserialize;
 use toml::Spanned;
 
-use crate::step::StepError;
-
-pub(crate) fn get_version(content: &str) -> Result<String, StepError> {
-    toml::from_str::<PyProject>(content)
-        .map_err(|_| StepError::InvalidPyProject)
-        .map(|pyproject| pyproject.tool.poetry.version.into_inner())
+pub(crate) fn get_version(content: &str) -> Result<String, toml::de::Error> {
+    toml::from_str::<PyProject>(content).map(|pyproject| pyproject.tool.poetry.version.into_inner())
 }
 
 pub(crate) fn set_version(
     mut pyproject_toml: String,
     new_version: &str,
-) -> Result<String, StepError> {
-    let doc: PyProject =
-        toml::from_str(&pyproject_toml).map_err(|_| StepError::InvalidPyProject)?;
+) -> Result<String, toml::de::Error> {
+    let doc: PyProject = toml::from_str(&pyproject_toml)?;
 
     // Account for quotes around value with +- 1
     let start = doc.tool.poetry.version.start() + 1;

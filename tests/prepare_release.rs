@@ -1,4 +1,4 @@
-use std::fs::{copy, read_to_string};
+use std::fs::{copy, read_to_string, write};
 use std::path::Path;
 
 use rstest::rstest;
@@ -167,6 +167,148 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
+}
+
+/// Snapshot the error messages when a required file is missing.
+#[rstest]
+#[case("Cargo.toml_knope.toml")]
+#[case("pyproject.toml_knope.toml")]
+#[case("package.json_knope.toml")]
+#[case("go.mod_knope.toml")]
+#[case("multiple_files_in_package_knope.toml")]
+fn prepare_release_versioned_file_not_found(#[case] knope_toml: &str) {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/package_selection");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
+    let file = "CHANGELOG.md";
+    copy(source_path.join(file), temp_path.join(file)).unwrap();
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .failure()
+        .stderr_eq_path(source_path.join(&format!("{knope_toml}_MISSING_output.txt")));
+    actual_assert
+        .failure()
+        .stderr_eq_path(source_path.join(&format!("{knope_toml}_MISSING_output.txt")));
+    assert_eq_path(
+        source_path.join("CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+}
+
+/// Run a `PrepareRelease` in a repo where the versioned files are invalid.
+#[rstest]
+#[case("Cargo.toml_knope.toml")]
+#[case("pyproject.toml_knope.toml")]
+#[case("package.json_knope.toml")]
+#[case("multiple_files_in_package_knope.toml")]
+fn prepare_release_invalid_versioned_files(#[case] knope_toml: &str) {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/package_selection");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
+    copy(
+        source_path.join("CHANGELOG.md"),
+        temp_path.join("CHANGELOG.md"),
+    )
+    .unwrap();
+    for file in ["Cargo.toml", "go.mod", "pyproject.toml", "package.json"] {
+        write(temp_path.join(file), "").unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .failure()
+        .stderr_eq_path(source_path.join(&format!("{knope_toml}_INVALID_output.txt")));
+    actual_assert
+        .failure()
+        .stderr_eq_path(source_path.join(&format!("{knope_toml}_INVALID_output.txt")));
+}
+
+/// Run a `PrepareRelease` where the CHANGELOG.md file is missing and verify it's created.
+#[test]
+fn prepare_release_creates_missing_changelog() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/package_selection");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    copy(
+        source_path.join("Cargo.toml_knope.toml"),
+        temp_path.join("knope.toml"),
+    )
+    .unwrap();
+    let file = "Cargo.toml";
+    copy(source_path.join(file), temp_path.join(file)).unwrap();
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+    assert_eq_path(
+        source_path.join("NEW_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
 }
 
 /// Run a `PrepareRelease` in a repo with multiple packages set to verify error message.

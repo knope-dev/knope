@@ -1,29 +1,20 @@
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
-use crate::step::StepError;
-
-pub(crate) fn get_version(content: &str) -> Result<String, StepError> {
-    serde_json::from_str::<Package>(content)
-        .map_err(|_| StepError::InvalidPackageJson)
-        .map(|package| package.version)
+pub(crate) fn get_version(content: &str) -> Result<String, serde_json::Error> {
+    serde_json::from_str::<Package>(content).map(|package| package.version)
 }
 
-pub(crate) fn set_version(package_json: &str, new_version: &str) -> Result<String, StepError> {
-    let json = match serde_json::from_str::<Value>(package_json)
-        .map_err(|_| StepError::InvalidPackageJson)?
-    {
-        Value::Object(mut data) => {
-            data.insert(
-                "version".to_string(),
-                Value::String(new_version.to_string()),
-            );
-            Some(Value::Object(data))
-        }
-        _ => None,
-    }
-    .ok_or(StepError::InvalidPackageJson)?;
-    serde_json::to_string_pretty(&json).map_err(|e| StepError::Bug(Box::new(e)))
+pub(crate) fn set_version(
+    package_json: &str,
+    new_version: &str,
+) -> Result<String, serde_json::Error> {
+    let mut json = serde_json::from_str::<Map<String, Value>>(package_json)?;
+    json.insert(
+        "version".to_string(),
+        Value::String(new_version.to_string()),
+    );
+    serde_json::to_string_pretty(&json)
 }
 
 #[derive(Debug, Deserialize)]
