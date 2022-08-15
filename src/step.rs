@@ -158,14 +158,14 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     VersionedFileFormat(PathBuf),
-    #[error("The package.json file was an incorrect format")]
+    #[error("The file {0} was an incorrect format")]
     #[diagnostic(
         code(step::invalid_package_json),
         help("knope expects the package.json file to be an object with a top level `version` property"),
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
-    InvalidPackageJson,
-    #[error("The pyproject.toml file was an incorrect format")]
+    InvalidPackageJson(PathBuf),
+    #[error("The file {0} was an incorrect format")]
     #[diagnostic(
         code(step::invalid_pyproject),
         help(
@@ -174,14 +174,14 @@ pub(super) enum StepError {
         ),
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
-    InvalidPyProject,
-    #[error("The Cargo.toml file was an incorrect format")]
+    InvalidPyProject(PathBuf),
+    #[error("The file {0} was an incorrect format")]
     #[diagnostic(
         code(step::invalid_cargo_toml),
         help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
-    InvalidCargoToml,
+    InvalidCargoToml(PathBuf),
     #[error("Trouble communicating with a remote API")]
     #[diagnostic(
         code(step::api_request_error),
@@ -296,13 +296,6 @@ pub(super) enum StepError {
     help("This step requires user input, but no user input was provided. Try running the step again."),
     )]
     UserInput(#[source] Option<std::io::Error>),
-    #[error("This is a bug!")]
-    #[diagnostic(
-        code(step::bug),
-        help("If you see this error, it's a bug in knope! Please report it in GitHub."),
-        url("https://github.com/knope-dev/knope/issues")
-    )]
-    Bug(#[source] Box<dyn std::error::Error + Send + Sync>),
     #[error("PrepareRelease needs to occur before this step")]
     #[diagnostic(
         code(step::release_not_prepared),
