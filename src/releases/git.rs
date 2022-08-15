@@ -25,7 +25,14 @@ pub(crate) fn release(
 
     let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
     let head = repo.head_commit()?;
-    repo.tag(tag, head.id, Kind::Commit, None, "", PreviousValue::Any)?;
+    repo.tag(
+        tag,
+        head.id,
+        Kind::Commit,
+        Some(repo.committer_or_default()),
+        "",
+        PreviousValue::Any,
+    )?;
 
     Ok(RunType::Real(state))
 }
