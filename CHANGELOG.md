@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.2
+
+### Features
+
+- `PrepareRelease` will create a `changelog` file if it was missing. (#240)
+
+### Fixes
+
+- Always set a committer on tags to resolve compatibility issue with GitLab. (#236)
+- Include file paths in file-related errors. (#239)
+
 ## 0.4.1
 
 ### Features
