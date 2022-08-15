@@ -271,7 +271,11 @@ pub(crate) fn update_project_from_conventional_commits(
         Ok(RunType::DryRun { state, stdout })
     } else {
         if let Some(changelog_path) = changelog_path {
-            let changelog_text = std::fs::read_to_string(&changelog_path)?;
+            let changelog_text = if changelog_path.exists() {
+                std::fs::read_to_string(&changelog_path)?
+            } else {
+                String::new()
+            };
             let changelog = add_version_to_changelog(&changelog_text, &new_changes);
             std::fs::write(&changelog_path, changelog)?;
         }
