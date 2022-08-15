@@ -173,24 +173,25 @@ pub(crate) fn find_packages() -> Vec<PackageConfig> {
             }];
         }
     }
-    return vec![];
+    vec![]
 }
 
 /// Includes some helper text for the user to understand how to use the config to define packages.
 pub(crate) fn suggested_package_toml() -> String {
     let packages = find_packages();
     if packages.is_empty() {
-        return format!(
-                "No supported package managers found in current directory. \
-                The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
-                \n\n```\n[[packages]]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
-                formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
-            );
+        format!(
+            "No supported package managers found in current directory. \
+            The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
+            \n\n```\n[[packages]]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
+            formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
+        )
+    } else {
+        format!(
+            "Found the package metadata file {file} in the current directory. You may need to add this \
+            to your knope.toml:\n\n```\n[[packages]]\n{toml}```",
+            file = packages[0].versioned_files[0].to_str().unwrap(),
+            toml = toml::to_string(&packages[0]).unwrap()
+        )
     }
-    return format!(
-        "Found the package metadata file {file} in the current directory. You may need to add this \
-        to your knope.toml:\n\n```\n[[packages]]\n{toml}```",
-        file = packages[0].versioned_files[0].to_str().unwrap(),
-        toml = toml::to_string(&packages[0]).unwrap()
-    );
 }
