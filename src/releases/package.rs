@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::releases::{cargo, get_current_versions_from_tag, go, package_json, pyproject};
 use crate::step::StepError;
+use crate::step::StepError::InvalidCargoToml;
 
 /// Represents an entry in the `[[packages]]` section of `knope.toml`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -56,6 +57,9 @@ impl TryFrom<PathBuf> for VersionedFile {
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let format = PackageFormat::try_from(&path)?;
+        if !path.exists() {
+            return Err(StepError::FileNotFound(path));
+        }
         let content = read_to_string(&path)?;
         Ok(Self {
             format,
@@ -67,11 +71,13 @@ impl TryFrom<PathBuf> for VersionedFile {
 
 impl VersionedFile {
     pub(crate) fn get_version(&self) -> Result<String, StepError> {
-        self.format.get_version(&self.content)
+        self.format.get_version(&self.content, &self.path)
     }
 
     pub(crate) fn set_version(self, version_str: &Version) -> Result<(), StepError> {
-        let new_content = self.format.set_version(self.content, version_str)?;
+        let new_content = self
+            .format
+            .set_version(self.content, version_str, &self.path)?;
         write(&self.path, new_content)?;
         Ok(())
     }
@@ -87,6 +93,9 @@ impl TryFrom<PathBuf> for Changelog {
     type Error = StepError;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        if !path.exists() {
+            return Err(StepError::FileNotFound(path));
+        }
         let content = read_to_string(&path)?;
         Ok(Self { path, content })
     }
@@ -117,11 +126,16 @@ impl TryFrom<&PathBuf> for PackageFormat {
 }
 
 impl PackageFormat {
-    pub(crate) fn get_version(self, content: &str) -> Result<String, StepError> {
+    /// Get the version from `content`. `path` is used for error reporting.
+    pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<String, StepError> {
         match self {
-            PackageFormat::Cargo => cargo::get_version(content),
-            PackageFormat::Poetry => pyproject::get_version(content),
-            PackageFormat::JavaScript => package_json::get_version(content),
+            PackageFormat::Cargo => {
+                cargo::get_version(content).map_err(|_| InvalidCargoToml(path.into()))
+            }
+            PackageFormat::Poetry => pyproject::get_version(content)
+                .map_err(|_| StepError::InvalidPyProject(path.into())),
+            PackageFormat::JavaScript => package_json::get_version(content)
+                .map_err(|_| StepError::InvalidPackageJson(path.into())),
             PackageFormat::Go => get_current_versions_from_tag().map(|current_versions| {
                 current_versions
                     .unwrap_or_default()
@@ -131,16 +145,23 @@ impl PackageFormat {
         }
     }
 
+    /// Consume the `content` and return a version of it which contains `new_version`.
+    ///
+    /// `path` is only used for error reporting.
     pub(crate) fn set_version(
         self,
         content: String,
         new_version: &Version,
+        path: &Path,
     ) -> Result<String, StepError> {
         match self {
-            PackageFormat::Cargo => cargo::set_version(content, &new_version.to_string()),
-            PackageFormat::Poetry => pyproject::set_version(content, &new_version.to_string()),
+            PackageFormat::Cargo => cargo::set_version(content, &new_version.to_string())
+                .map_err(|_| InvalidCargoToml(path.into())),
+            PackageFormat::Poetry => pyproject::set_version(content, &new_version.to_string())
+                .map_err(|_| StepError::InvalidPyProject(path.into())),
             PackageFormat::JavaScript => {
                 package_json::set_version(&content, &new_version.to_string())
+                    .map_err(|_| StepError::InvalidPackageJson(path.into()))
             }
             PackageFormat::Go => go::set_version(content, new_version),
         }

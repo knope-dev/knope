@@ -1,0 +1,9 @@
+Error: 
+  × Problem with workflow release
+
+Error: step::invalid_package_json (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
+
+  × The file package.json was an incorrect format
+  help: knope expects the package.json file to be an object with a top level
+        `version` property
+
