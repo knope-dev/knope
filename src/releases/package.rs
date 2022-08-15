@@ -93,10 +93,11 @@ impl TryFrom<PathBuf> for Changelog {
     type Error = StepError;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        if !path.exists() {
-            return Err(StepError::FileNotFound(path));
-        }
-        let content = read_to_string(&path)?;
+        let content = if path.exists() {
+            read_to_string(&path)?
+        } else {
+            String::new()
+        };
         Ok(Self { path, content })
     }
 }
