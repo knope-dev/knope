@@ -10,7 +10,7 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Limitations
 
-The CHANGELOG format is pretty strict, it needs to have at least one version already in it and every version needs to be a level 2 header (`## 1.0.0`). Only three sections will be added to the new version, `### Breaking Changes` for anything that conventional commits have marked as breaking, `### Fixes` for anything called `fix:`, and `### Features` for anything with `feat: `. Any other commits (conventional or not) will be left out. A new version will **always** be generated though, even if there are no changes to record.
+The CHANGELOG format is pretty strict. Only three sections will be added to the new version, `### Breaking Changes` for anything that conventional commits have marked as breaking, `### Fixes` for anything called `fix:`, and `### Features` for anything with `feat: `. Any other commits (conventional or not) will be left out. A new version will **always** be generated though, even if there are no changes to record.
 
 ## Examples
 
