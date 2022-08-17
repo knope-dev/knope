@@ -48,37 +48,6 @@ command = "git push"
 [[workflows.steps]]
 type = "Release"
 
-[[workflows]]
-name = "prerelease"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-prerelease_label = "rc"
-
-[[workflow.steps]]
-type = "Command"
-command = "cargo update -w"
-
-[[workflows.steps]]
-type = "Command"
-command = "npx -y prettier **/*.md --write"
-
-[[workflows.steps]]
-type = "Command"
-command = "git add Cargo.toml Cargo.lock CHANGELOG.md"
-
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m \"chore: Bump to version\""
-variables = { "version" = "Version" }
-
-[[workflows.steps]]
-type = "Command"
-command = "git push"
-
-[[workflows.steps]]
-type = "Release"
-
 [github]
 owner = "knope-dev"
 repo = "knope"

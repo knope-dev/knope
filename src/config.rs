@@ -43,6 +43,13 @@ impl Config {
             .into_diagnostic()
             .wrap_err("Invalid TOML when parsing config")
     }
+
+    /// Set the prerelease label for all `PrepareRelease` steps in all workflows in `self`.
+    pub(crate) fn set_prerelease_label(&mut self, label: &str) {
+        for workflow in &mut self.workflows {
+            workflow.set_prerelease_label(label);
+        }
+    }
 }
 
 /// Generate a brand new config file for the project in the current directory.

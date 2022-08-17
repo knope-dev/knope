@@ -31,6 +31,8 @@ type = "PrepareRelease"
 prerelease_label = "rc"
 ```
 
+If your prerelease workflow is exactly like your release workflow, you can instead temporarily add a prerelease label by passing the `--prerelease-label` option to `knope` or by setting the `KNOPE_PRERELEASE_LABEL` environment variable. This option overrides any set `prerelease_label` for any workflow run.
+
 ### Going from Pre-release to Full Release
 
 Let's say that in addition to the configuration from the above example, you also have a section like this:

@@ -1,0 +1,10 @@
+[[packages]]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "prerelease"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+prerelease_label = "rc"

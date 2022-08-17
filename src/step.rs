@@ -96,6 +96,13 @@ impl Step {
             Step::Release => releases::release(run_type),
         }
     }
+
+    /// Set `prerelease_label` if `self` is `PrepareRelease`.
+    pub(crate) fn set_prerelease_label(&mut self, prerelease_label: &str) {
+        if let Step::PrepareRelease(prepare_release) = self {
+            prepare_release.prerelease_label = Some(String::from(prerelease_label));
+        }
+    }
 }
 
 #[derive(Debug, Error, Diagnostic)]

@@ -57,6 +57,210 @@ fn prerelease_after_release() {
     );
 }
 
+/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
+/// the configured `prerelease_label` at runtime using the `--prerelease-label` argument.
+#[test]
+fn override_prerelease_label_with_option() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/override_prerelease_label");
+
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature in existing release");
+    tag(temp_path, "v1.1.0");
+    commit(temp_path, "feat!: Breaking feature in new RC");
+
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .arg("--prerelease-label=alpha")
+        .current_dir(temp_dir.path())
+        .assert();
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .arg("--prerelease-label=alpha")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("Expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
+/// the configured `prerelease_label` at runtime using the `KNOPE_PRERELEASE_LABEL` environment variable.
+#[test]
+fn override_prerelease_label_with_env() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/override_prerelease_label");
+
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature in existing release");
+    tag(temp_path, "v1.1.0");
+    commit(temp_path, "feat!: Breaking feature in new RC");
+
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .env("KNOPE_PRERELEASE_LABEL", "alpha")
+        .current_dir(temp_dir.path())
+        .assert();
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .env("KNOPE_PRERELEASE_LABEL", "alpha")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("Expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
+/// the configured `prerelease_label` at runtime using the `--prerelease-label` argument.
+#[test]
+fn enable_prerelease_label_with_option() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/enable_prerelease");
+
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature in existing release");
+    tag(temp_path, "v1.1.0");
+    commit(temp_path, "feat!: Breaking feature in new RC");
+
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .arg("--prerelease-label=rc")
+        .current_dir(temp_dir.path())
+        .assert();
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .arg("--prerelease-label=rc")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("Expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
+/// the configured `prerelease_label` at runtime using the `KNOPE_PRERELEASE_LABEL` environment variable.
+#[test]
+fn enable_prerelease_label_with_env() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/enable_prerelease");
+
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat: New feature in existing release");
+    tag(temp_path, "v1.1.0");
+    commit(temp_path, "feat!: Breaking feature in new RC");
+
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .env("KNOPE_PRERELEASE_LABEL", "rc")
+        .current_dir(temp_dir.path())
+        .assert();
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .env("KNOPE_PRERELEASE_LABEL", "rc")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    assert
+        .success()
+        .stdout_eq_path(source_path.join("output.txt"));
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("Expected_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a pre-release.
 #[test]
 fn second_prerelease() {

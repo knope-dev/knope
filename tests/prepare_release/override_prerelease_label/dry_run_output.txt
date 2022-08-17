@@ -1,0 +1,8 @@
+Would bump version to 2.0.0-alpha.1
+Would add the following to CHANGELOG.md: 
+## 2.0.0-alpha.1
+
+### Breaking Changes
+
+- Breaking feature in new RC
+

@@ -21,6 +21,14 @@ There are a few options you can pass to `knope` to control how it behaves.
 3. `--generate` will generate a `knope.toml` file in the current directory.
 4. `--validate` will check your `knope.toml` to make sure every workflow in it is valid, then exit. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid.
 5. `--dry-run` will pretend to run the selected workflow (either via arg or prompt), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout.
+6. `--prerelease-label` will override the `prerelease_label` for any [`PrepareRelease`] step run.
+
+### Environment Variables
+
+These are all the environment variables that Knope will look for when running workflows.
+
+1. `KNOPE_PRERELEASE_LABEL` works just like the `--prerelease-label` option. Note that the option takes precedence over the environment variable.
+2. `GITHUB_TOKEN` will be used to load credentials from GitHub for [GitHub config].
 
 ## Features
 
@@ -39,3 +47,5 @@ You define a [config] file named `knope.toml` which has some metadata (e.g. Jira
 [config]: config/config.md
 [workflow]: config/workflow.md
 [step]: config/step/step.md
+[`preparerelease`]: config/step/PrepareRelease.md
+[github config]: config/github.md

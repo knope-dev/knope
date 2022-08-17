@@ -19,6 +19,15 @@ pub(crate) struct Workflow {
     pub(crate) steps: Vec<Step>,
 }
 
+impl Workflow {
+    /// Set `prerelease_label` for any steps that are `PrepareRelease` steps.
+    pub(crate) fn set_prerelease_label(&mut self, prerelease_label: &str) {
+        for step in &mut self.steps {
+            step.set_prerelease_label(prerelease_label);
+        }
+    }
+}
+
 /// A collection of errors from running with the `--validate` option.
 #[derive(Debug, Error, Diagnostic)]
 #[error("There are problems with the defined workflows")]
