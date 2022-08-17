@@ -23,7 +23,6 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_push_gpgsign: false
-      - run: |
-          cargo run -- prerelease
+      - run: cargo run -- release --prerelease-label=rc
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}

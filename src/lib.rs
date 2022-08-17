@@ -41,7 +41,10 @@ pub fn run(cli: Cli) -> Result<()> {
 
     let preselected_workflow = cli.workflow;
 
-    let config = Config::load()?;
+    let mut config = Config::load()?;
+    if let Some(prerelease_label) = cli.prerelease_label {
+        config.set_prerelease_label(&prerelease_label);
+    }
     let state = State::new(config.jira, config.github, config.packages);
 
     if cli.validate {
@@ -99,6 +102,10 @@ pub struct Cli {
     #[clap(long)]
     /// Generate a new `knope.toml` file.
     generate: bool,
+
+    #[clap(long, env = "KNOPE_PRERELEASE_LABEL")]
+    /// Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime.
+    prerelease_label: Option<String>,
 }
 
 #[cfg(test)]
