@@ -3,5 +3,11 @@
     "config:base"
   ],
   "semanticCommits": "enabled",
-  "semanticCommitType": "chore"
+  "semanticCommitType": "chore",
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^git\-.*"],
+      "groupName": "gitoxide packages"
+    }
+  ]
 }
