@@ -648,13 +648,13 @@ checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
 
 [[package]]
 name = "git-actor"
-version = "0.11.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a5d2a77331398a96dc6464f1602358f80831f8c1d482d9b36b8589b89727b46"
+checksum = "48c82fe4f9747e12dba0db1a680720014579c6c25a2859a0e756d9333191fdcd"
 dependencies = [
  "bstr",
  "btoi",
- "git-date",
+ "git-date 0.0.3",
  "itoa",
  "nom",
  "quick-error",
@@ -738,6 +738,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "git-date"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ebf74e9db8846a62865c16999d737b803ad9672e5ba46cd81901e0196f63344"
+dependencies = [
+ "bstr",
+ "itoa",
+ "time",
+]
+
+[[package]]
 name = "git-diff"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -764,9 +775,9 @@ dependencies = [
 
 [[package]]
 name = "git-features"
-version = "0.22.0"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57bfebf2c0a0d28414aa7c3baa058d5c1c2969e553806904343a2c11483f425a"
+checksum = "48289da362ef7ee1412a9a80bb459406d3045ad604484526210d594d10aa5268"
 dependencies = [
  "crc32fast",
  "crossbeam-channel",
@@ -796,9 +807,9 @@ dependencies = [
 
 [[package]]
 name = "git-hash"
-version = "0.9.6"
+version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f82a0c09fdddeb738ed8338d214652c6d60ebf814a30d9ae1ecae7c91e0bbe81"
+checksum = "898628aaedf437563872461736f861acc1503e23ee4a59857513b0261c014460"
 dependencies = [
  "hex",
  "quick-error",
@@ -836,9 +847,9 @@ dependencies = [
 
 [[package]]
 name = "git-object"
-version = "0.20.0"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78bbda5da28d4bb564100373816dd21ba94709c39df12c114764967356430a8e"
+checksum = "2873d25c73b490aad3897d12f5d1bb9e91404590f37dcf9b72d229972192c07c"
 dependencies = [
  "bstr",
  "btoi",
@@ -946,7 +957,7 @@ dependencies = [
  "clru",
  "git-actor",
  "git-config",
- "git-date",
+ "git-date 0.0.2",
  "git-diff",
  "git-discover",
  "git-features",
@@ -977,7 +988,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "681181c8e87d96d6a47bafe1e4d8c9c7b0091c69573e69bd01422fc1a828f43d"
 dependencies = [
  "bstr",
- "git-date",
+ "git-date 0.0.2",
  "git-hash",
  "git-object",
  "hash_hasher",
@@ -1999,9 +2010,17 @@ version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72c91f41dcb2f096c05f0873d667dceec1087ce5bcf984ec8ffb19acddbb3217"
 dependencies = [
+ "itoa",
  "libc",
  "num_threads",
+ "time-macros",
 ]
+
+[[package]]
+name = "time-macros"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42657b1a6f4d817cda8e7a0ace261fe0cc946cf3a80314390b22cc61ae080792"
 
 [[package]]
 name = "tinyvec"
