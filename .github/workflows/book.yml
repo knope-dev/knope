@@ -1,0 +1,57 @@
+name: Deploy Book to GitHub Pages
+
+on:
+  release:
+    types: [released, prereleased]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v1
+      - name: Install cargo-binstall
+        run: |
+          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
+          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
+          cp cargo-binstall $HOME/.cargo/bin
+
+      - name: Install cargo-make
+        run: cargo-binstall --no-confirm cargo-make
+
+      - name: Preinstall mdbook dependencies
+        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck
+
+      - name: Build the book
+        uses: actions-rs/cargo@v1
+        with:
+          command: make
+          args: book
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: './docs/book/html'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
