@@ -11,6 +11,10 @@ Knope is built in such a way that [`cargo-binstall`] can install it by downloadi
 Is your platform not supported yet? Please contribute it by [opening a pull request](https://github.com/knope-dev/knope/pulls).
 ```
 
+## Install via GitHub Action (Recommended)
+
+If using GitHub Actions, the easiest way to install Knope is via [this action](https://github.com/marketplace/actions/install-knope).
+
 ## Download a Binary Manually
 
 We automatically build binaries for some platforms which can be found on the [Releases](https://github.com/knope-dev/knope/releases) page.
