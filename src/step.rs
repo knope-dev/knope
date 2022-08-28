@@ -85,12 +85,12 @@ impl Step {
             }
             Step::SwitchBranches => git::switch_branches(run_type),
             Step::RebaseBranch { to } => git::rebase_branch(&to, run_type),
-            Step::BumpVersion(rule) => releases::bump_version(run_type, rule),
+            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule),
             Step::Command { command, variables } => {
                 command::run_command(run_type, command, variables)
             }
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(run_type, prepare_release)
+                releases::prepare_release(run_type, &prepare_release)
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type),
             Step::Release => releases::release(run_type),
@@ -320,10 +320,16 @@ pub(super) enum StepError {
     #[error("Too many packages defined")]
     #[diagnostic(
         code(step::too_many_packages),
-        help("Only one package in [[packages]] is currently supported."),
-        url("https://github.com/knope-dev/knope/issues/153")
+        help("Only one package in [package] is currently supported for this step.")
     )]
     TooManyPackages,
+    #[error("Conflicting packages definition")]
+    #[diagnostic(
+        code(step::conflicting_packages),
+        help("You must define _either_ a [package] section or a [packages] section in knope.toml, not both."),
+        url("https://knope-dev.github.io/knope/config/packages.html")
+    )]
+    ConflictingPackages,
     #[error("File {0} does not exist")]
     #[diagnostic(
         code(step::file_not_found),

@@ -37,7 +37,7 @@ fn generate_no_remote() {
 #[case(&["Cargo.toml"], "Cargo.toml_knope.toml")]
 #[case(&["pyproject.toml"], "pyproject.toml_knope.toml")]
 #[case(&["package.json"], "package.json_knope.toml")]
-#[case(&["Cargo.toml", "pyproject.toml", "package.json"], "Cargo.toml_knope.toml")]
+#[case(&["Cargo.toml", "pyproject.toml", "package.json"], "multiple_knope.toml")]
 fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
     // Arrange
     let temp_dir = tempfile::tempdir().unwrap();

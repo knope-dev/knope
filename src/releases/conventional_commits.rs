@@ -1,7 +1,10 @@
 use git_conventional::{Commit, Type};
 use log::debug;
+use std::io::Write;
 
 use crate::git::get_commit_messages_after_last_stable_version;
+use crate::releases::semver::PackageVersion;
+use crate::releases::Package;
 use crate::step::StepError;
 use crate::{state, step, RunType};
 
@@ -209,8 +212,10 @@ mod test_conventional_commits {
     }
 }
 
-fn get_conventional_commits_after_last_stable_version() -> Result<ConventionalCommits, StepError> {
-    let commit_messages = get_commit_messages_after_last_stable_version()?;
+fn get_conventional_commits_after_last_stable_version(
+    package_name: &Option<String>,
+) -> Result<ConventionalCommits, StepError> {
+    let commit_messages = get_commit_messages_after_last_stable_version(package_name)?;
     let commits = commit_messages
         .iter()
         .filter_map(|message| Commit::parse(message.trim()).ok())
@@ -221,64 +226,82 @@ fn get_conventional_commits_after_last_stable_version() -> Result<ConventionalCo
 
 pub(crate) fn update_project_from_conventional_commits(
     run_type: RunType,
-    prepare_release: step::PrepareRelease,
+    prepare_release: &step::PrepareRelease,
 ) -> Result<RunType, StepError> {
+    let (mut state, mut dry_run_stdout) = match run_type {
+        RunType::DryRun { state, stdout } => (state, Some(stdout)),
+        RunType::Real(state) => (state, None),
+    };
+    if state.packages.is_empty() {
+        return Err(StepError::no_defined_packages_with_help());
+    }
+    for package in &mut state.packages {
+        let release = prepare_release_for_package(
+            package.clone(),
+            prepare_release.prerelease_label.as_ref(),
+            dry_run_stdout.as_mut(),
+        )?;
+        state.releases.push(state::Release::Prepared(release));
+    }
+    if let Some(dry_run_stdout) = dry_run_stdout {
+        Ok(RunType::DryRun {
+            state,
+            stdout: dry_run_stdout,
+        })
+    } else {
+        Ok(RunType::Real(state))
+    }
+}
+
+fn prepare_release_for_package(
+    package: Package,
+    prerelease_label: Option<&String>,
+    dry_run_stdout: Option<&mut Box<dyn Write>>,
+) -> Result<Release, StepError> {
     let ConventionalCommits {
         rule,
         features,
         fixes,
         breaking_changes,
-    } = get_conventional_commits_after_last_stable_version()?;
+    } = get_conventional_commits_after_last_stable_version(&package.name)?;
 
-    let (mut state, dry_run_stdout) = match run_type {
-        RunType::DryRun { state, stdout } => (state, Some(stdout)),
-        RunType::Real(state) => (state, None),
-    };
-
-    let changelog_path = state
-        .packages
-        .first()
-        .and_then(|package| package.changelog.as_ref());
-
-    let rule = if let Some(label) = prepare_release.prerelease_label {
+    let rule = if let Some(label) = prerelease_label {
         Rule::Pre {
-            label,
+            label: label.clone(),
             stable_rule: rule,
         }
     } else {
         Rule::from(rule)
     };
-    let new_version = bump_version(rule, dry_run_stdout.is_some(), &state.packages)?;
-    let new_version_string = new_version.to_string();
+    let PackageVersion { package, version } =
+        bump_version(&rule, dry_run_stdout.is_some(), package)?;
+    let new_version_string = version.latest().to_string();
     let new_changes =
         new_changelog_lines(&new_version_string, &fixes, &features, &breaking_changes);
 
-    state.release = state::Release::Prepared(Release {
-        version: new_version,
+    let release = Release {
+        version: version.into_latest(),
         changelog: new_changes.join("\n"),
-    });
+        package_name: package.name,
+    };
+    let changelog = package.changelog.as_ref();
 
-    if let Some(mut stdout) = dry_run_stdout {
+    if let Some(stdout) = dry_run_stdout {
         writeln!(stdout, "Would bump version to {}", &new_version_string)?;
-        if let Some(changelog_path) = changelog_path {
+        if let Some(changelog) = changelog {
             writeln!(
                 stdout,
                 "Would add the following to {}: \n{}",
-                changelog_path.display(),
+                changelog.path.display(),
                 new_changes.join("\n")
             )?;
         }
-        Ok(RunType::DryRun { state, stdout })
+        Ok(release)
     } else {
-        if let Some(changelog_path) = changelog_path {
-            let changelog_text = if changelog_path.exists() {
-                std::fs::read_to_string(&changelog_path)?
-            } else {
-                String::new()
-            };
-            let changelog = add_version_to_changelog(&changelog_text, &new_changes);
-            std::fs::write(&changelog_path, changelog)?;
+        if let Some(changelog) = changelog {
+            let contents = add_version_to_changelog(&changelog.content, &new_changes);
+            std::fs::write(&changelog.path, contents)?;
         }
-        Ok(RunType::Real(state))
+        Ok(release)
     }
 }

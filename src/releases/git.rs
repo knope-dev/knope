@@ -8,19 +8,28 @@ use semver::Version;
 
 use crate::releases::{CurrentVersions, Release};
 use crate::step::StepError;
-use crate::{RunType, State};
+
+pub(crate) fn tag_name(version: &Version, package_name: &Option<String>) -> String {
+    let prefix = package_name
+        .as_ref()
+        .map_or_else(|| "v".to_string(), |name| format!("{name}/v"));
+    format!("{prefix}{version}")
+}
 
 pub(crate) fn release(
-    state: State,
-    dry_run_stdout: Option<Box<dyn Write>>,
+    dry_run_stdout: Option<&mut Box<dyn Write>>,
     release: &Release,
-) -> Result<RunType, StepError> {
-    let version_string = release.version.to_string();
-    let tag = format!("v{}", version_string);
+) -> Result<(), StepError> {
+    let Release {
+        version,
+        changelog: _changelog,
+        package_name,
+    } = release;
+    let tag = tag_name(version, package_name);
 
-    if let Some(mut stdout) = dry_run_stdout {
+    if let Some(stdout) = dry_run_stdout {
         writeln!(stdout, "Would create Git tag {}", tag)?;
-        return Ok(RunType::DryRun { stdout, state });
+        return Ok(());
     }
 
     let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
@@ -34,10 +43,12 @@ pub(crate) fn release(
         PreviousValue::Any,
     )?;
 
-    Ok(RunType::Real(state))
+    Ok(())
 }
 
-pub(crate) fn get_current_versions_from_tag() -> Result<Option<CurrentVersions>, StepError> {
+pub(crate) fn get_current_versions_from_tag(
+    prefix: Option<&str>,
+) -> Result<Option<CurrentVersions>, StepError> {
     let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
     let references = repo.references().map_err(|_e| StepError::NotAGitRepo)?;
     let tags = references
@@ -57,8 +68,11 @@ pub(crate) fn get_current_versions_from_tag() -> Result<Option<CurrentVersions>,
         .flatten();
     let mut stable = None;
     let mut prerelease = None;
+    let pattern = prefix
+        .as_ref()
+        .map_or_else(|| String::from("v"), |prefix| format!("{}/v", prefix));
     for tag in tags {
-        if !tag.starts_with('v') {
+        if !tag.starts_with(&pattern) {
             continue;
         }
         if let Ok(version) = Version::parse(&tag[1..tag.len()]) {

@@ -1,19 +1,24 @@
+use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
 
-use crate::releases::{find_packages, PackageConfig};
-use crate::step::{PrepareRelease, Step};
+use crate::releases::find_packages;
+use crate::step::{PrepareRelease, Step, StepError};
 use crate::workflow::Workflow;
-use crate::{command, git};
+use crate::{command, git, releases};
 
 #[derive(Deserialize, Debug, Serialize)]
 pub(crate) struct Config {
     /// A list of defined packages within this project which can be updated via PrepareRelease or BumpVersion
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) packages: Vec<PackageConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    packages: Option<Packages>,
+    /// A single package to update via PrepareRelease or BumpVersion. Mutually exclusive with `packages`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    package: Option<Package>,
     /// The list of defined workflows that are selectable
     pub(crate) workflows: Vec<Workflow>,
     /// Optional configuration for Jira
@@ -50,6 +55,43 @@ impl Config {
             workflow.set_prerelease_label(label);
         }
     }
+
+    pub(crate) fn packages(&self) -> Result<Vec<releases::Package>, StepError> {
+        match (self.packages.clone(), self.package.clone()) {
+            (None, None) => Ok(Vec::new()),
+            (Some(..), Some(..)) => Err(StepError::ConflictingPackages),
+            (None, Some(package)) => Ok(vec![releases::Package::new(package, None)?]),
+            (Some(Packages::Multiple(packages)), None) => packages
+                .into_iter()
+                .map(|(name, package)| releases::Package::new(package, Some(name)))
+                .collect(),
+            (Some(Packages::Deprecated(packages)), None) => {
+                println!("WARNING: The [[packages]] syntax is deprecated, use [package] instead. Run knope --upgrade to do this automatically.");
+                packages
+                    .into_iter()
+                    .map(|package| releases::Package::new(package, None))
+                    .collect()
+            }
+        }
+    }
+}
+
+/// All of the different ways packages can be defined in `knope.toml`.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub(crate) enum Packages {
+    Multiple(HashMap<String, Package>),
+    Deprecated([Package; 1]),
+}
+
+/// Represents a single package in `knope.toml`.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub(crate) struct Package {
+    /// The files which define the current version of the package.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) versioned_files: Vec<PathBuf>,
+    /// The path to the `CHANGELOG.md` file (if any) to be updated when running [`crate::Step::PrepareRelease`].
+    pub(crate) changelog: Option<PathBuf>,
 }
 
 /// Generate a brand new config file for the project in the current directory.
@@ -100,7 +142,8 @@ pub(crate) fn generate() -> Result<()> {
         }],
         jira: None,
         github,
-        packages: find_packages(),
+        package: find_packages(),
+        packages: None,
     })
     .unwrap();
     fs::write(Config::CONFIG_PATH, contents).into_diagnostic()

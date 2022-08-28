@@ -1,12 +1,12 @@
 use ::semver::Version;
 pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
 
-use crate::state::Release::Prepared;
+use crate::state::Release::{Bumped, Prepared};
 use crate::step::StepError;
 use crate::RunType;
 
-pub(crate) use self::git::get_current_versions_from_tag;
-pub(crate) use self::package::{find_packages, suggested_package_toml, PackageConfig};
+pub(crate) use self::git::{get_current_versions_from_tag, tag_name};
+pub(crate) use self::package::{find_packages, suggested_package_toml, Package};
 pub(crate) use self::semver::bump_version_and_update_state as bump_version;
 pub(crate) use self::semver::{get_version, Rule};
 
@@ -25,6 +25,7 @@ mod semver;
 pub(crate) struct Release {
     pub(crate) version: Version,
     pub(crate) changelog: String,
+    pub(crate) package_name: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -56,17 +57,30 @@ impl Default for CurrentVersions {
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
 pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
-    let (state, dry_run_stdout) = run_type.decompose();
+    let (mut state, mut dry_run_stdout) = run_type.decompose();
 
-    let release = match state.release.clone() {
-        Prepared(release) => release,
-        _ => return Err(StepError::ReleaseNotPrepared),
-    };
+    for release in &state.releases {
+        let prepared = match release {
+            Prepared(release) => release,
+            Bumped { .. } => return Err(StepError::ReleaseNotPrepared),
+        };
 
-    let github_config = state.github_config.clone();
-    if let Some(github_config) = github_config {
-        github::release(state, dry_run_stdout, &github_config, &release)
+        let github_config = state.github_config.clone();
+        if let Some(github_config) = github_config {
+            state.github = github::release(
+                prepared,
+                state.github,
+                &github_config,
+                dry_run_stdout.as_mut(),
+            )?;
+        } else {
+            git::release(dry_run_stdout.as_mut(), prepared)?;
+        }
+    }
+
+    if let Some(stdout) = dry_run_stdout {
+        Ok(RunType::DryRun { stdout, state })
     } else {
-        git::release(state, dry_run_stdout, &release)
+        Ok(RunType::Real(state))
     }
 }

@@ -6,7 +6,7 @@ use log::{debug, error, trace, warn};
 
 use crate::issues::Issue;
 use crate::prompt::select;
-use crate::releases::get_current_versions_from_tag;
+use crate::releases::{get_current_versions_from_tag, tag_name};
 use crate::state;
 use crate::step::StepError;
 use crate::RunType;
@@ -190,13 +190,16 @@ pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
     format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(' ', "-")
 }
 
-pub(crate) fn get_commit_messages_after_last_stable_version() -> Result<Vec<String>, StepError> {
-    let target_version =
-        get_current_versions_from_tag()?.map(|current_version| current_version.stable);
+pub(crate) fn get_commit_messages_after_last_stable_version(
+    package_name: &Option<String>,
+) -> Result<Vec<String>, StepError> {
+    let target_version = get_current_versions_from_tag(package_name.as_deref())?
+        .map(|current_version| current_version.stable);
     let reference = match &target_version {
         Some(version) => {
-            debug!("Processing all commits since tag v{}", version);
-            Some(format!("refs/tags/v{}", version))
+            let tag = tag_name(version, package_name);
+            debug!("Processing all commits since tag {tag}");
+            Some(format!("refs/tags/{tag}"))
         }
         None => {
             warn!("No stable version tag found, processing all commits.");

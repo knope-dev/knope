@@ -45,7 +45,8 @@ pub fn run(cli: Cli) -> Result<()> {
     if let Some(prerelease_label) = cli.prerelease_label {
         config.set_prerelease_label(&prerelease_label);
     }
-    let state = State::new(config.jira, config.github, config.packages);
+    let packages = config.packages()?;
+    let state = State::new(config.jira, config.github, packages);
 
     if cli.validate {
         workflow::validate(config.workflows, state)?;

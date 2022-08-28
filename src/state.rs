@@ -3,7 +3,6 @@ use std::io::Write;
 use crate::config;
 use crate::issues;
 use crate::releases;
-use crate::releases::PackageConfig;
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
 #[derive(Clone, Debug)]
@@ -12,8 +11,9 @@ pub(crate) struct State {
     pub(crate) github: GitHub,
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
-    pub(crate) release: Release,
-    pub(crate) packages: Vec<PackageConfig>,
+    /// All of the releases that have been prepared in the current workflow.
+    pub(crate) releases: Vec<Release>,
+    pub(crate) packages: Vec<releases::Package>,
 }
 
 impl State {
@@ -21,14 +21,14 @@ impl State {
     pub(crate) fn new(
         jira_config: Option<config::Jira>,
         github_config: Option<config::GitHub>,
-        packages: Vec<PackageConfig>,
+        packages: Vec<releases::Package>,
     ) -> Self {
         State {
             jira_config,
             github: GitHub::New,
             github_config,
             issue: Issue::Initial,
-            release: Release::Initial,
+            releases: Vec::with_capacity(packages.len()),
             packages,
         }
     }
@@ -69,10 +69,11 @@ pub(crate) enum Issue {
 /// Tracks what's been done with respect to releases in this workflow.
 #[derive(Clone, Debug)]
 pub(crate) enum Release {
-    /// All workflows start here—no release has been created yet.
-    Initial,
     /// Triggered by [`crate::Step::BumpVersion`].
-    Bumped(semver::Version),
+    Bumped {
+        version: semver::Version,
+        package_name: Option<String>,
+    },
     /// Triggered by [`crate::Step::PrepareRelease`]. Contains the generated release notes and new
     /// version number.
     Prepared(releases::Release),
