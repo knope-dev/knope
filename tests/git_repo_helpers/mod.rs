@@ -92,12 +92,14 @@ pub fn tag(path: &Path, label: &str) {
 }
 
 /// Get the current tag, panicking if there is no tag.
-pub fn describe(path: &Path) -> String {
-    let output = Command::new("git")
-        .arg("describe")
-        .current_dir(path)
-        .output()
-        .unwrap();
+pub fn describe(path: &Path, pattern: Option<&str>) -> String {
+    let mut cmd = Command::new("git");
+    cmd.arg("describe").arg("--tags");
+    if let Some(pattern) = pattern {
+        cmd.arg("--match").arg(pattern);
+    }
+
+    let output = cmd.current_dir(path).output().unwrap();
     assert!(
         output.status.success(),
         "{}",

@@ -811,7 +811,7 @@ fn no_versioned_files() {
 
     // The release step should have created a tag with the right new version.
     let expected_tag = "v1.1.0";
-    let actual_tag = describe(temp_path);
+    let actual_tag = describe(temp_path, None);
     assert_eq!(expected_tag, actual_tag);
 }
 
@@ -905,7 +905,7 @@ fn go_modules() {
         source_path.join("EXPECTED_1.1_go.mod"),
         read_to_string(temp_path.join("go.mod")).unwrap(),
     );
-    let tag = describe(temp_path);
+    let tag = describe(temp_path, None);
     assert_eq!("v1.1.0", tag);
 
     // Arrange 2—version goes to 2.0
@@ -935,6 +935,62 @@ fn go_modules() {
         source_path.join("EXPECTED_2.0_go.mod"),
         read_to_string(temp_path.join("go.mod")).unwrap(),
     );
-    let tag = describe(temp_path);
+    let tag = describe(temp_path, None);
     assert_eq!("v2.0.0", tag);
+}
+
+/// Verify that PrepareRelease will operate on all defined packages independently
+#[test]
+fn multiple_packages() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/multiple_packages");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "first/v1.2.3");
+    tag(temp_path, "second/v0.4.6");
+    commit(temp_path, "feat!: New breaking feature");
+
+    for file in [
+        "knope.toml",
+        "FIRST_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+        "SECOND_CHANGELOG.md",
+        "package.json",
+    ] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in [
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+        "package.json",
+    ] {
+        assert_eq_path(
+            source_path.join(format!("EXPECTED_{}", file)),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
 }

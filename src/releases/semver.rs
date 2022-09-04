@@ -85,7 +85,8 @@ pub(crate) fn bump_version_and_update_state(
     };
 
     for package in state.packages.iter().cloned() {
-        let PackageVersion { package, version } = bump_version(rule, true, package)?;
+        let PackageVersion { package, version } =
+            bump_version(rule, dry_run_stdout.is_some(), package)?;
         if let Some(stdout) = dry_run_stdout.as_mut() {
             writeln!(
                 stdout,

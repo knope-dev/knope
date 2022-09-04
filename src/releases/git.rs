@@ -60,12 +60,9 @@ pub(crate) fn get_current_versions_from_tag(
                     .name()
                     .as_bstr()
                     .to_string()
-                    .split('/')
-                    .last()
-                    .map(String::from)
+                    .replace("refs/tags/", "")
             })
-        })
-        .flatten();
+        });
     let mut stable = None;
     let mut prerelease = None;
     let pattern = prefix
@@ -75,7 +72,8 @@ pub(crate) fn get_current_versions_from_tag(
         if !tag.starts_with(&pattern) {
             continue;
         }
-        if let Ok(version) = Version::parse(&tag[1..tag.len()]) {
+        let version_string = tag.replace(&pattern, "");
+        if let Ok(version) = Version::parse(version_string.as_str()) {
             if version.pre.is_empty() {
                 stable = Some(version);
                 prerelease = None; // Don't consider prereleases older than the stable version.

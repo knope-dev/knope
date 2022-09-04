@@ -3,6 +3,7 @@ use std::fs::{read_to_string, write};
 use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
+use log::trace;
 use semver::Version;
 
 use crate::config::Package as PackageConfig;
@@ -70,6 +71,7 @@ impl VersionedFile {
         self.content = self
             .format
             .set_version(self.content.clone(), version_str, &self.path)?;
+        trace!("Writing {} to {}", self.content, self.path.display());
         write(&self.path, &self.content)?;
         Ok(())
     }

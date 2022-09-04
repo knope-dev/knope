@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -80,7 +80,7 @@ impl Config {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub(crate) enum Packages {
-    Multiple(HashMap<String, Package>),
+    Multiple(BTreeMap<String, Package>),
     Deprecated([Package; 1]),
 }
 

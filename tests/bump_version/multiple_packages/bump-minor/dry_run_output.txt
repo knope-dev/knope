@@ -1,0 +1,3 @@
+Would bump javascript to version 6.8.0
+Would bump python to version 3.5.0
+Would bump rust to version 0.1.3
