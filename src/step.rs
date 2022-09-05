@@ -144,6 +144,13 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
     )]
     InvalidPreReleaseVersion(String),
+    #[error("No packages are ready to release")]
+    #[diagnostic(
+        code(step::no_release),
+        help("The `PrepareRelease` step will not complete if no commits cause a package's version to be increased."),
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html"),
+    )]
+    NoRelease,
     #[error("Found invalid semantic version {0}")]
     #[diagnostic(
         code(step::invalid_semantic_version),

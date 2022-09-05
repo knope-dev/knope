@@ -16,6 +16,7 @@ pub(crate) struct Package {
     pub(crate) versioned_files: Vec<VersionedFile>,
     pub(crate) changelog: Option<Changelog>,
     pub(crate) name: Option<String>,
+    pub(crate) scopes: Option<Vec<String>>,
 }
 
 impl Package {
@@ -30,6 +31,7 @@ impl Package {
             versioned_files,
             changelog,
             name,
+            scopes: config.scopes,
         })
     }
 }
@@ -204,6 +206,7 @@ pub(crate) fn find_packages() -> Option<PackageConfig> {
     Some(PackageConfig {
         versioned_files,
         changelog,
+        scopes: None,
     })
 }
 

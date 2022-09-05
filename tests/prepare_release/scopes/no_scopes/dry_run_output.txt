@@ -1,0 +1,24 @@
+Would bump first version to 2.0.0
+Would add the following to FIRST_CHANGELOG.md: 
+## 2.0.0
+
+### Breaking Changes
+
+- New breaking feature with a scope
+
+### Features
+
+- No scope feature
+
+Would bump second version to 0.2.0
+Would add the following to SECOND_CHANGELOG.md: 
+## 0.2.0
+
+### Breaking Changes
+
+- New breaking feature with a scope
+
+### Features
+
+- No scope feature
+

@@ -138,6 +138,7 @@ mod test_replace_variables {
             versioned_files: vec![PathBuf::from("Cargo.toml").try_into().unwrap()],
             changelog: Some(PathBuf::from("CHANGELOG.md").try_into().unwrap()),
             name: None,
+            scopes: None,
         }]
     }
 

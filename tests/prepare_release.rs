@@ -994,3 +994,219 @@ fn multiple_packages() {
         );
     }
 }
+
+/// When no scopes are defined, all commits must apply to all packages
+#[test]
+fn no_scopes_defined() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/scopes/no_scopes");
+
+    init(temp_path);
+    commit(temp_path, "feat: No scope feature");
+    commit(temp_path, "feat(scope)!: New breaking feature with a scope");
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in [
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+    ] {
+        assert_eq_path(
+            source_path.join(format!("EXPECTED_{}", file)),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+/// When scopes are defined, commits with no scope still apply to all packages
+#[test]
+fn unscoped_commits_apply_to_all_packages() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/scopes/unscoped_commits");
+
+    init(temp_path);
+    commit(temp_path, "fix(first): Fix for first only");
+    commit(temp_path, "feat: No-scope feat");
+    commit(temp_path, "feat(second)!: Breaking change for second only");
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in [
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+    ] {
+        assert_eq_path(
+            source_path.join(format!("EXPECTED_{}", file)),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+/// When scopes are defined, commits with a scope apply only to packages with that scope
+/// Multiple scopes can be defined per package
+#[test]
+fn apply_scopes() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/scopes/shared_commits");
+
+    init(temp_path);
+    commit(temp_path, "fix(first): Fix for first only");
+    commit(temp_path, "feat(both): Shared feat");
+    commit(temp_path, "feat(second)!: Breaking change for second only");
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in [
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+    ] {
+        assert_eq_path(
+            source_path.join(format!("EXPECTED_{}", file)),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+/// Don't prepare releases for packages which have not changed
+#[test]
+fn skip_unchanged_packages() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/scopes/skip_unchanged_packages");
+
+    init(temp_path);
+    commit(temp_path, "fix(first): Fix for first only");
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in ["FIRST_CHANGELOG.md", "Cargo.toml", "pyproject.toml"] {
+        assert_eq_path(
+            source_path.join(format!("EXPECTED_{}", file)),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+/// Error when no commits cause a change in version
+#[test]
+fn no_version_change() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/no_version_change");
+
+    init(temp_path);
+    commit(temp_path, "docs: Update README");
+
+    for file in ["knope.toml", "Cargo.toml", "CHANGELOG.md"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .failure()
+        .stderr_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .failure()
+        .stderr_eq_path(source_path.join("actual_output.txt"));
+}

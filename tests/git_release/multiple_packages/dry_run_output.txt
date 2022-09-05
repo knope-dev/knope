@@ -1,4 +1,4 @@
-Would bump version to 2.0.0
+Would bump first version to 2.0.0
 Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0
 
@@ -6,7 +6,7 @@ Would add the following to FIRST_CHANGELOG.md:
 
 - New breaking feature
 
-Would bump version to 0.5.0
+Would bump second version to 0.5.0
 Would add the following to SECOND_CHANGELOG.md: 
 ## 0.5.0
 
