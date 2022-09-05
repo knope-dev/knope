@@ -3,32 +3,23 @@ use std::fs::{read_to_string, write};
 use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
+use log::trace;
 use semver::Version;
-use serde::{Deserialize, Serialize};
 
+use crate::config::Package as PackageConfig;
 use crate::releases::{cargo, get_current_versions_from_tag, go, package_json, pyproject};
 use crate::step::StepError;
 use crate::step::StepError::InvalidCargoToml;
 
-/// Represents an entry in the `[[packages]]` section of `knope.toml`.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub(crate) struct PackageConfig {
-    /// The files which define the current version of the package.
-    pub(crate) versioned_files: Vec<PathBuf>,
-    /// The path to the `CHANGELOG.md` file (if any) to be updated when running [`crate::Step::PrepareRelease`].
-    pub(crate) changelog: Option<PathBuf>,
-}
-
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
     pub(crate) versioned_files: Vec<VersionedFile>,
     pub(crate) changelog: Option<Changelog>,
+    pub(crate) name: Option<String>,
 }
 
-impl TryFrom<PackageConfig> for Package {
-    type Error = StepError;
-
-    fn try_from(config: PackageConfig) -> Result<Self, Self::Error> {
+impl Package {
+    pub(crate) fn new(config: PackageConfig, name: Option<String>) -> Result<Self, StepError> {
         let versioned_files = config
             .versioned_files
             .into_iter()
@@ -38,11 +29,12 @@ impl TryFrom<PackageConfig> for Package {
         Ok(Package {
             versioned_files,
             changelog,
+            name,
         })
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct VersionedFile {
     /// The type of file format that `content` is.
     pub(crate) format: PackageFormat,
@@ -70,23 +62,25 @@ impl TryFrom<PathBuf> for VersionedFile {
 }
 
 impl VersionedFile {
-    pub(crate) fn get_version(&self) -> Result<String, StepError> {
-        self.format.get_version(&self.content, &self.path)
+    pub(crate) fn get_version(&self, package_name: Option<&str>) -> Result<String, StepError> {
+        self.format
+            .get_version(&self.content, package_name, &self.path)
     }
 
-    pub(crate) fn set_version(self, version_str: &Version) -> Result<(), StepError> {
-        let new_content = self
+    pub(crate) fn set_version(&mut self, version_str: &Version) -> Result<(), StepError> {
+        self.content = self
             .format
-            .set_version(self.content, version_str, &self.path)?;
-        write(&self.path, new_content)?;
+            .set_version(self.content.clone(), version_str, &self.path)?;
+        trace!("Writing {} to {}", self.content, self.path.display());
+        write(&self.path, &self.content)?;
         Ok(())
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Changelog {
-    path: PathBuf,
-    content: String,
+    pub(crate) path: PathBuf,
+    pub(crate) content: String,
 }
 
 impl TryFrom<PathBuf> for Changelog {
@@ -127,8 +121,14 @@ impl TryFrom<&PathBuf> for PackageFormat {
 }
 
 impl PackageFormat {
-    /// Get the version from `content`. `path` is used for error reporting.
-    pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<String, StepError> {
+    /// Get the version from `content` for package named `name` (if any name).
+    /// `path` is used for error reporting.
+    pub(crate) fn get_version(
+        self,
+        content: &str,
+        name: Option<&str>,
+        path: &Path,
+    ) -> Result<String, StepError> {
         match self {
             PackageFormat::Cargo => {
                 cargo::get_version(content).map_err(|_| InvalidCargoToml(path.into()))
@@ -137,7 +137,7 @@ impl PackageFormat {
                 .map_err(|_| StepError::InvalidPyProject(path.into())),
             PackageFormat::JavaScript => package_json::get_version(content)
                 .map_err(|_| StepError::InvalidPackageJson(path.into())),
-            PackageFormat::Go => get_current_versions_from_tag().map(|current_versions| {
+            PackageFormat::Go => get_current_versions_from_tag(name).map(|current_versions| {
                 current_versions
                     .unwrap_or_default()
                     .into_latest()
@@ -178,8 +178,8 @@ const ALL_PACKAGE_FORMATS: [PackageFormat; 4] = [
 const PACKAGE_FORMAT_FILE_NAMES: [&str; ALL_PACKAGE_FORMATS.len()] =
     ["Cargo.toml", "go.mod", "package.json", "pyproject.toml"];
 
-/// Find the first supported package manager in the current directory that can be added to generated config.
-pub(crate) fn find_packages() -> Vec<PackageConfig> {
+/// Find all supported package formats in the current directory.
+pub(crate) fn find_packages() -> Option<PackageConfig> {
     let default = PathBuf::from("CHANGELOG.md");
     let changelog = if Path::exists(&default) {
         Some(default)
@@ -187,33 +187,44 @@ pub(crate) fn find_packages() -> Vec<PackageConfig> {
         None
     };
 
-    for supported in PACKAGE_FORMAT_FILE_NAMES.map(PathBuf::from) {
-        if Path::exists(&supported) {
-            return vec![PackageConfig {
-                versioned_files: vec![supported],
-                changelog,
-            }];
-        }
+    let versioned_files = PACKAGE_FORMAT_FILE_NAMES
+        .iter()
+        .filter_map(|name| {
+            let path = PathBuf::from(name);
+            if path.exists() {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    if versioned_files.is_empty() {
+        return None;
     }
-    vec![]
+    Some(PackageConfig {
+        versioned_files,
+        changelog,
+    })
 }
 
 /// Includes some helper text for the user to understand how to use the config to define packages.
 pub(crate) fn suggested_package_toml() -> String {
-    let packages = find_packages();
-    if packages.is_empty() {
+    let package = find_packages();
+    if let Some(package) = package {
         format!(
-            "No supported package managers found in current directory. \
-            The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
-            \n\n```\n[[packages]]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
-            formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
+            "Found the package metadata files {files} in the current directory. You may need to add this \
+            to your knope.toml:\n\n```\n[package]\n{toml}```",
+            files = package.versioned_files.iter().map(|path| path.to_str().unwrap())
+                .collect::<Vec<_>>()
+                .join(", "),
+            toml = toml::to_string(&package).unwrap()
         )
     } else {
         format!(
-            "Found the package metadata file {file} in the current directory. You may need to add this \
-            to your knope.toml:\n\n```\n[[packages]]\n{toml}```",
-            file = packages[0].versioned_files[0].to_str().unwrap(),
-            toml = toml::to_string(&packages[0]).unwrap()
+            "No supported package managers found in current directory. \
+            The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
+            \n\n```\n[package]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
+            formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
         )
     }
 }

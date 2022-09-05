@@ -1,0 +1,50 @@
+[packages.rust]
+versioned_files = ["Cargo.toml"]
+
+[packages.javascript]
+versioned_files = ["package.json"]
+
+[packages.python]
+versioned_files = ["pyproject.toml"]
+
+[[workflows]]
+name = "prerelease"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+prerelease_label = "rc"
+
+[[workflows]]
+name = "prepare-release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows]]
+name = "bump-major"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Major"
+
+[[workflows]]
+name = "bump-minor"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Minor"
+
+[[workflows]]
+name = "bump-patch"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Patch"
+
+[[workflows]]
+name = "bump-pre"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Pre"
+label = "rc"

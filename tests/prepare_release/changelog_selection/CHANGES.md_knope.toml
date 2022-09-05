@@ -1,4 +1,4 @@
-[[packages]]
+[package]
 versioned_files = ["Cargo.toml"]
 changelog = "CHANGES.md"
 

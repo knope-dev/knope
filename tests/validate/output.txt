@@ -46,17 +46,10 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
         for `Cargo.toml`:
         
         ```
-        [[packages]]
+        [package]
         versioned_files = ["Cargo.toml"]
         changelog = "CHANGELOG.md"
         ```
-Error: 
-  × Problem with workflow Cannot release without PrepareRelease
-
-Error: step::release_not_prepared (https://knope-dev.github.io/knope/config/step/PrepareRelease.html)
-
-  × PrepareRelease needs to occur before this step
-  help: You must call the PrepareRelease step before this one.
 Error: 
   × Problem with workflow Cannot PrepareRelease with no configured packages
 
@@ -70,7 +63,7 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
         for `Cargo.toml`:
         
         ```
-        [[packages]]
+        [package]
         versioned_files = ["Cargo.toml"]
         changelog = "CHANGELOG.md"
         ```

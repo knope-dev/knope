@@ -1,0 +1,10 @@
+[package]
+
+[packages.knope]
+
+[[workflows]]
+name = "workflow"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo this is nothing, really"

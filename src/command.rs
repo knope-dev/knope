@@ -52,20 +52,35 @@ fn replace_variables(
 ) -> Result<String, StepError> {
     for (var_name, var_type) in variables {
         match var_type {
-            Variable::Version => match &state.release {
-                Release::Prepared(release) => {
-                    command = command.replace(&var_name, &release.version.to_string());
-                }
-                Release::Initial => {
+            Variable::Version => {
+                let package = if state.packages.len() == 1 {
+                    &state.packages[0]
+                } else if state.packages.is_empty() {
+                    return Err(StepError::no_defined_packages_with_help());
+                } else {
+                    return Err(StepError::TooManyPackages);
+                };
+                let release = if state.releases.is_empty() {
                     command = command.replace(
                         &var_name,
-                        &get_version(&state.packages)?.latest_version().to_string(),
+                        &get_version(package.clone())?.latest_version().to_string(),
                     );
+                    continue;
+                } else {
+                    &state.releases[0]
+                };
+                match release {
+                    Release::Prepared(release) => {
+                        command = command.replace(&var_name, &release.version.to_string());
+                    }
+                    Release::Bumped {
+                        version,
+                        package_name: _package_name,
+                    } => {
+                        command = command.replace(&var_name, &version.to_string());
+                    }
                 }
-                Release::Bumped(new_version) => {
-                    command = command.replace(&var_name, &new_version.to_string());
-                }
-            },
+            }
             Variable::IssueBranch => match &state.issue {
                 state::Issue::Initial => return Err(StepError::NoIssueSelected),
                 state::Issue::Selected(issue) => {
@@ -111,17 +126,18 @@ mod test_run_command {
 #[cfg(test)]
 mod test_replace_variables {
     use crate::issues::Issue;
-    use crate::releases::{PackageConfig, Release};
+    use crate::releases::{Package, Release};
     use crate::state;
     use semver::Version;
     use std::path::PathBuf;
 
     use super::*;
 
-    fn packages() -> Vec<PackageConfig> {
-        vec![PackageConfig {
-            versioned_files: vec![PathBuf::from("Cargo.toml")],
-            changelog: Some(PathBuf::from("CHANGELOG.md")),
+    fn packages() -> Vec<Package> {
+        vec![Package {
+            versioned_files: vec![PathBuf::from("Cargo.toml").try_into().unwrap()],
+            changelog: Some(PathBuf::from("CHANGELOG.md").try_into().unwrap()),
+            name: None,
         }]
     }
 
@@ -141,7 +157,7 @@ mod test_replace_variables {
             github: state::GitHub::New,
             github_config: None,
             issue: state::Issue::Selected(issue),
-            release: state::Release::Initial,
+            releases: Vec::new(),
             packages: packages(),
         };
 
@@ -151,7 +167,9 @@ mod test_replace_variables {
             command,
             format!(
                 "blah {} {}",
-                get_version(&state.packages).unwrap().latest_version(),
+                get_version(state.packages[0].clone())
+                    .unwrap()
+                    .latest_version(),
                 expected_branch_name
             )
         );
@@ -170,7 +188,9 @@ mod test_replace_variables {
             command,
             format!(
                 "blah {} other blah",
-                get_version(&state.packages).unwrap().latest_version(),
+                get_version(state.packages[0].clone())
+                    .unwrap()
+                    .latest_version(),
             )
         );
     }
@@ -182,10 +202,11 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, packages());
         let version = Version::new(1, 2, 3);
-        state.release = state::Release::Prepared(Release {
+        state.releases.push(state::Release::Prepared(Release {
             version: version.clone(),
             changelog: "".to_string(),
-        });
+            package_name: None,
+        }));
 
         let command = replace_variables(command, variables, &state).unwrap();
 
@@ -207,7 +228,7 @@ mod test_replace_variables {
             github: state::GitHub::New,
             github_config: None,
             issue: state::Issue::Selected(issue),
-            release: state::Release::Initial,
+            releases: Vec::new(),
             packages: Vec::new(),
         };
 

@@ -2,16 +2,14 @@ use semver::{Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
 use crate::releases::git::get_current_versions_from_tag;
-use crate::releases::package::{Package, VersionedFile};
+use crate::releases::package::Package;
 use crate::releases::CurrentVersions;
 use crate::step::StepError;
 use crate::{state, RunType};
 
-use super::PackageConfig;
-
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
-#[derive(Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(tag = "rule")]
 pub(crate) enum Rule {
     Major,
@@ -36,7 +34,7 @@ impl From<ConventionalRule> for Rule {
 }
 
 /// The rules that can be derived from Conventional Commits.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ConventionalRule {
     Major,
     Minor,
@@ -63,51 +61,58 @@ impl PackageVersion {
     }
 }
 
+/// Bump the version of a single `package` using `rule`.
 pub(super) fn bump_version(
-    rule: Rule,
+    rule: &Rule,
     dry_run: bool,
-    packages: &[PackageConfig],
-) -> Result<Version, StepError> {
-    let mut package_version = get_version(packages)?;
+    package: Package,
+) -> Result<PackageVersion, StepError> {
+    let mut package_version = get_version(package)?;
     package_version.version = bump(package_version.version, rule)?;
     set_version(package_version, dry_run)
 }
 
+/// The implementation of [`crate::step::Step::BumpVersion`].
+///
+/// Bumps the version of every configured package using `rule`.
 pub(crate) fn bump_version_and_update_state(
     run_type: RunType,
-    rule: Rule,
+    rule: &Rule,
 ) -> Result<RunType, StepError> {
-    match run_type {
-        RunType::DryRun {
-            mut state,
-            mut stdout,
-        } => {
-            let version = bump_version(rule, true, &state.packages)?;
-            writeln!(stdout, "Would bump version to {}", version)?;
-            state.release = state::Release::Bumped(version);
-            Ok(RunType::DryRun { state, stdout })
+    let (mut dry_run_stdout, mut state) = match run_type {
+        RunType::DryRun { state, stdout } => (Some(stdout), state),
+        RunType::Real(state) => (None, state),
+    };
+
+    for package in state.packages.iter().cloned() {
+        let PackageVersion { package, version } =
+            bump_version(rule, dry_run_stdout.is_some(), package)?;
+        if let Some(stdout) = dry_run_stdout.as_mut() {
+            writeln!(
+                stdout,
+                "Would bump {name} to version {version}",
+                name = package.name.as_deref().unwrap_or("package"),
+                version = version.latest()
+            )?;
         }
-        RunType::Real(mut state) => {
-            let version = bump_version(rule, false, &state.packages)?;
-            state.release = state::Release::Bumped(version);
-            Ok(RunType::Real(state))
-        }
+        state.releases.push(state::Release::Bumped {
+            version: version.into_latest(),
+            package_name: package.name.clone(),
+        });
+    }
+    if let Some(stdout) = dry_run_stdout {
+        Ok(RunType::DryRun { state, stdout })
+    } else {
+        Ok(RunType::Real(state))
     }
 }
 
-pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, StepError> {
-    if packages.is_empty() {
-        return Err(StepError::no_defined_packages_with_help());
-    }
-    if packages.len() > 1 {
-        return Err(StepError::TooManyPackages);
-    }
-    let package_config = &packages[0];
-    let package = Package::try_from(package_config.clone())?;
+/// Get the current version of a package.
+pub(crate) fn get_version(package: Package) -> Result<PackageVersion, StepError> {
     let stable_version = package
         .versioned_files
         .iter()
-        .map(VersionedFile::get_version)
+        .map(|versioned_file| versioned_file.get_version(package.name.as_deref()))
         .map(|result| {
             result.and_then(|version_string| {
                 Version::parse(&version_string)
@@ -130,13 +135,13 @@ pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, 
         .transpose()?;
 
     let version = match stable_version {
-        None => get_current_versions_from_tag()?.unwrap_or_default(),
+        None => get_current_versions_from_tag(package.name.as_deref())?.unwrap_or_default(),
         Some(stable) if stable.pre.is_empty() => CurrentVersions {
             stable,
             prerelease: None,
         },
         Some(pre) => {
-            let stable = get_current_versions_from_tag()?.map_or_else(
+            let stable = get_current_versions_from_tag(package.name.as_deref())?.map_or_else(
                 || Version::new(0, 0, 0),
                 |current_versions| current_versions.stable,
             );
@@ -152,19 +157,22 @@ pub(crate) fn get_version(packages: &[PackageConfig]) -> Result<PackageVersion, 
 
 /// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
 /// that was written.
-fn set_version(package_version: PackageVersion, dry_run: bool) -> Result<Version, StepError> {
-    let PackageVersion {
-        version: CurrentVersions { stable, prerelease },
-        package,
-    } = package_version;
-    let version = prerelease.unwrap_or(stable);
+fn set_version(
+    package_version: PackageVersion,
+    dry_run: bool,
+) -> Result<PackageVersion, StepError> {
     if dry_run {
-        return Ok(version);
+        return Ok(package_version);
     }
-    for versioned_file in package.versioned_files {
-        versioned_file.set_version(&version)?;
+    let PackageVersion {
+        mut package,
+        version,
+    } = package_version;
+    let latest = version.latest();
+    for versioned_file in &mut package.versioned_files {
+        versioned_file.set_version(latest)?;
     }
-    Ok(version)
+    Ok(PackageVersion { version, package })
 }
 
 /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.
@@ -175,7 +183,7 @@ fn set_version(package_version: PackageVersion, dry_run: bool) -> Result<Version
 /// different behavior:
 /// 1. [`Rule::Major`] will bump the minor component.
 /// 2. [`Rule::Minor`] will bump the patch component.
-fn bump(mut version: CurrentVersions, rule: Rule) -> Result<CurrentVersions, StepError> {
+fn bump(mut version: CurrentVersions, rule: &Rule) -> Result<CurrentVersions, StepError> {
     let stable = &mut version.stable;
     let is_0 = stable.major == 0;
     let prerelease = version.prerelease.take();
@@ -208,15 +216,15 @@ fn bump(mut version: CurrentVersions, rule: Rule) -> Result<CurrentVersions, Ste
             *stable = prerelease;
             Ok(version)
         }
-        (Rule::Pre { label, stable_rule }, _) => bump_pre(version, prerelease, &label, stable_rule),
+        (Rule::Pre { label, stable_rule }, _) => bump_pre(version, prerelease, label, *stable_rule),
     }
 }
 
 #[cfg(test)]
 mod test_bump {
-    use super::*;
-
     use rstest::rstest;
+
+    use super::*;
 
     #[test]
     fn major() {
@@ -226,7 +234,7 @@ mod test_bump {
                 stable,
                 prerelease: None,
             },
-            Rule::Major,
+            &Rule::Major,
         )
         .unwrap();
 
@@ -241,7 +249,7 @@ mod test_bump {
                 stable,
                 prerelease: None,
             },
-            Rule::Major,
+            &Rule::Major,
         )
         .unwrap();
 
@@ -259,7 +267,7 @@ mod test_bump {
                 stable,
                 prerelease: Some(Version::parse(pre_version).unwrap()),
             },
-            Rule::Major,
+            &Rule::Major,
         )
         .unwrap();
 
@@ -275,7 +283,7 @@ mod test_bump {
                 stable,
                 prerelease: None,
             },
-            Rule::Minor,
+            &Rule::Minor,
         )
         .unwrap();
 
@@ -290,7 +298,7 @@ mod test_bump {
                 stable,
                 prerelease: None,
             },
-            Rule::Minor,
+            &Rule::Minor,
         )
         .unwrap();
 
@@ -307,7 +315,7 @@ mod test_bump {
                 stable,
                 prerelease: Some(Version::parse(pre_version).unwrap()),
             },
-            Rule::Minor,
+            &Rule::Minor,
         )
         .unwrap();
 
@@ -323,7 +331,7 @@ mod test_bump {
                 stable,
                 prerelease: None,
             },
-            Rule::Patch,
+            &Rule::Patch,
         )
         .unwrap();
 
@@ -338,7 +346,7 @@ mod test_bump {
                 stable,
                 prerelease: None,
             },
-            Rule::Patch,
+            &Rule::Patch,
         )
         .unwrap();
 
@@ -353,7 +361,7 @@ mod test_bump {
                 stable,
                 prerelease: Some(Version::parse("1.2.4-rc.0").unwrap()),
             },
-            Rule::Patch,
+            &Rule::Patch,
         )
         .unwrap();
 
@@ -369,7 +377,7 @@ mod test_bump {
                 stable: stable.clone(),
                 prerelease: None,
             },
-            Rule::Pre {
+            &Rule::Pre {
                 label: String::from("rc"),
                 stable_rule: ConventionalRule::Minor,
             },
@@ -389,7 +397,7 @@ mod test_bump {
                 stable: stable.clone(),
                 prerelease,
             },
-            Rule::Pre {
+            &Rule::Pre {
                 label: String::from("rc"),
                 stable_rule: ConventionalRule::Minor,
             },
@@ -409,7 +417,7 @@ mod test_bump {
                 stable: stable.clone(),
                 prerelease,
             },
-            Rule::Pre {
+            &Rule::Pre {
                 label: String::from("rc"),
                 stable_rule: ConventionalRule::Minor,
             },
@@ -429,7 +437,7 @@ mod test_bump {
                 stable: stable.clone(),
                 prerelease,
             },
-            Rule::Pre {
+            &Rule::Pre {
                 label: String::from("rc"),
                 stable_rule: ConventionalRule::Minor,
             },
@@ -447,7 +455,7 @@ mod test_bump {
                 stable: Version::new(1, 2, 3),
                 prerelease: Some(Version::parse("1.2.3-rc.0").unwrap()),
             },
-            Rule::Release,
+            &Rule::Release,
         )
         .unwrap();
 
@@ -472,7 +480,7 @@ fn bump_pre(
     stable_rule: ConventionalRule,
 ) -> Result<CurrentVersions, StepError> {
     let stable = stable_only.stable.clone();
-    let next_stable = bump(stable_only, stable_rule.into())?.stable;
+    let next_stable = bump(stable_only, &stable_rule.into())?.stable;
     let prerelease_version = prerelease
         .and_then(|prerelease| {
             if prerelease.major != next_stable.major

@@ -1,11 +1,13 @@
 # PrepareRelease step
 
-This will look through all commits since the version tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the project version (depending on the [Semantic Versioning] rule determined from the commits) and add a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
+This will look through all commits since the version tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the package version (depending on the [Semantic Versioning] rule determined from the commits) and add a new changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
 
-The version bumping follows the same rules and logic as the [BumpVersion] step, with the rule selected for you automatically. Which files are edited (both for versioning and changelog) is determined by the [`packages`] section.
+The version bumping follows the same rules and logic as the [BumpVersion] step, with the rule selected for you automatically. Which files are edited (both for versioning and changelog) is determined by the [packages] section.
+
+When multiple [packages] are configured—`PrepareRelease` runs for each package independently. The version tag _for that package_ will be the starting point.
 
 ```admonish note
-The last "version tag" is used as the starting point to read commits—that's the most recent tag that looks like v<semantic_version>. v1.2.3 and v1.2.3-rc.1 are both valid version tags. However, if you are releasing a non-pre version (no `prerelease_label` is set for the step), prerelease tags are ignored. See examples below for more detail.
+The last "version tag" is used as the starting point to read commits—that's the most recent tag that was created by the [`Release`] step. See that step for details on the tagging formats.
 ```
 
 ## Limitations
@@ -19,7 +21,7 @@ The CHANGELOG format is pretty strict. Only three sections will be added to the 
 If you include the `prerelease_label` option, the version created will be a pre-release version (treated like `Pre` rule in [BumpVersion]). This allows you to collect the commits _so far_ to an impending future version to get them out earlier.
 
 ```toml
-[[packages]]
+[package]
 versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 
@@ -85,8 +87,9 @@ The reasons this can fail:
 
 1. If there is no previous tag to base changes off of.
 2. The version could not be bumped for some reason.
-3. The [`packages`] section is not configured correctly.
+3. The [packages] section is not configured correctly.
 
 [semantic versioning]: https://semver.org
 [bumpversion]: ./BumpVersion.md
-[`packages`]: ../packages.md
+[packages]: ../packages.md
+[`release`]: ./Release.md

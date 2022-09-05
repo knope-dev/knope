@@ -42,10 +42,22 @@ pub fn run(cli: Cli) -> Result<()> {
     let preselected_workflow = cli.workflow;
 
     let mut config = Config::load()?;
+
+    if cli.upgrade {
+        let upgraded = config.upgrade();
+        return if upgraded {
+            config.write_out()
+        } else {
+            println!("Nothing to upgrade");
+            Ok(())
+        };
+    }
+
     if let Some(prerelease_label) = cli.prerelease_label {
         config.set_prerelease_label(&prerelease_label);
     }
-    let state = State::new(config.jira, config.github, config.packages);
+    let packages = config.packages()?;
+    let state = State::new(config.jira, config.github, packages);
 
     if cli.validate {
         workflow::validate(config.workflows, state)?;
@@ -86,14 +98,11 @@ pub fn run(cli: Cli) -> Result<()> {
 /// Use [`Cli::parse()`] to parse the command line arguments.
 #[derive(Clone, Parser)]
 #[clap(author, version, about, long_about = None)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Cli {
     /// Name a workflow to bypass the interactive select and just run it. If not provided,
     /// you'll be asked to select one.
     workflow: Option<String>,
-
-    #[clap(long)]
-    /// Check that the `knope.toml` file is valid.
-    validate: bool,
 
     #[clap(long)]
     /// Pretend to run a workflow, outputting what _would_ happen without actually doing it.
@@ -106,6 +115,14 @@ pub struct Cli {
     #[clap(long, env = "KNOPE_PRERELEASE_LABEL")]
     /// Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime.
     prerelease_label: Option<String>,
+
+    #[clap(long)]
+    /// Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax.
+    upgrade: bool,
+
+    #[clap(long)]
+    /// Check that the `knope.toml` file is valid.
+    validate: bool,
 }
 
 #[cfg(test)]

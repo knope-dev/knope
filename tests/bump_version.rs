@@ -1,61 +1,166 @@
 //! An integration test which runs the `prerelease` task defined in `knope.toml`.
 
-use std::env::set_current_dir;
+use std::fs::read_to_string;
+use std::path::Path;
 
-use clap::Parser;
-
-use knope::{run, Cli};
+use rstest::rstest;
+use snapbox::assert_eq_path;
+use snapbox::cmd::{cargo_bin, Command};
 
 use git_repo_helpers::*;
 
 mod git_repo_helpers;
 
-#[test]
-fn tests() {
+/// Test all the `BumpVersion` rules.
+#[rstest]
+#[case("bump-pre", "1.2.3", "1.2.4-rc.0")]
+#[case("bump-pre", "1.2.3-rc.0", "1.2.4-rc.0")]
+#[case("bump-pre", "1.2.4-rc.0", "1.2.4-rc.1")]
+#[case("bump-release", "1.2.4-rc.0", "1.2.4")]
+#[case("bump-patch", "1.2.3", "1.2.4")]
+#[case("bump-minor", "1.2.3", "1.3.0")]
+#[case("bump-major", "1.2.3", "2.0.0")]
+fn bump_version(
+    #[case] workflow: &str,
+    #[case] current_version: &str,
+    #[case] expected_version: &str,
+) {
     // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
     init(temp_path);
     commit(temp_path, "Initial commit");
     tag(temp_path, "v1.2.3"); // Need to have stable version as tag if pre version in Cargo.toml.
+    let source_path = Path::new("tests/bump_version");
 
     let knope_toml = temp_dir.path().join("knope.toml");
-    std::fs::copy("tests/knope.toml", knope_toml).unwrap();
-
-    set_current_dir(temp_dir.path()).unwrap();
-
+    std::fs::copy(source_path.join("knope.toml"), knope_toml).unwrap();
     let cargo_toml = temp_dir.path().join("Cargo.toml");
+    std::fs::write(
+        &cargo_toml,
+        format!(
+            "[package]\nversion = \"{current_version}\"\n",
+            current_version = current_version
+        ),
+    )
+    .unwrap();
 
-    // Use a poor excuse for parametrization because setting the current dir doesn't work in parallel.
-    let test_cases = [
-        ("bump-pre", "1.2.3", "1.2.4-rc.0"),
-        ("bump-pre", "1.2.3-rc.0", "1.2.4-rc.0"),
-        ("bump-pre", "1.2.4-rc.0", "1.2.4-rc.1"),
-        ("bump-release", "1.2.4-rc.0", "1.2.4"),
-        ("bump-patch", "1.2.3", "1.2.4"),
-        ("bump-minor", "1.2.3", "1.3.0"),
-        ("bump-major", "1.2.3", "2.0.0"),
-    ];
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg(workflow)
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg(workflow)
+        .current_dir(temp_dir.path())
+        .assert();
 
-    for (workflow, current_version, expected_version) in test_cases {
-        std::fs::write(
-            &cargo_toml,
-            format!(
-                "[package]\nversion = \"{current_version}\"",
-                current_version = current_version
-            ),
-        )
-        .unwrap();
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join(format!(
+            "{workflow}_{current_version}_{expected_version}_dry_run_output.txt"
+        )));
+    actual_assert.success().stdout_eq("");
 
-        let cli = Cli::parse_from(["knope", workflow]);
-        run(cli).unwrap();
-        let cargo_contents = std::fs::read_to_string(&cargo_toml).unwrap();
-        assert_eq!(
-            cargo_contents,
-            format!(
-                "[package]\nversion = \"{expected_version}\"",
-                expected_version = expected_version
-            )
+    assert_eq_path(
+        source_path.join(format!(
+            "{workflow}_{current_version}_{expected_version}_cargo.toml"
+        )),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+/// Test all the `BumpVersion` rules when multiple packages are present.
+#[rstest]
+#[case("bump-pre")]
+#[case("bump-patch")]
+#[case("bump-minor")]
+#[case("bump-major")]
+fn multiple_packages(#[case] workflow: &str) {
+    // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.2.3"); // Need to have stable version as tag if pre version in Cargo.toml.
+    let source_path = Path::new("tests/bump_version/multiple_packages");
+    let expected_path = source_path.join(workflow);
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml", "package.json"] {
+        std::fs::copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg(workflow)
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg(workflow)
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(expected_path.join("dry_run_output.txt"))
+        .stderr_eq("");
+    actual_assert.success().stdout_eq("").stderr_eq("");
+
+    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
+        assert_eq_path(
+            expected_path.join(file),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+/// Test all the `BumpVersion` rules when multiple packages in pre-release versions are present.
+#[rstest]
+#[case("bump-pre")]
+#[case("bump-release")]
+fn multiple_packages_pre(#[case] workflow: &str) {
+    // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    // Need to have stable version as tag for each package.
+    tag(temp_path, "rust/v0.1.2");
+    tag(temp_path, "python/v3.4.5");
+    tag(temp_path, "javascript/v6.7.8");
+    let source_path = Path::new("tests/bump_version/multiple_packages_pre");
+    let expected_path = source_path.join(workflow);
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml", "package.json"] {
+        std::fs::copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg(workflow)
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg(workflow)
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(expected_path.join("dry_run_output.txt"))
+        .stderr_eq("");
+    actual_assert.success().stdout_eq("").stderr_eq("");
+
+    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
+        assert_eq_path(
+            expected_path.join(file),
+            read_to_string(temp_path.join(file)).unwrap(),
         );
     }
 }

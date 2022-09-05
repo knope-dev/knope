@@ -1,0 +1,9 @@
+[[packages]]
+versioned_files = []
+
+[[workflows]]
+name = "workflow"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo this is nothing, really"

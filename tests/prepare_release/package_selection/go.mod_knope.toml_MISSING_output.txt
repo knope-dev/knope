@@ -1,6 +1,3 @@
-Error: 
-  × Problem with workflow release
-
 Error: step::file_not_found
 
   × File go.mod does not exist

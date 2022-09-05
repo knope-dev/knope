@@ -1,26 +1,38 @@
-# `[[packages]]`
+# Packages
 
-The `[[packages]]` array is where you tell `knope` about the packages (programs, libraries, modules, etc.) you want to manage using it. This array is required to direct [`BumpVersion`] and [`PrepareRelease`] to modify the correct files.
+Packages are how you tell `knope` about collections of files that should be tracked with [semantic versioning]. At least one package must be defined in order to run the [`BumpVersion`] or [`PrepareRelease`] steps.
+
+There are two ways to define packages, if you only have one package, you define it like this:
+
+```toml
+[package]
+# package config here
+```
+
+If you have multiple packages, you define them like this:
+
+```toml
+[packages."<name>"]  # where you replace <name> with the name of the package
+# package config here
+
+[packages."<other_name>"]  # and so on
+# package config here
+```
 
 ```admonish warning
-Currently only [one package](https://github.com/knope-dev/knope/issues/153) at a time is supported.
+All conventional commits [currently affect all packages](https://github.com/knope-dev/knope/issues/154). Each package can have its own version, but they will all be updated with the same [semantic versioning] rule together.
+```
+
+```admonish warning
+There used to be an older `[[packages]]` syntax. This is deprecated and will be removed in a future version. Please run `knope --upgrade` to upgrade your configuration automatically.
 ```
 
 ## Syntax
 
-1. `versioned_files` is an array of files you'd like to bump the version of.
+Each package, whether it's defined in the `[package]` section or in the `[packages]` section, can have these keys:
+
+1. `versioned_files` is an optional array of files you'd like to bump the version of. They all must have the same version—as a package only has one version.
 2. `changelog` is the (optional) Markdown file you'd like to add release notes to.
-
-### Example
-
-```toml
-# knope.toml
-[[packages]]
-versioned_files = ["Cargo.toml"]
-changelog = "CHANGELOG.md"
-```
-
-This is the relevant part of Knope's own `knope.toml`, where we keep release notes in a file called `CHANGELOG.md` at the root of the project and version the project using `Cargo.toml` (as this is a Rust project).
 
 ### `versioned_files`
 
@@ -50,8 +62,56 @@ command = "my-command-which-bumps-a-custom-file-with version"
 variables = { "version" = "Version" }
 ```
 
+```admonish warning
+The `Version` variable in the [`Command`] step cannot be used when multiple packages are defined. This is a temporary limitation—if you have a specific use case for this, please [file an issue][request it as a feature].
+```
+
+## Examples
+
+### A Single Package with a Single Versioned File
+
+This is the relevant part of Knope's own `knope.toml`, where we keep release notes in a file called `CHANGELOG.md` at the root of the project and version the project using `Cargo.toml` (as this is a Rust project).
+
+```toml
+# knope.toml
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+```
+
+### A Single Package with Multiple Versioned Files
+
+If your one package must define its version in multiple files, you can do so like this:
+
+```toml
+# knope.toml
+[package]
+versioned_files = ["Cargo.toml", "pyproject.toml"]
+changelog = "CHANGES.md"  # You can use any filename here, but it is always Markdown
+```
+
+### Multiple Packages
+
+If you have multiple, separate packages which should be versioned and released separately—you define them as separate, named packages. For example, if `knope` was divided into two crates—it might be configured like this:
+
+```toml
+# knope.toml
+[packages.knope]
+versioned_files = ["knope/Cargo.toml"]
+changelog = "knope/CHANGELOG.md"
+
+[packages.knope-utils]
+versioned_files = ["knope-utils/Cargo.toml"]
+changelog = "knope-utils/CHANGELOG.md"
+```
+
+```admonish info
+See [`PrepareRelease`] and [`Release`] for details on what happens when those steps are run for multiple packages.
+```
+
 [`bumpversion`]: ./step/BumpVersion.md
 [`preparerelease`]: ./step/PrepareRelease.md
 [`release`]: ./step/Release.md
 [`command`]: ./step/Command.md
 [request it as a feature]: https://github.com/knope-dev/knope/issues
+[semantic versioning]: https://semver.org
