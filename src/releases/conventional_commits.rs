@@ -351,14 +351,13 @@ pub(crate) fn update_project_from_conventional_commits(
             state.releases.push(state::Release::Prepared(release));
         }
     }
-    if state.releases.is_empty() {
-        return Err(StepError::NoRelease);
-    }
     if let Some(dry_run_stdout) = dry_run_stdout {
         Ok(RunType::DryRun {
             state,
             stdout: dry_run_stdout,
         })
+    } else if state.releases.is_empty() {
+        Err(StepError::NoRelease)
     } else {
         Ok(RunType::Real(state))
     }
