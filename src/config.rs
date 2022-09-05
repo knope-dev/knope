@@ -121,6 +121,8 @@ pub(crate) struct Package {
     pub(crate) versioned_files: Vec<PathBuf>,
     /// The path to the `CHANGELOG.md` file (if any) to be updated when running [`crate::Step::PrepareRelease`].
     pub(crate) changelog: Option<PathBuf>,
+    /// Optional scopes that can be used to filter commits when running [`crate::Step::PrepareRelease`].
+    pub(crate) scopes: Option<Vec<String>>,
 }
 
 /// Generate a brand new config file for the project in the current directory.

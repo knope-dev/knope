@@ -20,10 +20,6 @@ If you have multiple packages, you define them like this:
 ```
 
 ```admonish warning
-All conventional commits [currently affect all packages](https://github.com/knope-dev/knope/issues/154). Each package can have its own version, but they will all be updated with the same [semantic versioning] rule together.
-```
-
-```admonish warning
 There used to be an older `[[packages]]` syntax. This is deprecated and will be removed in a future version. Please run `knope --upgrade` to upgrade your configuration automatically.
 ```
 
@@ -33,6 +29,7 @@ Each package, whether it's defined in the `[package]` section or in the `[packag
 
 1. `versioned_files` is an optional array of files you'd like to bump the version of. They all must have the same version—as a package only has one version.
 2. `changelog` is the (optional) Markdown file you'd like to add release notes to.
+3. `scopes` is an optional array of [conventional commit scopes] which should be considered for the package when running the [`PrepareRelease`] step.
 
 ### `versioned_files`
 
@@ -115,3 +112,4 @@ See [`PrepareRelease`] and [`Release`] for details on what happens when those st
 [`command`]: ./step/Command.md
 [request it as a feature]: https://github.com/knope-dev/knope/issues
 [semantic versioning]: https://semver.org
+[conventional commit scopes]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope

@@ -1,0 +1,15 @@
+[packages.first]
+versioned_files = ["Cargo.toml"]
+changelog = "FIRST_CHANGELOG.md"
+scopes = ["first", "both"]
+
+[packages.second]
+versioned_files = ["pyproject.toml"]
+changelog = "SECOND_CHANGELOG.md"
+scopes = ["second", "both"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
