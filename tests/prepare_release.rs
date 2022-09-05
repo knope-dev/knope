@@ -1204,7 +1204,7 @@ fn no_version_change() {
 
     // Assert.
     dry_run_output
-        .failure()
+        .success()
         .stderr_eq_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .failure()
