@@ -1,0 +1,7 @@
+[[packages]]
+versioned_files = ["Cargo.toml", "pyproject.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "No-op"
+steps = []

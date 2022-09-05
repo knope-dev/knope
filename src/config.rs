@@ -74,6 +74,35 @@ impl Config {
             }
         }
     }
+
+    /// Upgrade any deprecated syntax to the latest equivalent syntax.
+    ///
+    /// # Returns
+    ///
+    /// Whether or not any changes were made.
+    #[must_use]
+    pub(crate) fn upgrade(&mut self) -> bool {
+        let mut upgraded = false;
+        match self.packages.take() {
+            Some(Packages::Multiple(packages)) => {
+                self.packages = Some(Packages::Multiple(packages));
+            }
+            Some(Packages::Deprecated(packages)) => {
+                println!("Upgrading deprecated [[packages]] syntax to [package]");
+                upgraded = true;
+                let [package] = packages;
+                self.package = Some(package);
+            }
+            None => {}
+        }
+        upgraded
+    }
+
+    /// Write out the Config to `knope.toml`.
+    pub(crate) fn write_out(&self) -> Result<()> {
+        let contents = toml::to_string(&self).into_diagnostic()?;
+        fs::write(Config::CONFIG_PATH, contents).into_diagnostic()
+    }
 }
 
 /// All of the different ways packages can be defined in `knope.toml`.
@@ -130,7 +159,7 @@ pub(crate) fn generate() -> Result<()> {
         ],
     };
 
-    let contents = toml::to_string(&Config {
+    let config = Config {
         workflows: vec![Workflow {
             name: String::from("release"),
             steps: vec![
@@ -144,9 +173,8 @@ pub(crate) fn generate() -> Result<()> {
         github,
         package: find_packages(),
         packages: None,
-    })
-    .unwrap();
-    fs::write(Config::CONFIG_PATH, contents).into_diagnostic()
+    };
+    config.write_out()
 }
 
 /// Config required for steps that interact with Jira.
