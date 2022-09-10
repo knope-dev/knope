@@ -135,8 +135,14 @@ pub(crate) fn generate() -> Result<()> {
     let release_steps = match git::get_first_remote() {
         Some(remote) if remote.contains("github.com") => {
             let parts = remote.split('/').collect::<Vec<_>>();
-            let owner = parts[parts.len() - 2].to_string();
-            let repo = parts[parts.len() - 1].to_string();
+            let owner = parts[parts.len() - 2];
+            let owner = owner
+                .strip_prefix("git@github.com:")
+                .unwrap_or(owner)
+                .to_string();
+
+            let repo = parts[parts.len() - 1];
+            let repo = repo.strip_suffix(".git").unwrap_or(repo).to_string();
             github = Some(GitHub { owner, repo });
             vec![
                 Step::Command {
