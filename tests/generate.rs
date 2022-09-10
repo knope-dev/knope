@@ -108,14 +108,16 @@ fn generate_packages_changelog(#[case] has_changelog: bool, #[case] target_file:
 }
 
 /// Run `--generate` on a repo with a GitHub remote.
-#[test]
-fn generate_github() {
+#[rstest]
+#[case::ssh("git@github.com:knope-dev/knope.git")]
+#[case::https("https://github.com/knope-dev/knope.git")]
+fn generate_github(#[case] remote: &str) {
     // Arrange
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
     let source_path = Path::new("tests/generate/github");
     init(temp_path);
-    add_remote(temp_path, "github.com/knope-dev/knope");
+    add_remote(temp_path, remote);
 
     // Act
     let assert = Command::new(cargo_bin!("knope"))
