@@ -107,3 +107,38 @@ pub fn describe(path: &Path, pattern: Option<&str>) -> String {
     );
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
+
+/// Add all files to git
+pub fn add_all(path: &Path) {
+    let output = Command::new("git")
+        .arg("add")
+        .arg(".")
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// See which files, if any, are dirty in a Git repo
+pub fn status(path: &Path) -> Vec<String> {
+    let output = Command::new("git")
+        .arg("status")
+        .arg("--porcelain")
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .lines()
+        .map(String::from)
+        .collect()
+}

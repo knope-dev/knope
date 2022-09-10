@@ -1,6 +1,7 @@
 use semver::{Prerelease, Version};
 use serde::{Deserialize, Serialize};
 
+use crate::git::add_files;
 use crate::releases::git::get_current_versions_from_tag;
 use crate::releases::package::Package;
 use crate::releases::CurrentVersions;
@@ -169,9 +170,12 @@ fn set_version(
         version,
     } = package_version;
     let latest = version.latest();
+    let mut paths = Vec::with_capacity(package.versioned_files.len());
     for versioned_file in &mut package.versioned_files {
         versioned_file.set_version(latest)?;
+        paths.push(&versioned_file.path);
     }
+    add_files(&paths)?;
     Ok(PackageVersion { version, package })
 }
 

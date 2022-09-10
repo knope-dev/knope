@@ -1,6 +1,6 @@
-## 1.1.0
+## 2.0.0
 
-### Features
+### Breaking Changes
 
 - New feature
 

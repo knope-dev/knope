@@ -34,17 +34,7 @@ name = "release"
 [[workflows.steps]]
 type = "PrepareRelease"
 
-# Updates Cargo.lock from Cargo.toml so the versions match.
-[[workflow.steps]]
-type = "Command"
-command = "cargo update -w"
-
-# Add the freshly modified changes
-[[workflows.steps]]
-type = "Command"
-command = "git add Cargo.toml Cargo.lock CHANGELOG.md"
-
-# Commit the changes (make sure this is run on your default branch!)
+# Commit the changes that PrepareRelease added
 [[workflows.steps]]
 type = "Command"
 command = "git commit -m \"chore: Bump to version\""
@@ -82,17 +72,7 @@ name = "release"
 [[workflows.steps]]
 type = "PrepareRelease"
 
-# Updates Cargo.lock from Cargo.toml so the versions match.
-[[workflow.steps]]
-type = "Command"
-command = "cargo update -w"
-
-# Add the freshly modified changes
-[[workflows.steps]]
-type = "Command"
-command = "git add Cargo.toml Cargo.lock CHANGELOG.md"
-
-# Commit the changes (make sure this is your default branch!)
+# Commit the changes that PrepareRelease made
 [[workflows.steps]]
 type = "Command"
 command = "git commit -m \"chore: Bump to version\""
@@ -128,17 +108,7 @@ name = "release"
 [[workflows.steps]]
 type = "PrepareRelease"
 
-# Updates Cargo.lock from Cargo.toml so the versions match.
-[[workflow.steps]]
-type = "Command"
-command = "cargo update -w"
-
-# Add the freshly modified changes
-[[workflows.steps]]
-type = "Command"
-command = "git add Cargo.lock knope/Cargo.toml knope/CHANGELOG.md knope-utils/Cargo.toml knope-utils/CHANGELOG.md"
-
-# Commit the changes (make sure this is run on your default branch!)
+# Commit the changes that PrepareRelease made
 [[workflows.steps]]
 type = "Command"
 command = "git commit -m \"chore: Prepare releases\""

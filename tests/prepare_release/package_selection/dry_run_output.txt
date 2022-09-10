@@ -1,8 +1,8 @@
-Would bump package version to 1.1.0
+Would bump package version to 2.0.0
 Would add the following to CHANGELOG.md: 
-## 1.1.0
+## 2.0.0
 
-### Features
+### Breaking Changes
 
 - New feature
 

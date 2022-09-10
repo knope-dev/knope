@@ -140,7 +140,9 @@ pub(crate) fn generate() -> Result<()> {
             github = Some(GitHub { owner, repo });
             vec![
                 Step::Command {
-                    command: String::from("git add . && git commit -m \"chore: prepare release $version\" && git push"),
+                    command: String::from(
+                        "git commit -m \"chore: prepare release $version\" && git push",
+                    ),
                     variables: Some(variables),
                 },
                 Step::Release,
@@ -148,9 +150,7 @@ pub(crate) fn generate() -> Result<()> {
         }
         _ => vec![
             Step::Command {
-                command: String::from(
-                    "git add . && git commit -m \"chore: prepare release $version\"",
-                ),
+                command: String::from("git commit -m \"chore: prepare release $version\""),
                 variables: Some(variables),
             },
             Step::Release,
