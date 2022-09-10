@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use git2::build::CheckoutBuilder;
@@ -124,6 +125,46 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, StepError> {
     Ok(Issue { key, summary })
 }
 
+#[cfg(test)]
+mod test_select_issue_from_branch_name {
+    use super::*;
+
+    #[test]
+    fn jira_style() {
+        let issue = select_issue_from_branch_name("ABC-123-some-summary")
+            .expect("Failed to parse branch name");
+
+        assert_eq!(
+            issue,
+            Issue {
+                key: "ABC-123".to_string(),
+                summary: "some-summary".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn github_style() {
+        let issue =
+            select_issue_from_branch_name("123-some-summary").expect("Failed to parse branch name");
+
+        assert_eq!(
+            issue,
+            Issue {
+                key: "123".to_string(),
+                summary: "some-summary".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn no_number() {
+        let result = select_issue_from_branch_name("some-summary");
+
+        assert!(result.is_err());
+    }
+}
+
 fn create_branch<'repo>(
     repo: &'repo Repository,
     name: &str,
@@ -190,6 +231,21 @@ pub(crate) fn branch_name_from_issue(issue: &Issue) -> String {
     format!("{}-{}", issue.key, issue.summary.to_ascii_lowercase()).replace(' ', "-")
 }
 
+#[cfg(test)]
+mod test_branch_name_from_issue {
+    use super::*;
+
+    #[test]
+    fn branch_name_from_issue() {
+        let issue = Issue {
+            key: "FLOW-5".to_string(),
+            summary: "A test issue".to_string(),
+        };
+        let branch_name = super::branch_name_from_issue(&issue);
+        assert_eq!(&branch_name, "FLOW-5-a-test-issue");
+    }
+}
+
 pub(crate) fn get_commit_messages_after_last_stable_version(
     package_name: &Option<String>,
 ) -> Result<Vec<String>, StepError> {
@@ -243,57 +299,12 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
     Ok(messages)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn branch_name_from_issue() {
-        let issue = Issue {
-            key: "FLOW-5".to_string(),
-            summary: "A test issue".to_string(),
-        };
-        let branch_name = super::branch_name_from_issue(&issue);
-        assert_eq!(&branch_name, "FLOW-5-a-test-issue");
+/// Add some files to Git to be committed later.
+pub(crate) fn add_files(file_names: &[&PathBuf]) -> Result<(), StepError> {
+    let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
+    let mut index = repo.index()?;
+    for file_name in file_names {
+        index.add_path(file_name)?;
     }
-}
-
-#[cfg(test)]
-mod test_select_issue_from_branch_name {
-    use super::*;
-
-    #[test]
-    fn jira_style() {
-        let issue = select_issue_from_branch_name("ABC-123-some-summary")
-            .expect("Failed to parse branch name");
-
-        assert_eq!(
-            issue,
-            Issue {
-                key: "ABC-123".to_string(),
-                summary: "some-summary".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn github_style() {
-        let issue =
-            select_issue_from_branch_name("123-some-summary").expect("Failed to parse branch name");
-
-        assert_eq!(
-            issue,
-            Issue {
-                key: "123".to_string(),
-                summary: "some-summary".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn no_number() {
-        let result = select_issue_from_branch_name("some-summary");
-
-        assert!(result.is_err());
-    }
+    index.write().map_err(StepError::from)
 }

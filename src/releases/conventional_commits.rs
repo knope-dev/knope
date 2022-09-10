@@ -1,8 +1,9 @@
-use git_conventional::{Commit, Type};
-use log::debug;
 use std::io::Write;
 
-use crate::git::get_commit_messages_after_last_stable_version;
+use git_conventional::{Commit, Type};
+use log::debug;
+
+use crate::git::{add_files, get_commit_messages_after_last_stable_version};
 use crate::releases::semver::PackageVersion;
 use crate::releases::Package;
 use crate::step::StepError;
@@ -422,6 +423,7 @@ fn prepare_release_for_package(
         if let Some(changelog) = changelog {
             let contents = add_version_to_changelog(&changelog.content, &new_changes);
             std::fs::write(&changelog.path, contents)?;
+            add_files(&[&changelog.path])?;
         }
         Ok(Some(release))
     }

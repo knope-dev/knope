@@ -41,7 +41,7 @@ pub(crate) struct VersionedFile {
     /// The type of file format that `content` is.
     pub(crate) format: PackageFormat,
     /// The path to the file that was parsed.
-    path: PathBuf,
+    pub(crate) path: PathBuf,
     /// The raw content of the package manager file so it doesn't have to be read again.
     content: String,
 }

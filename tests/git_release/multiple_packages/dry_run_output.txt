@@ -14,6 +14,6 @@ Would add the following to SECOND_CHANGELOG.md:
 
 - New breaking feature
 
-Would run git add Cargo.toml pyproject.toml package.json FIRST_CHANGELOG.md SECOND_CHANGELOG.md && git commit -m "chore: Prepare release"
+Would run git commit -m "chore: Prepare release"
 Would create Git tag first/v2.0.0
 Would create Git tag second/v0.5.0

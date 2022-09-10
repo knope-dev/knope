@@ -1,6 +1,6 @@
 # PrepareRelease step
 
-This will look through all commits since the version tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the package version (depending on the [Semantic Versioning] rule determined from the commits) and add a new changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format.
+This will look through all commits since the version tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the package version (depending on the [Semantic Versioning] rule determined from the commits) and add a new changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format. Any files altered (`versioned_files` and `changelog`) will be staged for commit with `git add` **but not committed**.
 
 The version bumping follows the same rules and logic as the [BumpVersion] step, with the rule selected for you automatically. Which files are edited (both for versioning and changelog) is determined by the [packages] section.
 

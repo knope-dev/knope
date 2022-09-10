@@ -378,9 +378,6 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     let source_path = Path::new("tests/prepare_release/package_selection");
 
     init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
 
     copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
     for file in [
@@ -392,6 +389,11 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     ] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
+
+    add_all(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat!: New feature");
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -427,6 +429,17 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
+    let mut expected_changes = Vec::with_capacity(versioned_files.len() + 1);
+    for file in versioned_files {
+        expected_changes.push(format!("M  {file}"));
+    }
+    expected_changes.push("M  CHANGELOG.md".to_string());
+    expected_changes.sort();
+    assert_eq!(
+        status(temp_path),
+        expected_changes,
+        "All modified changes should be added to Git"
+    );
 }
 
 /// Snapshot the error messages when a required file is missing.
@@ -533,7 +546,7 @@ fn prepare_release_creates_missing_changelog() {
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
     tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
+    commit(temp_path, "feat!: New feature");
 
     copy(
         source_path.join("Cargo.toml_knope.toml"),
