@@ -36,7 +36,7 @@ Each package, whether it's defined in the `[package]` section or in the `[packag
 A package, by Knope's definition, has a single version. There can, however, be multiple files which contain this version (e.g., `Cargo.toml` for a Rust crate and `pyproject.toml` for a Python wrapper around it). As such, you can define an array of `versioned_files` for each package as long as they all have the same version and all are supported formats. If no file is included in `versioned_files`, the latest Git tag in the format created by the [`Release`] step will be used. The file must be named exactly the way that `knope` expects, but it can be in nested directories. The supported file types (and names) are:
 
 1. `Cargo.toml` for Rust projects
-2. `pyproject.toml` for Python projects (using [Poetry's metadata](https://python-poetry.org))
+2. `pyproject.toml` for Python projects using [PEP-621](https://peps.python.org/pep-0621/) or [Poetry](https://python-poetry.org)
 3. `package.json` for Node projects
 4. `go.mod` for Go projects using [modules](https://go.dev/ref/mod)
 

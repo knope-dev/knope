@@ -442,6 +442,58 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     );
 }
 
+/// Run a `PrepareRelease` against all supported types of `pyproject.toml` files.
+#[rstest]
+#[case::poetry("poetry_pyproject.toml")]
+#[case::pep621("pep621_pyproject.toml")]
+#[case::mixed("mixed_pyproject.toml")]
+fn prepare_release_pyproject_toml(#[case] input_file: &str) {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/pyproject_toml");
+
+    init(temp_path);
+    copy(
+        source_path.join(input_file),
+        temp_path.join("pyproject.toml"),
+    )
+    .unwrap();
+    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
+    add_all(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat!: New feature");
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert_eq_path(
+        source_path.join(&format!("expected_{input_file}.toml")),
+        read_to_string(temp_path.join("pyproject.toml")).unwrap(),
+    );
+
+    let expected_changes = ["M  pyproject.toml"];
+    assert_eq!(
+        status(temp_path),
+        expected_changes,
+        "All modified changes should be added to Git"
+    );
+}
+
 /// Snapshot the error messages when a required file is missing.
 #[rstest]
 #[case("Cargo.toml_knope.toml")]

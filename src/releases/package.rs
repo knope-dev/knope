@@ -135,7 +135,7 @@ impl PackageFormat {
             PackageFormat::Cargo => {
                 cargo::get_version(content).map_err(|_| InvalidCargoToml(path.into()))
             }
-            PackageFormat::Poetry => pyproject::get_version(content)
+            PackageFormat::Poetry => pyproject::get_version(content, path)
                 .map_err(|_| StepError::InvalidPyProject(path.into())),
             PackageFormat::JavaScript => package_json::get_version(content)
                 .map_err(|_| StepError::InvalidPackageJson(path.into())),
@@ -160,8 +160,10 @@ impl PackageFormat {
         match self {
             PackageFormat::Cargo => cargo::set_version(content, &new_version.to_string())
                 .map_err(|_| InvalidCargoToml(path.into())),
-            PackageFormat::Poetry => pyproject::set_version(content, &new_version.to_string())
-                .map_err(|_| StepError::InvalidPyProject(path.into())),
+            PackageFormat::Poetry => {
+                pyproject::set_version(content, &new_version.to_string(), path)
+                    .map_err(|_| StepError::InvalidPyProject(path.into()))
+            }
             PackageFormat::JavaScript => {
                 package_json::set_version(&content, &new_version.to_string())
                     .map_err(|_| StepError::InvalidPackageJson(path.into()))

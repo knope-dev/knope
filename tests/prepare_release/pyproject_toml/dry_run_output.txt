@@ -1,0 +1,1 @@
+Would bump package version to 2.0.0

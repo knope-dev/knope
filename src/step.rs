@@ -183,8 +183,9 @@ pub(super) enum StepError {
     #[diagnostic(
         code(step::invalid_pyproject),
         help(
-            "knope expects the pyproject.toml file to have a `tool.poetry.version` property. \
-            If you use a different location for your version, please open an issue to add support."
+            "knope expects the pyproject.toml file to have a `tool.poetry.version` or \
+            `project.version` property. If you use a different location for your version, please \
+            open an issue to add support."
         ),
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
