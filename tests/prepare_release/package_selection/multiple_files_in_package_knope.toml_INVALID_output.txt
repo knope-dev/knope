@@ -4,7 +4,7 @@ Error:
 Error: step::invalid_pyproject (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
 
   × The file pyproject.toml was an incorrect format
-  help: knope expects the pyproject.toml file to have a
+  help: knope expects the pyproject.toml file to have a `project.version` or
         `tool.poetry.version` property. If you use a different location for
         your version, please open an issue to add support.
 
