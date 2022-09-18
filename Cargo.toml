@@ -35,7 +35,7 @@ thiserror = "1.0.35"
 velcro = "0.5.3"
 git-repository = "0.23.1"
 log = "0.4.17"
-env_logger = "0.9.0"
+env_logger = "0.9.1"
 git-traverse = "0.16.4"
 git-object = "0.20.3"
 
