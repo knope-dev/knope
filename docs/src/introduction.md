@@ -1,10 +1,12 @@
+![A purple binder, stuffed to the brim with papers. The word "Knope" is written on the front](favicon.png)
+
 # Introduction
 
-Knope is a CLI for developers used to automate common tasks workflows. Things like transitioning issues, creating and merging branches, creating pull requests, bumping versions, tagging... anything that is a repetitive, time-consuming task in your development cycle, this tool is made to speed up.
+Knope is a CLI/CI tool which automates common tasks for developers. Things like creating changelogs, choosing and setting new versions, creating GitHub releases / tags, transitioning issues, creating and merging branches, creating pull requests... anything that is a repetitive, time-consuming task in your development cycle, this tool is made to speed up.
 
 ## How it Works
 
-Basically you create a file called `knope.toml` in your project directory which defines some workflows. The format of this file is described in [the chapter on config][config], the key piece to which is the `workflows` array. For a full example of a `knope.toml`, check out the file for this project! You can get started quickly with `knope --generate` which will give you some starter workflows.
+You create a file called `knope.toml` in your project directory which defines some workflows. The format of this file is described in [the chapter on config][config], the key piece to which is the `workflows` array. For a full example of a `knope.toml`, check out the file for this project! You can get started quickly with `knope --generate` which will give you some starter workflows.
 
 Once you've got a config set up, you just run this program (`knope` if you installed normally via cargo). That will prompt you to select one of your configured workflows. Do that and you're off to the races!
 
@@ -43,9 +45,18 @@ More detail on everything this program can do can be found by digging into [conf
 
 ## Concepts
 
-You define a [config] file named `knope.toml` which has some metadata (e.g. Jira details) about your project, as well as a set of defined [workflows][workflow]. Each [workflow] consists of a series of [steps][step] that will execute in order, stopping if any step fails. [Steps][step] can affect the state of the workflow. Some [steps][step] require that the workflow be in a specific state before they will work.
+You define a [config] file named `knope.toml` which has some metadata (e.g. [package definitions]) about your project, as well as a set of [workflows][workflow]. Each [workflow] consists of a series of [steps][step] that will execute in order, stopping if any step fails. Some [steps][step] require other steps to be run before they are.
+
+## The Name
+
+Knope (pronounced like "nope") is a reference to the character Leslie Knope from the TV show Parks and Recreation. She loves doing the hard, tedious work that most people don't like doing, and she's very good at it, just like this tool!
+
+## The Logo
+
+The logo is a binder in reference to Leslie Knope's love of binders. The binder is also analogous to the `knope.toml` file which defines all the workflows for your project.
 
 [config]: config/config.md
+[package definitions]: config/packages.md
 [workflow]: config/workflow.md
 [step]: config/step/step.md
 [`preparerelease`]: config/step/PrepareRelease.md
