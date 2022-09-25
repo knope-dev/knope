@@ -30,20 +30,17 @@ pub(crate) struct Config {
 impl Config {
     const CONFIG_PATH: &'static str = "knope.toml";
 
-    /// Create a Config from a TOML file.
+    /// Create a Config from a TOML file or load the default config via `generate`
     ///
     /// ## Errors
-    /// 1. Provided path is not found
-    /// 2. Cannot parse file contents into a Config
+    /// 1. Cannot parse file contents into a Config
     pub(crate) fn load() -> Result<Self> {
-        let contents = fs::read_to_string(Self::CONFIG_PATH)
-            .into_diagnostic()
-            .wrap_err_with(|| {
-                format!(
-                    "Could not find {CONFIG_PATH}",
-                    CONFIG_PATH = Self::CONFIG_PATH
-                )
-            })?;
+        let contents = if let Ok(contents) = fs::read_to_string(Self::CONFIG_PATH) {
+            contents
+        } else {
+            log::debug!("No `knope.toml` found, using default config");
+            return Ok(generate());
+        };
         toml::from_str(&contents)
             .into_diagnostic()
             .wrap_err("Invalid TOML when parsing config")
@@ -125,8 +122,8 @@ pub(crate) struct Package {
     pub(crate) scopes: Option<Vec<String>>,
 }
 
-/// Generate a brand new config file for the project in the current directory.
-pub(crate) fn generate() -> Result<()> {
+/// Generate a brand new Config for the project in the current directory.
+pub(crate) fn generate() -> Config {
     let variables = hash_map! {
         String::from("$version"): command::Variable::Version,
     };
@@ -167,7 +164,7 @@ pub(crate) fn generate() -> Result<()> {
         ],
     };
 
-    let config = Config {
+    Config {
         workflows: vec![Workflow {
             name: String::from("release"),
             steps: vec![
@@ -181,8 +178,7 @@ pub(crate) fn generate() -> Result<()> {
         github,
         package: find_packages(),
         packages: None,
-    };
-    config.write_out()
+    }
 }
 
 /// Config required for steps that interact with Jira.

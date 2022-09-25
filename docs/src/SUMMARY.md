@@ -2,6 +2,7 @@
 
 - [Introduction](introduction.md)
 - [Installation](installation.md)
+- [Default Workflows](default_workflows.md)
 - [knope.toml](config/config.md)
   - [Workflows](config/workflow.md)
   - [Steps](config/step/step.md)

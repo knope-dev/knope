@@ -36,7 +36,8 @@ mod workflow;
 pub fn run(cli: Cli) -> Result<()> {
     if cli.generate {
         println!("Generating a knope.toml file");
-        return config::generate();
+        let config = config::generate();
+        return config.write_out();
     }
 
     let preselected_workflow = cli.workflow;
