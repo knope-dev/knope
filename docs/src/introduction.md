@@ -6,7 +6,11 @@ Knope is a CLI/CI tool which automates common tasks for developers. Things like 
 
 ## How it Works
 
-You create a file called `knope.toml` in your project directory which defines some workflows. The format of this file is described in [the chapter on config][config], the key piece to which is the `workflows` array. For a full example of a `knope.toml`, check out the file for this project! You can get started quickly with `knope --generate` which will give you some starter workflows.
+```admonish info
+For some use-cases, you don't need to create a `knope.toml` file! If no file is detected, Knope will use the same config at runtime that it would create with `knope --generate`. Run `knope --generate` to see what you get for free, or check out the [default workflows](default_workflows.md).
+```
+
+You create a file called `knope.toml` in your project directory which defines some workflows. The format of this file is described in [the chapter on config][config], the key piece to which is the `workflows` array. You can get started quickly with `knope --generate` which will give you some starter workflows.
 
 Once you've got a config set up, you just run this program (`knope` if you installed normally via cargo). That will prompt you to select one of your configured workflows. Do that and you're off to the races!
 

@@ -1,0 +1,9 @@
+Would bump package version to 2.0.0
+Would run git commit -m "chore: prepare release 2.0.0" && git push
+Would create a release on GitHub with name and tag v2.0.0 and body:
+## 2.0.0
+
+### Breaking Changes
+
+- Breaking Change
+
