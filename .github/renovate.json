@@ -1,9 +1,8 @@
 {
   "extends": [
-    "config:base"
+    "config:base",
+    ":semanticCommitTypeAll(chore)"
   ],
-  "semanticCommits": "enabled",
-  "semanticCommitType": "chore",
   "packageRules": [
     {
       "matchPackagePatterns": ["^git\-.*"],
