@@ -98,30 +98,30 @@ pub fn run(cli: Cli) -> Result<()> {
 ///
 /// Use [`Cli::parse()`] to parse the command line arguments.
 #[derive(Clone, Parser)]
-#[clap(author, version, about, long_about = None)]
+#[command(long_about = None)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Cli {
     /// Name a workflow to bypass the interactive select and just run it. If not provided,
     /// you'll be asked to select one.
     workflow: Option<String>,
 
-    #[clap(long)]
+    #[arg(long)]
     /// Pretend to run a workflow, outputting what _would_ happen without actually doing it.
     dry_run: bool,
 
-    #[clap(long)]
+    #[arg(long)]
     /// Generate a new `knope.toml` file.
     generate: bool,
 
-    #[clap(long, env = "KNOPE_PRERELEASE_LABEL")]
+    #[arg(long, env = "KNOPE_PRERELEASE_LABEL")]
     /// Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime.
     prerelease_label: Option<String>,
 
-    #[clap(long)]
+    #[arg(long)]
     /// Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax.
     upgrade: bool,
 
-    #[clap(long)]
+    #[arg(long)]
     /// Check that the `knope.toml` file is valid.
     validate: bool,
 }
