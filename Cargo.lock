@@ -829,9 +829,9 @@ dependencies = [
 
 [[package]]
 name = "git-diff"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a88666a0ae4365b55a0cbf2efde68d2a4cff0747894ad229403bd60b0b2abc5"
+checksum = "2c4c61358be0a961adf3ebc9a9e126678d98a906a293959847f0b7f3b580c21c"
 dependencies = [
  "git-hash",
  "git-object",
@@ -898,9 +898,9 @@ dependencies = [
 
 [[package]]
 name = "git-index"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7639093731ba90b72dd63c73e2a493df847b6227681058339e7b302d445544f1"
+checksum = "821583c2d12b1e864694eb0bf1cca10ff6a3f45966f5f834e0f921b496dbe7cb"
 dependencies = [
  "atoi",
  "bitflags",
@@ -961,9 +961,9 @@ dependencies = [
 
 [[package]]
 name = "git-odb"
-version = "0.35.0"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaaea7031ac7d8dfee232a16d7114395d118226214fb03fe4e15d1f4d62a88a6"
+checksum = "76eb64cf37326fccda46fee6dc6c8c39d2e8b03f13031cb094a928d61c97b95c"
 dependencies = [
  "arc-swap",
  "git-features",
@@ -979,9 +979,9 @@ dependencies = [
 
 [[package]]
 name = "git-pack"
-version = "0.25.0"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc4386dff835ffdc3697c3558111f708fd7b7695c42a4347f2d211cf3246c8e1"
+checksum = "51f385ab95e01ecface60658b0d0f1181f51e114213e584bb7a16c5af47d653f"
 dependencies = [
  "bytesize",
  "clru",
@@ -1071,9 +1071,9 @@ dependencies = [
 
 [[package]]
 name = "git-repository"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeb43e59612e493af6a433bf0a960de0042c8aa6f4e4c4cb414f03b97e296b82"
+checksum = "e3e2c5e4611c366b025c4501677e2077d1fba1d365f9e211398d4426f482e204"
 dependencies = [
  "byte-unit",
  "clru",
