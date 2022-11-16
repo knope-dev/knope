@@ -46,6 +46,17 @@ pub(crate) fn release(
     Ok(())
 }
 
+fn replace_version_if_newer(current: &mut Option<Version>, new: Version) {
+    match current.as_ref() {
+        None => *current = Some(new),
+        Some(version) => {
+            if &new > version {
+                *current = Some(new);
+            }
+        }
+    }
+}
+
 pub(crate) fn get_current_versions_from_tag(
     prefix: Option<&str>,
 ) -> Result<Option<CurrentVersions>, StepError> {
@@ -75,12 +86,17 @@ pub(crate) fn get_current_versions_from_tag(
         let version_string = tag.replace(&pattern, "");
         if let Ok(version) = Version::parse(version_string.as_str()) {
             if version.pre.is_empty() {
-                stable = Some(version);
-                prerelease = None; // Don't consider prereleases older than the stable version.
+                replace_version_if_newer(&mut stable, version);
             } else {
-                prerelease.get_or_insert(version);
+                replace_version_if_newer(&mut prerelease, version);
             }
         }
     }
+
+    // Don't consider prereleases older than the stable version.
+    if prerelease < stable {
+        prerelease = None;
+    }
+
     Ok(stable.map(|stable| CurrentVersions { stable, prerelease }))
 }
