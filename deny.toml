@@ -162,8 +162,8 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "windows-sys", version = "0.36.1", depth = 10 }, # Waiting on update to git-index
-  { name = "hashbrown", version = "0.11.2", depth = 10 },   # Waiting on update to clap and serde_json (indexmap)
+  { name = "windows", version = "0.40.0", depth = 10 }, # Waiting on update to git-index
+  { name = "ahash", version = "0.7.6", depth = 10 },   # Waiting on update to hashbrown
 ]
 
 # This section is considered when running `cargo deny check sources`.
