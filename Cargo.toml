@@ -30,7 +30,7 @@ ureq = { version = "2.5.0", features = ["json"] }
 http = "0.2.8"
 clap = { version = "4.0.26", features = ["cargo", "derive", "env"] }
 itertools = "0.10.5"
-miette = { version = "5.4.1", features = ["fancy"] }
+miette = { version = "5.5.0", features = ["fancy"] }
 thiserror = "1.0.37"
 velcro = "0.5.3"
 git-repository = "0.27.0"
