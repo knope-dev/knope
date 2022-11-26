@@ -41,5 +41,5 @@ git-object = "0.22.1"
 
 [dev-dependencies]
 rstest = "0.15.0"
-snapbox = "0.4.2"
+snapbox = "0.4.3"
 tempfile = "3.3.0"
