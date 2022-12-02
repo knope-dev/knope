@@ -433,6 +433,26 @@ mod test_bump {
     }
 
     #[test]
+    fn pre_after_newer_pre_version() {
+        let stable = Version::new(1, 2, 3);
+        let prerelease = Some(Version::parse("2.1.4-rc.0").unwrap());
+        let new = bump(
+            CurrentVersions {
+                stable: stable.clone(),
+                prerelease,
+            },
+            &Rule::Pre {
+                label: String::from("rc"),
+                stable_rule: ConventionalRule::Minor,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(new.prerelease, Some(Version::parse("2.1.4-rc.1").unwrap()));
+        assert_eq!(new.stable, stable);
+    }
+
+    #[test]
     fn pre_after_different_pre_label() {
         let stable = Version::new(1, 2, 3);
         let prerelease = Some(Version::parse("1.3.0-beta.0").unwrap());
@@ -468,6 +488,22 @@ mod test_bump {
     }
 }
 
+fn version_to_bump(stable: Version, pre: Option<Version>) -> Version {
+    if let Some(pre) = pre {
+        let use_pre = pre > stable
+            || ((pre.major, pre.minor, pre.patch) == (stable.major, stable.minor, stable.patch)
+                && pre.pre != Prerelease::EMPTY);
+
+        if use_pre {
+            pre
+        } else {
+            stable
+        }
+    } else {
+        stable
+    }
+}
+
 /// Bumps the pre-release component of a [`Version`].
 ///
 /// If the existing [`Version`] has no pre-release,
@@ -485,29 +521,103 @@ fn bump_pre(
 ) -> Result<CurrentVersions, StepError> {
     let stable = stable_only.stable.clone();
     let next_stable = bump(stable_only, &stable_rule.into())?.stable;
-    let prerelease_version = prerelease
-        .and_then(|prerelease| {
-            if prerelease.major != next_stable.major
-                || prerelease.minor != next_stable.minor
-                || prerelease.patch != next_stable.patch
-            {
-                return None;
-            }
-            let pre_string = prerelease.pre.as_str();
-            let parts = pre_string.split('.').collect::<Vec<_>>();
-            if parts.len() != 2 || parts[0] != label {
-                return None;
-            }
-            let pre_version = parts[1].parse::<u16>().ok()?;
-            Some(format!("{}.{}", label, pre_version + 1))
-        })
-        .unwrap_or_else(|| format!("{}.0", label));
 
-    let mut next_prerelease = next_stable;
+    let mut next_prerelease = version_to_bump(next_stable, prerelease);
+    let prerelease_version = {
+        let pre_string = next_prerelease.pre.as_str();
+        let parts = pre_string.split('.').collect::<Vec<_>>();
+        let version = if parts.len() == 2 && parts[0] == label {
+            parts[1]
+                .parse::<u16>()
+                .ok()
+                .map(|pre_version| format!("{}.{}", label, pre_version + 1))
+        } else {
+            None
+        };
+        version.unwrap_or_else(|| format!("{}.0", label))
+    };
+
     next_prerelease.pre = Prerelease::new(&prerelease_version)
         .map_err(|_| StepError::InvalidPreReleaseVersion(prerelease_version))?;
     Ok(CurrentVersions {
         stable,
         prerelease: Some(next_prerelease),
     })
+}
+
+#[cfg(test)]
+mod test_bump_pre {
+    use semver::BuildMetadata;
+
+    use super::*;
+
+    #[test]
+    fn prerelease_is_before_release() {
+        let release = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: Prerelease::EMPTY,
+            build: BuildMetadata::EMPTY,
+        };
+        let prerelease = {
+            let mut pre = release.clone();
+            pre.pre = "rc.0".parse().unwrap();
+            pre
+        };
+
+        assert!(prerelease < release);
+    }
+
+    #[test]
+    fn use_prerelease_newer_than_release() {
+        let release = Version {
+            major: 1,
+            minor: 2,
+            patch: 3,
+            pre: Prerelease::EMPTY,
+            build: BuildMetadata::EMPTY,
+        };
+
+        let prerelease = {
+            let mut pre = release.clone();
+            pre.major += 1;
+            pre.pre = "rc.0".parse().unwrap();
+            pre
+        };
+
+        assert!(prerelease > release);
+
+        let current = CurrentVersions {
+            stable: release,
+            prerelease: Some(prerelease.clone()),
+        };
+
+        let bumped_no_pre = bump_pre(current.clone(), None, "rc", ConventionalRule::Minor)
+            .unwrap()
+            .prerelease
+            .unwrap();
+        let bumped = bump_pre(
+            current,
+            Some(prerelease.clone()),
+            "rc",
+            ConventionalRule::Minor,
+        )
+        .unwrap()
+        .prerelease
+        .unwrap();
+
+        assert!(
+            bumped_no_pre < prerelease,
+            "prerelease should be larger version than bumped stable"
+        );
+        assert!(
+            bumped > bumped_no_pre,
+            "bump from newer prerelease should be larger version than bumped stable"
+        );
+        assert!(
+            bumped > prerelease,
+            "bump from newer prerelease should be larger than prerelease"
+        );
+    }
 }
