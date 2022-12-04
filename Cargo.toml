@@ -40,6 +40,6 @@ git-traverse = "0.19.0"
 git-object = "0.23.0"
 
 [dev-dependencies]
-rstest = "0.15.0"
+rstest = "0.16.0"
 snapbox = "0.4.3"
 tempfile = "3.3.0"
