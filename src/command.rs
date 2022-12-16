@@ -34,7 +34,7 @@ pub(crate) fn run_command(
         command = replace_variables(command, variables, state)?;
     }
     if let Some(stdout) = dry_run_stdout {
-        writeln!(stdout, "Would run {}", command)?;
+        writeln!(stdout, "Would run {command}")?;
         return Ok(run_type);
     }
     let status = shell(command).status()?;
@@ -205,13 +205,13 @@ mod test_replace_variables {
         let version = Version::new(1, 2, 3);
         state.releases.push(state::Release::Prepared(Release {
             version: version.clone(),
-            changelog: "".to_string(),
+            changelog: String::new(),
             package_name: None,
         }));
 
         let command = replace_variables(command, variables, &state).unwrap();
 
-        assert_eq!(command, format!("blah {} other blah", version,));
+        assert_eq!(command, format!("blah {version} other blah"));
     }
 
     #[test]
@@ -235,6 +235,6 @@ mod test_replace_variables {
 
         let command = replace_variables(command, variables, &state).unwrap();
 
-        assert_eq!(command, format!("blah {} other blah", expected_branch_name));
+        assert_eq!(command, format!("blah {expected_branch_name} other blah"));
     }
 }

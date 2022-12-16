@@ -32,7 +32,7 @@ pub(crate) fn list_issues(
         state::GitHub::New => get_or_prompt_for_github_token()?,
     };
     let response = ureq::post("https://api.github.com/graphql")
-        .set("Authorization", &format!("bearer {}", token))
+        .set("Authorization", &format!("bearer {token}"))
         .send_json(ureq::json!({
             "query": ISSUES_QUERY,
             "variables": {

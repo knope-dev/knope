@@ -37,7 +37,7 @@ fn bump_version(
     std::fs::copy(source_path.join("knope.toml"), knope_toml).unwrap();
     let cargo_toml = temp_dir.path().join("Cargo.toml");
     std::fs::write(
-        &cargo_toml,
+        cargo_toml,
         format!(
             "[package]\nversion = \"{current_version}\"\n",
             current_version = current_version

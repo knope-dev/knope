@@ -25,7 +25,7 @@ pub(crate) fn release(
 
     let tag_name = tag_name(version, package_name);
     let name = if let Some(package_name) = package_name {
-        format!("{} {}", package_name, version_string)
+        format!("{package_name} {version_string}")
     } else {
         version_string
     };

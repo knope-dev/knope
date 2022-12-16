@@ -122,6 +122,7 @@ pub(super) fn transition_jira_issue(status: &str, run_type: RunType) -> Result<R
     }
 
     jira::transition_issue(jira_config, &issue.key, status)?;
-    println!("{} transitioned to {}", &issue.key, status);
+    let key = &issue.key;
+    println!("{key} transitioned to {status}");
     Ok(RunType::Real(state))
 }

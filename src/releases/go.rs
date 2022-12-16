@@ -40,7 +40,7 @@ pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<Strin
         Ok(go_mod.replace(module_line, &new_module_line))
     } else {
         // No existing version found—add new line
-        let new_module_line = format!("module {}/v{}", module, new_version.major);
+        let new_module_line = format!("module {module}/v{}", new_version.major);
         Ok(go_mod.replace(module_line, &new_module_line))
     }
 }

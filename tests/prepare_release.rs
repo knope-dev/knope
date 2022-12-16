@@ -425,7 +425,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
             String::from(file)
         };
         assert_eq_path(
-            source_path.join(&expected_path),
+            source_path.join(expected_path),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -482,7 +482,7 @@ fn prepare_release_pyproject_toml(#[case] input_file: &str) {
         .stdout_eq_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
     assert_eq_path(
-        source_path.join(&format!("expected_{input_file}.toml")),
+        source_path.join(format!("expected_{input_file}.toml")),
         read_to_string(temp_path.join("pyproject.toml")).unwrap(),
     );
 
@@ -530,10 +530,10 @@ fn prepare_release_versioned_file_not_found(#[case] knope_toml: &str) {
     // Assert.
     dry_run_assert
         .failure()
-        .stderr_eq_path(source_path.join(&format!("{knope_toml}_MISSING_output.txt")));
+        .stderr_eq_path(source_path.join(format!("{knope_toml}_MISSING_output.txt")));
     actual_assert
         .failure()
-        .stderr_eq_path(source_path.join(&format!("{knope_toml}_MISSING_output.txt")));
+        .stderr_eq_path(source_path.join(format!("{knope_toml}_MISSING_output.txt")));
     assert_eq_path(
         source_path.join("CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
@@ -581,10 +581,10 @@ fn prepare_release_invalid_versioned_files(#[case] knope_toml: &str) {
     // Assert.
     dry_run_assert
         .failure()
-        .stderr_eq_path(source_path.join(&format!("{knope_toml}_INVALID_output.txt")));
+        .stderr_eq_path(source_path.join(format!("{knope_toml}_INVALID_output.txt")));
     actual_assert
         .failure()
-        .stderr_eq_path(source_path.join(&format!("{knope_toml}_INVALID_output.txt")));
+        .stderr_eq_path(source_path.join(format!("{knope_toml}_INVALID_output.txt")));
 }
 
 /// Run a `PrepareRelease` where the CHANGELOG.md file is missing and verify it's created.
@@ -650,7 +650,7 @@ fn test_prepare_release_multiple_files_inconsistent_versions() {
     commit(temp_path, "feat: New feature");
 
     let knope_toml = "multiple_files_in_package_knope.toml";
-    copy(source_path.join(&knope_toml), temp_path.join("knope.toml")).unwrap();
+    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
     copy(
         source_path.join("Cargo_different_version.toml"),
         temp_path.join("Cargo.toml"),
@@ -706,7 +706,7 @@ fn test_prepare_release_invalid_versioned_file_format() {
     commit(temp_path, "feat: New feature");
 
     let knope_toml = "invalid_versioned_file_format_knope.toml";
-    copy(source_path.join(&knope_toml), temp_path.join("knope.toml")).unwrap();
+    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
     for file in [
         "CHANGELOG.md",
         "Cargo.toml",

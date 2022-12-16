@@ -499,9 +499,9 @@ fn bump_pre(
                 return None;
             }
             let pre_version = parts[1].parse::<u16>().ok()?;
-            Some(format!("{}.{}", label, pre_version + 1))
+            Some(format!("{label}.{}", pre_version + 1))
         })
-        .unwrap_or_else(|| format!("{}.0", label));
+        .unwrap_or_else(|| format!("{label}.0"));
 
     let mut next_prerelease = next_stable;
     next_prerelease.pre = Prerelease::new(&prerelease_version)

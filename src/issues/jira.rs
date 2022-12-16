@@ -32,13 +32,14 @@ fn get_auth() -> Result<String, StepError> {
     let token = get_or_prompt_for_jira_token()?;
     Ok(format!(
         "Basic {}",
-        base64::encode(format!("{}:{}", email, token))
+        base64::encode(format!("{email}:{token}"))
     ))
 }
 
 pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>, StepError> {
     let auth = get_auth()?;
-    let jql = format!("status = {} AND project = {}", status, jira_config.project);
+    let project = &jira_config.project;
+    let jql = format!("status = {status} AND project = {project}");
     let url = format!("{}/rest/api/3/search", jira_config.url);
     Ok(ureq::post(&url)
         .set("Authorization", &auth)
@@ -59,10 +60,8 @@ pub(crate) fn transition_issue(
     status: &str,
 ) -> Result<(), StepError> {
     let auth = get_auth()?; // TODO: get auth once and store in state
-    let url = format!(
-        "{}/rest/api/3/issue/{}/transitions",
-        jira_config.url, issue_key
-    );
+    let base_url = &jira_config.url;
+    let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions",);
     let agent = ureq::Agent::new();
     let response = agent.get(&url).set("Authorization", &auth).call()?;
     let response = response.into_json::<GetTransitionResponse>()?;

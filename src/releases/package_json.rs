@@ -33,7 +33,7 @@ mod tests {
         "version": "0.1.0-rc.0"
         }"###;
 
-        assert_eq!(get_version(content).unwrap(), "0.1.0-rc.0".to_string())
+        assert_eq!(get_version(content).unwrap(), "0.1.0-rc.0".to_string());
     }
 
     #[test]

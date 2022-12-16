@@ -34,13 +34,10 @@ pub(crate) fn switch_branches(run_type: RunType) -> Result<RunType, StepError> {
     let branches = get_all_branches(&repo)?;
 
     if let Ok(existing) = repo.find_branch(&new_branch_name, BranchType::Local) {
-        println!(
-            "Found existing branch named {}, switching to it.",
-            new_branch_name
-        );
+        println!("Found existing branch named {new_branch_name}, switching to it.");
         switch_to_branch(&repo, &existing)?;
     } else {
-        println!("Creating a new branch called {}", new_branch_name);
+        println!("Creating a new branch called {new_branch_name}");
         let branch = select_branch(branches, "Which branch do you want to base off of?")?;
         let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
         switch_to_branch(&repo, &new_branch)?;
@@ -52,7 +49,7 @@ pub(crate) fn switch_branches(run_type: RunType) -> Result<RunType, StepError> {
 /// Rebase the current branch onto the selected one.
 pub(crate) fn rebase_branch(to: &str, mut run_type: RunType) -> Result<RunType, StepError> {
     if let RunType::DryRun { stdout, .. } = &mut run_type {
-        writeln!(stdout, "Would rebase current branch onto {}", to)?;
+        writeln!(stdout, "Would rebase current branch onto {to}")?;
         return Ok(run_type);
     }
 
@@ -65,9 +62,9 @@ pub(crate) fn rebase_branch(to: &str, mut run_type: RunType) -> Result<RunType, 
     repo.rebase(Some(&target), None, Some(&source), None)?
         .finish(None)?;
 
-    println!("Rebased current branch onto {}", to);
+    println!("Rebased current branch onto {to}");
     switch_to_branch(&repo, &target_branch)?;
-    println!("Switched to branch {}, don't forget to push!", to);
+    println!("Switched to branch {to}, don't forget to push!");
     Ok(run_type)
 }
 
@@ -121,7 +118,7 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, StepError> {
         Err(StepError::BadGitBranchName)
     }?;
 
-    println!("Auto-selecting issue {} from ref {}", &key, ref_name);
+    println!("Auto-selecting issue {} from ref {ref_name}", &key);
     Ok(Issue { key, summary })
 }
 

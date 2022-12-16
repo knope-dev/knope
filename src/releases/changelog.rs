@@ -38,7 +38,7 @@ pub(super) fn new_changelog_lines(
         fixes.len() + features.len() + breaking_changes.len() + HEADERS_AND_PADDING,
     );
 
-    blocks.push(format!("## {}\n", title));
+    blocks.push(format!("## {title}\n"));
     if !breaking_changes.is_empty() {
         blocks.push(String::from("### Breaking Changes\n"));
         blocks.extend(unordered_list(breaking_changes));
@@ -58,7 +58,7 @@ pub(super) fn new_changelog_lines(
 }
 
 fn unordered_list(items: &[String]) -> Map<Iter<String>, fn(&String) -> String> {
-    items.iter().map(|note| format!("- {}", note))
+    items.iter().map(|note| format!("- {note}"))
 }
 
 #[cfg(test)]

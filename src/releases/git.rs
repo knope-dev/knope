@@ -28,7 +28,7 @@ pub(crate) fn release(
     let tag = tag_name(version, package_name);
 
     if let Some(stdout) = dry_run_stdout {
-        writeln!(stdout, "Would create Git tag {}", tag)?;
+        writeln!(stdout, "Would create Git tag {tag}")?;
         return Ok(());
     }
 
@@ -78,7 +78,7 @@ pub(crate) fn get_current_versions_from_tag(
     let mut prerelease = None;
     let pattern = prefix
         .as_ref()
-        .map_or_else(|| String::from("v"), |prefix| format!("{}/v", prefix));
+        .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
     for tag in tags {
         if !tag.starts_with(&pattern) {
             continue;
