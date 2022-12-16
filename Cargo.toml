@@ -15,7 +15,7 @@ rust-version = "1.60"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.149", features = ["derive"] }
+serde = { version = "1.0.151", features = ["derive"] }
 base64 = "0.13.1"
 console = "0.15.2"
 dialoguer = "0.10.2"
