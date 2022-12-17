@@ -31,7 +31,7 @@ http = "0.2.8"
 clap = { version = "4.0.29", features = ["cargo", "derive", "env"] }
 itertools = "0.10.5"
 miette = { version = "5.5.0", features = ["fancy"] }
-thiserror = "1.0.37"
+thiserror = "1.0.38"
 velcro = "0.5.3"
 git-repository = "0.29.0"
 log = "0.4.17"
