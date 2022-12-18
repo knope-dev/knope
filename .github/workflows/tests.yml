@@ -24,21 +24,18 @@ jobs:
           cp cargo-binstall $HOME/.cargo/bin
 
       - name: Install cargo-make
-        run: cargo-binstall --no-confirm cargo-make
+        run: cargo-binstall --no-confirm cargo-make --force
 
       - name: Preinstall cargo-deny
-        run: cargo-binstall --no-confirm cargo-deny
+        run: cargo-binstall --no-confirm cargo-deny --force
 
       - name: Run CI
-        uses: actions-rs/cargo@v1
+        run: makers ci-flow
         env:
           CARGO_MAKE_BUILD_EXAMPLES: true
-        with:
-          command: make
-          args: ci-flow
 
       - name: Preinstall mdbook dependencies
-        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck
+        run: cargo-binstall --no-confirm mdbook --force
 
       - name: Test building the book
         uses: actions-rs/cargo@v1
