@@ -24,10 +24,10 @@ jobs:
           cp cargo-binstall $HOME/.cargo/bin
 
       - name: Install cargo-make
-        run: cargo-binstall --no-confirm cargo-make
+        run: cargo-binstall --no-confirm cargo-make --force
 
       - name: Preinstall cargo-deny
-        run: cargo-binstall --no-confirm cargo-deny
+        run: cargo-binstall --no-confirm cargo-deny --force
 
       - name: Run CI
         run: makers ci-flow
@@ -35,7 +35,7 @@ jobs:
           CARGO_MAKE_BUILD_EXAMPLES: true
 
       - name: Preinstall mdbook dependencies
-        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck
+        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck --force
 
       - name: Test building the book
         uses: actions-rs/cargo@v1
