@@ -16,7 +16,7 @@ rust-version = "1.60"
 
 [dependencies]
 serde = { version = "1.0.151", features = ["derive"] }
-base64 = "0.13.1"
+base64 = "0.20.0"
 console = "0.15.2"
 dialoguer = "0.10.2"
 toml = "0.5.10"
