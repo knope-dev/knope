@@ -38,10 +38,10 @@ jobs:
           cp cargo-binstall $HOME/.cargo/bin
 
       - name: Install cargo-make
-        run: cargo-binstall --no-confirm cargo-make
+        run: cargo-binstall --no-confirm cargo-make --force
 
       - name: Preinstall mdbook dependencies
-        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck
+        run: cargo-binstall --no-confirm mdbook --force
 
       - name: Build the book
         uses: actions-rs/cargo@v1
