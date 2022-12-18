@@ -22,7 +22,7 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_push_gpgsign: false
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - run: |
           cargo run -- release
         env:

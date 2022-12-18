@@ -15,7 +15,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
