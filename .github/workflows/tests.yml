@@ -30,12 +30,9 @@ jobs:
         run: cargo-binstall --no-confirm cargo-deny
 
       - name: Run CI
-        uses: actions-rs/cargo@v1
+        run: makers ci-flow
         env:
           CARGO_MAKE_BUILD_EXAMPLES: true
-        with:
-          command: make
-          args: ci-flow
 
       - name: Preinstall mdbook dependencies
         run: cargo-binstall --no-confirm mdbook mdbook-linkcheck
