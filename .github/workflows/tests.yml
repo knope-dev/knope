@@ -35,7 +35,7 @@ jobs:
           CARGO_MAKE_BUILD_EXAMPLES: true
 
       - name: Preinstall mdbook dependencies
-        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck --force
+        run: cargo-binstall --no-confirm mdbook --force
 
       - name: Test building the book
         uses: actions-rs/cargo@v1
