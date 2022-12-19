@@ -1,11 +1,12 @@
 use std::env::current_dir;
 use std::io::Write;
+use std::str::FromStr;
 
 use git_repository::object::Kind;
 use git_repository::open;
 use git_repository::refs::transaction::PreviousValue;
-use semver::Version;
 
+use crate::releases::semver::Version;
 use crate::releases::{CurrentVersions, Release};
 use crate::step::StepError;
 
@@ -46,20 +47,9 @@ pub(crate) fn release(
     Ok(())
 }
 
-fn replace_version_if_newer(current: &mut Option<Version>, new: Version) {
-    match current.as_ref() {
-        None => *current = Some(new),
-        Some(version) => {
-            if &new > version {
-                *current = Some(new);
-            }
-        }
-    }
-}
-
 pub(crate) fn get_current_versions_from_tag(
     prefix: Option<&str>,
-) -> Result<Option<CurrentVersions>, StepError> {
+) -> Result<CurrentVersions, StepError> {
     let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
     let references = repo.references().map_err(|_e| StepError::NotAGitRepo)?;
     let tags = references
@@ -74,8 +64,7 @@ pub(crate) fn get_current_versions_from_tag(
                     .replace("refs/tags/", "")
             })
         });
-    let mut stable = None;
-    let mut prerelease = None;
+    let mut current_versions = CurrentVersions::default();
     let pattern = prefix
         .as_ref()
         .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
@@ -84,19 +73,14 @@ pub(crate) fn get_current_versions_from_tag(
             continue;
         }
         let version_string = tag.replace(&pattern, "");
-        if let Ok(version) = Version::parse(version_string.as_str()) {
-            if version.pre.is_empty() {
-                replace_version_if_newer(&mut stable, version);
+        if let Ok(version) = Version::from_str(version_string.as_str()) {
+            if version.pre.is_none() {
+                current_versions.replace_stable_if_newer(version);
             } else {
-                replace_version_if_newer(&mut prerelease, version);
+                current_versions.insert_prerelease(version);
             }
         }
     }
 
-    // Don't consider prereleases older than the stable version.
-    if prerelease < stable {
-        prerelease = None;
-    }
-
-    Ok(stable.map(|stable| CurrentVersions { stable, prerelease }))
+    Ok(current_versions)
 }

@@ -9,6 +9,7 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::releases::semver::Label;
 use crate::releases::suggested_package_toml;
 use crate::state::RunType;
 use crate::{command, git, issues, releases};
@@ -100,7 +101,7 @@ impl Step {
     /// Set `prerelease_label` if `self` is `PrepareRelease`.
     pub(crate) fn set_prerelease_label(&mut self, prerelease_label: &str) {
         if let Step::PrepareRelease(prepare_release) = self {
-            prepare_release.prerelease_label = Some(String::from(prerelease_label));
+            prepare_release.prerelease_label = Some(Label::from(prerelease_label));
         }
     }
 }
@@ -158,6 +159,13 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
     )]
     InvalidSemanticVersion(String),
+    #[error("Could not determine the current version of the package")]
+    #[diagnostic(
+        code(step::no_current_version),
+        help("The current version of the package could not be determined"),
+        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
+    )]
+    NoCurrentVersion,
     #[error("Versioned files within the same package must have the same version. Found {0} which does not match {1}")]
     #[diagnostic(
         code(step::inconsistent_versions),
@@ -370,5 +378,5 @@ impl StepError {
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct PrepareRelease {
     /// If set, the user wants to create a pre-release version using the selected label.
-    pub(crate) prerelease_label: Option<String>,
+    pub(crate) prerelease_label: Option<Label>,
 }

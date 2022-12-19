@@ -1275,3 +1275,45 @@ fn no_version_change() {
         .failure()
         .stderr_eq_path(source_path.join("actual_output.txt"));
 }
+
+#[test]
+fn handle_pre_versions_that_are_too_new() {
+    // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v2.0.0-rc.0"); // An earlier pre-release, but 2.0 isn't finished yet!
+    tag(temp_path, "v1.2.3"); // The current stable version
+    commit(temp_path, "feat: A new feature");
+    tag(temp_path, "v1.3.0-rc.0"); // The current pre-release version
+    commit(temp_path, "feat: Another new feature");
+
+    let source_path = Path::new("tests/prepare_release/hande_pre_versions_that_are_too_new");
+    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
+    let cargo_toml = temp_dir.path().join("Cargo.toml");
+    write(cargo_toml, "[package]\nversion = \"1.2.3\"\n").unwrap();
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("prerelease")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stdout_eq_path(source_path.join("actual_output.txt"));
+    assert_eq_path(
+        source_path.join("EXPECTED_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}

@@ -1,6 +1,8 @@
-use ::semver::Version;
+use std::collections::BTreeMap;
+
 pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
 
+use crate::releases::semver::{Label, Prerelease, Version};
 use crate::state::Release::{Bumped, Prepared};
 use crate::step::StepError;
 use crate::RunType;
@@ -19,7 +21,7 @@ mod go;
 mod package;
 mod package_json;
 mod pyproject;
-mod semver;
+pub(crate) mod semver;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Release {
@@ -28,27 +30,66 @@ pub(crate) struct Release {
     pub(crate) package_name: Option<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct CurrentVersions {
-    pub(crate) stable: Version,
-    pub(crate) prerelease: Option<Version>,
+    pub(crate) stable: Option<Version>,
+    pub(crate) prereleases: Prereleases,
 }
+
+type Prereleases = BTreeMap<Version, BTreeMap<Label, Prerelease>>;
 
 impl CurrentVersions {
-    pub(crate) fn latest(&self) -> &Version {
-        self.prerelease.as_ref().unwrap_or(&self.stable)
+    pub(crate) fn into_latest(mut self) -> Option<Version> {
+        self.prereleases
+            .pop_last()
+            .map(|(version, mut pres)| {
+                let mut version = version;
+                version.pre = Some(
+                    pres.pop_last()
+                        .expect("This map is never allowed to be empty")
+                        .1,
+                );
+                version
+            })
+            .or(self.stable)
     }
 
-    pub(crate) fn into_latest(self) -> Version {
-        self.prerelease.unwrap_or(self.stable)
+    pub(crate) fn insert_prerelease(&mut self, prerelease: Version) {
+        let (stable_component, pre) = {
+            let mut version = prerelease;
+            let pre = version.pre.take().expect("This is a prerelease");
+            (version, pre)
+        };
+        let recorded_pre = self
+            .prereleases
+            .get(&stable_component)
+            .and_then(|pres| pres.get(&pre.label));
+        if let Some(recorded_pre) = recorded_pre {
+            if recorded_pre >= &pre {
+                return;
+            }
+        }
+        self.prereleases
+            .entry(stable_component)
+            .or_default()
+            .insert(pre.label.clone(), pre);
+    }
+
+    pub(crate) fn replace_stable_if_newer(&mut self, version: Version) {
+        if let Some(stable) = &self.stable {
+            if stable >= &version {
+                return;
+            }
+        }
+        self.stable = Some(version);
     }
 }
 
-impl Default for CurrentVersions {
-    fn default() -> Self {
+impl From<Version> for CurrentVersions {
+    fn from(version: Version) -> Self {
         Self {
-            stable: Version::new(0, 0, 0),
-            prerelease: None,
+            stable: Some(version),
+            prereleases: BTreeMap::new(),
         }
     }
 }

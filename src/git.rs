@@ -246,8 +246,7 @@ mod test_branch_name_from_issue {
 pub(crate) fn get_commit_messages_after_last_stable_version(
     package_name: &Option<String>,
 ) -> Result<Vec<String>, StepError> {
-    let target_version = get_current_versions_from_tag(package_name.as_deref())?
-        .map(|current_version| current_version.stable);
+    let target_version = get_current_versions_from_tag(package_name.as_deref())?.stable;
     let reference = match &target_version {
         Some(version) => {
             let tag = tag_name(version, package_name);

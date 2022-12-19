@@ -1,5 +1,5 @@
+use crate::releases::semver::Version;
 use crate::step::StepError;
-use semver::Version;
 
 pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<String, StepError> {
     if new_version.major == 0 || new_version.major == 1 {

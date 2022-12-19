@@ -4,7 +4,7 @@ use git_conventional::{Commit, Type};
 use log::debug;
 
 use crate::git::{add_files, get_commit_messages_after_last_stable_version};
-use crate::releases::semver::PackageVersion;
+use crate::releases::semver::{Label, PackageVersion};
 use crate::releases::Package;
 use crate::step::StepError;
 use crate::{state, step, RunType};
@@ -367,7 +367,7 @@ pub(crate) fn update_project_from_conventional_commits(
 fn prepare_release_for_package(
     package: Package,
     consider_scopes: bool,
-    prerelease_label: Option<&String>,
+    prerelease_label: Option<&Label>,
     dry_run_stdout: Option<&mut Box<dyn Write>>,
 ) -> Result<Option<Release>, StepError> {
     let ConventionalCommits {
@@ -392,12 +392,12 @@ fn prepare_release_for_package(
     };
     let PackageVersion { package, version } =
         bump_version(&rule, dry_run_stdout.is_some(), package)?;
-    let new_version_string = version.latest().to_string();
+    let new_version_string = version.to_string();
     let new_changes =
         new_changelog_lines(&new_version_string, &fixes, &features, &breaking_changes);
 
     let release = Release {
-        version: version.into_latest(),
+        version,
         changelog: new_changes.join("\n"),
         package_name: package.name,
     };
