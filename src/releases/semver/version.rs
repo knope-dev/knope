@@ -19,13 +19,11 @@ impl Ord for Version {
             .cmp(&other.major)
             .then_with(|| self.minor.cmp(&other.minor))
             .then_with(|| self.patch.cmp(&other.patch))
-            .then_with(|| {
-                match (&self.pre, &other.pre) {
-                    (Some(pre), Some(other_pre)) => pre.cmp(other_pre),
-                    (Some(_), None) => std::cmp::Ordering::Less,
-                    (None, Some(_)) => std::cmp::Ordering::Greater,
-                    (None, None) => std::cmp::Ordering::Equal,
-                }
+            .then_with(|| match (&self.pre, &other.pre) {
+                (Some(pre), Some(other_pre)) => pre.cmp(other_pre),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => std::cmp::Ordering::Equal,
             })
     }
 }
