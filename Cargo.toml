@@ -25,7 +25,7 @@ git2 = { version = "0.15.0", default-features = false }
 semver = "1.0.15"
 execute = "0.2.11"
 platform-dirs = "0.3.0"
-git-conventional = "0.12.0"
+git-conventional = "0.12.1"
 ureq = { version = "2.5.0", features = ["json"] }
 http = "0.2.8"
 clap = { version = "4.0.32", features = ["cargo", "derive", "env"] }
@@ -33,11 +33,11 @@ itertools = "0.10.5"
 miette = { version = "5.5.0", features = ["fancy"] }
 thiserror = "1.0.38"
 velcro = "0.5.3"
-git-repository = "0.29.0"
+git-repository = "0.30.2"
 log = "0.4.17"
 env_logger = "0.10.0"
-git-traverse = "0.19.0"
-git-object = "0.23.0"
+git-traverse = "0.20.0"
+git-object = "0.24.0"
 
 [dev-dependencies]
 rstest = "0.16.0"
