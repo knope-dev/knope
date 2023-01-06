@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
 
-use crate::releases::semver::{Label, Prerelease, Version};
+use crate::releases::semver::{Label, PreVersion, Prerelease, StableVersion, Version};
 use crate::state::Release::{Bumped, Prepared};
 use crate::step::StepError;
 use crate::RunType;
@@ -32,65 +32,79 @@ pub(crate) struct Release {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct CurrentVersions {
-    pub(crate) stable: Option<Version>,
+    pub(crate) stable: Option<StableVersion>,
     pub(crate) prereleases: Prereleases,
 }
 
-type Prereleases = BTreeMap<Version, BTreeMap<Label, Prerelease>>;
+type Prereleases = BTreeMap<StableVersion, BTreeMap<Label, Prerelease>>;
 
 impl CurrentVersions {
     pub(crate) fn into_latest(mut self) -> Option<Version> {
         self.prereleases
             .pop_last()
-            .map(|(version, mut pres)| {
-                let mut version = version;
-                version.pre = Some(
-                    pres.pop_last()
-                        .expect("This map is never allowed to be empty")
-                        .1,
-                );
-                version
+            .map(|(stable_component, mut pres)| {
+                let pre_component = pres
+                    .pop_last()
+                    .expect("This map is never allowed to be empty")
+                    .1;
+                Version::Pre(PreVersion {
+                    stable_component,
+                    pre_component,
+                })
             })
-            .or(self.stable)
+            .or_else(|| self.stable.map(Version::Stable))
     }
 
-    pub(crate) fn insert_prerelease(&mut self, prerelease: Version) {
-        let (stable_component, pre) = {
-            let mut version = prerelease;
-            let pre = version.pre.take().expect("This is a prerelease");
-            (version, pre)
-        };
-        let recorded_pre = self
-            .prereleases
-            .get(&stable_component)
-            .and_then(|pres| pres.get(&pre.label));
-        if let Some(recorded_pre) = recorded_pre {
-            if recorded_pre >= &pre {
-                return;
+    /// Replace or insert the version in the correct location if it's newer than the current
+    /// equivalent version. If the version is a newer stable version, it will update `stable`.
+    /// If the version is a newer prerelease, it will overwrite the prerelease with
+    /// the same stable component and label.
+    pub(crate) fn update_version(&mut self, version: Version) {
+        match version {
+            Version::Stable(new) => {
+                if let Some(existing) = &self.stable {
+                    if existing >= &new {
+                        return;
+                    }
+                }
+                self.stable = Some(new);
+            }
+            Version::Pre(PreVersion {
+                stable_component,
+                pre_component,
+            }) => {
+                let recorded_pre = self
+                    .prereleases
+                    .get(&stable_component)
+                    .and_then(|pres| pres.get(&pre_component.label));
+                if let Some(recorded_pre) = recorded_pre {
+                    if recorded_pre >= &pre_component {
+                        return;
+                    }
+                }
+                self.prereleases
+                    .entry(stable_component)
+                    .or_default()
+                    .insert(pre_component.label.clone(), pre_component);
             }
         }
-        self.prereleases
-            .entry(stable_component)
-            .or_default()
-            .insert(pre.label.clone(), pre);
     }
+}
 
-    pub(crate) fn replace_stable_if_newer(&mut self, version: Version) {
-        if let Some(stable) = &self.stable {
-            if stable >= &version {
-                return;
-            }
+impl From<StableVersion> for CurrentVersions {
+    fn from(version: StableVersion) -> Self {
+        Self {
+            stable: Some(version),
+            prereleases: BTreeMap::new(),
         }
-        self.stable = Some(version);
     }
 }
 
 impl From<Version> for CurrentVersions {
     fn from(version: Version) -> Self {
-        Self {
-            stable: Some(version),
-            prereleases: BTreeMap::new(),
-        }
+        let mut new = Self::default();
+        new.update_version(version);
+        new
     }
 }
 

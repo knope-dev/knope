@@ -2,7 +2,8 @@ use crate::releases::semver::Version;
 use crate::step::StepError;
 
 pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<String, StepError> {
-    if new_version.major == 0 || new_version.major == 1 {
+    let new_major = new_version.stable_component().major;
+    if new_major == 0 || new_major == 1 {
         // These major versions aren't recorded in go.mod
         return Ok(go_mod);
     }
@@ -29,18 +30,18 @@ pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<Strin
         None
     };
     if let Some(existing_version) = existing_version {
-        if existing_version == new_version.major {
+        if existing_version == new_version.stable_component().major {
             // Major version has not changed—keep existing content
             return Ok(go_mod);
         }
         let index = parts.len() - 1;
-        let new_version_string = format!("v{}", new_version.major);
+        let new_version_string = format!("v{new_major}");
         parts[index] = new_version_string.as_str();
         let new_module_line = format!("module {}", parts.join("/"));
         Ok(go_mod.replace(module_line, &new_module_line))
     } else {
         // No existing version found—add new line
-        let new_module_line = format!("module {module}/v{}", new_version.major);
+        let new_module_line = format!("module {module}/v{new_major}");
         Ok(go_mod.replace(module_line, &new_module_line))
     }
 }

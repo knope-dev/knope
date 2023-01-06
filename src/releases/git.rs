@@ -74,11 +74,7 @@ pub(crate) fn get_current_versions_from_tag(
         }
         let version_string = tag.replace(&pattern, "");
         if let Ok(version) = Version::from_str(version_string.as_str()) {
-            if version.pre.is_none() {
-                current_versions.replace_stable_if_newer(version);
-            } else {
-                current_versions.insert_prerelease(version);
-            }
+            current_versions.update_version(version);
         }
     }
 

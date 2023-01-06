@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -5,31 +6,100 @@ use serde::{Deserialize, Serialize};
 
 use crate::step::StepError;
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub(crate) struct Version {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum Version {
+    Stable(StableVersion),
+    Pre(PreVersion),
+}
+
+impl Version {
+    pub(crate) const fn stable_component(&self) -> StableVersion {
+        match self {
+            Self::Stable(stable) => *stable,
+            Self::Pre(pre) => pre.stable_component,
+        }
+    }
+
+    pub(crate) const fn is_prerelease(&self) -> bool {
+        matches!(self, Version::Pre(_))
+    }
+}
+
+impl Version {
+    pub(crate) fn new(major: u64, minor: u64, patch: u64, pre: Option<Prerelease>) -> Self {
+        let stable = StableVersion {
+            major,
+            minor,
+            patch,
+        };
+        match pre {
+            Some(pre) => Self::Pre(PreVersion {
+                stable_component: stable,
+                pre_component: pre,
+            }),
+            None => Self::Stable(stable),
+        }
+    }
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Self::new(0, 0, 0, None)
+    }
+}
+
+impl From<StableVersion> for Version {
+    fn from(stable: StableVersion) -> Self {
+        Self::Stable(stable)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) struct StableVersion {
     pub(crate) major: u64,
     pub(crate) minor: u64,
     pub(crate) patch: u64,
-    pub(crate) pre: Option<Prerelease>,
 }
 
-impl Ord for Version {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+impl Ord for StableVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.major
             .cmp(&other.major)
             .then_with(|| self.minor.cmp(&other.minor))
             .then_with(|| self.patch.cmp(&other.patch))
-            .then_with(|| match (&self.pre, &other.pre) {
-                (Some(pre), Some(other_pre)) => pre.cmp(other_pre),
-                (Some(_), None) => std::cmp::Ordering::Less,
-                (None, Some(_)) => std::cmp::Ordering::Greater,
-                (None, None) => std::cmp::Ordering::Equal,
-            })
+    }
+}
+
+impl PartialOrd for StableVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct PreVersion {
+    pub(crate) stable_component: StableVersion,
+    pub(crate) pre_component: Prerelease,
+}
+
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.stable_component().cmp(&other.stable_component()) {
+            Ordering::Equal => match (self, other) {
+                (Self::Stable(_), Self::Stable(_)) => Ordering::Equal,
+                (Self::Stable(_), Self::Pre(_)) => Ordering::Greater,
+                (Self::Pre(_), Self::Stable(_)) => Ordering::Less,
+                (Self::Pre(pre), Self::Pre(other_pre)) => {
+                    pre.pre_component.cmp(&other_pre.pre_component)
+                }
+            },
+            ordering => ordering,
+        }
     }
 }
 
 impl PartialOrd for Version {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -53,22 +123,40 @@ impl FromStr for Version {
                 "Version must have exactly 3 parts".to_string(),
             ));
         }
-        Ok(Self {
+        let stable = StableVersion {
             major: version_parts[0],
             minor: version_parts[1],
             patch: version_parts[2],
-            pre: pre.map(Prerelease::from_str).transpose()?,
-        })
+        };
+        if let Some(pre) = pre {
+            Ok(Self::Pre(PreVersion {
+                stable_component: stable,
+                pre_component: Prerelease::from_str(pre)?,
+            }))
+        } else {
+            Ok(Self::Stable(stable))
+        }
     }
 }
 
 impl Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
-        if let Some(pre) = &self.pre {
-            write!(f, "-{pre}")?;
+        match self {
+            Self::Stable(StableVersion {
+                major,
+                minor,
+                patch,
+            }) => write!(f, "{major}.{minor}.{patch}"),
+            Self::Pre(PreVersion {
+                stable_component:
+                    StableVersion {
+                        major,
+                        minor,
+                        patch,
+                    },
+                pre_component,
+            }) => write!(f, "{major}.{minor}.{patch}-{pre_component}",),
         }
-        Ok(())
     }
 }
 
@@ -101,7 +189,7 @@ impl FromStr for Prerelease {
 }
 
 impl Ord for Prerelease {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.label
             .cmp(&other.label)
             .then(self.version.cmp(&other.version))
@@ -109,7 +197,7 @@ impl Ord for Prerelease {
 }
 
 impl PartialOrd for Prerelease {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }

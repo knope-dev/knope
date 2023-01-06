@@ -206,12 +206,7 @@ mod test_replace_variables {
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, packages());
-        let version = Version {
-            major: 1,
-            minor: 2,
-            patch: 3,
-            pre: None,
-        };
+        let version = Version::new(1, 2, 3, None);
         state.releases.push(state::Release::Prepared(Release {
             version: version.clone(),
             changelog: String::new(),

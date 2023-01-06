@@ -34,7 +34,7 @@ pub(crate) fn release(
         tag_name: &tag_name,
         name: &name,
         body: changelog,
-        prerelease: release.version.pre.is_some(),
+        prerelease: release.version.is_prerelease(),
     };
 
     if let Some(stdout) = dry_run_stdout {
