@@ -33,11 +33,11 @@ itertools = "0.10.5"
 miette = { version = "5.5.0", features = ["fancy"] }
 thiserror = "1.0.38"
 velcro = "0.5.4"
-git-repository = "0.30.2"
+git-repository = "0.31.0"
 log = "0.4.17"
 env_logger = "0.10.0"
-git-traverse = "0.20.0"
-git-object = "0.24.0"
+git-traverse = "0.21.0"
+git-object = "0.25.0"
 
 [dev-dependencies]
 rstest = "0.16.0"
