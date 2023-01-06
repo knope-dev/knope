@@ -673,7 +673,21 @@ checksum = "599cb75eb7c3bf03149b7ab70c66bc0b9a432a092b1154b49d21b49fc7e4bd93"
 dependencies = [
  "bstr",
  "btoi",
- "git-date",
+ "git-date 0.3.1",
+ "itoa",
+ "nom",
+ "quick-error",
+]
+
+[[package]]
+name = "git-actor"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9e5fd7bc63ad527d64584f8d01f99b89c051f5fbb8144b58ae5f812775065cf"
+dependencies = [
+ "bstr",
+ "btoi",
+ "git-date 0.4.0",
  "itoa",
  "nom",
  "quick-error",
@@ -796,13 +810,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "git-date"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "412c9b89026505bd24d5f8acafa578de6eea3b271ece307a73b8e646e671302a"
+dependencies = [
+ "bstr",
+ "itoa",
+ "thiserror",
+ "time",
+]
+
+[[package]]
 name = "git-diff"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8ae775956f509fe115b173d79e539f97539d40c1d5c5c63a61d10eaf79c857a"
 dependencies = [
  "git-hash",
- "git-object",
+ "git-object 0.25.0",
  "imara-diff",
  "thiserror",
 ]
@@ -887,8 +913,8 @@ dependencies = [
  "git-features",
  "git-hash",
  "git-lock",
- "git-object",
- "git-traverse",
+ "git-object 0.25.0",
+ "git-traverse 0.21.0",
  "itoa",
  "memmap2",
  "smallvec",
@@ -913,7 +939,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "396cef08d4ec18ea35fed043f5b003e46957603a01349dd429a4773c146fefca"
 dependencies = [
  "bstr",
- "git-actor",
+ "git-actor 0.16.0",
  "quick-error",
 ]
 
@@ -925,7 +951,26 @@ checksum = "fad6c2ddb376b99172dc8b651e11be4cb49cef423de4fad563ebbda4fee3fcf6"
 dependencies = [
  "bstr",
  "btoi",
- "git-actor",
+ "git-actor 0.16.0",
+ "git-features",
+ "git-hash",
+ "git-validate",
+ "hex",
+ "itoa",
+ "nom",
+ "smallvec",
+ "thiserror",
+]
+
+[[package]]
+name = "git-object"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f8563e2d6f524d7053f3106714f99ecdc3adbba2cb7108c09d71a02579f2e19"
+dependencies = [
+ "bstr",
+ "btoi",
+ "git-actor 0.17.0",
  "git-features",
  "git-hash",
  "git-validate",
@@ -945,7 +990,7 @@ dependencies = [
  "arc-swap",
  "git-features",
  "git-hash",
- "git-object",
+ "git-object 0.25.0",
  "git-pack",
  "git-path",
  "git-quote",
@@ -968,10 +1013,10 @@ dependencies = [
  "git-features",
  "git-hash",
  "git-hashtable",
- "git-object",
+ "git-object 0.25.0",
  "git-path",
  "git-tempfile",
- "git-traverse",
+ "git-traverse 0.21.0",
  "memmap2",
  "parking_lot 0.12.1",
  "smallvec",
@@ -1019,11 +1064,11 @@ version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b351af399166a5506369e36389d6b9aee744cfa672d0e2ea93d2b01223b1cfbe"
 dependencies = [
- "git-actor",
+ "git-actor 0.16.0",
  "git-features",
  "git-hash",
  "git-lock",
- "git-object",
+ "git-object 0.25.0",
  "git-path",
  "git-tempfile",
  "git-validate",
@@ -1052,11 +1097,11 @@ version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9e21852e326233c5f3f034a44b66215c166506e5ccf227de7e28ccdfbcfb47a"
 dependencies = [
- "git-actor",
+ "git-actor 0.16.0",
  "git-attributes",
  "git-config",
  "git-credentials",
- "git-date",
+ "git-date 0.3.1",
  "git-diff",
  "git-discover",
  "git-features",
@@ -1066,7 +1111,7 @@ dependencies = [
  "git-index",
  "git-lock",
  "git-mailmap",
- "git-object",
+ "git-object 0.25.0",
  "git-odb",
  "git-pack",
  "git-path",
@@ -1076,7 +1121,7 @@ dependencies = [
  "git-revision",
  "git-sec",
  "git-tempfile",
- "git-traverse",
+ "git-traverse 0.21.0",
  "git-url",
  "git-validate",
  "git-worktree",
@@ -1096,10 +1141,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b64c0d2e37eb24c8897d11a2f77371a817c3d40dc744d4a2f048f33236eef6b"
 dependencies = [
  "bstr",
- "git-date",
+ "git-date 0.3.1",
  "git-hash",
  "git-hashtable",
- "git-object",
+ "git-object 0.25.0",
  "thiserror",
 ]
 
@@ -1138,7 +1183,19 @@ checksum = "43b91ed45b561161ba56b85a83865825b7d17a6b1c6f981e831a78b93cf2cc5f"
 dependencies = [
  "git-hash",
  "git-hashtable",
- "git-object",
+ "git-object 0.25.0",
+ "thiserror",
+]
+
+[[package]]
+name = "git-traverse"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd356da21ec00f69b9d4f105df4cb85543c746b18f4b7fc81529ce77713cdb29"
+dependencies = [
+ "git-hash",
+ "git-hashtable",
+ "git-object 0.26.0",
  "thiserror",
 ]
 
@@ -1178,7 +1235,7 @@ dependencies = [
  "git-glob",
  "git-hash",
  "git-index",
- "git-object",
+ "git-object 0.25.0",
  "git-path",
  "io-close",
  "thiserror",
@@ -1405,9 +1462,9 @@ dependencies = [
  "env_logger",
  "execute",
  "git-conventional",
- "git-object",
+ "git-object 0.26.0",
  "git-repository",
- "git-traverse",
+ "git-traverse 0.22.0",
  "git2",
  "http",
  "itertools",
