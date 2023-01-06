@@ -32,7 +32,7 @@ clap = { version = "4.0.32", features = ["cargo", "derive", "env"] }
 itertools = "0.10.5"
 miette = { version = "5.5.0", features = ["fancy"] }
 thiserror = "1.0.38"
-velcro = "0.5.3"
+velcro = "0.5.4"
 git-repository = "0.30.2"
 log = "0.4.17"
 env_logger = "0.10.0"
