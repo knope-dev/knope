@@ -52,7 +52,7 @@ impl FromStr for Version {
             .collect::<Result<Vec<_>, _>>()?;
         if version_parts.len() != 3 {
             return Err(StepError::InvalidSemanticVersion(
-                "Version must have 3 parts".to_string(),
+                "Version must have exactly 3 parts".to_string(),
             ));
         }
         Ok(Self {
