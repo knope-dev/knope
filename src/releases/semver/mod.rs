@@ -57,7 +57,7 @@ impl Default for ConventionalRule {
 pub(crate) struct PackageVersion {
     /// The current version for the package
     pub(crate) version: Version,
-    /// The package from which the version was derived (and the package that should be bumped).
+    /// The package from which the version was derived and that should be bumped.
     pub(crate) package: Package,
 }
 
