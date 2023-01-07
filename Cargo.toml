@@ -36,8 +36,6 @@ velcro = "0.5.4"
 git-repository = "0.31.0"
 log = "0.4.17"
 env_logger = "0.10.0"
-git-traverse = "0.21.0"
-git-object = "0.25.0"
 
 [dev-dependencies]
 rstest = "0.16.0"
