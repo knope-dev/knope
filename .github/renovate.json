@@ -2,11 +2,5 @@
   "extends": [
     "config:base",
     ":semanticCommitTypeAll(chore)"
-  ],
-  "packageRules": [
-    {
-      "matchPackagePatterns": ["^git\-.*"],
-      "groupName": "gitoxide packages"
-    }
   ]
 }
