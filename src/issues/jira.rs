@@ -1,3 +1,4 @@
+use base64::{prelude::BASE64_STANDARD as base64, Engine};
 use serde::{Deserialize, Serialize};
 
 use crate::app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token};
@@ -32,7 +33,7 @@ fn get_auth() -> Result<String, StepError> {
     let token = get_or_prompt_for_jira_token()?;
     Ok(format!(
         "Basic {}",
-        base64::encode(format!("{email}:{token}"))
+        base64.encode(format!("{email}:{token}"))
     ))
 }
 
