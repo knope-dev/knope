@@ -9,10 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - run: |
+          rustup override set stable
+          rustup update stable
       - uses: Swatinem/rust-cache@v2
       - uses: katyo/publish-crates@v1
         with:
@@ -40,9 +39,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - run: |
+          rustup override set stable
+          rustup update stable
 
       - uses: Swatinem/rust-cache@v2
 
