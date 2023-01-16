@@ -55,12 +55,6 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Get release
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
       - name: Set Archive Name (Non-Windows)
         id: archive
         run: echo "archive_name=knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}" >> $GITHUB_ENV
@@ -83,12 +77,9 @@ jobs:
       - name: Create Tar Archive
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+      - name: Upload Release Assets
+        uses: alexellis/upload-assets@0.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ${{ env.archive_name }}.tgz
-          asset_name: ${{ env.archive_name }}.tgz
-          asset_content_type: application/gzip
+          asset_paths: '[${{ env.archive_name }}.tgz]'
