@@ -43,7 +43,7 @@ A package, by Knope's definition, has a single version. There can, however, be m
 Want to bump the version of a file that isn't natively supported? [Request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
 
 ```toml
-[[packages]]
+[package]
 versioned_files = []  # With no versioned_files, the version will be determined via Git tag
 changelog = "CHANGELOG.md"
 
