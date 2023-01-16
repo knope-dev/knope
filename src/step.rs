@@ -261,6 +261,15 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
     )]
     UncommittedChanges,
+    #[error("Could not determine Git committer to commit changes")]
+    #[diagnostic(
+        code(step::no_committer),
+        help(
+            "We couldn't determine who to commit the changes as. Please set the `user.name` and \
+            `user.email` Git config options."
+        )
+    )]
+    NoCommitter,
     #[error("Could not complete checkout")]
     #[diagnostic(
     code(step::incomplete_checkout),

@@ -39,7 +39,7 @@ pub(crate) fn release(
         tag,
         head.id,
         Kind::Commit,
-        Some(repo.committer_or_default()),
+        Some(repo.committer().ok_or(StepError::NoCommitter)?),
         "",
         PreviousValue::Any,
     )?;
