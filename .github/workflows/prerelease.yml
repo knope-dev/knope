@@ -11,10 +11,9 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - run: |
+          rustup override set stable
+          rustup update stable
       - uses: Swatinem/rust-cache@v2
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v5

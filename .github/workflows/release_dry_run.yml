@@ -13,10 +13,9 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - run: |
+          rustup override set stable
+          rustup update stable
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo run -- release --dry-run
