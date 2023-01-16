@@ -17,17 +17,17 @@ rust-version = "1.60"
 [dependencies]
 serde = { version = "1.0.152", features = ["derive"] }
 base64 = "0.20.0"
-console = "0.15.4"
-dialoguer = "0.10.2"
+console = "0.15.5"
+dialoguer = "0.10.3"
 toml = "0.5.10"
 serde_json = { version = "1.0.91", features = ["preserve_order"] }
 git2 = { version = "0.15.0", default-features = false }
 execute = "0.2.11"
 platform-dirs = "0.3.0"
 git-conventional = "0.12.1"
-ureq = { version = "2.6.1", features = ["json"] }
+ureq = { version = "2.6.2", features = ["json"] }
 http = "0.2.8"
-clap = { version = "4.0.32", features = ["cargo", "derive", "env"] }
+clap = { version = "4.1.1", features = ["cargo", "derive", "env"] }
 itertools = "0.10.5"
 miette = { version = "5.5.0", features = ["fancy"] }
 thiserror = "1.0.38"
@@ -35,8 +35,6 @@ velcro = "0.5.4"
 git-repository = "0.31.0"
 log = "0.4.17"
 env_logger = "0.10.0"
-git-traverse = "0.21.0"
-git-object = "0.25.0"
 
 [dev-dependencies]
 rstest = "0.16.0"

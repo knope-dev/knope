@@ -1,7 +1,7 @@
-use git_object::decode;
+use git_repository::objs::decode;
 use git_repository::reference::{head_commit, peel};
 use git_repository::tag;
-use git_traverse::commit::ancestors;
+use git_repository::traverse::commit::ancestors;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
