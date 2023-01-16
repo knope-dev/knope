@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.7.0
+
+### Breaking Changes
+
+- Handling of pre-release versions has been reworked to handle many more edge cases, which results in more correct (but different) behavior.
+
+### Fixes
+
+- Check all relevant pre-release versions, not just the latest [#334, #346]. Thanks @Shadow53!
+
 ## 0.6.3
 
 ### Fixes
