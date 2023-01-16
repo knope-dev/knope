@@ -246,18 +246,14 @@ mod test_branch_name_from_issue {
 pub(crate) fn get_commit_messages_after_last_stable_version(
     package_name: &Option<String>,
 ) -> Result<Vec<String>, StepError> {
-    let target_version = get_current_versions_from_tag(package_name.as_deref())?
-        .map(|current_version| current_version.stable);
-    let reference = match &target_version {
-        Some(version) => {
-            let tag = tag_name(version, package_name);
-            debug!("Processing all commits since tag {tag}");
-            Some(format!("refs/tags/{tag}"))
-        }
-        None => {
-            warn!("No stable version tag found, processing all commits.");
-            None
-        }
+    let target_version = get_current_versions_from_tag(package_name.as_deref())?.stable;
+    let reference = if let Some(version) = target_version {
+        let tag = tag_name(&version.into(), package_name);
+        debug!("Processing all commits since tag {tag}");
+        Some(format!("refs/tags/{tag}"))
+    } else {
+        warn!("No stable version tag found, processing all commits.");
+        None
     };
     let repo = git_repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
     let tag_ref = reference

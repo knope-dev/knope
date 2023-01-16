@@ -3,6 +3,7 @@ use std::io::Write;
 use crate::config;
 use crate::issues;
 use crate::releases;
+use crate::releases::semver::Version;
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
 #[derive(Clone, Debug)]
@@ -71,7 +72,7 @@ pub(crate) enum Issue {
 pub(crate) enum Release {
     /// Triggered by [`crate::Step::BumpVersion`].
     Bumped {
-        version: semver::Version,
+        version: Version,
         package_name: Option<String>,
     },
     /// Triggered by [`crate::Step::PrepareRelease`]. Contains the generated release notes and new

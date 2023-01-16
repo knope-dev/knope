@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
 use log::trace;
-use semver::Version;
 
 use crate::config::Package as PackageConfig;
+use crate::releases::semver::Version;
 use crate::releases::{cargo, get_current_versions_from_tag, go, package_json, pyproject};
 use crate::step::StepError;
 use crate::step::StepError::InvalidCargoToml;
@@ -141,8 +141,8 @@ impl PackageFormat {
                 .map_err(|_| StepError::InvalidPackageJson(path.into())),
             PackageFormat::Go => get_current_versions_from_tag(name).map(|current_versions| {
                 current_versions
-                    .unwrap_or_default()
                     .into_latest()
+                    .unwrap_or_default()
                     .to_string()
             }),
         }

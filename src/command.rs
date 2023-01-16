@@ -63,7 +63,10 @@ fn replace_variables(
                 let release = if state.releases.is_empty() {
                     command = command.replace(
                         &var_name,
-                        &get_version(package.clone())?.latest_version().to_string(),
+                        &get_version(package)?
+                            .into_latest()
+                            .ok_or(StepError::NoCurrentVersion)?
+                            .to_string(),
                     );
                     continue;
                 } else {
@@ -126,9 +129,8 @@ mod test_run_command {
 #[cfg(test)]
 mod test_replace_variables {
     use crate::issues::Issue;
-    use crate::releases::{Package, Release};
+    use crate::releases::{semver::Version, Package, Release};
     use crate::state;
-    use semver::Version;
     use std::path::PathBuf;
 
     use super::*;
@@ -168,9 +170,10 @@ mod test_replace_variables {
             command,
             format!(
                 "blah {} {}",
-                get_version(state.packages[0].clone())
+                get_version(&state.packages[0])
                     .unwrap()
-                    .latest_version(),
+                    .into_latest()
+                    .unwrap(),
                 expected_branch_name
             )
         );
@@ -189,9 +192,10 @@ mod test_replace_variables {
             command,
             format!(
                 "blah {} other blah",
-                get_version(state.packages[0].clone())
+                get_version(&state.packages[0])
                     .unwrap()
-                    .latest_version(),
+                    .into_latest()
+                    .unwrap(),
             )
         );
     }
@@ -202,7 +206,7 @@ mod test_replace_variables {
         let mut variables = HashMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, packages());
-        let version = Version::new(1, 2, 3);
+        let version = Version::new(1, 2, 3, None);
         state.releases.push(state::Release::Prepared(Release {
             version: version.clone(),
             changelog: String::new(),
