@@ -35,9 +35,7 @@ impl Config {
     /// ## Errors
     /// 1. Cannot parse file contents into a Config
     pub(crate) fn load() -> Result<Self> {
-        let contents = if let Ok(contents) = fs::read_to_string(Self::CONFIG_PATH) {
-            contents
-        } else {
+        let Ok(contents) = fs::read_to_string(Self::CONFIG_PATH) else {
             log::debug!("No `knope.toml` found, using default config");
             return Ok(generate());
         };

@@ -376,9 +376,7 @@ fn prepare_release_for_package(
         fixes,
         breaking_changes,
     } = get_conventional_commits_after_last_stable_version(&package, consider_scopes)?;
-    let rule = if let Some(rule) = rule {
-        rule
-    } else {
+    let Some(rule) = rule else {
         return Ok(None);
     };
 
