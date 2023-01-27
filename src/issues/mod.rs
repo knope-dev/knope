@@ -29,8 +29,7 @@ pub(super) fn select_jira_issue(status: &str, run_type: RunType) -> Result<RunTy
     if let Some(mut stdout) = dry_run_stdout {
         writeln!(
             stdout,
-            "Would query configured Jira instance for issues with status {}",
-            status
+            "Would query configured Jira instance for issues with status {status}"
         )?;
         writeln!(
             stdout,
@@ -115,8 +114,7 @@ pub(super) fn transition_jira_issue(status: &str, run_type: RunType) -> Result<R
     if let Some(mut stdout) = dry_run_stdout {
         writeln!(
             stdout,
-            "Would transition currently selected issue to status {}",
-            status
+            "Would transition currently selected issue to status {status}"
         )?;
         return Ok(RunType::DryRun { state, stdout });
     }

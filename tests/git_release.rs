@@ -111,7 +111,7 @@ fn multiple_packages() {
         "package.json",
     ] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }

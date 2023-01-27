@@ -65,7 +65,8 @@ pub(crate) fn release(
 
     let response = ureq::post(&url)
         .set("Authorization", &token_header)
-        .send_json(github_release)?;
+        .send_json(github_release)
+        .or(Err(StepError::ApiRequestError))?;
 
     if response.status() != 201 {
         return Err(StepError::ApiResponseError(None));

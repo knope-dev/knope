@@ -24,8 +24,7 @@ pub(crate) fn switch_branches(run_type: RunType) -> Result<RunType, StepError> {
     if let Some(mut stdout) = dry_run_stdout {
         writeln!(
             stdout,
-            "Would switch to or create a branch named {}",
-            new_branch_name
+            "Would switch to or create a branch named {new_branch_name}"
         )?;
         return Ok(RunType::DryRun { state, stdout });
     }

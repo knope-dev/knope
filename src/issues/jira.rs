@@ -44,7 +44,8 @@ pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>,
     let url = format!("{}/rest/api/3/search", jira_config.url);
     Ok(ureq::post(&url)
         .set("Authorization", &auth)
-        .send_json(ureq::json!({"jql": jql, "fields": ["summary"]}))?
+        .send_json(ureq::json!({"jql": jql, "fields": ["summary"]}))
+        .or(Err(StepError::ApiRequestError))?
         .into_json::<SearchResponse>()?
         .issues
         .into_iter()
@@ -64,7 +65,11 @@ pub(crate) fn transition_issue(
     let base_url = &jira_config.url;
     let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions",);
     let agent = ureq::Agent::new();
-    let response = agent.get(&url).set("Authorization", &auth).call()?;
+    let response = agent
+        .get(&url)
+        .set("Authorization", &auth)
+        .call()
+        .or(Err(StepError::ApiRequestError))?;
     let response = response.into_json::<GetTransitionResponse>()?;
     let transition = response
         .transitions
@@ -74,7 +79,8 @@ pub(crate) fn transition_issue(
     let _response = agent
         .post(&url)
         .set("Authorization", &auth)
-        .send_json(ureq::json!({"transition": {"id": transition.id}}))?;
+        .send_json(ureq::json!({"transition": {"id": transition.id}}))
+        .or(Err(StepError::ApiRequestError))?;
     Ok(())
 }
 

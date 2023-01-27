@@ -214,7 +214,7 @@ pub(super) enum StepError {
              network issue."
         )
     )]
-    ApiRequestError(#[from] ureq::Error),
+    ApiRequestError,
     #[error("Trouble decoding the response from a remote API")]
     #[diagnostic(
     code(step::api_response_error),

@@ -70,7 +70,7 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
     // Assert
     validate_assert
         .failure()
-        .stderr_eq_path(source_path.join(format!("{case}_stderr.txt", case = target_file)));
+        .stderr_eq_path(source_path.join(format!("{target_file}_stderr.txt")));
     assert.success().stdout_eq("Generating a knope.toml file\n");
     assert_eq_path(
         source_path.join(target_file),

@@ -40,7 +40,8 @@ pub(crate) fn list_issues(
                 "owner": github_config.owner,
                 "labels": labels
             }
-        }))?;
+        }))
+        .or(Err(StepError::ApiRequestError))?;
 
     let gh_issues = decode_github_response(response)?;
 
