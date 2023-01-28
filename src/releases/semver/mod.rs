@@ -1,15 +1,17 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
-
 pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 
-use crate::git::add_files;
-use crate::releases::git::get_current_versions_from_tag;
-use crate::releases::package::Package;
-use crate::releases::{CurrentVersions, Prereleases};
-use crate::step::StepError;
-use crate::{state, RunType};
+use crate::{
+    git::add_files,
+    releases::{
+        git::get_current_versions_from_tag, package::Package, CurrentVersions, Prereleases,
+    },
+    state,
+    step::StepError,
+    RunType,
+};
 
 mod version;
 

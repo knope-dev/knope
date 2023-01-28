@@ -2,13 +2,14 @@ use std::io::Write;
 
 use serde::Serialize;
 
-use crate::app_config::get_or_prompt_for_github_token;
-use crate::config::GitHub;
-use crate::releases::git::tag_name;
-use crate::releases::Release;
-use crate::state;
-use crate::state::GitHub::{Initialized, New};
-use crate::step::StepError;
+use crate::{
+    app_config::get_or_prompt_for_github_token,
+    config::GitHub,
+    releases::{git::tag_name, Release},
+    state,
+    state::GitHub::{Initialized, New},
+    step::StepError,
+};
 
 pub(crate) fn release(
     release: &Release,
@@ -65,7 +66,8 @@ pub(crate) fn release(
 
     let response = ureq::post(&url)
         .set("Authorization", &token_header)
-        .send_json(github_release)?;
+        .send_json(github_release)
+        .or(Err(StepError::ApiRequestError))?;
 
     if response.status() != 201 {
         return Err(StepError::ApiResponseError(None));

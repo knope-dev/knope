@@ -1,15 +1,15 @@
-use std::collections::BTreeMap;
-use std::fs;
-use std::path::PathBuf;
+use std::{collections::BTreeMap, fs, path::PathBuf};
 
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
 
-use crate::releases::find_packages;
-use crate::step::{PrepareRelease, Step, StepError};
-use crate::workflow::Workflow;
-use crate::{command, git, releases};
+use crate::{
+    command, git, releases,
+    releases::find_packages,
+    step::{PrepareRelease, Step, StepError},
+    workflow::Workflow,
+};
 
 #[derive(Deserialize, Debug, Serialize)]
 pub(crate) struct Config {
@@ -35,9 +35,7 @@ impl Config {
     /// ## Errors
     /// 1. Cannot parse file contents into a Config
     pub(crate) fn load() -> Result<Self> {
-        let contents = if let Ok(contents) = fs::read_to_string(Self::CONFIG_PATH) {
-            contents
-        } else {
+        let Ok(contents) = fs::read_to_string(Self::CONFIG_PATH) else {
             log::debug!("No `knope.toml` found, using default config");
             return Ok(generate());
         };

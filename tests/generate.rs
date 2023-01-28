@@ -1,11 +1,14 @@
-use std::fs::{copy, read_to_string, remove_file, write};
-use std::path::Path;
-
-use rstest::rstest;
-use snapbox::assert_eq_path;
-use snapbox::cmd::{cargo_bin, Command};
+use std::{
+    fs::{copy, read_to_string, remove_file, write},
+    path::Path,
+};
 
 use git_repo_helpers::*;
+use rstest::rstest;
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod git_repo_helpers;
 
@@ -70,7 +73,7 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
     // Assert
     validate_assert
         .failure()
-        .stderr_eq_path(source_path.join(format!("{case}_stderr.txt", case = target_file)));
+        .stderr_eq_path(source_path.join(format!("{target_file}_stderr.txt")));
     assert.success().stdout_eq("Generating a knope.toml file\n");
     assert_eq_path(
         source_path.join(target_file),

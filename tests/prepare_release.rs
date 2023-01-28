@@ -1,11 +1,14 @@
-use std::fs::{copy, read_to_string, write};
-use std::path::Path;
-
-use rstest::rstest;
-use snapbox::assert_eq_path;
-use snapbox::cmd::{cargo_bin, Command};
+use std::{
+    fs::{copy, read_to_string, write},
+    path::Path,
+};
 
 use git_repo_helpers::*;
+use rstest::rstest;
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod git_repo_helpers;
 
@@ -1054,7 +1057,7 @@ fn multiple_packages() {
         "package.json",
     ] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -1100,7 +1103,7 @@ fn no_scopes_defined() {
         "pyproject.toml",
     ] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -1147,7 +1150,7 @@ fn unscoped_commits_apply_to_all_packages() {
         "pyproject.toml",
     ] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -1195,7 +1198,7 @@ fn apply_scopes() {
         "pyproject.toml",
     ] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -1235,7 +1238,7 @@ fn skip_unchanged_packages() {
 
     for file in ["FIRST_CHANGELOG.md", "Cargo.toml", "pyproject.toml"] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }

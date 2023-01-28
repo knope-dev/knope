@@ -42,6 +42,18 @@ args = ["prettier", "**/*.md", "--list-different", "--prose-wrap=never"]
 command = "cargo"
 args = ["deny", "--all-features", "check"]
 
+[tasks.check-format-toml]
+install_crate = "taplo-cli"
+command = "taplo"
+args = ["format", "--check"]
+
+[tasks.check-format]
+toolchain = "nightly"
+dependencies = ["prettier-check", "check-format-toml"]
+
+[tasks.format]
+toolchain = "nightly"
+
 [tasks.dev-test-flow]
 dependencies = [
   "deny",
@@ -56,4 +68,4 @@ dependencies = [
 ]
 
 [tasks.pre-ci-flow]
-dependencies = ["deny", "clippy-flow", "check-format"]
+dependencies = ["deny", "clippy-flow"]

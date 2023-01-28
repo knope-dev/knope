@@ -1,8 +1,7 @@
 use std::fmt::Display;
 
 use console::Term;
-use dialoguer::theme::ColorfulTheme;
-use dialoguer::{Input, Select};
+use dialoguer::{theme::ColorfulTheme, Input, Select};
 use miette::Result;
 
 use crate::step::StepError;

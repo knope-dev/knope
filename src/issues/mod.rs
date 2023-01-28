@@ -1,8 +1,10 @@
 use std::fmt;
 
-use crate::prompt::select;
-use crate::state::{self, RunType, State};
-use crate::step::StepError;
+use crate::{
+    prompt::select,
+    state::{self, RunType, State},
+    step::StepError,
+};
 
 mod github;
 mod jira;
@@ -29,8 +31,7 @@ pub(super) fn select_jira_issue(status: &str, run_type: RunType) -> Result<RunTy
     if let Some(mut stdout) = dry_run_stdout {
         writeln!(
             stdout,
-            "Would query configured Jira instance for issues with status {}",
-            status
+            "Would query configured Jira instance for issues with status {status}"
         )?;
         writeln!(
             stdout,
@@ -115,8 +116,7 @@ pub(super) fn transition_jira_issue(status: &str, run_type: RunType) -> Result<R
     if let Some(mut stdout) = dry_run_stdout {
         writeln!(
             stdout,
-            "Would transition currently selected issue to status {}",
-            status
+            "Would transition currently selected issue to status {status}"
         )?;
         return Ok(RunType::DryRun { state, stdout });
     }

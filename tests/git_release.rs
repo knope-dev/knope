@@ -1,10 +1,13 @@
-use std::fs::{copy, read_to_string};
-use std::path::Path;
-
-use snapbox::assert_eq_path;
-use snapbox::cmd::{cargo_bin, Command};
+use std::{
+    fs::{copy, read_to_string},
+    path::Path,
+};
 
 use git_repo_helpers::*;
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod git_repo_helpers;
 
@@ -111,7 +114,7 @@ fn multiple_packages() {
         "package.json",
     ] {
         assert_eq_path(
-            source_path.join(format!("EXPECTED_{}", file)),
+            source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }

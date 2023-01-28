@@ -10,7 +10,7 @@ homepage = "https://knope-dev.github.io/knope/"
 documentation = "https://knope-dev.github.io/knope/"
 keywords = ["jira", "git", "github", "workflow", "script"]
 categories = ["command-line-utilities", "development-tools"]
-rust-version = "1.60"
+rust-version = "1.67"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
