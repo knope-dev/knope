@@ -1,14 +1,15 @@
-use std::fmt::Debug;
-use std::io::sink;
+use std::{fmt::Debug, io::sink};
 
 use itertools::Itertools;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::state::RunType;
-use crate::step::{Step, StepError};
-use crate::State;
+use crate::{
+    state::RunType,
+    step::{Step, StepError},
+    State,
+};
 
 /// A workflow is basically the state machine to run for a single execution of knope.
 #[derive(Deserialize, Debug, Serialize)]

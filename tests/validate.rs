@@ -1,9 +1,7 @@
-use std::fs::copy;
-use std::path::Path;
-
-use snapbox::cmd::{cargo_bin, Command};
+use std::{fs::copy, path::Path};
 
 use git_repo_helpers::*;
+use snapbox::cmd::{cargo_bin, Command};
 
 mod git_repo_helpers;
 

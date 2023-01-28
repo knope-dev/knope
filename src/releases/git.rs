@@ -1,14 +1,11 @@
-use std::env::current_dir;
-use std::io::Write;
-use std::str::FromStr;
+use std::{env::current_dir, io::Write, str::FromStr};
 
-use git_repository::object::Kind;
-use git_repository::open;
-use git_repository::refs::transaction::PreviousValue;
+use git_repository::{object::Kind, open, refs::transaction::PreviousValue};
 
-use crate::releases::semver::Version;
-use crate::releases::{CurrentVersions, Release};
-use crate::step::StepError;
+use crate::{
+    releases::{semver::Version, CurrentVersions, Release},
+    step::StepError,
+};
 
 pub(crate) fn tag_name(version: &Version, package_name: &Option<String>) -> String {
     let prefix = package_name

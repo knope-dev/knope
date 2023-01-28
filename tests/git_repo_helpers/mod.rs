@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 /// Create a Git repo in `path` with some fake config.
 pub fn init(path: &Path) {

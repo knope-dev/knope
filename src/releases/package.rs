@@ -1,15 +1,19 @@
-use std::ffi::OsStr;
-use std::fs::{read_to_string, write};
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    fs::{read_to_string, write},
+    path::{Path, PathBuf},
+};
 
 use itertools::Itertools;
 use log::trace;
 
-use crate::config::Package as PackageConfig;
-use crate::releases::semver::Version;
-use crate::releases::{cargo, get_current_versions_from_tag, go, package_json, pyproject};
-use crate::step::StepError;
-use crate::step::StepError::InvalidCargoToml;
+use crate::{
+    config::Package as PackageConfig,
+    releases::{
+        cargo, get_current_versions_from_tag, go, package_json, pyproject, semver::Version,
+    },
+    step::{StepError, StepError::InvalidCargoToml},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {

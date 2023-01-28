@@ -1,12 +1,10 @@
 //! Test the default workflows that should work when no `knope.toml` exists.
 
-use std::fs::copy;
-use std::path::Path;
-
-use rstest::rstest;
-use snapbox::cmd::{cargo_bin, Command};
+use std::{fs::copy, path::Path};
 
 use git_repo_helpers::*;
+use rstest::rstest;
+use snapbox::cmd::{cargo_bin, Command};
 
 mod git_repo_helpers;
 

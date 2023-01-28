@@ -1,18 +1,20 @@
-use git_repository::objs::decode;
-use git_repository::reference::{head_commit, peel};
-use git_repository::tag;
-use git_repository::traverse::commit::ancestors;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
+use git_repository::{
+    objs::decode,
+    reference::{head_commit, peel},
+    tag,
+    traverse::commit::ancestors,
+};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::releases::semver::Label;
-use crate::releases::suggested_package_toml;
-use crate::state::RunType;
-use crate::{command, git, issues, releases};
+use crate::{
+    command, git, issues, releases,
+    releases::{semver::Label, suggested_package_toml},
+    state::RunType,
+};
 
 /// Each variant describes an action you can take using knope, they are used when defining your
 /// [`crate::Workflow`] via whatever config format is being utilized.

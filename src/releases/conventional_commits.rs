@@ -3,15 +3,21 @@ use std::io::Write;
 use git_conventional::{Commit, Type};
 use log::debug;
 
-use crate::git::{add_files, get_commit_messages_after_last_stable_version};
-use crate::releases::semver::{Label, PackageVersion};
-use crate::releases::Package;
-use crate::step::StepError;
-use crate::{state, step, RunType};
-
-use super::changelog::{add_version_to_changelog, new_changelog_lines};
-use super::semver::{bump_version, ConventionalRule, Rule};
-use super::Release;
+use super::{
+    changelog::{add_version_to_changelog, new_changelog_lines},
+    semver::{bump_version, ConventionalRule, Rule},
+    Release,
+};
+use crate::{
+    git::{add_files, get_commit_messages_after_last_stable_version},
+    releases::{
+        semver::{Label, PackageVersion},
+        Package,
+    },
+    state, step,
+    step::StepError,
+    RunType,
+};
 
 #[derive(Debug)]
 struct ConventionalCommits {

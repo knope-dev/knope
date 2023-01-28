@@ -1,7 +1,6 @@
 use platform_dirs::AppDirs;
 
-use crate::prompt::get_input;
-use crate::step::StepError;
+use crate::{prompt::get_input, step::StepError};
 
 /// For managing configuration of knope globally
 
