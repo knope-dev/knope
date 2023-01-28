@@ -56,6 +56,9 @@ jobs:
       - name: Install cargo-make
         run: cargo-binstall --no-confirm cargo-make --force
 
+      - name: Install taplo
+        run: cargo-binstall --no-confirm taplo-cli --force
+
       - run: cargo make check-format
 
   validate-config:
