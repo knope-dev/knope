@@ -1,10 +1,12 @@
 use base64::{prelude::BASE64_STANDARD as base64, Engine};
 use serde::{Deserialize, Serialize};
 
-use crate::app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token};
-use crate::config::Jira;
-use crate::issues::Issue;
-use crate::step::StepError;
+use crate::{
+    app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token},
+    config::Jira,
+    issues::Issue,
+    step::StepError,
+};
 
 #[derive(Serialize, Debug)]
 struct SearchParams {

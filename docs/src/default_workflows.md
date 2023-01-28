@@ -24,5 +24,5 @@ Without any config, you can run `knope release` to create a new release from [co
 
 [conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
 [semantic version]: https://semver.org
-[`PrepareRelease`]: config/step/PrepareRelease.md
-[`Release`]: config/step/Release.md
+[`preparerelease`]: config/step/PrepareRelease.md
+[`release`]: config/step/Release.md

@@ -1,6 +1,4 @@
-use std::cmp::Ordering;
-use std::fmt::Display;
-use std::str::FromStr;
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 

@@ -2,15 +2,17 @@ use std::collections::BTreeMap;
 
 pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
 
-use crate::releases::semver::{Label, PreVersion, Prerelease, StableVersion, Version};
-use crate::state::Release::{Bumped, Prepared};
-use crate::step::StepError;
-use crate::RunType;
-
-pub(crate) use self::git::{get_current_versions_from_tag, tag_name};
-pub(crate) use self::package::{find_packages, suggested_package_toml, Package};
-pub(crate) use self::semver::bump_version_and_update_state as bump_version;
-pub(crate) use self::semver::{get_version, Rule};
+pub(crate) use self::{
+    git::{get_current_versions_from_tag, tag_name},
+    package::{find_packages, suggested_package_toml, Package},
+    semver::{bump_version_and_update_state as bump_version, get_version, Rule},
+};
+use crate::{
+    releases::semver::{Label, PreVersion, Prerelease, StableVersion, Version},
+    state::Release::{Bumped, Prepared},
+    step::StepError,
+    RunType,
+};
 
 mod cargo;
 mod changelog;

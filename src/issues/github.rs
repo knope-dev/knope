@@ -1,7 +1,6 @@
-use crate::app_config::get_or_prompt_for_github_token;
-use crate::issues::Issue;
-use crate::step::StepError;
-use crate::{config, state};
+use crate::{
+    app_config::get_or_prompt_for_github_token, config, issues::Issue, state, step::StepError,
+};
 
 const ISSUES_QUERY: &str = r##"
 query($repo: String!, $owner: String!, $labels: [String!]) { 

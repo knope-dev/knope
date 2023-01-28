@@ -1,7 +1,9 @@
-use crate::step::StepError;
-use serde::Deserialize;
 use std::path::Path;
+
+use serde::Deserialize;
 use toml::Spanned;
+
+use crate::step::StepError;
 
 /// Extrat the consistent version from a `pyproject.toml` file's content or return an error.
 ///
@@ -91,8 +93,9 @@ struct Metadata {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::path::PathBuf;
+
+    use super::*;
 
     #[test]
     fn test_get_version_poetry() {

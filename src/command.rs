@@ -3,11 +3,10 @@ use std::collections::HashMap;
 use execute::shell;
 use serde::{Deserialize, Serialize};
 
-use crate::git::branch_name_from_issue;
-use crate::releases::get_version;
-use crate::state::Release;
-use crate::step::StepError;
-use crate::{state, RunType, State};
+use crate::{
+    git::branch_name_from_issue, releases::get_version, state, state::Release, step::StepError,
+    RunType, State,
+};
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
 #[derive(Debug, Deserialize, Serialize)]
@@ -99,9 +98,8 @@ fn replace_variables(
 mod test_run_command {
     use tempfile::NamedTempFile;
 
-    use crate::State;
-
     use super::*;
+    use crate::State;
 
     #[test]
     fn test() {
@@ -128,12 +126,14 @@ mod test_run_command {
 
 #[cfg(test)]
 mod test_replace_variables {
-    use crate::issues::Issue;
-    use crate::releases::{semver::Version, Package, Release};
-    use crate::state;
     use std::path::PathBuf;
 
     use super::*;
+    use crate::{
+        issues::Issue,
+        releases::{semver::Version, Package, Release},
+        state,
+    };
 
     fn packages() -> Vec<Package> {
         vec![Package {

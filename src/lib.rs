@@ -8,11 +8,12 @@ use std::io::stdout;
 
 use clap::Parser;
 use miette::{miette, Result};
-
 use prompt::select;
 
-use crate::config::Config;
-use crate::state::{RunType, State};
+use crate::{
+    config::Config,
+    state::{RunType, State},
+};
 
 mod app_config;
 mod command;

@@ -1,8 +1,10 @@
 use std::fmt;
 
-use crate::prompt::select;
-use crate::state::{self, RunType, State};
-use crate::step::StepError;
+use crate::{
+    prompt::select,
+    state::{self, RunType, State},
+    step::StepError,
+};
 
 mod github;
 mod jira;

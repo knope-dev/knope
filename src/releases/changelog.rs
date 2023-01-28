@@ -1,5 +1,4 @@
-use std::iter::Map;
-use std::slice::Iter;
+use std::{iter::Map, slice::Iter};
 
 use itertools::Itertools;
 

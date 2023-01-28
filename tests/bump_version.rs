@@ -1,13 +1,13 @@
 //! An integration test which runs the `prerelease` task defined in `knope.toml`.
 
-use std::fs::read_to_string;
-use std::path::Path;
-
-use rstest::rstest;
-use snapbox::assert_eq_path;
-use snapbox::cmd::{cargo_bin, Command};
+use std::{fs::read_to_string, path::Path};
 
 use git_repo_helpers::*;
+use rstest::rstest;
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod git_repo_helpers;
 

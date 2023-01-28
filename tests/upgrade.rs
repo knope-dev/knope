@@ -1,9 +1,14 @@
 //! Test the `--upgrade` option.
 
-use snapbox::assert_eq_path;
-use snapbox::cmd::{cargo_bin, Command};
-use std::fs::{copy, read_to_string};
-use std::path::Path;
+use std::{
+    fs::{copy, read_to_string},
+    path::Path,
+};
+
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 /// Test upgrading the deprecated `[[packages]]` section to the new `[package]` section.
 #[test]

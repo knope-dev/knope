@@ -1,9 +1,6 @@
 use std::io::Write;
 
-use crate::config;
-use crate::issues;
-use crate::releases;
-use crate::releases::semver::Version;
+use crate::{config, issues, releases, releases::semver::Version};
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
 #[derive(Clone, Debug)]

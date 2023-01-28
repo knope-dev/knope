@@ -1,11 +1,14 @@
-use std::fs::{copy, read_to_string, remove_file, write};
-use std::path::Path;
-
-use rstest::rstest;
-use snapbox::assert_eq_path;
-use snapbox::cmd::{cargo_bin, Command};
+use std::{
+    fs::{copy, read_to_string, remove_file, write},
+    path::Path,
+};
 
 use git_repo_helpers::*;
+use rstest::rstest;
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod git_repo_helpers;
 

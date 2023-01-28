@@ -2,13 +2,14 @@ use std::io::Write;
 
 use serde::Serialize;
 
-use crate::app_config::get_or_prompt_for_github_token;
-use crate::config::GitHub;
-use crate::releases::git::tag_name;
-use crate::releases::Release;
-use crate::state;
-use crate::state::GitHub::{Initialized, New};
-use crate::step::StepError;
+use crate::{
+    app_config::get_or_prompt_for_github_token,
+    config::GitHub,
+    releases::{git::tag_name, Release},
+    state,
+    state::GitHub::{Initialized, New},
+    step::StepError,
+};
 
 pub(crate) fn release(
     release: &Release,

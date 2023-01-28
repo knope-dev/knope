@@ -1,5 +1,4 @@
-use crate::releases::semver::Version;
-use crate::step::StepError;
+use crate::{releases::semver::Version, step::StepError};
 
 pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<String, StepError> {
     let new_major = new_version.stable_component().major;

@@ -1,16 +1,16 @@
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
-use git2::build::CheckoutBuilder;
-use git2::{Branch, BranchType, Repository};
+use git2::{build::CheckoutBuilder, Branch, BranchType, Repository};
 use log::{debug, error, trace, warn};
 
-use crate::issues::Issue;
-use crate::prompt::select;
-use crate::releases::{get_current_versions_from_tag, tag_name};
-use crate::state;
-use crate::step::StepError;
-use crate::RunType;
+use crate::{
+    issues::Issue,
+    prompt::select,
+    releases::{get_current_versions_from_tag, tag_name},
+    state,
+    step::StepError,
+    RunType,
+};
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
