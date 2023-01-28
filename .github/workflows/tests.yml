@@ -46,6 +46,7 @@ jobs:
       - run: |
           rustup override set nightly
           rustup update nightly
+          rustup component add rustfmt
 
       - name: Install cargo-binstall
         run: |
