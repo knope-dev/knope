@@ -1,6 +1,6 @@
 use std::{env::current_dir, io::Write, str::FromStr};
 
-use git_repository::{object::Kind, open, refs::transaction::PreviousValue};
+use gix::{object::Kind, open, refs::transaction::PreviousValue};
 
 use crate::{
     releases::{semver::Version, CurrentVersions, Release},
@@ -36,7 +36,9 @@ pub(crate) fn release(
         tag,
         head.id,
         Kind::Commit,
-        Some(repo.committer().ok_or(StepError::NoCommitter)?),
+        repo.committer()
+            .transpose()
+            .map_err(|_| StepError::NoCommitter)?,
         "",
         PreviousValue::Any,
     )?;
