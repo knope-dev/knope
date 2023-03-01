@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use git_repository::{
+use gix::{
     objs::decode,
     reference::{head_commit, peel},
     tag,
@@ -299,7 +299,7 @@ pub(super) enum StepError {
         code(step::create_tag_error),
         help("A Git tag could not be created for the release.")
     )]
-    CreateTagError(#[from] tag::Error),
+    CreateTagError,
     #[error("Command returned non-zero exit code")]
     #[diagnostic(
         code(step::command_failed),
@@ -375,6 +375,12 @@ pub(super) enum StepError {
         help("The go.mod file contains an invalid module line.")
     )]
     MalformedModuleLine(String),
+}
+
+impl From<tag::Error> for StepError {
+    fn from(_: tag::Error) -> Self {
+        Self::CreateTagError
+    }
 }
 
 impl StepError {

@@ -254,14 +254,14 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
         warn!("No stable version tag found, processing all commits.");
         None
     };
-    let repo = git_repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
+    let repo = gix::open(".").map_err(|_| StepError::NotAGitRepo)?;
     let tag_ref = reference
         .as_ref()
         .map(|reference| repo.find_reference(reference))
         .transpose()
         .expect("Could not find Git reference that was previously seen.");
     let tag_oid = tag_ref
-        .map(git_repository::Reference::into_fully_peeled_id)
+        .map(gix::Reference::into_fully_peeled_id)
         .transpose()?;
     if reference.is_some() && tag_oid.is_none() {
         error!(

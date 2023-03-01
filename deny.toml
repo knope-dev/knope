@@ -79,6 +79,7 @@ allow = [
   "MPL-2.0",
   "BSD-3-Clause",
   "Unicode-DFS-2016",
+  "CC0-1.0",
 ]
 # List of explicitly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
@@ -172,10 +173,9 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "base64", version = "0.13.1", depth = 10 },      # Waiting on update to ureq https://github.com/algesten/ureq/pull/580
-  { name = "hashbrown", version = "0.12.3", depth = 10 },   # Waiting on update to dashmap https://github.com/xacrimon/dashmap/pull/250
-  { name = "parking_lot", version = "0.11.2", depth = 10 }, # Waiting on update to prodash (no PR yet)
-  { name = "atty", version = "0.2.14", depth = 10 },        # Waiting on update to miette https://github.com/zkat/miette/pull/229
+  { name = "base64", version = "0.13.1", depth = 10 },    # Waiting on update to ureq https://github.com/algesten/ureq/pull/580
+  { name = "hashbrown", version = "0.12.3", depth = 10 }, # Waiting on update to dashmap https://github.com/xacrimon/dashmap/pull/250
+  { name = "atty", version = "0.2.14", depth = 10 },      # Waiting on update to miette https://github.com/zkat/miette/pull/229
 ]
 
 # This section is considered when running `cargo deny check sources`.
