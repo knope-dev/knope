@@ -27,7 +27,7 @@ platform-dirs = "0.3.0"
 git-conventional = "0.12.1"
 ureq = { version = "2.6.2", features = ["json"] }
 http = "0.2.9"
-clap = { version = "4.1.6", features = ["cargo", "derive", "env"] }
+clap = { version = "4.1.8", features = ["cargo", "derive", "env"] }
 itertools = "0.10.5"
 miette = { version = "5.5.0", features = ["fancy"] }
 thiserror = "1.0.38"
