@@ -759,13 +759,13 @@ dependencies = [
 
 [[package]]
 name = "git-conventional"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2033e90bdceee1540826d126c95461a90b9411624f110feab6fcd5149790231"
+checksum = "47f12808f7f7aed1a42d1c3a2c9f7cfc17dd169b41733506aba160c93b39c80c"
 dependencies = [
  "doc-comment",
- "nom",
  "unicase",
+ "winnow",
 ]
 
 [[package]]
@@ -2599,6 +2599,15 @@ name = "windows_x86_64_msvc"
 version = "0.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40009d85759725a34da6d89a94e63d7bdc50a862acf0dbc7c8e488f1edcb6f5"
+
+[[package]]
+name = "winnow"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efdd927d1a3d5d98abcfc4cf8627371862ee6abfe52a988050621c50c66b4493"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "yansi"
