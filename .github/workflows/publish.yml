@@ -13,7 +13,7 @@ jobs:
           rustup override set stable
           rustup update stable
       - uses: Swatinem/rust-cache@v2
-      - uses: katyo/publish-crates@v1
+      - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}
 
