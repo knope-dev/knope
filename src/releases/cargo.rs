@@ -12,8 +12,8 @@ pub(crate) fn set_version(
     let doc: Cargo = toml::from_str(&cargo_toml)?;
 
     // Account for quotes with +- 1
-    let start = doc.package.version.start() + 1;
-    let end = doc.package.version.end() - 1;
+    let start = doc.package.version.span().start + 1;
+    let end = doc.package.version.span().end - 1;
 
     cargo_toml.replace_range(start..end, new_version);
 
