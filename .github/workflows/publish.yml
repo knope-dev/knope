@@ -56,6 +56,12 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Set Archive Name (Non-Windows)
         id: archive
         run: echo "archive_name=knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}" >> $GITHUB_ENV
