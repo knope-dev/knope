@@ -73,8 +73,8 @@ impl PyProject {
 
         for version in [poetry_version, project_version].into_iter().flatten() {
             // Account for quotes around value with +- 1
-            let start = version.start() + 1;
-            let end = version.end() - 1;
+            let start = version.span().start + 1;
+            let end = version.span().end - 1;
             raw_contents.replace_range(start..end, new_version);
         }
         raw_contents
