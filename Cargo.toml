@@ -38,5 +38,5 @@ env_logger = "0.10.0"
 
 [dev-dependencies]
 rstest = "0.16.0"
-snapbox = "0.4.7"
+snapbox = "0.4.8"
 tempfile = "3.4.0"
