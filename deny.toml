@@ -48,9 +48,6 @@ notice = "warn"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
-  # Does not impact this project
-  # Remove exception after https://github.com/zkat/miette/pull/229
-  "RUSTSEC-2021-0145",
 ]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
@@ -175,7 +172,6 @@ skip = [
 skip-tree = [
   { name = "base64", version = "0.13.1", depth = 10 },    # Waiting on update to ureq https://github.com/algesten/ureq/pull/580
   { name = "hashbrown", version = "0.12.3", depth = 10 }, # Waiting on update to dashmap https://github.com/xacrimon/dashmap/pull/250
-  { name = "atty", version = "0.2.14", depth = 10 },      # Waiting on update to miette https://github.com/zkat/miette/pull/229
 ]
 
 # This section is considered when running `cargo deny check sources`.
