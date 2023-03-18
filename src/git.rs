@@ -212,7 +212,6 @@ fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<(), StepError>
 fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>, StepError> {
     Ok(repo
         .branches(Some(BranchType::Local))?
-        .into_iter()
         .filter_map(|value| {
             if let Ok((b, _)) = value {
                 Some(b)
