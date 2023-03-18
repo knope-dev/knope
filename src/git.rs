@@ -270,7 +270,7 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
     }
     let commit = repo.head_commit()?;
     let mut messages = vec![];
-    for item in commit.ancestors().all()?.error_on_missing_commit() {
+    for item in commit.ancestors().all()? {
         let id = item?;
         if let Some(tag_id) = tag_oid {
             if id == tag_id {
