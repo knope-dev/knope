@@ -42,17 +42,12 @@ impl From<ConventionalRule> for Rule {
 }
 
 /// The rules that can be derived from Conventional Commits.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub(crate) enum ConventionalRule {
     Major,
     Minor,
+    #[default]
     Patch,
-}
-
-impl Default for ConventionalRule {
-    fn default() -> Self {
-        ConventionalRule::Patch
-    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
