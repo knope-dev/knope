@@ -169,10 +169,10 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "base64", version = "0.13.1", depth = 10 },    # Waiting on update to ureq https://github.com/algesten/ureq/pull/580
-  { name = "hashbrown", version = "0.12.3", depth = 10 }, # Waiting on update to dashmap https://github.com/xacrimon/dashmap/pull/250
-  { name = "windows-sys", version = "0.42.0", depth = 10},   # waiting on console > 0.15.5
-  { name = "hermit-abi", version = "0.2.6", depth = 10},  # waiting on num_cpus > 1.15.0
+  { name = "base64", version = "0.13.1", depth = 10 },      # Waiting on update to ureq https://github.com/algesten/ureq/pull/580
+  { name = "hashbrown", version = "0.12.3", depth = 10 },   # Waiting on update to dashmap https://github.com/xacrimon/dashmap/pull/250
+  { name = "windows-sys", version = "0.42.0", depth = 10 }, # waiting on console > 0.15.5
+  { name = "hermit-abi", version = "0.2.6", depth = 10 },   # waiting on num_cpus > 1.15.0
 ]
 
 # This section is considered when running `cargo deny check sources`.
