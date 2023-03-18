@@ -3,6 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use gix::{
     objs::decode,
     reference::{head_commit, peel},
+    revision::walk,
     tag,
     traverse::commit::ancestors,
 };
@@ -318,6 +319,12 @@ pub(super) enum StepError {
         help("This step requires walking backwards from HEAD to find the previous release commit. If this fails, make sure HEAD is on a branch."),
     )]
     AncestorsError(#[from] ancestors::Error),
+    #[error("Could not walk backwards from HEAD commit")]
+    #[diagnostic(
+        code(step::walk_error),
+        help("This step requires walking backwards from HEAD to find the previous release commit. If this fails, make sure HEAD is on a branch without shallow commits."),
+    )]
+    WalkError(#[from] walk::Error),
     #[error("Could not decode commit")]
     #[diagnostic(
         code(step::decode_commit_error),
