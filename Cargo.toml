@@ -22,7 +22,7 @@ dialoguer = "0.10.3"
 toml = "0.7.3"
 serde_json = { version = "1.0.95", features = ["preserve_order"] }
 git2 = { version = "0.16.1", default-features = false }
-execute = "0.2.11"
+execute = "0.2.12"
 platform-dirs = "0.3.0"
 git-conventional = "0.12.2"
 ureq = { version = "2.6.2", features = ["json"] }
