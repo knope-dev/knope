@@ -138,6 +138,15 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/github.html")
     )]
     GitHubNotConfigured,
+    #[error("Could not open configuration path")]
+    #[diagnostic(
+        code(step::could_not_open_config_path),
+        help(
+            "Knope attempts to store config in a local config directory, this error may be a \
+            permissions issue or may mean you're using an obscure operating system"
+        )
+    )]
+    CouldNotOpenConfigPath,
     #[error("Could not increment pre-release version {0}")]
     #[diagnostic(
         code(step::invalid_pre_release_version),
@@ -301,6 +310,12 @@ pub(super) enum StepError {
         help("A Git tag could not be created for the release.")
     )]
     CreateTagError,
+    #[error("Something went wrong with Git")]
+    #[diagnostic(
+        code(step::unknown_git_error),
+        help("Something funky happened with Git, please open a GitHub issue so we can diagnose")
+    )]
+    UnknownGitError,
     #[error("Command returned non-zero exit code")]
     #[diagnostic(
         code(step::command_failed),
@@ -382,6 +397,12 @@ pub(super) enum StepError {
         help("The go.mod file contains an invalid module line.")
     )]
     MalformedModuleLine(String),
+    #[error("Failed to serialize to TOML")]
+    #[diagnostic(
+        code(step::failed_toml_serialize),
+        help("If you see this error, it's a bug. Please report on GitHub.")
+    )]
+    FailedTomlSerialization,
 }
 
 impl From<tag::Error> for StepError {
@@ -392,8 +413,11 @@ impl From<tag::Error> for StepError {
 
 impl StepError {
     pub fn no_defined_packages_with_help() -> Self {
-        Self::NoDefinedPackages {
-            package_suggestion: suggested_package_toml(),
+        match suggested_package_toml() {
+            Ok(suggested_toml) => Self::NoDefinedPackages {
+                package_suggestion: suggested_toml,
+            },
+            Err(e) => e,
         }
     }
 }

@@ -109,18 +109,17 @@ impl FromStr for Version {
         let (version, pre) = s
             .split_once('-')
             .map_or((s, None), |(version, pre)| (version, Some(pre)));
-        let version_parts = version
+        let version_parts: [u64; 3] = version
             .split('.')
             .map(|part| {
                 part.parse::<u64>()
                     .map_err(|err| StepError::InvalidSemanticVersion(err.to_string()))
             })
-            .collect::<Result<Vec<_>, _>>()?;
-        if version_parts.len() != 3 {
-            return Err(StepError::InvalidSemanticVersion(
-                "Version must have exactly 3 parts".to_string(),
-            ));
-        }
+            .collect::<Result<Vec<_>, _>>()?
+            .try_into()
+            .map_err(|_| {
+                StepError::InvalidSemanticVersion("Version must have exactly 3 parts".to_string())
+            })?;
         let stable = StableVersion {
             major: version_parts[0],
             minor: version_parts[1],

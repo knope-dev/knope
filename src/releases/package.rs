@@ -121,7 +121,7 @@ impl TryFrom<&PathBuf> for PackageFormat {
         PACKAGE_FORMAT_FILE_NAMES
             .iter()
             .find_position(|&name| *name == file_name)
-            .map(|(pos, _)| ALL_PACKAGE_FORMATS[pos])
+            .and_then(|(pos, _)| ALL_PACKAGE_FORMATS.get(pos).copied())
             .ok_or_else(|| StepError::VersionedFileFormat(path.clone()))
     }
 }
@@ -217,23 +217,23 @@ pub(crate) fn find_packages() -> Option<PackageConfig> {
 }
 
 /// Includes some helper text for the user to understand how to use the config to define packages.
-pub(crate) fn suggested_package_toml() -> String {
+pub(crate) fn suggested_package_toml() -> Result<String, StepError> {
     let package = find_packages();
     if let Some(package) = package {
-        format!(
+        Ok(format!(
             "Found the package metadata files {files} in the current directory. You may need to add this \
             to your knope.toml:\n\n```\n[package]\n{toml}```",
-            files = package.versioned_files.iter().map(|path| path.to_str().unwrap())
+            files = package.versioned_files.iter().map(|path| path.to_string_lossy())
                 .collect::<Vec<_>>()
                 .join(", "),
-            toml = toml::to_string(&package).unwrap()
-        )
+            toml = toml::to_string(&package).or(Err(StepError::FailedTomlSerialization))?
+        ))
     } else {
-        format!(
+        Ok(format!(
             "No supported package managers found in current directory. \
-            The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
-            \n\n```\n[package]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
+                    The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
+                    \n\n```\n[package]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
             formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
-        )
+        ))
     }
 }

@@ -125,31 +125,39 @@ pub(crate) fn generate() -> Config {
     let variables = hash_map! {
         String::from("$version"): command::Variable::Version,
     };
-    let mut github = None;
 
-    let release_steps = match git::get_first_remote() {
+    let github = match git::get_first_remote() {
         Some(remote) if remote.contains("github.com") => {
             let parts = remote.split('/').collect::<Vec<_>>();
-            let owner = parts[parts.len() - 2];
-            let owner = owner
-                .strip_prefix("git@github.com:")
-                .unwrap_or(owner)
-                .to_string();
+            let owner = parts.get(parts.len() - 2).map(|owner| {
+                owner
+                    .strip_prefix("git@github.com:")
+                    .unwrap_or(owner)
+                    .to_string()
+            });
 
-            let repo = parts[parts.len() - 1];
-            let repo = repo.strip_suffix(".git").unwrap_or(repo).to_string();
-            github = Some(GitHub { owner, repo });
-            vec![
-                Step::Command {
-                    command: String::from(
-                        "git commit -m \"chore: prepare release $version\" && git push",
-                    ),
-                    variables: Some(variables),
-                },
-                Step::Release,
-            ]
+            let repo = parts
+                .last()
+                .map(|repo| repo.strip_suffix(".git").unwrap_or(repo).to_string());
+
+            owner
+                .and_then(|owner| repo.map(|repo| (owner, repo)))
+                .map(|(owner, repo)| GitHub { owner, repo })
         }
-        _ => vec![
+        _ => None,
+    };
+    let release_steps = if github.is_some() {
+        vec![
+            Step::Command {
+                command: String::from(
+                    "git commit -m \"chore: prepare release $version\" && git push",
+                ),
+                variables: Some(variables),
+            },
+            Step::Release,
+        ]
+    } else {
+        vec![
             Step::Command {
                 command: String::from("git commit -m \"chore: prepare release $version\""),
                 variables: Some(variables),
@@ -159,7 +167,7 @@ pub(crate) fn generate() -> Config {
                 command: String::from("git push && git push --tags"),
                 variables: None,
             },
-        ],
+        ]
     };
 
     Config {
