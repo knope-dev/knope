@@ -1,6 +1,7 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{collections::VecDeque, path::PathBuf, str::FromStr};
 
 use git2::{build::CheckoutBuilder, Branch, BranchType, Repository};
+use itertools::Itertools;
 use log::{debug, error, trace, warn};
 
 use crate::{
@@ -105,20 +106,28 @@ pub(crate) fn get_first_remote() -> Option<String> {
 }
 
 fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, StepError> {
-    let parts: Vec<&str> = ref_name.split('-').collect();
+    let mut parts: VecDeque<&str> = ref_name.split('-').collect();
 
-    let (key, summary) = if !parts.is_empty() && usize::from_str(parts[0]).is_ok() {
-        // GitHub style, like 42-some-description for issue #42
-        Ok((parts[0].to_string(), parts[1..].join("-")))
-    } else if parts.len() >= 2 && usize::from_str(parts[1]).is_ok() {
-        // Jira style, like PROJ-123-something-else where PROJ-123 is the issue key
-        Ok((parts[0..2].join("-"), parts[2..].join("-")))
-    } else {
-        Err(StepError::BadGitBranchName)
-    }?;
-
-    println!("Auto-selecting issue {} from ref {ref_name}", &key);
-    Ok(Issue { key, summary })
+    let issue_key = parts.pop_front().ok_or(StepError::BadGitBranchName)?;
+    if let Ok(github_issue) = usize::from_str(issue_key) {
+        println!("Auto-selecting issue {github_issue} from ref {ref_name}");
+        return Ok(Issue {
+            key: github_issue.to_string(),
+            summary: parts.iter().join("-"),
+        });
+    }
+    let project_key = issue_key;
+    let issue_number = parts
+        .pop_front()
+        .map(usize::from_str)
+        .ok_or(StepError::BadGitBranchName)?
+        .or(Err(StepError::BadGitBranchName))?;
+    let jira_issue = format!("{project_key}-{issue_number}");
+    println!("Auto-selecting issue {jira_issue} from ref {ref_name}");
+    return Ok(Issue {
+        key: jira_issue,
+        summary: parts.iter().join("-"),
+    });
 }
 
 #[cfg(test)]
@@ -258,15 +267,17 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
         .as_ref()
         .map(|reference| repo.find_reference(reference))
         .transpose()
-        .expect("Could not find Git reference that was previously seen.");
+        .or(Err(StepError::UnknownGitError))?;
     let tag_oid = tag_ref
         .map(gix::Reference::into_fully_peeled_id)
         .transpose()?;
-    if reference.is_some() && tag_oid.is_none() {
-        error!(
-            "Found tagged version {}, but could not parse it within Git",
-            reference.unwrap()
-        );
+    if tag_oid.is_none() {
+        if let Some(reference) = reference {
+            error!(
+                "Found tagged version {}, but could not parse it within Git",
+                reference
+            );
+        }
     }
     let commit = repo.head_commit()?;
     let mut messages = vec![];

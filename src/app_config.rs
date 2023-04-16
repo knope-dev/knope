@@ -22,7 +22,7 @@ pub(crate) fn get_or_prompt_for_github_token() -> Result<String, StepError> {
 }
 
 pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String, StepError> {
-    let app_dirs = AppDirs::new(Some("knope"), true).expect("Could not open config path");
+    let app_dirs = AppDirs::new(Some("knope"), true).ok_or(StepError::CouldNotOpenConfigPath)?;
     let config_path = app_dirs.config_dir.join(key);
     if !app_dirs.config_dir.exists() {
         std::fs::create_dir_all(app_dirs.config_dir)?;

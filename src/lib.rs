@@ -1,8 +1,23 @@
+#![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::cargo)]
 #![allow(clippy::multiple_crate_versions)] // Let cargo-deny handle this
-#![forbid(unsafe_code)]
+
+// Don't panic!
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::panic,
+        clippy::exit,
+        clippy::unimplemented,
+        clippy::todo,
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::indexing_slicing,
+        clippy::missing_panics_doc
+    )
+)]
 
 use std::io::stdout;
 

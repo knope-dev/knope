@@ -15,9 +15,8 @@ pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<Strin
         .split_whitespace()
         .nth(1)
         .ok_or_else(|| StepError::MalformedModuleLine(String::from(module_line)))?;
-    let mut parts: Vec<&str> = module.split('/').collect();
-    let last_part = parts
-        .last()
+    let (uri, last_part) = module
+        .rsplit_once('/')
         .ok_or_else(|| StepError::MalformedModuleLine(String::from(module_line)))?;
     let existing_version = if let Some(major_string) = last_part.strip_prefix('v') {
         if let Ok(major) = major_string.parse::<u64>() {
@@ -33,10 +32,8 @@ pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<Strin
             // Major version has not changed—keep existing content
             return Ok(go_mod);
         }
-        let index = parts.len() - 1;
         let new_version_string = format!("v{new_major}");
-        parts[index] = new_version_string.as_str();
-        let new_module_line = format!("module {}", parts.join("/"));
+        let new_module_line = format!("module {uri}/{new_version_string}");
         Ok(go_mod.replace(module_line, &new_module_line))
     } else {
         // No existing version found—add new line
