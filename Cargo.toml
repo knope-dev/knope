@@ -38,5 +38,5 @@ env_logger = "0.10.0"
 
 [dev-dependencies]
 rstest = { version = "0.17.0", default-features = false }
-snapbox = "0.4.10"
+snapbox = "0.4.11"
 tempfile = "3.4.0"
