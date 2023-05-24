@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.7.3
+
+### Features
+
+- Remove any potential panics (#429)
+
+### Fixes
+
+- Handle merge commits in history. Thanks @erichulburd! (#443)
+
 ## 0.7.2
 
 ### Fixes
