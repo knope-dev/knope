@@ -8,6 +8,7 @@ use log::debug;
 pub fn init(path: &Path) {
     let output = Command::new("git")
         .arg("init")
+        .arg("--initial-branch=main")
         .current_dir(path)
         .output()
         .unwrap();
