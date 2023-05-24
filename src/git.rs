@@ -279,26 +279,45 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
             );
         }
     }
-    let commit = repo.head_commit()?;
-    let mut messages = vec![];
-    for item in commit.ancestors().all()? {
-        let id = item?;
-        if let Some(tag_id) = tag_oid {
-            if id == tag_id {
-                break;
-            }
-        }
-        if let Some(commit) = repo
-            .find_object(id)
-            .ok()
-            .and_then(|object| object.try_into_commit().ok())
-        {
-            let message = commit.decode()?.message.to_string();
-            trace!("Checking commit message: {}", &message);
-            messages.push(message);
-        }
-    }
-    Ok(messages)
+    let head_commit = repo.head_commit()?;
+    let head_commit_message = head_commit.decode()?.message.to_string();
+    trace!("Checking commit message: {}", &head_commit_message);
+    Ok([head_commit_message]
+        .into_iter()
+        .chain(
+            head_commit
+                .parent_ids()
+                .filter_map(|id| {
+                    repo.find_object(id)
+                        .ok()
+                        .and_then(|object| object.try_into_commit().ok())
+                        .and_then(|commit| commit.ancestors().all().ok())
+                        .map(|ancestors| {
+                            ancestors
+                                .into_iter()
+                                .filter_map(Result::ok)
+                                .take_while(|id| {
+                                    if let Some(tag_id) = tag_oid {
+                                        *id != tag_id
+                                    } else {
+                                        true
+                                    }
+                                })
+                                .filter_map(|id| {
+                                    repo.find_object(id)
+                                        .ok()
+                                        .and_then(|object| object.try_into_commit().ok())
+                                })
+                        })
+                })
+                .flatten()
+                .filter_map(|commit| {
+                    let message = commit.decode().ok()?.message.to_string();
+                    trace!("Checking commit message: {}", &message);
+                    Some(message)
+                }),
+        )
+        .collect_vec())
 }
 
 /// Add some files to Git to be committed later.

@@ -2,10 +2,13 @@
 
 use std::{path::Path, process::Command};
 
+use log::debug;
+
 /// Create a Git repo in `path` with some fake config.
 pub fn init(path: &Path) {
     let output = Command::new("git")
         .arg("init")
+        .arg("--initial-branch=main")
         .current_dir(path)
         .output()
         .unwrap();
@@ -88,6 +91,56 @@ pub fn tag(path: &Path, label: &str) {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+/// Create and switch to a new branch
+pub fn create_branch(path: &Path, name: &str) {
+    let output = Command::new("git")
+        .arg("switch")
+        .arg("-c")
+        .arg(name)
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    debug!("{}", String::from_utf8_lossy(&output.stdout));
+}
+
+/// Switch to an existing branch
+pub fn switch_branch(path: &Path, name: &str) {
+    let output = Command::new("git")
+        .arg("switch")
+        .arg(name)
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    debug!("{}", String::from_utf8_lossy(&output.stdout));
+}
+
+/// Merge a branch into the current branch
+pub fn merge_branch(path: &Path, name: &str) {
+    let output = Command::new("git")
+        .arg("merge")
+        .arg("--no-ff")
+        .arg(name)
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    debug!("{}", String::from_utf8_lossy(&output.stdout));
 }
 
 /// Get the current tag, panicking if there is no tag.
