@@ -1,6 +1,8 @@
 use std::{
     fs::{copy, read_to_string, write},
     path::Path,
+    thread::sleep,
+    time::Duration,
 };
 
 use git_repo_helpers::*;
@@ -1318,5 +1320,56 @@ fn handle_pre_versions_that_are_too_new() {
     assert_eq_path(
         source_path.join("EXPECTED_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+#[test]
+fn merge_commits() {
+    env_logger::init();
+    // Arrange a knope project with a merge commit.
+    // Make a directory at a known path
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    create_branch(temp_path, "feature");
+    commit(temp_path, "feat: A new feature");
+    switch_branch(temp_path, "main");
+    // Even if the latest tag commit is newer than the merged, the ancestors from the merge should be processed
+    sleep(Duration::from_secs(1));
+    commit(temp_path, "feat: existing feature");
+    tag(temp_path, "v1.2.3"); // The current stable version
+    merge_branch(temp_path, "feature");
+
+    let source_path = Path::new("tests/prepare_release/merge_commits");
+    for file in ["knope.toml", "Cargo.toml", "CHANGELOG.md"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_path)
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stdout_eq_path(source_path.join("actual_output.txt"));
+    assert_eq_path(
+        source_path.join("EXPECTED_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 }
