@@ -69,7 +69,7 @@ Increment the Patch component of the semantic version and reset all lesser compo
 
 Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` "rc" would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.4-rc.0".
 
-```admonish warn
+```admonish warning
 Only a very specific pre-release format is supported—that is `MAJOR.MINOR.PATCH-LABEL.NUMBER`. For example, `1.2.3-rc.4` is supported, but `1.2.3-rc4` is not. `LABEL` must be specified via config  or the `--prerelease-label` option in the CLI. `NUMBER` starts at 0 and increments each time the rule is applied.
 ```
 
