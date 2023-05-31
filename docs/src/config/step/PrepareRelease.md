@@ -12,7 +12,8 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Limitations
 
-The CHANGELOG format is pretty strict. Only three sections will be added to the new version, `### Breaking Changes` for anything that conventional commits have marked as breaking, `### Fixes` for anything called `fix:`, and `### Features` for anything with `feat: `. Any other commits (conventional or not) will be left out.
+- The CHANGELOG format is pretty strict. Only three sections will be added to the new version, `### Breaking Changes` for anything that conventional commits have marked as breaking, `### Fixes` for anything called `fix:`, and `### Features` for anything with `feat: `. Any other commits (conventional or not) will be left out.
+- Knope uses a simpler subset of semantic versioning which you can read about in [BumpVersion]
 
 ## Commit Scopes
 

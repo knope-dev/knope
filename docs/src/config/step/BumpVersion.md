@@ -8,7 +8,7 @@ It may be easier to select the appropriate version automatically using [conventi
 
 ## Fields
 
-1. `rule`: The [Semantic Versioning] rule to use.
+1. `rule`: The Semantic Versioning [rule](#rules) to use.
 2. `label`: Only applicable to `Pre` `rule`. The pre-release label to use.
 
 ## Examples
@@ -69,6 +69,10 @@ Increment the Patch component of the semantic version and reset all lesser compo
 
 Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` "rc" would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.4-rc.0".
 
+```admonish warn
+Only a very specific pre-release format is supported—that is `MAJOR.MINOR.PATCH-LABEL.NUMBER`. For example, `1.2.3-rc.4` is supported, but `1.2.3-rc4` is not. `LABEL` must be specified via config  or the `--prerelease-label` option in the CLI. `NUMBER` starts at 0 and increments each time the rule is applied.
+```
+
 ### Release
 
 Remove the pre-release component of the semantic version (e.g. 1.2.3-rc.4 -> 1.2.3).
@@ -85,7 +89,7 @@ Remove the pre-release component of the semantic version (e.g. 1.2.3-rc.4 -> 1.2
 
 This step will fail if any of the following are true:
 
-1. A malformed version string is found while attempting to bump.
+1. A malformed version string is found while attempting to bump. Note that only a subset of [pre-release version formats](#pre) are supported.
 2. No [package] is defined missing or invalid.
 
 [semantic versioning]: https://semver.org
