@@ -1,8 +1,12 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt, fs,
+    path::PathBuf,
+};
 
+use git_conventional::FooterToken;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
-use velcro::{hash_map, vec};
 
 use crate::{
     command, git, releases,
@@ -118,13 +122,52 @@ pub(crate) struct Package {
     pub(crate) changelog: Option<PathBuf>,
     /// Optional scopes that can be used to filter commits when running [`crate::Step::PrepareRelease`].
     pub(crate) scopes: Option<Vec<String>>,
+    /// Extra sections that should be added to the changelog from custom footers in commit messages.
+    pub(crate) extra_changelog_sections: Option<Vec<ChangelogSection>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub(crate) struct ChangelogSection {
+    pub(crate) name: ChangeLogSectionName,
+    pub(crate) footers: Vec<CommitFooter>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub(crate) struct CommitFooter(String);
+
+impl From<FooterToken<'_>> for CommitFooter {
+    fn from(token: FooterToken<'_>) -> Self {
+        Self(token.to_string())
+    }
+}
+
+impl From<&'static str> for CommitFooter {
+    fn from(token: &'static str) -> Self {
+        Self(token.into())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub(crate) struct ChangeLogSectionName(String);
+
+impl fmt::Display for ChangeLogSectionName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<&'static str> for ChangeLogSectionName {
+    fn from(token: &'static str) -> Self {
+        Self(token.into())
+    }
 }
 
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Config {
-    let variables = hash_map! {
-        String::from("$version"): command::Variable::Version,
-    };
+    let mut variables = HashMap::new();
+    variables.insert(String::from("$version"), command::Variable::Version);
 
     let github = match git::get_first_remote() {
         Some(remote) if remote.contains("github.com") => {
@@ -146,7 +189,7 @@ pub(crate) fn generate() -> Config {
         }
         _ => None,
     };
-    let release_steps = if github.is_some() {
+    let mut release_steps = if github.is_some() {
         vec![
             Step::Command {
                 command: String::from(
@@ -169,16 +212,17 @@ pub(crate) fn generate() -> Config {
             },
         ]
     };
+    release_steps.insert(
+        0,
+        Step::PrepareRelease(PrepareRelease {
+            prerelease_label: None,
+        }),
+    );
 
     Config {
         workflows: vec![Workflow {
             name: String::from("release"),
-            steps: vec![
-                Step::PrepareRelease(PrepareRelease {
-                    prerelease_label: None,
-                }),
-                ..release_steps,
-            ],
+            steps: release_steps,
         }],
         jira: None,
         github,

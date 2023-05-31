@@ -1188,9 +1188,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.9.1"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
+checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
  "hashbrown 0.12.3",
@@ -1300,6 +1300,7 @@ dependencies = [
  "git2",
  "gix",
  "http",
+ "indexmap",
  "itertools",
  "log",
  "miette",
@@ -1312,7 +1313,6 @@ dependencies = [
  "thiserror",
  "toml",
  "ureq",
- "velcro",
 ]
 
 [[package]]
@@ -2227,36 +2227,6 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
-
-[[package]]
-name = "velcro"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31c6a51883ba1034757307e06dc4856cd5439ecf6804ce6c90d13d49496196fc"
-dependencies = [
- "velcro_macros",
-]
-
-[[package]]
-name = "velcro_core"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "742cf45d07989b7614877e083602a8973890c75a81f47216b238d2f326ec916c"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "velcro_macros"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b23c806d7b49977e6e12ee6d120ac01dcab702b51c652fdf1a6709ab5b8868c"
-dependencies = [
- "syn",
- "velcro_core",
-]
 
 [[package]]
 name = "version_check"
