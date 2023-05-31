@@ -1,5 +1,6 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{collections::BTreeMap, fmt, fs, path::PathBuf};
 
+use git_conventional::FooterToken;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
 use velcro::{hash_map, vec};
@@ -118,6 +119,46 @@ pub(crate) struct Package {
     pub(crate) changelog: Option<PathBuf>,
     /// Optional scopes that can be used to filter commits when running [`crate::Step::PrepareRelease`].
     pub(crate) scopes: Option<Vec<String>>,
+    /// Extra sections that should be added to the changelog from custom footers in commit messages.
+    pub(crate) extra_changelog_sections: Option<Vec<ChangelogSection>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub(crate) struct ChangelogSection {
+    pub(crate) name: ChangeLogSectionName,
+    pub(crate) footers: Vec<CommitFooter>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub(crate) struct CommitFooter(String);
+
+impl From<FooterToken<'_>> for CommitFooter {
+    fn from(token: FooterToken<'_>) -> Self {
+        Self(token.to_string())
+    }
+}
+
+impl From<&'static str> for CommitFooter {
+    fn from(token: &'static str) -> Self {
+        Self(token.into())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
+pub(crate) struct ChangeLogSectionName(String);
+
+impl fmt::Display for ChangeLogSectionName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<&'static str> for ChangeLogSectionName {
+    fn from(token: &'static str) -> Self {
+        Self(token.into())
+    }
 }
 
 /// Generate a brand new Config for the project in the current directory.

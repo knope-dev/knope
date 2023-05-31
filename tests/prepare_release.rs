@@ -1373,3 +1373,71 @@ fn merge_commits() {
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 }
+
+#[test]
+fn notes() {
+    // Arrange a knope project with a merge commit.
+    // Make a directory at a known path
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Existing versions");
+    tag(temp_path, "first/v1.0.0");
+    tag(temp_path, "second/v0.1.0");
+    commit(
+        temp_path,
+        "chore: something\n\nChangelog-Note: A standard note",
+    );
+    commit(
+        temp_path,
+        "chore(first): something\n\nChangelog-Note: Standard note first only",
+    );
+    commit(
+        temp_path,
+        "chore(second): something\n\nChangelog-Note: Standard note second only",
+    );
+    commit(
+        temp_path,
+        "chore: something\n\nChangelog-First-Note: A custom note",
+    );
+    commit(temp_path, "chore: something\n\nSpecial: Special note");
+    commit(temp_path, "chore: something\n\nWhatever: Whatever note");
+
+    let source_path = Path::new("prepare_release/extra_changelog_sections");
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stderr_eq("");
+    assert_eq_path(
+        source_path.join("EXPECTED_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_pyproject.toml"),
+        read_to_string(temp_path.join("pyproject.toml")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_FIRST_CHANGELOG.md"),
+        read_to_string(temp_path.join("FIRST_CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_SECOND_CHANGELOG.md"),
+        read_to_string(temp_path.join("SECOND_CHANGELOG.md")).unwrap(),
+    );
+}

@@ -1,0 +1,24 @@
+Would bump first version to 1.0.1
+Would add the following to FIRST_CHANGELOG.md: 
+## 1.0.1
+
+### Notes
+
+- A standard note
+- Standard note first only
+- A custom note
+
+### Something Special 🚀
+
+- Special note
+- Whatever note
+
+Would bump second version to 0.1.1
+Would add the following to SECOND_CHANGELOG.md: 
+## 0.1.1
+
+### Notes
+
+- A standard note
+- Standard note second only
+

@@ -282,7 +282,7 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
     let head_commit = repo.head_commit()?;
     let head_commit_message = head_commit.decode()?.message.to_string();
     trace!("Checking commit message: {}", &head_commit_message);
-    Ok([head_commit_message]
+    let mut reverse_commits = [head_commit_message]
         .into_iter()
         .chain(
             head_commit
@@ -317,7 +317,9 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
                     Some(message)
                 }),
         )
-        .collect_vec())
+        .collect_vec();
+    reverse_commits.reverse();
+    Ok(reverse_commits)
 }
 
 /// Add some files to Git to be committed later.

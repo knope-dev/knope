@@ -1,0 +1,23 @@
+[packages.first]
+versioned_files = ["Cargo.toml"]
+changelog = "FIRST_CHANGELOG.md"
+scopes = ["first", "both"]
+
+[[packages.first.extra_changelog_sections]]
+name = "Notes"
+footers = ["Changelog-First-Note"]
+
+[[packages.first.extra_changelog_sections]]
+name = "Something Special 🚀"
+footers = ["Special", "Whatever"]
+
+[packages.second]
+versioned_files = ["pyproject.toml"]
+changelog = "SECOND_CHANGELOG.md"
+scopes = ["second", "both"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

@@ -30,6 +30,7 @@ Each package, whether it's defined in the `[package]` section or in the `[packag
 1. `versioned_files` is an optional array of files you'd like to bump the version of. They all must have the same version—as a package only has one version.
 2. `changelog` is the (optional) Markdown file you'd like to add release notes to.
 3. `scopes` is an optional array of [conventional commit scopes] which should be considered for the package when running the [`PrepareRelease`] step.
+4. `extra_changelog_sections` is an optional array of extra sections that can be added to the changelog when running the [`PrepareRelease`] step.
 
 ### `versioned_files`
 
@@ -61,6 +62,19 @@ variables = { "version" = "Version" }
 
 ```admonish warning
 The `Version` variable in the [`Command`] step cannot be used when multiple packages are defined. This is a temporary limitation—if you have a specific use case for this, please [file an issue][request it as a feature].
+```
+
+### `extra_changelog_sections`
+
+You may wish to add more sections to a changelog than the [defaults](./step/PrepareRelease.md#changelog-sections), you can do this by configuring custom [conventional commit footers](https://www.conventionalcommits.org/en/v1.0.0/#specification) to add notes to new sections in the changelog. By default, the footer `Changelog-Note` adds to the `Notes` section—the configuration to do that would look like this:
+
+```toml
+[package]
+versioned_files = []
+changelog = "CHANGELOG.md"
+extra_changelog_sections = [
+  { name = "Notes", footers = ["Changelog-Note"] }
+]
 ```
 
 ## Examples

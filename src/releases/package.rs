@@ -4,11 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use indexmap::IndexMap;
 use itertools::Itertools;
 use log::trace;
 
 use crate::{
-    config::Package as PackageConfig,
+    config::{ChangeLogSectionName, CommitFooter, Package as PackageConfig},
     releases::{
         cargo, get_current_versions_from_tag, go, package_json, pyproject, semver::Version,
     },
@@ -21,6 +22,7 @@ pub(crate) struct Package {
     pub(crate) changelog: Option<Changelog>,
     pub(crate) name: Option<String>,
     pub(crate) scopes: Option<Vec<String>>,
+    pub(crate) extra_changelog_sections: IndexMap<CommitFooter, ChangeLogSectionName>,
 }
 
 impl Package {
@@ -31,11 +33,22 @@ impl Package {
             .map(VersionedFile::try_from)
             .collect::<Result<Vec<_>, _>>()?;
         let changelog = config.changelog.map(Changelog::try_from).transpose()?;
+        let mut extra_changelog_sections = IndexMap::new();
+        for section in config.extra_changelog_sections.unwrap_or_default() {
+            for footer in section.footers {
+                extra_changelog_sections.insert(footer, section.name.clone());
+            }
+        }
+        let default_extra_footer = CommitFooter::from("Changelog-Note");
+        extra_changelog_sections
+            .entry(default_extra_footer)
+            .or_insert_with(|| ChangeLogSectionName::from("Notes"));
         Ok(Package {
             versioned_files,
             changelog,
             name,
             scopes: config.scopes,
+            extra_changelog_sections,
         })
     }
 }
@@ -213,6 +226,7 @@ pub(crate) fn find_packages() -> Option<PackageConfig> {
         versioned_files,
         changelog,
         scopes: None,
+        extra_changelog_sections: None,
     })
 }
 
