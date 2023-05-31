@@ -1,9 +1,12 @@
-use std::{collections::BTreeMap, fmt, fs, path::PathBuf};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fmt, fs,
+    path::PathBuf,
+};
 
 use git_conventional::FooterToken;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use serde::{Deserialize, Serialize};
-use velcro::{hash_map, vec};
 
 use crate::{
     command, git, releases,
@@ -163,9 +166,8 @@ impl From<&'static str> for ChangeLogSectionName {
 
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Config {
-    let variables = hash_map! {
-        String::from("$version"): command::Variable::Version,
-    };
+    let mut variables = HashMap::new();
+    variables.insert(String::from("$version"), command::Variable::Version);
 
     let github = match git::get_first_remote() {
         Some(remote) if remote.contains("github.com") => {
@@ -187,7 +189,7 @@ pub(crate) fn generate() -> Config {
         }
         _ => None,
     };
-    let release_steps = if github.is_some() {
+    let mut release_steps = if github.is_some() {
         vec![
             Step::Command {
                 command: String::from(
@@ -210,16 +212,17 @@ pub(crate) fn generate() -> Config {
             },
         ]
     };
+    release_steps.insert(
+        0,
+        Step::PrepareRelease(PrepareRelease {
+            prerelease_label: None,
+        }),
+    );
 
     Config {
         workflows: vec![Workflow {
             name: String::from("release"),
-            steps: vec![
-                Step::PrepareRelease(PrepareRelease {
-                    prerelease_label: None,
-                }),
-                ..release_steps,
-            ],
+            steps: release_steps,
         }],
         jira: None,
         github,

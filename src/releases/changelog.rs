@@ -71,8 +71,6 @@ fn unordered_list(items: &[String]) -> Map<Iter<String>, fn(&String) -> String> 
 
 #[cfg(test)]
 mod tests {
-    use velcro::hash_map;
-
     use super::*;
 
     #[test]
@@ -109,6 +107,14 @@ Sometimes a second paragraph
 
 - Fixed something
 
+### Notes
+
+- Something
+
+### More stuff
+
+- stuff
+
 ## 0.1.0 - 2020-12-25
 ### Features
 - Initial version
@@ -116,16 +122,21 @@ Sometimes a second paragraph
 [link]: some footer details
 "##;
 
-        let extra_sections = hash_map!(
-            ChangeLogSectionName::from("Notes") => vec![String::from("Something")],
-            ChangeLogSectionName::from("More stuff") => vec![String::from("stuff")],
+        let mut extra_sections = IndexMap::new();
+        extra_sections.insert(
+            ChangeLogSectionName::from("Notes"),
+            vec![String::from("Something")],
+        );
+        extra_sections.insert(
+            ChangeLogSectionName::from("More stuff"),
+            vec![String::from("stuff")],
         );
         let new_changes = new_changelog_lines(
             "0.2.0 - 2020-12-31",
             &["Fixed something".to_string()],
             &[String::from("New Feature")],
             &[String::from("Breaking change")],
-            extra_sections,
+            &extra_sections,
         );
         let changelog = add_version_to_changelog(MARKDOWN, &new_changes);
         assert_eq!(changelog, EXPECTED);
@@ -166,7 +177,7 @@ Sometimes a second paragraph
             &["Fixed something".to_string()],
             &[String::from("New Feature")],
             &[String::from("Breaking change")],
-            &HashMap::new(),
+            &IndexMap::new(),
         );
         let changelog = add_version_to_changelog(MARKDOWN, &new_changes);
         assert_eq!(changelog, EXPECTED);

@@ -1403,7 +1403,7 @@ fn notes() {
     commit(temp_path, "chore: something\n\nSpecial: Special note");
     commit(temp_path, "chore: something\n\nWhatever: Whatever note");
 
-    let source_path = Path::new("prepare_release/extra_changelog_sections");
+    let source_path = Path::new("tests/prepare_release/extra_changelog_sections");
     for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
