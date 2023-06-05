@@ -5,6 +5,7 @@
     "github>Turbo87/renovate-config//rust/updateToolchain"
   ],
   "platformAutomerge": true,
+  "lockFileMaintenance": { "enabled": true },
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
