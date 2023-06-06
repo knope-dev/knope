@@ -39,4 +39,4 @@ indexmap = "1.9.3"
 [dev-dependencies]
 rstest = { version = "0.17.0", default-features = false }
 snapbox = "0.4.10"
-tempfile = "3.4.0"
+tempfile = "3.6.0"
