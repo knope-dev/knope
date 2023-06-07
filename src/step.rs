@@ -7,6 +7,7 @@ use gix::{
     tag,
     traverse::commit::ancestors,
 };
+use inquire::InquireError;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -351,7 +352,7 @@ pub(super) enum StepError {
     code(step::user_input_error),
     help("This step requires user input, but no user input was provided. Try running the step again."),
     )]
-    UserInput(#[source] Option<std::io::Error>),
+    UserInput(#[from] InquireError),
     #[error("PrepareRelease needs to occur before this step")]
     #[diagnostic(
         code(step::release_not_prepared),

@@ -1,30 +1,25 @@
-Error: 
-  × There are problems with the defined workflows
+Error:   × There are problems with the defined workflows
 
-Error: 
-  × Problem with workflow Cannot SelectJiraIssue without Jira config
+Error:   × Problem with workflow Cannot SelectJiraIssue without Jira config
 
 Error: step::jira_not_configured (https://knope-dev.github.io/knope/config/jira.html)
 
   × Jira is not configured
   help: Jira must be configured in order to call this step
-Error: 
-  × Problem with workflow Cannot TransitionJiraIssue without SelectJiraIssue
+Error:   × Problem with workflow Cannot TransitionJiraIssue without SelectJiraIssue
 
 Error: step::no_issue_selected
 
   × No issue selected
   help: You must call SelectJiraIssue or SelectGitHubIssue before calling
         this step
-Error: 
-  × Problem with workflow Cannot SelectGitHubIssue without GitHub config
+Error:   × Problem with workflow Cannot SelectGitHubIssue without GitHub config
 
 Error: step::github_not_configured (https://knope-dev.github.io/knope/config/github.html)
 
   × GitHub is not configured
   help: GitHub must be configured in order to call this step
-Error: 
-  × Problem with workflow Cannot SwitchBranches without first selecting an
+Error:   × Problem with workflow Cannot SwitchBranches without first selecting an
   │ issue
 
 Error: step::no_issue_selected
@@ -32,8 +27,7 @@ Error: step::no_issue_selected
   × No issue selected
   help: You must call SelectJiraIssue or SelectGitHubIssue before calling
         this step
-Error: 
-  × Problem with workflow Cannot use Version variable when no metadata file
+Error:   × Problem with workflow Cannot use Version variable when no metadata file
   │ is found
 
 Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
@@ -50,8 +44,7 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
         versioned_files = ["Cargo.toml"]
         changelog = "CHANGELOG.md"
         ```
-Error: 
-  × Problem with workflow Cannot PrepareRelease with no configured packages
+Error:   × Problem with workflow Cannot PrepareRelease with no configured packages
 
 Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 

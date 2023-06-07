@@ -1,8 +1,6 @@
-Error: 
-  × There are problems with the defined workflows
+Error:   × There are problems with the defined workflows
 
-Error: 
-  × Problem with workflow release
+Error:   × Problem with workflow release
 
 Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 
