@@ -1,5 +1,4 @@
-Error: 
-  × Problem with workflow release
+Error:   × Problem with workflow release
 
 Error: step::invalid_package_json (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
 

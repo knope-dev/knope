@@ -1,6 +1,6 @@
-use inquire::{Select, Text};
 use std::fmt::Display;
 
+use inquire::{Select, Text};
 use miette::Result;
 
 use crate::step::StepError;

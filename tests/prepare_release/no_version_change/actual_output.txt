@@ -1,5 +1,4 @@
-Error: 
-  × Problem with workflow release
+Error:   × Problem with workflow release
 
 Error: step::no_release (https://knope-dev.github.io/knope/config/step/PrepareRelease.html)
 

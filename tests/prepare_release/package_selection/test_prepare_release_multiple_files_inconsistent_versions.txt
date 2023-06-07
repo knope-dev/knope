@@ -1,5 +1,4 @@
-Error: 
-  × Problem with workflow release
+Error:   × Problem with workflow release
 
 Error: step::inconsistent_versions (https://knope-dev.github.io/knope/config/step/BumpVersion.html)
 
