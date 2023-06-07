@@ -4,11 +4,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use indexmap::IndexMap;
 use itertools::Itertools;
 use log::trace;
 
 use crate::{
-    config::Package as PackageConfig,
+    config::{ChangeLogSectionName, CommitFooter, Package as PackageConfig},
     releases::{
         cargo, get_current_versions_from_tag, go, package_json, pyproject, semver::Version,
     },
@@ -21,6 +22,7 @@ pub(crate) struct Package {
     pub(crate) changelog: Option<Changelog>,
     pub(crate) name: Option<String>,
     pub(crate) scopes: Option<Vec<String>>,
+    pub(crate) extra_changelog_sections: IndexMap<CommitFooter, ChangeLogSectionName>,
 }
 
 impl Package {
@@ -31,11 +33,22 @@ impl Package {
             .map(VersionedFile::try_from)
             .collect::<Result<Vec<_>, _>>()?;
         let changelog = config.changelog.map(Changelog::try_from).transpose()?;
+        let mut extra_changelog_sections = IndexMap::new();
+        for section in config.extra_changelog_sections.unwrap_or_default() {
+            for footer in section.footers {
+                extra_changelog_sections.insert(footer, section.name.clone());
+            }
+        }
+        let default_extra_footer = CommitFooter::from("Changelog-Note");
+        extra_changelog_sections
+            .entry(default_extra_footer)
+            .or_insert_with(|| ChangeLogSectionName::from("Notes"));
         Ok(Package {
             versioned_files,
             changelog,
             name,
             scopes: config.scopes,
+            extra_changelog_sections,
         })
     }
 }
@@ -121,7 +134,7 @@ impl TryFrom<&PathBuf> for PackageFormat {
         PACKAGE_FORMAT_FILE_NAMES
             .iter()
             .find_position(|&name| *name == file_name)
-            .map(|(pos, _)| ALL_PACKAGE_FORMATS[pos])
+            .and_then(|(pos, _)| ALL_PACKAGE_FORMATS.get(pos).copied())
             .ok_or_else(|| StepError::VersionedFileFormat(path.clone()))
     }
 }
@@ -213,27 +226,28 @@ pub(crate) fn find_packages() -> Option<PackageConfig> {
         versioned_files,
         changelog,
         scopes: None,
+        extra_changelog_sections: None,
     })
 }
 
 /// Includes some helper text for the user to understand how to use the config to define packages.
-pub(crate) fn suggested_package_toml() -> String {
+pub(crate) fn suggested_package_toml() -> Result<String, StepError> {
     let package = find_packages();
     if let Some(package) = package {
-        format!(
+        Ok(format!(
             "Found the package metadata files {files} in the current directory. You may need to add this \
             to your knope.toml:\n\n```\n[package]\n{toml}```",
-            files = package.versioned_files.iter().map(|path| path.to_str().unwrap())
+            files = package.versioned_files.iter().map(|path| path.to_string_lossy())
                 .collect::<Vec<_>>()
                 .join(", "),
-            toml = toml::to_string(&package).unwrap()
-        )
+            toml = toml::to_string(&package).or(Err(StepError::FailedTomlSerialization))?
+        ))
     } else {
-        format!(
+        Ok(format!(
             "No supported package managers found in current directory. \
-            The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
-            \n\n```\n[package]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
+                    The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
+                    \n\n```\n[package]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
             formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
-        )
+        ))
     }
 }

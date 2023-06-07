@@ -6,16 +6,19 @@ CARGO_MAKE_CARGO_VERBOSE_FLAGS = ""
 crate_name = "mdbook"
 binary = "mdbook"
 test_arg = "--help"
+force = false
 
 [tasks.mdbook-admonish.install_crate]
 crate_name = "mdbook-admonish"
 binary = "mdbook-admonish"
 test_arg = "help"
+force = false
 
 [tasks.mdbook-linkcheck.install_crate]
 crate_name = "mdbook-linkcheck"
 binary = "mdbook-linkcheck"
 test_arg = "--help"
+force = false
 
 [tasks.book-dependencies]
 dependencies = ["mdbook", "mdbook-admonish", "mdbook-linkcheck"]

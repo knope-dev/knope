@@ -1,6 +1,8 @@
 use std::{
     fs::{copy, read_to_string, write},
     path::Path,
+    thread::sleep,
+    time::Duration,
 };
 
 use git_repo_helpers::*;
@@ -1318,5 +1320,124 @@ fn handle_pre_versions_that_are_too_new() {
     assert_eq_path(
         source_path.join("EXPECTED_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+#[test]
+fn merge_commits() {
+    env_logger::init();
+    // Arrange a knope project with a merge commit.
+    // Make a directory at a known path
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    create_branch(temp_path, "feature");
+    commit(temp_path, "feat: A new feature");
+    switch_branch(temp_path, "main");
+    // Even if the latest tag commit is newer than the merged, the ancestors from the merge should be processed
+    sleep(Duration::from_secs(1));
+    commit(temp_path, "feat: existing feature");
+    tag(temp_path, "v1.2.3"); // The current stable version
+    merge_branch(temp_path, "feature");
+
+    let source_path = Path::new("tests/prepare_release/merge_commits");
+    for file in ["knope.toml", "Cargo.toml", "CHANGELOG.md"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_path)
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stdout_eq_path(source_path.join("actual_output.txt"));
+    assert_eq_path(
+        source_path.join("EXPECTED_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+}
+
+#[test]
+fn notes() {
+    // Arrange a knope project with a merge commit.
+    // Make a directory at a known path
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Existing versions");
+    tag(temp_path, "first/v1.0.0");
+    tag(temp_path, "second/v0.1.0");
+    commit(
+        temp_path,
+        "chore: something\n\nChangelog-Note: A standard note",
+    );
+    commit(
+        temp_path,
+        "chore(first): something\n\nChangelog-Note: Standard note first only",
+    );
+    commit(
+        temp_path,
+        "chore(second): something\n\nChangelog-Note: Standard note second only",
+    );
+    commit(
+        temp_path,
+        "chore: something\n\nChangelog-First-Note: A custom note",
+    );
+    commit(temp_path, "chore: something\n\nSpecial: Special note");
+    commit(temp_path, "chore: something\n\nWhatever: Whatever note");
+
+    let source_path = Path::new("tests/prepare_release/extra_changelog_sections");
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stderr_eq("");
+    assert_eq_path(
+        source_path.join("EXPECTED_Cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_pyproject.toml"),
+        read_to_string(temp_path.join("pyproject.toml")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_FIRST_CHANGELOG.md"),
+        read_to_string(temp_path.join("FIRST_CHANGELOG.md")).unwrap(),
+    );
+    assert_eq_path(
+        source_path.join("EXPECTED_SECOND_CHANGELOG.md"),
+        read_to_string(temp_path.join("SECOND_CHANGELOG.md")).unwrap(),
     );
 }

@@ -52,14 +52,14 @@ fn replace_variables(
     for (var_name, var_type) in variables {
         match var_type {
             Variable::Version => {
-                let package = if state.packages.len() == 1 {
-                    &state.packages[0]
-                } else if state.packages.is_empty() {
-                    return Err(StepError::no_defined_packages_with_help());
-                } else {
+                let package = if state.packages.len() > 1 {
                     return Err(StepError::TooManyPackages);
+                } else if let Some(package) = state.packages.first() {
+                    package
+                } else {
+                    return Err(StepError::no_defined_packages_with_help());
                 };
-                let release = if state.releases.is_empty() {
+                let Some(release) = state.releases.first() else {
                     command = command.replace(
                         &var_name,
                         &get_version(package)?
@@ -68,8 +68,6 @@ fn replace_variables(
                             .to_string(),
                     );
                     continue;
-                } else {
-                    &state.releases[0]
                 };
                 match release {
                     Release::Prepared(release) => {
@@ -128,6 +126,8 @@ mod test_run_command {
 mod test_replace_variables {
     use std::path::PathBuf;
 
+    use indexmap::IndexMap;
+
     use super::*;
     use crate::{
         issues::Issue,
@@ -141,6 +141,7 @@ mod test_replace_variables {
             changelog: Some(PathBuf::from("CHANGELOG.md").try_into().unwrap()),
             name: None,
             scopes: None,
+            extra_changelog_sections: IndexMap::new(),
         }]
     }
 

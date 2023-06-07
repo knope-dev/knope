@@ -8,7 +8,7 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state as bump_version, get_version, Rule},
 };
 use crate::{
-    releases::semver::{Label, PreVersion, Prerelease, StableVersion, Version},
+    releases::semver::{PreVersion, StableVersion, Version},
     state::Release::{Bumped, Prepared},
     step::StepError,
     RunType,
@@ -24,6 +24,7 @@ mod package;
 mod package_json;
 mod pyproject;
 pub(crate) mod semver;
+pub(crate) use non_empty_map::PrereleaseMap;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Release {
@@ -38,17 +39,49 @@ pub(crate) struct CurrentVersions {
     pub(crate) prereleases: Prereleases,
 }
 
-type Prereleases = BTreeMap<StableVersion, BTreeMap<Label, Prerelease>>;
+type Prereleases = BTreeMap<StableVersion, PrereleaseMap>;
+
+mod non_empty_map {
+    use std::collections::BTreeMap;
+
+    use crate::releases::semver::{Label, Prerelease};
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    /// Used to track the various pre-releases of a version, can never be empty
+    pub(crate) struct PrereleaseMap(BTreeMap<Label, Prerelease>);
+
+    impl PrereleaseMap {
+        /// Create a new map, cannot be empty
+        pub(crate) fn new(prerelease: Prerelease) -> Self {
+            let mut map = BTreeMap::new();
+            map.insert(prerelease.label.clone(), prerelease);
+            Self(map)
+        }
+
+        #[allow(clippy::unwrap_used)] // Map is not allowed to be empty ever
+        pub(crate) fn into_last(mut self) -> Prerelease {
+            self.0
+                .pop_last()
+                .map(|(_label, prerelease)| prerelease)
+                .unwrap()
+        }
+
+        pub(crate) fn insert(&mut self, prerelease: Prerelease) {
+            self.0.insert(prerelease.label.clone(), prerelease);
+        }
+
+        pub(crate) fn get(&self, key: &Label) -> Option<&Prerelease> {
+            self.0.get(key)
+        }
+    }
+}
 
 impl CurrentVersions {
     pub(crate) fn into_latest(mut self) -> Option<Version> {
         self.prereleases
             .pop_last()
-            .map(|(stable_component, mut pres)| {
-                let pre_component = pres
-                    .pop_last()
-                    .expect("This map is never allowed to be empty")
-                    .1;
+            .map(|(stable_component, pres)| {
+                let pre_component = pres.into_last();
                 Version::Pre(PreVersion {
                     stable_component,
                     pre_component,
@@ -84,10 +117,12 @@ impl CurrentVersions {
                         return;
                     }
                 }
-                self.prereleases
-                    .entry(stable_component)
-                    .or_default()
-                    .insert(pre_component.label.clone(), pre_component);
+                if let Some(labels) = self.prereleases.get_mut(&stable_component) {
+                    labels.insert(pre_component);
+                } else {
+                    self.prereleases
+                        .insert(stable_component, PrereleaseMap::new(pre_component));
+                }
             }
         }
     }

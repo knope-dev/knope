@@ -1,6 +1,7 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{collections::VecDeque, path::PathBuf, str::FromStr};
 
 use git2::{build::CheckoutBuilder, Branch, BranchType, Repository};
+use itertools::Itertools;
 use log::{debug, error, trace, warn};
 
 use crate::{
@@ -105,20 +106,28 @@ pub(crate) fn get_first_remote() -> Option<String> {
 }
 
 fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, StepError> {
-    let parts: Vec<&str> = ref_name.split('-').collect();
+    let mut parts: VecDeque<&str> = ref_name.split('-').collect();
 
-    let (key, summary) = if !parts.is_empty() && usize::from_str(parts[0]).is_ok() {
-        // GitHub style, like 42-some-description for issue #42
-        Ok((parts[0].to_string(), parts[1..].join("-")))
-    } else if parts.len() >= 2 && usize::from_str(parts[1]).is_ok() {
-        // Jira style, like PROJ-123-something-else where PROJ-123 is the issue key
-        Ok((parts[0..2].join("-"), parts[2..].join("-")))
-    } else {
-        Err(StepError::BadGitBranchName)
-    }?;
-
-    println!("Auto-selecting issue {} from ref {ref_name}", &key);
-    Ok(Issue { key, summary })
+    let issue_key = parts.pop_front().ok_or(StepError::BadGitBranchName)?;
+    if let Ok(github_issue) = usize::from_str(issue_key) {
+        println!("Auto-selecting issue {github_issue} from ref {ref_name}");
+        return Ok(Issue {
+            key: github_issue.to_string(),
+            summary: parts.iter().join("-"),
+        });
+    }
+    let project_key = issue_key;
+    let issue_number = parts
+        .pop_front()
+        .map(usize::from_str)
+        .ok_or(StepError::BadGitBranchName)?
+        .or(Err(StepError::BadGitBranchName))?;
+    let jira_issue = format!("{project_key}-{issue_number}");
+    println!("Auto-selecting issue {jira_issue} from ref {ref_name}");
+    return Ok(Issue {
+        key: jira_issue,
+        summary: parts.iter().join("-"),
+    });
 }
 
 #[cfg(test)]
@@ -258,36 +267,59 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
         .as_ref()
         .map(|reference| repo.find_reference(reference))
         .transpose()
-        .expect("Could not find Git reference that was previously seen.");
+        .or(Err(StepError::UnknownGitError))?;
     let tag_oid = tag_ref
         .map(gix::Reference::into_fully_peeled_id)
         .transpose()?;
-    if reference.is_some() && tag_oid.is_none() {
-        error!(
-            "Found tagged version {}, but could not parse it within Git",
-            reference.unwrap()
-        );
-    }
-    let commit = repo.head_commit()?;
-    let mut messages = vec![];
-    for item in commit.ancestors().all()? {
-        let id = item?;
-        if let Some(tag_id) = tag_oid {
-            if id == tag_id {
-                break;
-            }
-        }
-        if let Some(commit) = repo
-            .find_object(id)
-            .ok()
-            .and_then(|object| object.try_into_commit().ok())
-        {
-            let message = commit.decode()?.message.to_string();
-            trace!("Checking commit message: {}", &message);
-            messages.push(message);
+    if tag_oid.is_none() {
+        if let Some(reference) = reference {
+            error!(
+                "Found tagged version {}, but could not parse it within Git",
+                reference
+            );
         }
     }
-    Ok(messages)
+    let head_commit = repo.head_commit()?;
+    let head_commit_message = head_commit.decode()?.message.to_string();
+    trace!("Checking commit message: {}", &head_commit_message);
+    let mut reverse_commits = [head_commit_message]
+        .into_iter()
+        .chain(
+            head_commit
+                .parent_ids()
+                .filter_map(|id| {
+                    repo.find_object(id)
+                        .ok()
+                        .and_then(|object| object.try_into_commit().ok())
+                        .and_then(|commit| commit.ancestors().all().ok())
+                        .map(|ancestors| {
+                            ancestors
+                                .into_iter()
+                                .filter_map(Result::ok)
+                                .take_while(|id| {
+                                    if let Some(tag_id) = tag_oid {
+                                        *id != tag_id
+                                    } else {
+                                        true
+                                    }
+                                })
+                                .filter_map(|id| {
+                                    repo.find_object(id)
+                                        .ok()
+                                        .and_then(|object| object.try_into_commit().ok())
+                                })
+                        })
+                })
+                .flatten()
+                .filter_map(|commit| {
+                    let message = commit.decode().ok()?.message.to_string();
+                    trace!("Checking commit message: {}", &message);
+                    Some(message)
+                }),
+        )
+        .collect_vec();
+    reverse_commits.reverse();
+    Ok(reverse_commits)
 }
 
 /// Add some files to Git to be committed later.

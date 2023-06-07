@@ -4,6 +4,6 @@ Would add the following to CHANGELOG.md:
 
 ### Features
 
-- Another new feature
 - A new feature
+- Another new feature
 

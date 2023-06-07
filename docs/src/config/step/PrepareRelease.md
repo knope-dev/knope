@@ -12,7 +12,8 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Limitations
 
-The CHANGELOG format is pretty strict. Only three sections will be added to the new version, `### Breaking Changes` for anything that conventional commits have marked as breaking, `### Fixes` for anything called `fix:`, and `### Features` for anything with `feat: `. Any other commits (conventional or not) will be left out.
+- The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] which meet certain requirements. See [Changelog sections](#changelog-sections) below.
+- Knope uses a simpler subset of semantic versioning which you can read about in [BumpVersion]
 
 ## Commit Scopes
 
@@ -21,6 +22,25 @@ The `PrepareRelease` step can be fine-tuned when working with multiple packages 
 1. If no packages define `scopes` in their config, all commits apply to all packages. Scopes are not considered by `knope`.
 2. If a commit does not have a scope, it applies to all packages.
 3. If a commit has a scope, and _any_ package has defined a `scopes` array, the commit will only apply to those packages which have that scope defined in their `scopes` array.
+
+## Changelog sections
+
+Sections are only added to the changelog for each version as needed—if there are no commits that meet the requirements for a section, that section will not be added. The built-in sections are:
+
+1. `### Breaking Changes` for anything that conventional commits have marked as breaking. Any commit whose type/scope end in `!` will land in this section **instead** of their default section (if any). So `fix!: a breaking fix` will add the note "a breaking fix" to this section and **nothing** to the "Fixes" section. If the special `BREAKING CHANGE` footer is used in any commit, the message from that footer (not the main commit message) will be added here.
+2. `### Features` for any commit with type `feat` (no `!`)
+3. `### Fixes` for any commit with type `fix` (no `!`)
+4. `### Notes` for any footer in a conventional commit called `Changelog-Note`. This section name can be changed via [configuration](../packages.md#extra_changelog_sections).
+5. Custom sections as defined in the [configuration](../packages.md#extra_changelog_sections).
+
+## Versioning
+
+Versioning is done with the same logic as the [BumpVersion] step, but the rule is selected automatically based on the commits since the last version tag. Generally, rule selection works as follows:
+
+1. If there are any breaking changes (type/scope ending in `!` or a `BREAKING CHANGE` footer), the `Major` rule is used.
+2. If no breaking changes, but there are any features (commits with `feat` type), the `Minor` rule is used.
+3. If no breaking changes or features, but there _are_ entries to add to the changelog (fixes, notes, or custom sections) the `Patch` rule is used.
+4. If there are no new entries to add to the changelog, version will not be increased.
 
 ## Examples
 
@@ -164,3 +184,4 @@ The reasons this can fail:
 [packages]: ../packages.md
 [`release`]: ./Release.md
 [conventional commit scope]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope
+[conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
