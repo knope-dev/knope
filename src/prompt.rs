@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use inquire::{Select, Text};
+use inquire::{Password, Select};
 use miette::Result;
 
 use crate::step::StepError;
@@ -12,5 +12,9 @@ pub(crate) fn select<T: Display>(items: Vec<T>, prompt: &str) -> Result<T, StepE
 }
 
 pub(crate) fn get_input(prompt: &str) -> Result<String, StepError> {
-    Text::new(prompt).prompt().map_err(StepError::UserInput)
+    Password::new(prompt)
+        .with_display_toggle_enabled()
+        .without_confirmation()
+        .prompt()
+        .map_err(StepError::UserInput)
 }
