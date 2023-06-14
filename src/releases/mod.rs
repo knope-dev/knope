@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
 
 pub(crate) use self::{
+    changesets::{create_change_file, ChangeType},
     git::{get_current_versions_from_tag, tag_name},
     package::{find_packages, suggested_package_toml, Package},
     semver::{bump_version_and_update_state as bump_version, get_version, Rule},
@@ -16,6 +17,7 @@ use crate::{
 
 mod cargo;
 mod changelog;
+mod changesets;
 mod conventional_commits;
 mod git;
 mod github;
@@ -24,6 +26,7 @@ mod package;
 mod package_json;
 mod pyproject;
 pub(crate) mod semver;
+
 pub(crate) use non_empty_map::PrereleaseMap;
 
 #[derive(Clone, Debug)]

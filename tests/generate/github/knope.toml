@@ -14,6 +14,12 @@ command = "git commit -m \"chore: prepare release $version\" && git push"
 [[workflows.steps]]
 type = "Release"
 
+[[workflows]]
+name = "document-change"
+
+[[workflows.steps]]
+type = "CreateChangeFile"
+
 [github]
 owner = "knope-dev"
 repo = "knope"

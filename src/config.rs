@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     command, git, releases,
-    releases::find_packages,
+    releases::{find_packages, ChangeType},
     step::{PrepareRelease, Step, StepError},
     workflow::Workflow,
 };
@@ -129,7 +129,10 @@ pub(crate) struct Package {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub(crate) struct ChangelogSection {
     pub(crate) name: ChangeLogSectionName,
+    #[serde(default)]
     pub(crate) footers: Vec<CommitFooter>,
+    #[serde(default)]
+    pub(crate) types: Vec<ChangeType>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -220,10 +223,16 @@ pub(crate) fn generate() -> Config {
     );
 
     Config {
-        workflows: vec![Workflow {
-            name: String::from("release"),
-            steps: release_steps,
-        }],
+        workflows: vec![
+            Workflow {
+                name: String::from("release"),
+                steps: release_steps,
+            },
+            Workflow {
+                name: String::from("document-change"),
+                steps: vec![Step::CreateChangeFile],
+            },
+        ],
         jira: None,
         github,
         package: find_packages(),

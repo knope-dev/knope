@@ -126,8 +126,6 @@ mod test_run_command {
 mod test_replace_variables {
     use std::path::PathBuf;
 
-    use indexmap::IndexMap;
-
     use super::*;
     use crate::{
         issues::Issue,
@@ -139,9 +137,7 @@ mod test_replace_variables {
         vec![Package {
             versioned_files: vec![PathBuf::from("Cargo.toml").try_into().unwrap()],
             changelog: Some(PathBuf::from("CHANGELOG.md").try_into().unwrap()),
-            name: None,
-            scopes: None,
-            extra_changelog_sections: IndexMap::new(),
+            ..Package::default()
         }]
     }
 

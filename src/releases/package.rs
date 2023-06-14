@@ -1,5 +1,6 @@
 use std::{
     ffi::OsStr,
+    fmt,
     fs::{read_to_string, write},
     path::{Path, PathBuf},
 };
@@ -12,17 +13,19 @@ use crate::{
     config::{ChangeLogSectionName, CommitFooter, Package as PackageConfig},
     releases::{
         cargo, get_current_versions_from_tag, go, package_json, pyproject, semver::Version,
+        ChangeType,
     },
     step::{StepError, StepError::InvalidCargoToml},
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Package {
     pub(crate) versioned_files: Vec<VersionedFile>,
     pub(crate) changelog: Option<Changelog>,
     pub(crate) name: Option<String>,
     pub(crate) scopes: Option<Vec<String>>,
-    pub(crate) extra_changelog_sections: IndexMap<CommitFooter, ChangeLogSectionName>,
+    pub(crate) commit_footers: IndexMap<CommitFooter, ChangeLogSectionName>,
+    pub(crate) change_types: IndexMap<ChangeType, ChangeLogSectionName>,
 }
 
 impl Package {
@@ -33,14 +36,18 @@ impl Package {
             .map(VersionedFile::try_from)
             .collect::<Result<Vec<_>, _>>()?;
         let changelog = config.changelog.map(Changelog::try_from).transpose()?;
-        let mut extra_changelog_sections = IndexMap::new();
+        let mut commit_footers = IndexMap::new();
+        let mut change_types = IndexMap::new();
         for section in config.extra_changelog_sections.unwrap_or_default() {
             for footer in section.footers {
-                extra_changelog_sections.insert(footer, section.name.clone());
+                commit_footers.insert(footer, section.name.clone());
+            }
+            for change_type in section.types {
+                change_types.insert(change_type, section.name.clone());
             }
         }
         let default_extra_footer = CommitFooter::from("Changelog-Note");
-        extra_changelog_sections
+        commit_footers
             .entry(default_extra_footer)
             .or_insert_with(|| ChangeLogSectionName::from("Notes"));
         Ok(Package {
@@ -48,8 +55,15 @@ impl Package {
             changelog,
             name,
             scopes: config.scopes,
-            extra_changelog_sections,
+            commit_footers,
+            change_types,
         })
+    }
+}
+
+impl fmt::Display for Package {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name.as_deref().unwrap_or("default"))
     }
 }
 
