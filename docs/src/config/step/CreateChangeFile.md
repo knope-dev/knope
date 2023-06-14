@@ -61,7 +61,7 @@ first: poem
 second: major
 ---
 
-### `[i carry your heart with me(i carry it in]`
+#### `[i carry your heart with me(i carry it in]`
 ```
 
 If that brief summary is not enough, you should then edit this file and add more detail below the generated heading, using all the Markdown features you want!
@@ -72,7 +72,7 @@ first: poem
 second: major
 ---
 
-### `[i carry your heart with me(i carry it in]`
+#### `[i carry your heart with me(i carry it in]`
 
 **E. E. Cummings**
 
@@ -95,17 +95,16 @@ and this is the wonder that's keeping the stars apart
 
 i carry your heart(i carry it in my heart)
 </pre>
-
 ```
 
-When you are done, you can run `knope document-change` again to create another change file. When you are ready to release, run [`PrepareRelease`] to combine all the change files and conventional commits into a changelog and update the versions of any configured [packages]. The type of the change for each package will determine where it is placed in the changelog: so `first/CHANGELOG.md` will have a `## Poems 🎭` section and `second/CHANGELOG.md` will have a `## Breaking Changes` section, each containing the summary and body of the change.
+When you are done, you can run `knope document-change` again to create another change file. When you are ready to release, run [`PrepareRelease`] to combine all the change files and conventional commits into a changelog and update the versions of any configured [packages]. The type of the change for each package will determine where it is placed in the changelog: so `first/CHANGELOG.md` will have a `### Poems 🎭` section and `second/CHANGELOG.md` will have a `### Breaking Changes` section, each containing the summary and body of the change.
 
 For completeness, this is what the changelog for `first` would look like (if there had been no other changes):
 
 ```markdown
-## Poems 🎭
+### Poems 🎭
 
-### `[i carry your heart with me(i carry it in]`
+#### `[i carry your heart with me(i carry it in]`
 
 **E. E. Cummings**
 

@@ -2,13 +2,13 @@
 
 ### Breaking Changes
 
-- Breaking change
+#### Breaking change
 
 ## 1.1.0
 
 ### Features
 
-- New feature
+#### New feature
 
 ## 1.0.0
 

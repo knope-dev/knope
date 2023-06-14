@@ -4,7 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Breaking Changes
 
-- Breaking Change
+#### Breaking Change
 
 Would run git commit -m "chore: prepare release 2.0.0"
 Would create Git tag v2.0.0

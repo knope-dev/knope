@@ -46,7 +46,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
         .prompt()
         .map_err(StepError::UserInput)?;
     let unique_id: String = create_unique_id(&summary);
-    let summary = format!("### {summary}");
+    let summary = format!("#### {summary}");
     let change = Change {
         unique_id,
         versioning,

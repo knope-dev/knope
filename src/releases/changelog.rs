@@ -1,5 +1,3 @@
-use std::{iter::Map, slice::Iter};
-
 use indexmap::IndexMap;
 use itertools::Itertools;
 
@@ -43,34 +41,32 @@ pub(super) fn new_changelog_lines(
 
     blocks.push(format!("## {title}\n"));
     if !breaking_changes.is_empty() {
-        blocks.push(String::from("### Breaking Changes\n"));
-        blocks.extend(unordered_list(breaking_changes));
-        blocks.push(String::new());
+        blocks.extend(create_section("Breaking Changes", breaking_changes));
     }
     if !features.is_empty() {
-        blocks.push(String::from("### Features\n"));
-        blocks.extend(unordered_list(features));
-        blocks.push(String::new());
+        blocks.extend(create_section("Features", features));
     }
     if !fixes.is_empty() {
-        blocks.push(String::from("### Fixes\n"));
-        blocks.extend(unordered_list(fixes));
-        blocks.push(String::new());
+        blocks.extend(create_section("Fixes", fixes));
     }
     for (section_title, notes) in extra_sections {
-        blocks.push(format!("### {section_title}\n"));
-        blocks.extend(unordered_list(notes));
-        blocks.push(String::new());
+        blocks.extend(create_section(section_title.as_ref(), notes));
     }
     blocks
 }
 
-fn unordered_list(items: &[String]) -> Map<Iter<String>, fn(&String) -> String> {
-    items.iter().map(|note| format!("- {note}"))
+fn create_section(title: &str, items: &[String]) -> Vec<String> {
+    let mut blocks = Vec::with_capacity(items.len() + 2);
+    blocks.push(format!("### {title}"));
+    blocks.extend(items.iter().map(|summary| format!("\n#### {summary}")));
+    blocks.push(String::new());
+    blocks
 }
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[test]
@@ -97,23 +93,25 @@ Sometimes a second paragraph
 
 ### Breaking Changes
 
-- Breaking change
+#### Breaking change
 
 ### Features
 
-- New Feature
+#### New Feature
+
+#### Another feature
 
 ### Fixes
 
-- Fixed something
+#### Fixed something
 
 ### Notes
 
-- Something
+#### Something
 
 ### More stuff
 
-- stuff
+#### stuff
 
 ## 0.1.0 - 2020-12-25
 ### Features
@@ -134,7 +132,7 @@ Sometimes a second paragraph
         let new_changes = new_changelog_lines(
             "0.2.0 - 2020-12-31",
             &["Fixed something".to_string()],
-            &[String::from("New Feature")],
+            &[String::from("New Feature"), String::from("Another feature")],
             &[String::from("Breaking change")],
             &extra_sections,
         );
@@ -161,15 +159,15 @@ Sometimes a second paragraph
 
 ### Breaking Changes
 
-- Breaking change
+#### Breaking change
 
 ### Features
 
-- New Feature
+#### New Feature
 
 ### Fixes
 
-- Fixed something
+#### Fixed something
 "##;
 
         let new_changes = new_changelog_lines(

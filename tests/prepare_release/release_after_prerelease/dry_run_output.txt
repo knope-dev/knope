@@ -4,9 +4,9 @@ Would add the following to CHANGELOG.md:
 
 ### Breaking Changes
 
-- Breaking change
+#### Breaking change
 
 ### Features
 
-- New feature
+#### New feature
 

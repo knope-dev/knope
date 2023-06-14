@@ -2,8 +2,8 @@
 
 ### Features
 
-- No-scope feat
+#### No-scope feat
 
 ### Fixes
 
-- Fix for first only
+#### Fix for first only

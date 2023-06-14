@@ -4,11 +4,11 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Breaking Changes
 
-- New breaking feature with a scope
+#### New breaking feature with a scope
 
 ### Features
 
-- No scope feature
+#### No scope feature
 
 Would bump second version to 0.2.0
 Would add the following to SECOND_CHANGELOG.md: 
@@ -16,9 +16,9 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Breaking Changes
 
-- New breaking feature with a scope
+#### New breaking feature with a scope
 
 ### Features
 
-- No scope feature
+#### No scope feature
 

@@ -39,6 +39,7 @@ inquire = { version = "0.6.2", default-features = false, features = [
 changesets = { version = "0.1.0", path = "../changesets" }
 
 [dev-dependencies]
+pretty_assertions = "1.3.0"
 rstest = { version = "0.17.0", default-features = false }
 snapbox = "0.4.10"
 tempfile = "3.4.0"

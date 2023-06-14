@@ -4,6 +4,6 @@ Would add the following to CHANGELOG.md:
 
 ### Features
 
-- New feature
+#### New feature
 
 Would create Git tag v1.1.0

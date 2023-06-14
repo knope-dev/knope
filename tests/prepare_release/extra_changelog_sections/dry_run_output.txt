@@ -4,14 +4,17 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Notes
 
-- A standard note
-- Standard note first only
-- A custom note
+#### A standard note
+
+#### Standard note first only
+
+#### A custom note
 
 ### Something Special 🚀
 
-- Special note
-- Whatever note
+#### Special note
+
+#### Whatever note
 
 Would bump second version to 0.1.1
 Would add the following to SECOND_CHANGELOG.md: 
@@ -19,6 +22,7 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Notes
 
-- A standard note
-- Standard note second only
+#### A standard note
+
+#### Standard note second only
 

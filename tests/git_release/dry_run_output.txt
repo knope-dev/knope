@@ -4,7 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Features
 
-- New feature
+#### New feature
 
 Would run git commit -m "chore: Bump to 1.1.0"
 Would create Git tag v1.1.0

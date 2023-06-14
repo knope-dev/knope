@@ -2,7 +2,7 @@
 
 ### Features
 
-- New feature in second RC
+#### New feature in second RC
 
 ## 1.1.0-rc.1
 

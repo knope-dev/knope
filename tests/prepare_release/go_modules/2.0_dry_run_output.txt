@@ -4,6 +4,6 @@ Would add the following to CHANGELOG.md:
 
 ### Breaking Changes
 
-- Breaking change
+#### Breaking change
 
 Would create Git tag v2.0.0

@@ -2,8 +2,8 @@
 
 ### Breaking Changes
 
-- Breaking change for second only
+#### Breaking change for second only
 
 ### Features
 
-- Shared feat
+#### Shared feat

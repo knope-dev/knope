@@ -4,5 +4,5 @@ Would add the following to CHANGES.md:
 
 ### Features
 
-- New feature
+#### New feature
 

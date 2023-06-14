@@ -5,5 +5,5 @@ Would create a release on GitHub with name and tag v2.0.0 and body:
 
 ### Breaking Changes
 
-- Breaking Change
+#### Breaking Change
 

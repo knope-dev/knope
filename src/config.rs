@@ -167,6 +167,12 @@ impl From<&'static str> for ChangeLogSectionName {
     }
 }
 
+impl AsRef<str> for ChangeLogSectionName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Config {
     let mut variables = HashMap::new();
