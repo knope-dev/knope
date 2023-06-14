@@ -45,16 +45,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
         .with_help_message("This will be used as a header in the changelog")
         .prompt()
         .map_err(StepError::UserInput)?;
-    let unique_id: String = summary
-        .chars()
-        .map(|c| {
-            if c.is_ascii_alphabetic() {
-                c.to_ascii_lowercase()
-            } else {
-                '_'
-            }
-        })
-        .collect();
+    let unique_id: String = create_unique_id(&summary);
     let summary = format!("### {summary}");
     let change = Change {
         unique_id,
@@ -72,6 +63,30 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
         StepError::CouldNotCreateFile(changeset_path.join(file_name))
     })?;
     Ok(RunType::Real(state))
+}
+
+fn create_unique_id(summary: &str) -> String {
+    summary
+        .chars()
+        .filter_map(|c| {
+            if c.is_ascii_alphanumeric() {
+                Some(c.to_ascii_lowercase())
+            } else if c == ' ' {
+                Some('_')
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+#[cfg(test)]
+#[test]
+fn test_create_unique_id() {
+    assert_eq!(
+        create_unique_id("`[i carry your heart with me(i carry it in]`"),
+        "i_carry_your_heart_with_mei_carry_it_in"
+    );
 }
 
 #[derive(Clone, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
