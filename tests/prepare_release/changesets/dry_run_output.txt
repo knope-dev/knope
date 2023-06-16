@@ -1,0 +1,24 @@
+Would delete: .changeset/breaking_change.md
+Would bump Cargo.toml to 2.0.0
+Would bump pyproject.toml to 2.0.0
+Would add the following to FIRST_CHANGELOG.md:
+## 2.0.0
+
+### Breaking Changes
+
+#### #### A breaking change
+
+A breaking change for only the first package
+
+### Features
+
+#### A new shared feature from a conventional commit
+
+Would bump package.json to 0.4.7
+Would add the following to SECOND_CHANGELOG.md:
+## 0.4.7
+
+### Features
+
+#### A new shared feature from a conventional commit
+

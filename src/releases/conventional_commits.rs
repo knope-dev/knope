@@ -1,41 +1,25 @@
-use std::{collections::HashMap, io::Write};
-
 use git_conventional::{Commit, Type};
-use indexmap::IndexMap;
 use log::debug;
 
-use super::{
-    changelog::{add_version_to_changelog, new_changelog_lines},
-    semver::{bump_version, ConventionalRule, Rule},
-    Release,
-};
 use crate::{
-    config::{ChangeLogSectionName, CommitFooter},
-    git::{add_files, get_commit_messages_after_last_stable_version},
-    releases::{
-        semver::{Label, PackageVersion},
-        Package,
-    },
-    state, step,
+    config::CommitFooter,
+    git::get_commit_messages_after_last_stable_version,
+    releases::{package::ChangelogSectionSource, Change, ChangeType, Package},
     step::StepError,
-    RunType,
 };
 
-#[derive(Debug)]
-struct ConventionalCommits {
-    rule: Option<ConventionalRule>,
-    features: Vec<String>,
-    fixes: Vec<String>,
-    breaking_changes: Vec<String>,
-    extra_sections: IndexMap<ChangeLogSectionName, Vec<String>>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ConventionalCommit {
+    pub(crate) change_type: ChangeType,
+    pub(crate) message: String,
 }
 
-impl ConventionalCommits {
+impl ConventionalCommit {
     fn from_commit_messages(
         commit_messages: &[String],
         consider_scopes: bool,
         package: &Package,
-    ) -> Self {
+    ) -> Vec<Self> {
         let commits = commit_messages
             .iter()
             .filter_map(|message| Commit::parse(message.trim()).ok())
@@ -54,34 +38,24 @@ impl ConventionalCommits {
         Self::from_commits(package, commits)
     }
 
-    fn from_commits(package: &Package, commits: Vec<Commit>) -> Self {
-        let mut rule = None;
-        let mut features = Vec::new();
-        let mut fixes = Vec::new();
-        let mut breaking_changes = Vec::new();
-        let mut extra_sections = HashMap::new();
+    fn from_commits(package: &Package, commits: Vec<Commit>) -> Vec<Self> {
+        let mut conventional_commits = Vec::with_capacity(commits.len());
 
         for commit in commits {
             for footer in commit.footers() {
-                if let Some(section) = package
-                    .commit_footers
-                    .get(&CommitFooter::from(footer.token()))
-                {
-                    extra_sections
-                        .entry(section.clone())
-                        .or_insert_with(Vec::new)
-                        .push(String::from(footer.value()));
+                let source: ChangelogSectionSource = CommitFooter::from(footer.token()).into();
+                if package.extra_changelog_sections.contains_key(&source) {
+                    conventional_commits.push(Self {
+                        change_type: ChangeType::from(source),
+                        message: footer.value().to_string(),
+                    });
                 }
             }
             if let Some(breaking_message) = commit.breaking_description() {
-                if !matches!(rule, Some(ConventionalRule::Major)) {
-                    debug!(
-                        "breaking change \"{}\" results in Major rule selection",
-                        breaking_message
-                    );
-                    rule = Some(ConventionalRule::Major);
-                }
-                breaking_changes.push(breaking_message.to_string());
+                conventional_commits.push(Self {
+                    change_type: ChangeType::Breaking,
+                    message: breaking_message.to_string(),
+                });
                 if breaking_message == commit.description() {
                     // There is no separate breaking change message, so the normal description is used.
                     // Don't include the same message elsewhere.
@@ -90,194 +64,90 @@ impl ConventionalCommits {
             }
 
             if commit.type_() == Type::FEAT {
-                features.push(commit.description().to_string());
-                if !matches!(rule, Some(ConventionalRule::Major)) {
-                    debug!(
-                        "commit \"{}\" results in Minor rule selection",
-                        commit.description()
-                    );
-                    rule = Some(ConventionalRule::Minor);
-                }
+                conventional_commits.push(Self {
+                    change_type: ChangeType::Feature,
+                    message: commit.description().to_string(),
+                });
             } else if commit.type_() == Type::FIX {
-                if rule.is_none() {
-                    debug!(
-                        "commit \"{}\" results in Patch rule selection",
-                        commit.description()
-                    );
-                    rule = Some(ConventionalRule::Patch);
-                }
-                fixes.push(commit.description().to_string());
+                conventional_commits.push(Self {
+                    change_type: ChangeType::Fix,
+                    message: commit.description().to_string(),
+                });
             }
         }
-
-        if rule.is_none() && !extra_sections.is_empty() {
-            debug!("extra sections result in Path rule selection");
-            rule = Some(ConventionalRule::Patch);
-        }
-        let extra_sections = package
-            .commit_footers
-            .values()
-            .filter_map(|footer| extra_sections.remove_entry(footer))
-            .collect();
-
-        ConventionalCommits {
-            rule,
-            features,
-            fixes,
-            breaking_changes,
-            extra_sections,
-        }
+        conventional_commits
     }
 }
 
 #[cfg(test)]
 mod test_conventional_commits {
+    use indexmap::IndexMap;
+    use pretty_assertions::assert_eq;
+
     use super::*;
+    use crate::releases::package::ChangelogSectionSource;
 
     #[test]
-    fn non_breaking_features() {
-        let commits = vec![
-            Commit::parse("feat: add a feature").unwrap(),
-            Commit::parse("feat: another feature").unwrap(),
-        ];
-        let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Minor));
-        assert_eq!(
-            conventional_commits.features,
-            vec![
-                String::from("add a feature"),
-                String::from("another feature")
-            ]
-        );
-        assert_eq!(conventional_commits.fixes, Vec::<String>::new());
-        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
-    }
-
-    #[test]
-    fn non_breaking_fixes() {
+    fn commit_types() {
         let commits = vec![
             Commit::parse("fix: a bug").unwrap(),
-            Commit::parse("fix: another bug").unwrap(),
-        ];
-        let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Patch));
-        assert_eq!(
-            conventional_commits.fixes,
-            vec![String::from("a bug"), String::from("another bug")]
-        );
-        assert_eq!(conventional_commits.features, Vec::<String>::new());
-        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
-    }
-
-    #[test]
-    fn mixed_fixes_and_features() {
-        let commits = vec![
-            Commit::parse("fix: a bug").unwrap(),
-            Commit::parse("feat: add a feature").unwrap(),
-        ];
-        let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Minor));
-        assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
-        assert_eq!(
-            conventional_commits.features,
-            vec![String::from("add a feature")]
-        );
-        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
-    }
-
-    #[test]
-    fn breaking_feature() {
-        let commits = vec![
-            Commit::parse("fix: a bug").unwrap(),
+            Commit::parse("fix!: a breaking bug fix").unwrap(),
             Commit::parse("feat!: add a feature").unwrap(),
             Commit::parse("feat: add another feature").unwrap(),
         ];
         let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Major));
-        assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
+        let conventional_commits = ConventionalCommit::from_commits(&package, commits);
         assert_eq!(
-            conventional_commits.features,
-            vec![String::from("add another feature")]
-        );
-        assert_eq!(
-            conventional_commits.breaking_changes,
-            vec![String::from("add a feature")]
-        );
-    }
-
-    #[test]
-    fn breaking_fix() {
-        let commits = vec![
-            Commit::parse("fix!: a bug").unwrap(),
-            Commit::parse("fix: another bug").unwrap(),
-            Commit::parse("feat: add a feature").unwrap(),
-        ];
-        let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Major));
-        assert_eq!(
-            conventional_commits.fixes,
-            vec![String::from("another bug")]
-        );
-        assert_eq!(
-            conventional_commits.features,
-            vec![String::from("add a feature")]
-        );
-        assert_eq!(
-            conventional_commits.breaking_changes,
-            vec![String::from("a bug")]
-        );
-    }
-
-    #[test]
-    fn fix_with_separate_breaking_message() {
-        let commits = vec![
-            Commit::parse("fix: a bug\n\nBREAKING CHANGE: something broke").unwrap(),
-            Commit::parse("fix: another bug").unwrap(),
-            Commit::parse("feat: add a feature").unwrap(),
-        ];
-        let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Major));
-        assert_eq!(
-            conventional_commits.fixes,
-            vec![String::from("a bug"), String::from("another bug")]
-        );
-        assert_eq!(
-            conventional_commits.features,
-            vec![String::from("add a feature")]
-        );
-        assert_eq!(
-            conventional_commits.breaking_changes,
-            vec![String::from("something broke")]
-        );
-    }
-
-    #[test]
-    fn feature_with_separate_breaking_message() {
-        let commits = vec![
-            Commit::parse("feat: add a feature\n\nBREAKING CHANGE: something broke").unwrap(),
-            Commit::parse("fix: a bug").unwrap(),
-            Commit::parse("feat: add another feature").unwrap(),
-        ];
-        let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Major));
-        assert_eq!(conventional_commits.fixes, vec![String::from("a bug")]);
-        assert_eq!(
-            conventional_commits.features,
+            conventional_commits,
             vec![
-                String::from("add a feature"),
-                String::from("add another feature")
+                ConventionalCommit {
+                    change_type: ChangeType::Fix,
+                    message: String::from("a bug")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Breaking,
+                    message: String::from("a breaking bug fix")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Breaking,
+                    message: String::from("add a feature")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Feature,
+                    message: String::from("add another feature")
+                }
             ]
         );
+    }
+
+    #[test]
+    fn separate_breaking_messages() {
+        let commits = vec![
+            Commit::parse("fix: a bug\n\nBREAKING CHANGE: something broke").unwrap(),
+            Commit::parse("feat: a features\n\nBREAKING CHANGE: something else broke").unwrap(),
+        ];
+        let package = Package::default();
+        let conventional_commits = ConventionalCommit::from_commits(&package, commits);
         assert_eq!(
-            conventional_commits.breaking_changes,
-            vec![String::from("something broke")]
+            conventional_commits,
+            vec![
+                ConventionalCommit {
+                    change_type: ChangeType::Breaking,
+                    message: String::from("something broke")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Fix,
+                    message: String::from("a bug")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Breaking,
+                    message: String::from("something else broke")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Feature,
+                    message: String::from("a features")
+                },
+            ]
         );
     }
 
@@ -285,11 +155,8 @@ mod test_conventional_commits {
     fn no_commits() {
         let commits = Vec::<Commit>::new();
         let package = Package::default();
-        let conventional_commits = ConventionalCommits::from_commits(&package, commits);
-        assert_eq!(conventional_commits.rule, None);
-        assert_eq!(conventional_commits.fixes, Vec::<String>::new());
-        assert_eq!(conventional_commits.features, Vec::<String>::new());
-        assert_eq!(conventional_commits.breaking_changes, Vec::<String>::new());
+        let conventional_commits = ConventionalCommit::from_commits(&package, commits);
+        assert_eq!(conventional_commits, Vec::<ConventionalCommit>::new());
     }
 
     #[test]
@@ -299,7 +166,7 @@ mod test_conventional_commits {
             "fix: No scope",
         ]
         .map(String::from);
-        let conventional_commits = ConventionalCommits::from_commit_messages(
+        let conventional_commits = ConventionalCommit::from_commit_messages(
             &commits,
             false,
             &Package {
@@ -307,7 +174,19 @@ mod test_conventional_commits {
                 ..Package::default()
             },
         );
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Major));
+        assert_eq!(
+            conventional_commits,
+            vec![
+                ConventionalCommit {
+                    change_type: ChangeType::Breaking,
+                    message: String::from("Wrong scope breaking change!")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Fix,
+                    message: String::from("No scope")
+                },
+            ]
+        );
     }
 
     #[test]
@@ -318,8 +197,14 @@ mod test_conventional_commits {
         ]
         .map(String::from);
         let conventional_commits =
-            ConventionalCommits::from_commit_messages(&commits, true, &Package::default());
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Patch));
+            ConventionalCommit::from_commit_messages(&commits, true, &Package::default());
+        assert_eq!(
+            conventional_commits,
+            vec![ConventionalCommit {
+                change_type: ChangeType::Fix,
+                message: String::from("No scope")
+            },]
+        );
     }
 
     #[test]
@@ -330,7 +215,7 @@ mod test_conventional_commits {
             "fix: No scope",
         ]
         .map(String::from);
-        let conventional_commits = ConventionalCommits::from_commit_messages(
+        let conventional_commits = ConventionalCommit::from_commit_messages(
             &commits,
             true,
             &Package {
@@ -338,125 +223,86 @@ mod test_conventional_commits {
                 ..Package::default()
             },
         );
-        assert_eq!(conventional_commits.rule, Some(ConventionalRule::Minor));
+        assert_eq!(
+            conventional_commits,
+            vec![
+                ConventionalCommit {
+                    change_type: ChangeType::Feature,
+                    message: String::from("Right scope feature")
+                },
+                ConventionalCommit {
+                    change_type: ChangeType::Fix,
+                    message: String::from("No scope")
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn custom_footers() {
+        let commits = [String::from(
+            "chore: ignored type\n\nignored-footer: ignored\ncustom-footer: hello",
+        )];
+        let mut extra_changelog_sections = IndexMap::new();
+        extra_changelog_sections.insert(
+            CommitFooter::from("custom-footer").into(),
+            "custom section".into(),
+        );
+        let conventional_commits = ConventionalCommit::from_commit_messages(
+            &commits,
+            false,
+            &Package {
+                extra_changelog_sections,
+                ..Package::default()
+            },
+        );
+        assert_eq!(
+            conventional_commits,
+            vec![ConventionalCommit {
+                change_type: ChangeType::Custom(ChangelogSectionSource::CommitFooter(
+                    "custom-footer".into()
+                )),
+                message: String::from("hello")
+            },]
+        );
     }
 }
 
 fn get_conventional_commits_after_last_stable_version(
     package: &Package,
     consider_scopes: bool,
-) -> Result<ConventionalCommits, StepError> {
+) -> Result<Vec<ConventionalCommit>, StepError> {
     let commit_messages = get_commit_messages_after_last_stable_version(&package.name)?;
-    Ok(ConventionalCommits::from_commit_messages(
+    Ok(ConventionalCommit::from_commit_messages(
         &commit_messages,
         consider_scopes,
         package,
     ))
 }
 
-pub(crate) fn update_project_from_conventional_commits(
-    run_type: RunType,
-    prepare_release: &step::PrepareRelease,
-) -> Result<RunType, StepError> {
-    let (mut state, mut dry_run_stdout) = match run_type {
-        RunType::DryRun { state, stdout } => (state, Some(stdout)),
-        RunType::Real(state) => (state, None),
-    };
-    if state.packages.is_empty() {
-        return Err(StepError::no_defined_packages_with_help());
-    }
-    let consider_scopes = state
-        .packages
-        .iter()
-        .any(|package| package.scopes.is_some());
-    for package in &mut state.packages {
-        let release = prepare_release_for_package(
-            package.clone(),
-            consider_scopes,
-            prepare_release.prerelease_label.as_ref(),
-            dry_run_stdout.as_mut(),
-        )?;
-        if let Some(release) = release {
-            state.releases.push(state::Release::Prepared(release));
-        }
-    }
-    if let Some(dry_run_stdout) = dry_run_stdout {
-        Ok(RunType::DryRun {
-            state,
-            stdout: dry_run_stdout,
-        })
-    } else if state.releases.is_empty() {
-        Err(StepError::NoRelease)
-    } else {
-        Ok(RunType::Real(state))
-    }
+pub(crate) fn add_releases_from_conventional_commits(
+    packages: Vec<Package>,
+) -> Result<Vec<Package>, StepError> {
+    let consider_scopes = packages.iter().any(|package| package.scopes.is_some());
+    packages
+        .into_iter()
+        .map(|package| add_release_for_package(package, consider_scopes))
+        .collect()
 }
 
-fn prepare_release_for_package(
-    package: Package,
+fn add_release_for_package(
+    mut package: Package,
     consider_scopes: bool,
-    prerelease_label: Option<&Label>,
-    dry_run_stdout: Option<&mut Box<dyn Write>>,
-) -> Result<Option<Release>, StepError> {
-    let ConventionalCommits {
-        rule,
-        features,
-        fixes,
-        breaking_changes,
-        extra_sections,
-    } = get_conventional_commits_after_last_stable_version(&package, consider_scopes)?;
-    let Some(rule) = rule else {
-        return Ok(None);
-    };
-
-    let rule = if let Some(label) = prerelease_label {
-        Rule::Pre {
-            label: label.clone(),
-            stable_rule: rule,
+) -> Result<Package, StepError> {
+    get_conventional_commits_after_last_stable_version(&package, consider_scopes).map(|commits| {
+        if commits.is_empty() {
+            package
+        } else {
+            package.pending_changes = commits
+                .into_iter()
+                .map(Change::ConventionalCommit)
+                .collect();
+            package
         }
-    } else {
-        Rule::from(rule)
-    };
-    let PackageVersion { package, version } =
-        bump_version(&rule, dry_run_stdout.is_some(), package)?;
-    let new_version_string = version.to_string();
-    let new_changes = new_changelog_lines(
-        &new_version_string,
-        &fixes,
-        &features,
-        &breaking_changes,
-        &extra_sections,
-    );
-
-    let release = Release {
-        version,
-        changelog: new_changes.join("\n"),
-        package_name: package.name,
-    };
-    let changelog = package.changelog.as_ref();
-
-    if let Some(stdout) = dry_run_stdout {
-        writeln!(
-            stdout,
-            "Would bump {} version to {}",
-            release.package_name.as_deref().unwrap_or("package"),
-            new_version_string
-        )?;
-        if let Some(changelog) = changelog {
-            writeln!(
-                stdout,
-                "Would add the following to {}: \n{}",
-                changelog.path.display(),
-                new_changes.join("\n")
-            )?;
-        }
-        Ok(Some(release))
-    } else {
-        if let Some(changelog) = changelog {
-            let contents = add_version_to_changelog(&changelog.content, &new_changes);
-            std::fs::write(&changelog.path, contents)?;
-            add_files(&[&changelog.path])?;
-        }
-        Ok(Some(release))
-    }
+    })
 }

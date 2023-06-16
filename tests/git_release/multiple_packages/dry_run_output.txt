@@ -1,13 +1,14 @@
-Would bump first version to 2.0.0
-Would add the following to FIRST_CHANGELOG.md: 
+Would bump Cargo.toml to 2.0.0
+Would bump pyproject.toml to 2.0.0
+Would add the following to FIRST_CHANGELOG.md:
 ## 2.0.0
 
 ### Breaking Changes
 
 #### New breaking feature
 
-Would bump second version to 0.5.0
-Would add the following to SECOND_CHANGELOG.md: 
+Would bump package.json to 0.5.0
+Would add the following to SECOND_CHANGELOG.md:
 ## 0.5.0
 
 ### Breaking Changes

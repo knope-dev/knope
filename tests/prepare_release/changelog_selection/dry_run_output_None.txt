@@ -1,1 +1,1 @@
-Would bump package version to 1.1.0
+Would bump Cargo.toml to 1.1.0

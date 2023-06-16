@@ -2,6 +2,7 @@
 
 use std::{path::Path, process::Command};
 
+use itertools::Itertools;
 use log::debug;
 
 /// Create a Git repo in `path` with some fake config.
@@ -192,5 +193,6 @@ pub fn status(path: &Path) -> Vec<String> {
         .trim()
         .lines()
         .map(String::from)
+        .sorted()
         .collect()
 }

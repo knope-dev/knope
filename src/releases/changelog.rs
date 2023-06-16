@@ -1,7 +1,65 @@
+use std::io::Write;
+
 use indexmap::IndexMap;
 use itertools::Itertools;
 
-use crate::config::ChangeLogSectionName;
+use super::{semver::Version, Package};
+use crate::{config::ChangeLogSectionName, releases::ChangeType, step::StepError};
+
+impl Package {
+    /// Adds content from `release` to `Self::changelog` if it exists.
+    pub(crate) fn write_changelog(
+        &mut self,
+        version: &Version,
+        dry_run: &mut Option<Box<dyn Write>>,
+    ) -> Result<String, StepError> {
+        let mut fixes = Vec::new();
+        let mut features = Vec::new();
+        let mut breaking_changes = Vec::new();
+        let mut extra_sections: IndexMap<ChangeLogSectionName, Vec<String>> = IndexMap::new();
+
+        for change in &self.pending_changes {
+            match change.change_type() {
+                ChangeType::Fix => fixes.push(change.summary()),
+                ChangeType::Feature => features.push(change.summary()),
+                ChangeType::Breaking => breaking_changes.push(change.summary()),
+                ChangeType::Custom(source) => {
+                    if let Some(section) = self.extra_changelog_sections.get(&source) {
+                        extra_sections
+                            .entry(section.clone())
+                            .or_default()
+                            .push(change.summary());
+                    }
+                }
+            }
+        }
+
+        let new_changes = new_changelog_lines(
+            &version.to_string(),
+            &fixes,
+            &features,
+            &breaking_changes,
+            &extra_sections,
+        );
+        let new_content = new_changes.join("\n");
+
+        if let Some(changelog) = self.changelog.as_mut() {
+            changelog.content = add_version_to_changelog(&changelog.content, &new_changes);
+            if let Some(stdout) = dry_run {
+                writeln!(
+                    stdout,
+                    "Would add the following to {}:",
+                    changelog.path.display()
+                )?;
+                writeln!(stdout, "{}", &new_content)?;
+            } else {
+                std::fs::write(&changelog.path, &changelog.content)?;
+            }
+        };
+
+        Ok(new_content)
+    }
+}
 
 /// Take in some existing markdown in the expected changelog format, find the top entry, and
 /// put the new version above it.

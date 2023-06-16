@@ -324,6 +324,9 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
 
 /// Add some files to Git to be committed later.
 pub(crate) fn add_files(file_names: &[&PathBuf]) -> Result<(), StepError> {
+    if file_names.is_empty() {
+        return Ok(());
+    }
     let repo = Repository::open(".").map_err(|_| StepError::NotAGitRepo)?;
     let mut index = repo.index()?;
     for file_name in file_names {

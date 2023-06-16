@@ -1,6 +1,8 @@
 use std::{
     collections::{BTreeMap, HashMap},
-    fmt, fs,
+    fmt,
+    fmt::Display,
+    fs,
     path::PathBuf,
 };
 
@@ -10,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     command, git, releases,
-    releases::{find_packages, ChangeType},
+    releases::find_packages,
     step::{PrepareRelease, Step, StepError},
     workflow::Workflow,
 };
@@ -132,12 +134,18 @@ pub(crate) struct ChangelogSection {
     #[serde(default)]
     pub(crate) footers: Vec<CommitFooter>,
     #[serde(default)]
-    pub(crate) types: Vec<ChangeType>,
+    pub(crate) types: Vec<CustomChangeType>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct CommitFooter(String);
+
+impl Display for CommitFooter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl From<FooterToken<'_>> for CommitFooter {
     fn from(token: FooterToken<'_>) -> Self {
@@ -153,9 +161,25 @@ impl From<&'static str> for CommitFooter {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
+pub(crate) struct CustomChangeType(String);
+
+impl Display for CustomChangeType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<String> for CustomChangeType {
+    fn from(token: String) -> Self {
+        Self(token)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
 pub(crate) struct ChangeLogSectionName(String);
 
-impl fmt::Display for ChangeLogSectionName {
+impl Display for ChangeLogSectionName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }

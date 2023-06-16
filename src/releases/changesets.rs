@@ -1,11 +1,14 @@
-use std::{fmt, path::PathBuf};
+use std::{fmt, io::Write, path::PathBuf};
 
-use changesets::{Change, Versioning};
+use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
 
-use crate::{state::RunType, step::StepError};
+use crate::{
+    releases::{package::ChangelogSectionSource, Change, Package},
+    state::RunType,
+    step::StepError,
+};
 
 pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError> {
     let state = match run_type {
@@ -33,7 +36,18 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
             let package_name = package.to_string();
             let change_types = [ChangeType::Breaking, ChangeType::Feature, ChangeType::Fix]
                 .into_iter()
-                .chain(package.change_types.into_keys())
+                .chain(
+                    package
+                        .extra_changelog_sections
+                        .into_keys()
+                        .filter_map(|key| {
+                            if let ChangelogSectionSource::CustomChangeType(_) = &key {
+                                Some(ChangeType::Custom(key))
+                            } else {
+                                None
+                            }
+                        }),
+                )
                 .collect_vec();
             Select::new("What type of change is this?", change_types)
                 .prompt()
@@ -45,10 +59,9 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
         .with_help_message("This will be used as a header in the changelog")
         .prompt()
         .map_err(StepError::UserInput)?;
-    let unique_id: String = create_unique_id(&summary);
     let summary = format!("#### {summary}");
-    let change = Change {
-        unique_id,
+    let change = changesets::Change {
+        unique_id: UniqueId::from(&summary),
         versioning,
         summary,
     };
@@ -59,42 +72,18 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
             .map_err(|_| StepError::CouldNotCreateFile(changeset_path.clone()))?;
     }
     change.write_to_directory(&changeset_path).map_err(|_| {
-        let file_name = change.file_name();
+        let file_name = change.unique_id.to_file_name();
         StepError::CouldNotCreateFile(changeset_path.join(file_name))
     })?;
     Ok(RunType::Real(state))
 }
 
-fn create_unique_id(summary: &str) -> String {
-    summary
-        .chars()
-        .filter_map(|c| {
-            if c.is_ascii_alphanumeric() {
-                Some(c.to_ascii_lowercase())
-            } else if c == ' ' {
-                Some('_')
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-#[cfg(test)]
-#[test]
-fn test_create_unique_id() {
-    assert_eq!(
-        create_unique_id("`[i carry your heart with me(i carry it in]`"),
-        "i_carry_your_heart_with_mei_carry_it_in"
-    );
-}
-
-#[derive(Clone, Debug, Deserialize, Hash, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub(crate) enum ChangeType {
     Breaking,
     Feature,
     Fix,
-    Custom(String),
+    Custom(ChangelogSectionSource),
 }
 
 impl fmt::Display for ChangeType {
@@ -114,7 +103,73 @@ impl From<ChangeType> for changesets::ChangeType {
             ChangeType::Breaking => Self::Major,
             ChangeType::Feature => Self::Minor,
             ChangeType::Fix => Self::Patch,
-            ChangeType::Custom(custom) => Self::Custom(custom),
+            ChangeType::Custom(custom) => Self::Custom(custom.to_string()),
         }
     }
+}
+
+impl From<&changesets::ChangeType> for ChangeType {
+    fn from(value: &changesets::ChangeType) -> Self {
+        match value {
+            changesets::ChangeType::Major => Self::Breaking,
+            changesets::ChangeType::Minor => Self::Feature,
+            changesets::ChangeType::Patch => Self::Fix,
+            changesets::ChangeType::Custom(custom) => Self::Custom(
+                ChangelogSectionSource::CustomChangeType(custom.clone().into()),
+            ),
+        }
+    }
+}
+
+impl From<ChangelogSectionSource> for ChangeType {
+    fn from(source: ChangelogSectionSource) -> Self {
+        Self::Custom(source)
+    }
+}
+
+pub(crate) const DEFAULT_CHANGESET_PACKAGE_NAME: &str = "default";
+
+pub(crate) fn add_releases_from_changeset(
+    packages: Vec<Package>,
+    dry_run: &mut Option<Box<dyn Write>>,
+) -> Result<Vec<Package>, StepError> {
+    let changeset_path = PathBuf::from(".changeset");
+    if !changeset_path.exists() {
+        return Ok(packages);
+    }
+    let mut changeset = ChangeSet::from_directory(&changeset_path)?;
+    Ok(packages
+        .into_iter()
+        .map(|mut package| {
+            if let Some(release_changes) = changeset.releases.remove(
+                package
+                    .name
+                    .as_deref()
+                    .unwrap_or(DEFAULT_CHANGESET_PACKAGE_NAME),
+            ) {
+                package
+                    .pending_changes
+                    .extend(release_changes.changes.into_iter().map(|change| {
+                        if let Some(dry_run) = dry_run {
+                            writeln!(
+                                dry_run,
+                                "Would delete: {}",
+                                changeset_path
+                                    .join(change.unique_id.to_file_name())
+                                    .display()
+                            )
+                            .ok(); // Truly not the end of the world if stdio fails, and error handling is hard
+                        } else {
+                            // Error is ignored because we will attempt to double-delete some files.
+                            std::fs::remove_file(
+                                changeset_path.join(change.unique_id.to_file_name()),
+                            )
+                            .ok();
+                        }
+                        Change::ChangeSet(change)
+                    }));
+            }
+            package
+        })
+        .collect())
 }

@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{io::Write, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
@@ -6,9 +6,9 @@ pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 use crate::{
     git::add_files,
     releases::{
-        git::get_current_versions_from_tag, package::Package, CurrentVersions, Prereleases,
+        git::get_current_versions_from_tag, package::Package, ChangeType, CurrentVersions,
+        Prereleases, Release,
     },
-    state,
     step::StepError,
     RunType,
 };
@@ -42,12 +42,50 @@ impl From<ConventionalRule> for Rule {
 }
 
 /// The rules that can be derived from Conventional Commits.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum ConventionalRule {
     Major,
     Minor,
     #[default]
     Patch,
+}
+
+impl Ord for ConventionalRule {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Self::Major, Self::Major)
+            | (Self::Minor, Self::Minor)
+            | (Self::Patch, Self::Patch) => std::cmp::Ordering::Equal,
+            (Self::Major, _) | (_, Self::Patch) => std::cmp::Ordering::Greater,
+            (_, Self::Major) | (Self::Patch, _) => std::cmp::Ordering::Less,
+        }
+    }
+}
+
+impl PartialOrd for ConventionalRule {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl From<changesets::ChangeType> for ConventionalRule {
+    fn from(value: changesets::ChangeType) -> Self {
+        match value {
+            changesets::ChangeType::Minor => Self::Minor,
+            changesets::ChangeType::Major => Self::Major,
+            changesets::ChangeType::Custom(_) | changesets::ChangeType::Patch => Self::Patch,
+        }
+    }
+}
+
+impl From<ChangeType> for ConventionalRule {
+    fn from(value: ChangeType) -> Self {
+        match value {
+            ChangeType::Feature => Self::Minor,
+            ChangeType::Breaking => Self::Major,
+            ChangeType::Custom(_) | ChangeType::Fix => Self::Patch,
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -56,18 +94,6 @@ pub(crate) struct PackageVersion {
     pub(crate) version: Version,
     /// The package from which the version was derived and that should be bumped.
     pub(crate) package: Package,
-}
-
-/// Bump the version of a single `package` using `rule`.
-pub(super) fn bump_version(
-    rule: &Rule,
-    dry_run: bool,
-    package: Package,
-) -> Result<PackageVersion, StepError> {
-    let versions = get_version(&package)?;
-    let version = bump(versions, rule)?;
-    let package = set_version(package, &version, dry_run)?;
-    Ok(PackageVersion { version, package })
 }
 
 /// The implementation of [`crate::step::Step::BumpVersion`].
@@ -82,22 +108,19 @@ pub(crate) fn bump_version_and_update_state(
         RunType::Real(state) => (None, state),
     };
 
-    for package in state.packages.iter().cloned() {
-        let PackageVersion { package, version } =
-            bump_version(rule, dry_run_stdout.is_some(), package)?;
-        if let Some(stdout) = dry_run_stdout.as_mut() {
-            writeln!(
-                stdout,
-                "Would bump {name} to version {version}",
-                name = package.name.as_deref().unwrap_or("package"),
-                version = version
-            )?;
-        }
-        state.releases.push(state::Release::Bumped {
-            version,
-            package_name: package.name.clone(),
-        });
-    }
+    state.packages = state
+        .packages
+        .into_iter()
+        .map(|package| {
+            let version = bump(package.get_version()?, rule)?;
+            let mut package = package.write_version(&version, &mut dry_run_stdout)?;
+            package.prepared_release = Some(Release {
+                new_changelog: String::new(),
+                new_version: version,
+            });
+            Ok(package)
+        })
+        .collect::<Result<Vec<Package>, StepError>>()?;
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
     } else {
@@ -105,54 +128,63 @@ pub(crate) fn bump_version_and_update_state(
     }
 }
 
-/// Get the current version of a package.
-pub(crate) fn get_version(package: &Package) -> Result<CurrentVersions, StepError> {
-    let version_from_files = package
-        .versioned_files
-        .iter()
-        .map(|versioned_file| versioned_file.get_version(package.name.as_deref()))
-        .map(|result| result.and_then(|version_string| Version::from_str(&version_string)))
-        .reduce(|accumulator, version| match (version, accumulator) {
-            (Ok(version), Ok(accumulator)) => {
-                if version == accumulator {
-                    Ok(accumulator)
-                } else {
-                    Err(StepError::InconsistentVersions(
-                        version.to_string(),
-                        accumulator.to_string(),
-                    ))
+impl Package {
+    /// Get the current version of a package.
+    pub(crate) fn get_version(&self) -> Result<CurrentVersions, StepError> {
+        let version_from_files = self
+            .versioned_files
+            .iter()
+            .map(|versioned_file| versioned_file.get_version(self.name.as_deref()))
+            .map(|result| result.and_then(|version_string| Version::from_str(&version_string)))
+            .reduce(|accumulator, version| match (version, accumulator) {
+                (Ok(version), Ok(accumulator)) => {
+                    if version == accumulator {
+                        Ok(accumulator)
+                    } else {
+                        Err(StepError::InconsistentVersions(
+                            version.to_string(),
+                            accumulator.to_string(),
+                        ))
+                    }
                 }
+                (_, Err(err)) | (Err(err), _) => Err(err),
+            })
+            .transpose()?;
+
+        let mut current_versions = get_current_versions_from_tag(self.name.as_deref())?;
+
+        if let Some(version_from_files) = version_from_files {
+            current_versions.update_version(version_from_files);
+        }
+
+        Ok(current_versions)
+    }
+
+    /// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
+    /// that was written.
+    ///
+    /// If `dry_run` is `true`, the version will not be written to any files.
+    pub(crate) fn write_version(
+        mut self,
+        version: &Version,
+        dry_run: &mut Option<Box<dyn Write>>,
+    ) -> Result<Self, StepError> {
+        let mut paths = Vec::with_capacity(self.versioned_files.len());
+        for versioned_file in &mut self.versioned_files {
+            if let Some(stdio) = dry_run.as_deref_mut() {
+                writeln!(
+                    stdio,
+                    "Would bump {} to {version}",
+                    versioned_file.path.display()
+                )?;
+            } else {
+                versioned_file.set_version(version)?;
+                paths.push(&versioned_file.path);
             }
-            (_, Err(err)) | (Err(err), _) => Err(err),
-        })
-        .transpose()?;
-
-    let mut current_versions = get_current_versions_from_tag(package.name.as_deref())?;
-
-    if let Some(version_from_files) = version_from_files {
-        current_versions.update_version(version_from_files);
+        }
+        add_files(&paths)?;
+        Ok(self)
     }
-
-    Ok(current_versions)
-}
-
-/// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
-/// that was written.
-fn set_version(
-    mut package: Package,
-    version: &Version,
-    dry_run: bool,
-) -> Result<Package, StepError> {
-    if dry_run {
-        return Ok(package);
-    }
-    let mut paths = Vec::with_capacity(package.versioned_files.len());
-    for versioned_file in &mut package.versioned_files {
-        versioned_file.set_version(version)?;
-        paths.push(&versioned_file.path);
-    }
-    add_files(&paths)?;
-    Ok(package)
 }
 
 /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.
@@ -163,7 +195,7 @@ fn set_version(
 /// different behavior:
 /// 1. [`Rule::Major`] will bump the minor component.
 /// 2. [`Rule::Minor`] will bump the patch component.
-fn bump(mut versions: CurrentVersions, rule: &Rule) -> Result<Version, StepError> {
+pub(crate) fn bump(mut versions: CurrentVersions, rule: &Rule) -> Result<Version, StepError> {
     let mut stable = versions.stable.unwrap_or_default();
     let is_0 = stable.major == 0;
     match (rule, is_0) {

@@ -1,5 +1,5 @@
-Would bump package version to 1.3.0-rc.1
-Would add the following to CHANGELOG.md: 
+Would bump Cargo.toml to 1.3.0-rc.1
+Would add the following to CHANGELOG.md:
 ## 1.3.0-rc.1
 
 ### Features

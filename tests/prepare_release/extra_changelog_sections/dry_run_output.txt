@@ -1,5 +1,5 @@
-Would bump first version to 1.0.1
-Would add the following to FIRST_CHANGELOG.md: 
+Would bump Cargo.toml to 1.0.1
+Would add the following to FIRST_CHANGELOG.md:
 ## 1.0.1
 
 ### Notes
@@ -16,8 +16,8 @@ Would add the following to FIRST_CHANGELOG.md:
 
 #### Whatever note
 
-Would bump second version to 0.1.1
-Would add the following to SECOND_CHANGELOG.md: 
+Would bump pyproject.toml to 0.1.1
+Would add the following to SECOND_CHANGELOG.md:
 ## 0.1.1
 
 ### Notes

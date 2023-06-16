@@ -416,6 +416,14 @@ pub(super) enum StepError {
         help("This could be a permissions issue or a file conflict (the file already exists).")
     )]
     CouldNotCreateFile(PathBuf),
+    #[error(transparent)]
+    #[diagnostic(
+        code(step::could_not_read_changeset),
+        help(
+            "This could be a file-system issue or a problem with the formatting of a change file."
+        )
+    )]
+    CouldNotReadChangeSet(#[from] changesets::LoadingError),
 }
 
 impl From<tag::Error> for StepError {
