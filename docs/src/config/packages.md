@@ -66,7 +66,9 @@ The `Version` variable in the [`Command`] step cannot be used when multiple pack
 
 ### `extra_changelog_sections`
 
-You may wish to add more sections to a changelog than the [defaults](./step/PrepareRelease.md#changelog-sections), you can do this by configuring custom [conventional commit footers](https://www.conventionalcommits.org/en/v1.0.0/#specification) to add notes to new sections in the changelog. By default, the footer `Changelog-Note` adds to the `Notes` section—the configuration to do that would look like this:
+You may wish to add more sections to a changelog than the [defaults](./step/PrepareRelease.md#changelog-sections), you can do this by configuring custom [conventional commit footers](https://www.conventionalcommits.org/en/v1.0.0/#specification) and/or [changeset types](https://github.com/knope-dev/changesets#change-type) to add notes to new sections in the changelog.
+
+By default, the commit footer `Changelog-Note` adds to the `Notes` section—the configuration to do that would look like this:
 
 ```toml
 [package]
@@ -74,6 +76,17 @@ versioned_files = []
 changelog = "CHANGELOG.md"
 extra_changelog_sections = [
   { name = "Notes", footers = ["Changelog-Note"] }
+]
+```
+
+To leverage that same section for changeset types, we could add the `types` key:
+
+```toml
+[package]
+versioned_files = []
+changelog = "CHANGELOG.md"
+extra_changelog_sections = [
+  { name = "Notes", footers = ["Changelog-Note"], types = ["note"] }
 ]
 ```
 
@@ -114,6 +127,12 @@ changelog = "knope/CHANGELOG.md"
 [packages.knope-utils]
 versioned_files = ["knope-utils/Cargo.toml"]
 changelog = "knope-utils/CHANGELOG.md"
+```
+
+By default, the package names (e.g., `knope` and `knope-utils`) will be used as package names for changesets. No additional config is needed to independently version packages via changesets. If you want to target conventional commits at a specific package, you need to add the [`scopes` key](./step/PrepareRelease.md#mono-repos-and-multiple-packages).
+
+```admonish warning
+When you have one `[package]`, the package name "default" will be used for changesets. If you switch to a multi-package setup, you will need to update all changeset files (in the .changeset directory) to use the new package names.
 ```
 
 ```admonish info

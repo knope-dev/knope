@@ -2,8 +2,72 @@
 
 A command line tool that happily completes the tasks which most developers find tedious.
 
-## What it does
+## Example: Automating GitHub Actions Release
 
-If you're already using [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) and [semantic versioning](https://semver.org/), Knope can probably automate bumping versions and creating releases for you. Try running a `knope release --dry-run` to see what it would do for your current project with no config.
+Got some conventional commits?
+
+```
+feat: A spicy feature
+fix: Some sauce
+```
+
+And some changesets?
+
+```
+---
+my-package: major
+---
+
+#### Big deal
+
+You probably want to read this before upgrading 💜
+```
+
+Do you want to release this by hand? Knope! Here's a GitHub Actions workflow:
+
+```yaml
+name: Drop a new version
+
+on: workflow_dispatch
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT }}
+      - uses: knope-dev/action@v1 # Install Knope
+        with:
+          version: 0.7.4
+      - run: knope release
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+```
+
+You get a GitHub release and a changelog, picking the [semantic version] based on the combination of [conventional commits] and [changesets].
+
+```markdown
+## 2.0.0
+
+### Breaking Changes
+
+#### Big deal
+
+You probably want to read this before upgrading 💜
+
+### Features
+
+#### A spicy feature
+
+### Fixes
+
+#### Some sauce
+```
 
 Knope can do much more with some customization, [read the docs](https://knope-dev.github.io/knope/) for more info.
+
+[conventional commits]: https://www.conventionalcommits.org
+[semantic version]: https://semver.org
+[changesets]: https://github.com/changesets/changesets
