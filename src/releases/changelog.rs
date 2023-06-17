@@ -36,10 +36,10 @@ impl Package {
 
         let new_changes = new_changelog_lines(
             &version.to_string(),
-            &fixes,
-            &features,
-            &breaking_changes,
-            &extra_sections,
+            fixes,
+            features,
+            breaking_changes,
+            extra_sections,
         );
         let new_content = new_changes.join("\n");
 
@@ -87,10 +87,10 @@ pub(super) fn add_version_to_changelog(existing: &str, new_changes: &[String]) -
 
 pub(super) fn new_changelog_lines(
     title: &str,
-    fixes: &[String],
-    features: &[String],
-    breaking_changes: &[String],
-    extra_sections: &IndexMap<ChangeLogSectionName, Vec<String>>,
+    fixes: Vec<String>,
+    features: Vec<String>,
+    breaking_changes: Vec<String>,
+    extra_sections: IndexMap<ChangeLogSectionName, Vec<String>>,
 ) -> Vec<String> {
     const HEADERS_AND_PADDING: usize = 10;
     let mut blocks = Vec::with_capacity(
@@ -113,10 +113,17 @@ pub(super) fn new_changelog_lines(
     blocks
 }
 
-fn create_section(title: &str, items: &[String]) -> Vec<String> {
+fn create_section(title: &str, items: Vec<String>) -> Vec<String> {
     let mut blocks = Vec::with_capacity(items.len() + 2);
     blocks.push(format!("### {title}"));
-    blocks.extend(items.iter().map(|summary| format!("\n#### {summary}")));
+    blocks.extend(items.into_iter().map(|summary| {
+        if summary.starts_with("#### ") {
+            // Sometimes the formatting is already done, like in changesets
+            format!("\n{summary}")
+        } else {
+            format!("\n#### {summary}")
+        }
+    }));
     blocks.push(String::new());
     blocks
 }
@@ -189,10 +196,10 @@ Sometimes a second paragraph
         );
         let new_changes = new_changelog_lines(
             "0.2.0 - 2020-12-31",
-            &["Fixed something".to_string()],
-            &[String::from("New Feature"), String::from("Another feature")],
-            &[String::from("Breaking change")],
-            &extra_sections,
+            vec!["Fixed something".to_string()],
+            vec![String::from("New Feature"), String::from("Another feature")],
+            vec![String::from("Breaking change")],
+            extra_sections,
         );
         let changelog = add_version_to_changelog(MARKDOWN, &new_changes);
         assert_eq!(changelog, EXPECTED);
@@ -230,10 +237,10 @@ Sometimes a second paragraph
 
         let new_changes = new_changelog_lines(
             "0.2.0 - 2020-12-31",
-            &["Fixed something".to_string()],
-            &[String::from("New Feature")],
-            &[String::from("Breaking change")],
-            &IndexMap::new(),
+            vec!["Fixed something".to_string()],
+            vec![String::from("New Feature")],
+            vec![String::from("Breaking change")],
+            IndexMap::new(),
         );
         let changelog = add_version_to_changelog(MARKDOWN, &new_changes);
         assert_eq!(changelog, EXPECTED);

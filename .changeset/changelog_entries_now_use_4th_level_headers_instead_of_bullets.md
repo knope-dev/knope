@@ -21,3 +21,5 @@ It now looks like what you're seeing:
 
 ... recursion omitted
 ```
+
+If a change note starts with `#### ` already (like in changesets), it will be left alone.
