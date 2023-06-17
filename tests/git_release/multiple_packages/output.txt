@@ -1,5 +1,7 @@
 [..] chore: Prepare release
- 3 files changed, 7 insertions(+)
+ 5 files changed, 25 insertions(+)
  create mode 100644 Cargo.toml
+ create mode 100644 FIRST_CHANGELOG.md
+ create mode 100644 SECOND_CHANGELOG.md
  create mode 100644 package.json
  create mode 100644 pyproject.toml

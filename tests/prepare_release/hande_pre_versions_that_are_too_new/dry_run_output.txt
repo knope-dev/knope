@@ -8,3 +8,6 @@ Would add the following to CHANGELOG.md:
 
 #### Another new feature
 
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md

@@ -6,4 +6,7 @@ Would add the following to CHANGELOG.md:
 
 #### A new feature
 
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md
 Would create Git tag v1.3.0

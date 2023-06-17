@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 
 use crate::{
-    git::add_files,
     releases::{
         git::get_current_versions_from_tag, package::Package, ChangeType, CurrentVersions,
         Prereleases, Release,
@@ -161,7 +160,7 @@ impl Package {
     }
 
     /// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
-    /// that was written.
+    /// that was written. Adds all modified package files to Git.
     ///
     /// If `dry_run` is `true`, the version will not be written to any files.
     pub(crate) fn write_version(
@@ -169,7 +168,6 @@ impl Package {
         version: &Version,
         dry_run: &mut Option<Box<dyn Write>>,
     ) -> Result<Self, StepError> {
-        let mut paths = Vec::with_capacity(self.versioned_files.len());
         for versioned_file in &mut self.versioned_files {
             if let Some(stdio) = dry_run.as_deref_mut() {
                 writeln!(
@@ -179,10 +177,8 @@ impl Package {
                 )?;
             } else {
                 versioned_file.set_version(version)?;
-                paths.push(&versioned_file.path);
             }
         }
-        add_files(&paths)?;
         Ok(self)
     }
 }

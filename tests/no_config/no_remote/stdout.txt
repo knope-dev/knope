@@ -1,4 +1,6 @@
 Would bump Cargo.toml to 2.0.0
+Would add files to git:
+  Cargo.toml
 Would run git commit -m "chore: prepare release 2.0.0"
 Would create Git tag v2.0.0
 Would run git push && git push --tags

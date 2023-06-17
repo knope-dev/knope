@@ -6,3 +6,6 @@ Would add the following to FIRST_CHANGELOG.md:
 
 #### Fix for first only
 
+Would add files to git:
+  Cargo.toml
+  FIRST_CHANGELOG.md

@@ -16,6 +16,9 @@ Would add the following to FIRST_CHANGELOG.md:
 
 #### Whatever note
 
+Would add files to git:
+  Cargo.toml
+  FIRST_CHANGELOG.md
 Would bump pyproject.toml to 0.1.1
 Would add the following to SECOND_CHANGELOG.md:
 ## 0.1.1
@@ -26,3 +29,6 @@ Would add the following to SECOND_CHANGELOG.md:
 
 #### Standard note second only
 
+Would add files to git:
+  pyproject.toml
+  SECOND_CHANGELOG.md

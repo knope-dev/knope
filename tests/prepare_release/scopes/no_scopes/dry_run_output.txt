@@ -10,6 +10,9 @@ Would add the following to FIRST_CHANGELOG.md:
 
 #### No scope feature
 
+Would add files to git:
+  Cargo.toml
+  FIRST_CHANGELOG.md
 Would bump pyproject.toml to 0.2.0
 Would add the following to SECOND_CHANGELOG.md:
 ## 0.2.0
@@ -22,3 +25,6 @@ Would add the following to SECOND_CHANGELOG.md:
 
 #### No scope feature
 
+Would add files to git:
+  pyproject.toml
+  SECOND_CHANGELOG.md

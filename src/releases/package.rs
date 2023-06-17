@@ -13,6 +13,7 @@ use log::trace;
 
 use crate::{
     config::{ChangeLogSectionName, CommitFooter, CustomChangeType, Package as PackageConfig},
+    git::add_files,
     releases::{
         cargo,
         changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
@@ -98,12 +99,44 @@ impl Package {
 
         self = self.write_version(&new_version, dry_run)?;
         let new_changelog = self.write_changelog(&new_version, dry_run)?;
+        self.stage_changes_to_git(dry_run)?;
 
         self.prepared_release = Some(Release {
             new_changelog,
             new_version,
         });
         Ok(self)
+    }
+    fn stage_changes_to_git(&self, dry_run: &mut Option<Box<dyn Write>>) -> Result<(), StepError> {
+        let changeset_path = PathBuf::from(".changeset");
+        let paths = self
+            .versioned_files
+            .iter()
+            .map(|versioned_file| versioned_file.path.clone())
+            .chain(
+                self.changelog
+                    .as_ref()
+                    .map(|changelog| changelog.path.clone()),
+            )
+            .chain(self.pending_changes.iter().filter_map(|change| {
+                if let Change::ChangeSet(change) = change {
+                    Some(changeset_path.join(change.unique_id.to_file_name()))
+                } else {
+                    None
+                }
+            }))
+            .collect_vec();
+        if paths.is_empty() {
+            Ok(())
+        } else if let Some(stdio) = dry_run.as_deref_mut() {
+            writeln!(stdio, "Would add files to git:")?;
+            for path in &paths {
+                writeln!(stdio, "  {}", path.display())?;
+            }
+            Ok(())
+        } else {
+            add_files(&paths)
+        }
     }
 }
 

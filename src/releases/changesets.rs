@@ -59,9 +59,10 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
         .with_help_message("This will be used as a header in the changelog")
         .prompt()
         .map_err(StepError::UserInput)?;
+    let unique_id = UniqueId::from(&summary);
     let summary = format!("#### {summary}");
     let change = changesets::Change {
-        unique_id: UniqueId::from(&summary),
+        unique_id,
         versioning,
         summary,
     };

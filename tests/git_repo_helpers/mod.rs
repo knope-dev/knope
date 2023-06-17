@@ -190,7 +190,6 @@ pub fn status(path: &Path) -> Vec<String> {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout)
-        .trim()
         .lines()
         .map(String::from)
         .sorted()

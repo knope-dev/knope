@@ -6,3 +6,6 @@ Would add the following to CHANGES.md:
 
 #### New feature
 
+Would add files to git:
+  Cargo.toml
+  CHANGES.md

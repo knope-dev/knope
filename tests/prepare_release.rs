@@ -440,7 +440,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     for file in versioned_files {
         expected_changes.push(format!("M  {file}"));
     }
-    expected_changes.push("M CHANGELOG.md".to_string());
+    expected_changes.push("M  CHANGELOG.md".to_string());
     expected_changes.sort();
     assert_eq!(
         status(temp_path),
@@ -1454,10 +1454,6 @@ fn changesets() {
     commit(temp_path, "feat!: Existing feature");
     tag(temp_path, "first/v1.2.3");
     tag(temp_path, "second/v0.4.6");
-    commit(
-        temp_path,
-        "feat: A new shared feature from a conventional commit",
-    );
 
     let changeset_path = temp_path.join(".changeset");
     create_dir(&changeset_path).unwrap();
@@ -1481,6 +1477,11 @@ fn changesets() {
     ] {
         copy(src_path.join(file), temp_path.join(file)).unwrap();
     }
+    add_all(temp_path);
+    commit(
+        temp_path,
+        "feat: A new shared feature from a conventional commit",
+    );
 
     // Act—run a PrepareRelease step to bump versions and update changelogs
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -1499,6 +1500,7 @@ fn changesets() {
         .stdout_eq_path(src_path.join("dry_run_output.txt"));
     actual_assert.success().stderr_eq("").stdout_eq("");
 
+    let status = status(temp_path);
     for file in [
         "Cargo.toml",
         "package.json",
@@ -1510,9 +1512,15 @@ fn changesets() {
             src_path.join(format!("EXPECTED_{}", file)),
             read_to_string(temp_path.join(file)).unwrap(),
         );
+        assert!(status.contains(&format!("M  {}", file)), "{:#?}", status);
     }
 
     assert_eq!(changeset_path.as_path().read_dir().unwrap().count(), 0);
+    assert!(
+        status.contains(&"D  .changeset/breaking_change.md".to_string()),
+        "{:#?}",
+        status
+    );
 }
 
 #[test]

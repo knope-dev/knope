@@ -7,3 +7,7 @@ Would add the following to CHANGELOG.md:
 
 #### New feature
 
+Would add files to git:
+  pyproject.toml
+  Cargo.toml
+  CHANGELOG.md

@@ -6,4 +6,7 @@ Would add the following to CHANGELOG.md:
 
 #### Breaking change
 
+Would add files to git:
+  go.mod
+  CHANGELOG.md
 Would create Git tag v2.0.0

@@ -6,3 +6,6 @@ Would add the following to CHANGELOG.md:
 
 #### Breaking feature in new RC
 
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md

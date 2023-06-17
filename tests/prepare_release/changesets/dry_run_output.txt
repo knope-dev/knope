@@ -14,6 +14,11 @@ A breaking change for only the first package
 
 #### A new shared feature from a conventional commit
 
+Would add files to git:
+  Cargo.toml
+  pyproject.toml
+  FIRST_CHANGELOG.md
+  .changeset/breaking_change.md
 Would bump package.json to 0.4.7
 Would add the following to SECOND_CHANGELOG.md:
 ## 0.4.7
@@ -22,3 +27,6 @@ Would add the following to SECOND_CHANGELOG.md:
 
 #### A new shared feature from a conventional commit
 
+Would add files to git:
+  package.json
+  SECOND_CHANGELOG.md
