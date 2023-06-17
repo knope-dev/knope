@@ -169,7 +169,6 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "base64", version = "0.13.1", depth = 10 },     # Waiting on update to ureq > 2.6.2
   { name = "hashbrown", version = "0.12.3", depth = 10 },  # Waiting on update to dashmap https://github.com/xacrimon/dashmap/pull/250
   { name = "hermit-abi", version = "0.2.6", depth = 10 },  # waiting on num_cpus > 1.15.0
   { name = "rstest", version = "0.17.0", depth = 10 },     # Includes syn 1 but only for tests
