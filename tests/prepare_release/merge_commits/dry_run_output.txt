@@ -1,9 +1,12 @@
-Would bump package version to 1.3.0
-Would add the following to CHANGELOG.md: 
+Would bump Cargo.toml to 1.3.0
+Would add the following to CHANGELOG.md:
 ## 1.3.0
 
 ### Features
 
-- A new feature
+#### A new feature
 
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md
 Would create Git tag v1.3.0

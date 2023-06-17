@@ -5,24 +5,21 @@ use serde::Serialize;
 use crate::{
     app_config::get_or_prompt_for_github_token,
     config::GitHub,
-    releases::{git::tag_name, Release},
+    releases::{git::tag_name, semver::Version},
     state,
     state::GitHub::{Initialized, New},
     step::StepError,
 };
 
 pub(crate) fn release(
-    release: &Release,
+    package_name: &Option<String>,
+    version: &Version,
+    changelog: &str,
     github_state: state::GitHub,
     github_config: &GitHub,
     dry_run_stdout: Option<&mut Box<dyn Write>>,
 ) -> Result<state::GitHub, StepError> {
-    let Release {
-        version,
-        changelog,
-        package_name,
-    } = release;
-    let version_string = release.version.to_string();
+    let version_string = version.to_string();
 
     let tag_name = tag_name(version, package_name);
     let name = if let Some(package_name) = package_name {
@@ -35,7 +32,7 @@ pub(crate) fn release(
         tag_name: &tag_name,
         name: &name,
         body: changelog,
-        prerelease: release.version.is_prerelease(),
+        prerelease: version.is_prerelease(),
     };
 
     if let Some(stdout) = dry_run_stdout {

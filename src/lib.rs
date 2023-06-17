@@ -2,6 +2,7 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::cargo)]
+#![deny(warnings)]
 #![allow(clippy::multiple_crate_versions)] // Let cargo-deny handle this
 
 // Don't panic!

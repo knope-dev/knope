@@ -2,7 +2,7 @@
 
 ### Breaking Changes
 
-- New breaking feature
+#### New breaking feature
 
 ## 0.4.6
 

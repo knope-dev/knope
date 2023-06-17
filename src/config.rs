@@ -1,6 +1,8 @@
 use std::{
     collections::{BTreeMap, HashMap},
-    fmt, fs,
+    fmt,
+    fmt::Display,
+    fs,
     path::PathBuf,
 };
 
@@ -129,12 +131,21 @@ pub(crate) struct Package {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub(crate) struct ChangelogSection {
     pub(crate) name: ChangeLogSectionName,
+    #[serde(default)]
     pub(crate) footers: Vec<CommitFooter>,
+    #[serde(default)]
+    pub(crate) types: Vec<CustomChangeType>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct CommitFooter(String);
+
+impl Display for CommitFooter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl From<FooterToken<'_>> for CommitFooter {
     fn from(token: FooterToken<'_>) -> Self {
@@ -150,9 +161,25 @@ impl From<&'static str> for CommitFooter {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
+pub(crate) struct CustomChangeType(String);
+
+impl Display for CustomChangeType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<String> for CustomChangeType {
+    fn from(token: String) -> Self {
+        Self(token)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(transparent)]
 pub(crate) struct ChangeLogSectionName(String);
 
-impl fmt::Display for ChangeLogSectionName {
+impl Display for ChangeLogSectionName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -161,6 +188,12 @@ impl fmt::Display for ChangeLogSectionName {
 impl From<&'static str> for ChangeLogSectionName {
     fn from(token: &'static str) -> Self {
         Self(token.into())
+    }
+}
+
+impl AsRef<str> for ChangeLogSectionName {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
@@ -220,10 +253,16 @@ pub(crate) fn generate() -> Config {
     );
 
     Config {
-        workflows: vec![Workflow {
-            name: String::from("release"),
-            steps: release_steps,
-        }],
+        workflows: vec![
+            Workflow {
+                name: String::from("release"),
+                steps: release_steps,
+            },
+            Workflow {
+                name: String::from("document-change"),
+                steps: vec![Step::CreateChangeFile],
+            },
+        ],
         jira: None,
         github,
         package: find_packages(),

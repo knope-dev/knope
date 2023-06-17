@@ -3,7 +3,7 @@ use std::{env::current_dir, io::Write, str::FromStr};
 use gix::{object::Kind, open, refs::transaction::PreviousValue};
 
 use crate::{
-    releases::{semver::Version, CurrentVersions, Release},
+    releases::{semver::Version, CurrentVersions},
     step::StepError,
 };
 
@@ -16,13 +16,9 @@ pub(crate) fn tag_name(version: &Version, package_name: &Option<String>) -> Stri
 
 pub(crate) fn release(
     dry_run_stdout: Option<&mut Box<dyn Write>>,
-    release: &Release,
+    version: &Version,
+    package_name: &Option<String>,
 ) -> Result<(), StepError> {
-    let Release {
-        version,
-        changelog: _changelog,
-        package_name,
-    } = release;
     let tag = tag_name(version, package_name);
 
     if let Some(stdout) = dry_run_stdout {

@@ -16,14 +16,15 @@ Where `type` matches one of the available steps listed below. Some steps also ca
 
 ## Available Steps
 
+- [PrepareRelease](./PrepareRelease.md)
+- [CreateChangeFile](./CreateChangeFile.md)
+- [BumpVersion](./BumpVersion.md)
+- [RebaseBranch](./RebaseBranch.md)
+- [SwitchBranches](./SwitchBranches.md)
 - [SelectJiraIssue](./SelectJiraIssue.md)
 - [TransitionJiraIssue](./TransitionJiraIssue.md)
 - [SelectGitHubIssue](./SelectGitHubIssue.md)
 - [SelectIssueFromBranch](./SelectIssueFromBranch.md)
-- [SwitchBranches](./SwitchBranches.md)
-- [RebaseBranch](./RebaseBranch.md)
-- [BumpVersion](./BumpVersion.md)
 - [Command](./Command.md)
-- [PrepareRelease](./PrepareRelease.md)
 
 [workflow]: ../workflow.md

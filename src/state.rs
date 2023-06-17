@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::{config, issues, releases, releases::semver::Version};
+use crate::{config, issues, releases};
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
 #[derive(Clone, Debug)]
@@ -9,8 +9,6 @@ pub(crate) struct State {
     pub(crate) github: GitHub,
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
-    /// All of the releases that have been prepared in the current workflow.
-    pub(crate) releases: Vec<Release>,
     pub(crate) packages: Vec<releases::Package>,
 }
 
@@ -26,7 +24,6 @@ impl State {
             github: GitHub::New,
             github_config,
             issue: Issue::Initial,
-            releases: Vec::with_capacity(packages.len()),
             packages,
         }
     }
@@ -62,19 +59,6 @@ pub(crate) enum Issue {
     /// contains details of the issue you're working against to use for things like transitioning
     /// or creating branches.
     Selected(issues::Issue),
-}
-
-/// Tracks what's been done with respect to releases in this workflow.
-#[derive(Clone, Debug)]
-pub(crate) enum Release {
-    /// Triggered by [`crate::Step::BumpVersion`].
-    Bumped {
-        version: Version,
-        package_name: Option<String>,
-    },
-    /// Triggered by [`crate::Step::PrepareRelease`]. Contains the generated release notes and new
-    /// version number.
-    Prepared(releases::Release),
 }
 
 #[derive(Clone, Debug)]

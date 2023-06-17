@@ -17,6 +17,10 @@ Without any config, you can run `knope release` to create a new release from [co
    1. If your remote is GitHub, create a new release on GitHub with the same body as the changelog entry. **This requires a `GITHUB_TOKEN` environment variable to be set.**
    2. If the remote is not GitHub, a tag will be created and pushed to the remote.
 
+## `document-change`
+
+Without any config, you can run `knope document-change` to run the [`CreateChangeFile`] step. Because there is only one package configured by default, this step will be skipped and a special, default package will be used.
+
 ### Additional Options
 
 1. `--dry-run` will run the workflow without modifying any files or interacting with the remote. Instead, all the steps that _would_ happen will be printed to the screen so you can verify what will happen.
@@ -26,3 +30,4 @@ Without any config, you can run `knope release` to create a new release from [co
 [semantic version]: https://semver.org
 [`preparerelease`]: config/step/PrepareRelease.md
 [`release`]: config/step/Release.md
+[`createchangefile`]: config/step/CreateChangeFile.md

@@ -1,8 +1,12 @@
 # PrepareRelease step
 
-This will look through all commits since the version tag and parse any [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will then bump the package version (depending on the [Semantic Versioning] rule determined from the commits) and add a new changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/) format. Any files altered (`versioned_files` and `changelog`) will be staged for commit with `git add` **but not committed**.
+This step:
 
-The version bumping follows the same rules and logic as the [BumpVersion] step, with the rule selected for you automatically. Which files are edited (both for versioning and changelog) is determined by the [packages] section.
+1. Looks through all commits since the last version tags and parses any [Conventional Commits] it finds.
+2. Reads any [Changesets] in the `.changeset` folder (which you can create via [`CreateChangeFile`]). Those files are deleted after being read.
+3. Bumps the [semantic version][semantic versioning] of any packages that have changed.
+4. Adds a new entry to any affected changelog files.
+5. Stages all files modified by this step with Git (effectively, `git add <file>` for versioned files, changelogs, and changesets). This step **does not commit** the changes.
 
 When multiple [packages] are configured—`PrepareRelease` runs for each package independently. The version tag _for that package_ will be the starting point.
 
@@ -12,12 +16,12 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Limitations
 
-- The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] which meet certain requirements. See [Changelog sections](#changelog-sections) below.
-- Knope uses a simpler subset of semantic versioning which you can read about in [BumpVersion]
+- The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] and [Changesets] that meet certain requirements. See [Changelog sections](#changelog-sections) below.
+- Knope uses a simpler subset of semantic versioning which you can read about in [`BumpVersion`]
 
-## Commit Scopes
+## Mono-repos and multiple packages
 
-The `PrepareRelease` step can be fine-tuned when working with multiple packages to only apply a commit to a specific package's version & changelog. This is done by adding a `scopes` array to the [packages] config and adding a [conventional commit scope] to the commits that should not apply to all packages. The following rules apply, in order, with respect to conventional commit scopes:
+You can have [multiple packages in one repo](../packages.md#multiple-packages). By default, changesets work with multiple packages and conventional commits apply to _all_ packages. If you want to target specific conventional commits at individual packages, you need use a [conventional commit scope]. This is done by adding a `scopes` array to the [packages] config and adding a [conventional commit scope] to the commits that should not apply to all packages. The following rules apply, in order, with respect to conventional commit scopes:
 
 1. If no packages define `scopes` in their config, all commits apply to all packages. Scopes are not considered by `knope`.
 2. If a commit does not have a scope, it applies to all packages.
@@ -27,26 +31,29 @@ The `PrepareRelease` step can be fine-tuned when working with multiple packages 
 
 Sections are only added to the changelog for each version as needed—if there are no commits that meet the requirements for a section, that section will not be added. The built-in sections are:
 
-1. `### Breaking Changes` for anything that conventional commits have marked as breaking. Any commit whose type/scope end in `!` will land in this section **instead** of their default section (if any). So `fix!: a breaking fix` will add the note "a breaking fix" to this section and **nothing** to the "Fixes" section. If the special `BREAKING CHANGE` footer is used in any commit, the message from that footer (not the main commit message) will be added here.
-2. `### Features` for any commit with type `feat` (no `!`)
-3. `### Fixes` for any commit with type `fix` (no `!`)
+1. `### Breaking Changes` for anything that triggers a major semantic version increase.
+   1. Any commit whose type/scope end in `!` will land in this section **instead** of their default section (if any). So `fix!: a breaking fix` will add the note "a breaking fix" to this section and **nothing** to the "Fixes" section.
+   2. If the special `BREAKING CHANGE` footer is used in any commit, the message from that footer (not the main commit message) will be added here. The main commit message will be added as appropriate to the normal section. So a `fix: ` commit with a `BREAKING CHANGE` footer creates entries in both the `### Fixes` section and the `### Breaking Changes` section.
+   3. Any changeset with a [change type] of `major` (selecting "Breaking" in [`CreateChangeFile`])
+2. `### Features` for any commit with type `feat` (no `!`) or change type `minor` (selecting "Feature" in [`CreateChangeFile`])
+3. `### Fixes` for any commit with type `fix` (no `!`) or change type `patch` (selecting "Fix" in [`CreateChangeFile`])
 4. `### Notes` for any footer in a conventional commit called `Changelog-Note`. This section name can be changed via [configuration](../packages.md#extra_changelog_sections).
 5. Custom sections as defined in the [configuration](../packages.md#extra_changelog_sections).
 
 ## Versioning
 
-Versioning is done with the same logic as the [BumpVersion] step, but the rule is selected automatically based on the commits since the last version tag. Generally, rule selection works as follows:
+Versioning is done with the same logic as the [`BumpVersion`] step, but the rule is selected automatically based on the commits since the last version tag and the files present in the `.changeset` directory. Generally, rule selection works as follows:
 
-1. If there are any breaking changes (type/scope ending in `!` or a `BREAKING CHANGE` footer), the `Major` rule is used.
-2. If no breaking changes, but there are any features (commits with `feat` type), the `Minor` rule is used.
+1. If there are any breaking changes (things in the `### Breaking Changes` section above), the `Major` rule is used.
+2. If no breaking changes, but there are any features (things in the `### Features` section above), the `Minor` rule is used.
 3. If no breaking changes or features, but there _are_ entries to add to the changelog (fixes, notes, or custom sections) the `Patch` rule is used.
-4. If there are no new entries to add to the changelog, version will not be increased.
+4. If there are no new entries to add to the changelog, version will not be increased, and this step will throw an error (unless the `--dry-run` option is set).
 
 ## Examples
 
 ### Creating a Pre-release Version
 
-If you include the `prerelease_label` option, the version created will be a pre-release version (treated like `Pre` rule in [BumpVersion]). This allows you to collect the commits _so far_ to an impending future version to get them out earlier.
+If you include the `prerelease_label` option, the version created will be a pre-release version (treated like `Pre` rule in [`BumpVersion`]). This allows you to collect the commits _so far_ to an impending future version to get them out earlier.
 
 ```toml
 [package]
@@ -180,8 +187,11 @@ The reasons this can fail:
 3. There was nothing to release. In this case it exits immediately so that there aren't problems with later steps.
 
 [semantic versioning]: https://semver.org
-[bumpversion]: ./BumpVersion.md
+[`bumpversion`]: ./BumpVersion.md
 [packages]: ../packages.md
 [`release`]: ./Release.md
 [conventional commit scope]: https://www.conventionalcommits.org/en/v1.0.0/#commit-message-with-scope
 [conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
+[changesets]: https://github.com/changesets/changesets
+[`CreateChangeFile`]: ./CreateChangeFile.md
+[change type]: https://github.com/knope-dev/changesets#change-type

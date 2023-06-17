@@ -1,11 +1,13 @@
 use std::{
-    fs::{copy, read_to_string, write},
+    fs::{copy, create_dir, read_to_string, write},
     path::Path,
     thread::sleep,
     time::Duration,
 };
 
+use changesets::{Change, ChangeType, UniqueId, Versioning};
 use git_repo_helpers::*;
+use pretty_assertions::assert_eq;
 use rstest::rstest;
 use snapbox::{
     assert_eq_path,
@@ -414,7 +416,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .stdout_eq_path(source_path.join(format!("{knope_toml}_dry_run_output.txt")));
     actual_assert
         .success()
         .stdout_eq_path(source_path.join("output.txt"));
@@ -1440,4 +1442,120 @@ fn notes() {
         source_path.join("EXPECTED_SECOND_CHANGELOG.md"),
         read_to_string(temp_path.join("SECOND_CHANGELOG.md")).unwrap(),
     );
+}
+
+#[test]
+fn changesets() {
+    // Arrange a project with two packages. Add a changeset file for the _first_ package only
+    // that has a breaking change. Add a conventional commit for _both_ packages with a feature.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "feat!: Existing feature");
+    tag(temp_path, "first/v1.2.3");
+    tag(temp_path, "second/v0.4.6");
+
+    let changeset_path = temp_path.join(".changeset");
+    create_dir(&changeset_path).unwrap();
+    Change {
+        unique_id: UniqueId::from("breaking_change"),
+        summary: "#### A breaking change\n\nA breaking change for only the first package"
+            .to_string(),
+        versioning: Versioning::from(("first", ChangeType::Major)),
+    }
+    .write_to_directory(&changeset_path)
+    .unwrap();
+
+    let src_path = Path::new("tests/prepare_release/changesets");
+    for file in [
+        "knope.toml",
+        "Cargo.toml",
+        "package.json",
+        "pyproject.toml",
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+    ] {
+        copy(src_path.join(file), temp_path.join(file)).unwrap();
+    }
+    add_all(temp_path);
+    commit(
+        temp_path,
+        "feat: A new shared feature from a conventional commit",
+    );
+
+    // Act—run a PrepareRelease step to bump versions and update changelogs
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_eq_path(src_path.join("dry_run_output.txt"));
+    actual_assert.success().stderr_eq("").stdout_eq("");
+
+    let status = status(temp_path);
+    for file in [
+        "Cargo.toml",
+        "package.json",
+        "pyproject.toml",
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+    ] {
+        assert_eq_path(
+            src_path.join(format!("EXPECTED_{}", file)),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+        assert!(status.contains(&format!("M  {}", file)), "{:#?}", status);
+    }
+
+    assert_eq!(changeset_path.as_path().read_dir().unwrap().count(), 0);
+    assert!(
+        status.contains(&"D  .changeset/breaking_change.md".to_string()),
+        "{:#?}",
+        status
+    );
+}
+
+#[test]
+fn output_of_invalid_changesets() {
+    // Arrange a basic project, create an invalid change file
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "feat!: Existing feature");
+    tag(temp_path, "v1.2.3");
+
+    let changeset_path = temp_path.join(".changeset");
+    create_dir(&changeset_path).unwrap();
+    write(changeset_path.join("invalid.md"), "invalid").unwrap();
+
+    let src_path = Path::new("tests/prepare_release/changesets");
+    let file = "Cargo.toml";
+    copy(src_path.join(file), temp_path.join(file)).unwrap();
+
+    // Act—run a PrepareRelease step to bump versions and update changelogs
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .failure()
+        .stderr_eq_path(src_path.join("failure_dry_run.txt"));
+    actual_assert
+        .failure()
+        .stderr_eq_path(src_path.join("failure.txt"));
 }

@@ -1,8 +1,11 @@
-Would bump first version to 1.0.1
-Would add the following to FIRST_CHANGELOG.md: 
+Would bump Cargo.toml to 1.0.1
+Would add the following to FIRST_CHANGELOG.md:
 ## 1.0.1
 
 ### Fixes
 
-- Fix for first only
+#### Fix for first only
 
+Would add files to git:
+  Cargo.toml
+  FIRST_CHANGELOG.md

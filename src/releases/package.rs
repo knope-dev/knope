@@ -1,6 +1,9 @@
 use std::{
     ffi::OsStr,
+    fmt,
+    fmt::Display,
     fs::{read_to_string, write},
+    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -9,20 +12,27 @@ use itertools::Itertools;
 use log::trace;
 
 use crate::{
-    config::{ChangeLogSectionName, CommitFooter, Package as PackageConfig},
+    config::{ChangeLogSectionName, CommitFooter, CustomChangeType, Package as PackageConfig},
+    git::add_files,
     releases::{
-        cargo, get_current_versions_from_tag, go, package_json, pyproject, semver::Version,
+        cargo,
+        changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
+        get_current_versions_from_tag, go, package_json, pyproject,
+        semver::{bump, ConventionalRule, Label, Version},
+        Change, Release, Rule,
     },
     step::{StepError, StepError::InvalidCargoToml},
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Package {
     pub(crate) versioned_files: Vec<VersionedFile>,
     pub(crate) changelog: Option<Changelog>,
     pub(crate) name: Option<String>,
     pub(crate) scopes: Option<Vec<String>>,
-    pub(crate) extra_changelog_sections: IndexMap<CommitFooter, ChangeLogSectionName>,
+    pub(crate) extra_changelog_sections: IndexMap<ChangelogSectionSource, ChangeLogSectionName>,
+    pub(crate) pending_changes: Vec<Change>,
+    pub(crate) prepared_release: Option<Release>,
 }
 
 impl Package {
@@ -36,12 +46,16 @@ impl Package {
         let mut extra_changelog_sections = IndexMap::new();
         for section in config.extra_changelog_sections.unwrap_or_default() {
             for footer in section.footers {
-                extra_changelog_sections.insert(footer, section.name.clone());
+                extra_changelog_sections
+                    .insert(ChangelogSectionSource::from(footer), section.name.clone());
+            }
+            for change_type in section.types {
+                extra_changelog_sections.insert(change_type.into(), section.name.clone());
             }
         }
         let default_extra_footer = CommitFooter::from("Changelog-Note");
         extra_changelog_sections
-            .entry(default_extra_footer)
+            .entry(default_extra_footer.into())
             .or_insert_with(|| ChangeLogSectionName::from("Notes"));
         Ok(Package {
             versioned_files,
@@ -49,7 +63,119 @@ impl Package {
             name,
             scopes: config.scopes,
             extra_changelog_sections,
+            pending_changes: Vec::new(),
+            prepared_release: None,
         })
+    }
+
+    fn bump_rule(&self) -> ConventionalRule {
+        self.pending_changes
+            .iter()
+            .map(|change| change.change_type().into())
+            .max()
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn write_release(
+        mut self,
+        prerelease_label: &Option<Label>,
+        dry_run: &mut Option<Box<dyn Write>>,
+    ) -> Result<Self, StepError> {
+        if self.pending_changes.is_empty() {
+            return Ok(self);
+        }
+
+        let bump_rule = self.bump_rule();
+        let versions = self.get_version()?;
+        let rule = if let Some(pre_label) = prerelease_label {
+            Rule::Pre {
+                label: pre_label.clone(),
+                stable_rule: bump_rule,
+            }
+        } else {
+            bump_rule.into()
+        };
+        let new_version = bump(versions, &rule)?;
+
+        self = self.write_version(&new_version, dry_run)?;
+        let new_changelog = self.write_changelog(&new_version, dry_run)?;
+        self.stage_changes_to_git(dry_run)?;
+
+        self.prepared_release = Some(Release {
+            new_changelog,
+            new_version,
+        });
+        Ok(self)
+    }
+    fn stage_changes_to_git(&self, dry_run: &mut Option<Box<dyn Write>>) -> Result<(), StepError> {
+        let changeset_path = PathBuf::from(".changeset");
+        let paths = self
+            .versioned_files
+            .iter()
+            .map(|versioned_file| versioned_file.path.clone())
+            .chain(
+                self.changelog
+                    .as_ref()
+                    .map(|changelog| changelog.path.clone()),
+            )
+            .chain(self.pending_changes.iter().filter_map(|change| {
+                if let Change::ChangeSet(change) = change {
+                    Some(changeset_path.join(change.unique_id.to_file_name()))
+                } else {
+                    None
+                }
+            }))
+            .collect_vec();
+        if paths.is_empty() {
+            Ok(())
+        } else if let Some(stdio) = dry_run.as_deref_mut() {
+            writeln!(stdio, "Would add files to git:")?;
+            for path in &paths {
+                writeln!(stdio, "  {}", path.display())?;
+            }
+            Ok(())
+        } else {
+            add_files(&paths)
+        }
+    }
+}
+
+impl Display for Package {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.name
+                .as_deref()
+                .unwrap_or(DEFAULT_CHANGESET_PACKAGE_NAME)
+        )
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum ChangelogSectionSource {
+    CommitFooter(CommitFooter),
+    CustomChangeType(CustomChangeType),
+}
+
+impl From<CommitFooter> for ChangelogSectionSource {
+    fn from(footer: CommitFooter) -> Self {
+        Self::CommitFooter(footer)
+    }
+}
+
+impl From<CustomChangeType> for ChangelogSectionSource {
+    fn from(change_type: CustomChangeType) -> Self {
+        Self::CustomChangeType(change_type)
+    }
+}
+
+impl Display for ChangelogSectionSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CommitFooter(footer) => footer.fmt(f),
+            Self::CustomChangeType(change_type) => change_type.fmt(f),
+        }
     }
 }
 

@@ -1,8 +1,11 @@
-Would bump package version to 2.0.0-rc.1
-Would add the following to CHANGELOG.md: 
+Would bump Cargo.toml to 2.0.0-rc.1
+Would add the following to CHANGELOG.md:
 ## 2.0.0-rc.1
 
 ### Breaking Changes
 
-- Breaking feature in new RC
+#### Breaking feature in new RC
 
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md

@@ -2,7 +2,7 @@
 
 ### Breaking Changes
 
-- New feature
+#### New feature
 
 ## 1.0.0
 

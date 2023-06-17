@@ -76,6 +76,11 @@ pub(crate) enum Step {
     ///
     /// Requires that GitHub details be configured.
     Release,
+    /// Create a new change file to be included in the next release.
+    ///
+    /// This step is interactive and will prompt the user for the information needed to create the
+    /// change file. Do not try to run in a non-interactive environment.
+    CreateChangeFile,
 }
 
 impl Step {
@@ -99,6 +104,7 @@ impl Step {
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type),
             Step::Release => releases::release(run_type),
+            Step::CreateChangeFile => releases::create_change_file(run_type),
         }
     }
 
@@ -248,10 +254,10 @@ pub(super) enum StepError {
     IoError(#[from] std::io::Error),
     #[error("Not a Git repo.")]
     #[diagnostic(
-    code(step::not_a_git_repo),
-    help(
-    "We couldn't find a Git repo in the current directory. Maybe you're not running from the project root?"
-    )
+        code(step::not_a_git_repo),
+        help(
+            "We couldn't find a Git repo in the current directory. Maybe you're not running from the project root?"
+        )
     )]
     NotAGitRepo,
     #[error("Not on the tip of a Git branch.")]
@@ -285,18 +291,18 @@ pub(super) enum StepError {
     NoCommitter,
     #[error("Could not complete checkout")]
     #[diagnostic(
-    code(step::incomplete_checkout),
-    help("Switching branches failed, but HEAD was changed. You probably want to git switch back \
-        to the branch you were on."),
+        code(step::incomplete_checkout),
+        help("Switching branches failed, but HEAD was changed. You probably want to git switch back \
+            to the branch you were on."),
     )]
     IncompleteCheckout(#[source] git2::Error),
     #[error("Unknown Git error.")]
     #[diagnostic(
-    code(step::git_error),
-    help(
-    "Something went wrong when interacting with Git that we don't have an explanation for. \
-            Maybe try performing the operation manually?"
-    )
+        code(step::git_error),
+        help(
+        "Something went wrong when interacting with Git that we don't have an explanation for. \
+                Maybe try performing the operation manually?"
+        )
     )]
     GitError(#[from] Option<git2::Error>),
     #[error("Could not get head commit")]
@@ -349,8 +355,8 @@ pub(super) enum StepError {
     DecodeError(#[from] decode::Error),
     #[error("Failed to get user input")]
     #[diagnostic(
-    code(step::user_input_error),
-    help("This step requires user input, but no user input was provided. Try running the step again."),
+        code(step::user_input_error),
+        help("This step requires user input, but no user input was provided. Try running the step again."),
     )]
     UserInput(#[from] InquireError),
     #[error("PrepareRelease needs to occur before this step")]
@@ -404,6 +410,20 @@ pub(super) enum StepError {
         help("If you see this error, it's a bug. Please report on GitHub.")
     )]
     FailedTomlSerialization,
+    #[error("Failed to create the file {0}")]
+    #[diagnostic(
+        code(step::could_not_create_file),
+        help("This could be a permissions issue or a file conflict (the file already exists).")
+    )]
+    CouldNotCreateFile(PathBuf),
+    #[error(transparent)]
+    #[diagnostic(
+        code(step::could_not_read_changeset),
+        help(
+            "This could be a file-system issue or a problem with the formatting of a change file."
+        )
+    )]
+    CouldNotReadChangeSet(#[from] changesets::LoadingError),
 }
 
 impl From<tag::Error> for StepError {

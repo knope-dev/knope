@@ -1,21 +1,22 @@
 use std::collections::BTreeMap;
 
-pub(crate) use conventional_commits::update_project_from_conventional_commits as prepare_release;
+use ::changesets::PackageChange;
 
 pub(crate) use self::{
+    changesets::{create_change_file, ChangeType},
     git::{get_current_versions_from_tag, tag_name},
     package::{find_packages, suggested_package_toml, Package},
-    semver::{bump_version_and_update_state as bump_version, get_version, Rule},
+    semver::{bump_version_and_update_state as bump_version, Rule},
 };
 use crate::{
     releases::semver::{PreVersion, StableVersion, Version},
-    state::Release::{Bumped, Prepared},
     step::StepError,
     RunType,
 };
 
 mod cargo;
 mod changelog;
+mod changesets;
 mod conventional_commits;
 mod git;
 mod github;
@@ -24,13 +25,76 @@ mod package;
 mod package_json;
 mod pyproject;
 pub(crate) mod semver;
+
+use conventional_commits::ConventionalCommit;
 pub(crate) use non_empty_map::PrereleaseMap;
 
-#[derive(Clone, Debug)]
+use crate::{
+    releases::conventional_commits::add_releases_from_conventional_commits, step::PrepareRelease,
+};
+
+pub(crate) fn prepare_release(
+    run_type: RunType,
+    prepare_release: &PrepareRelease,
+) -> Result<RunType, StepError> {
+    let (mut state, mut dry_run_stdout) = match run_type {
+        RunType::DryRun { state, stdout } => (state, Some(stdout)),
+        RunType::Real(state) => (state, None),
+    };
+    if state.packages.is_empty() {
+        return Err(StepError::no_defined_packages_with_help());
+    }
+    let PrepareRelease { prerelease_label } = prepare_release;
+    state.packages = add_releases_from_conventional_commits(state.packages)
+        .and_then(|packages| changesets::add_releases_from_changeset(packages, &mut dry_run_stdout))
+        .and_then(|packages| {
+            packages
+                .into_iter()
+                .map(|package| package.write_release(prerelease_label, &mut dry_run_stdout))
+                .collect()
+        })?;
+
+    if let Some(stdout) = dry_run_stdout {
+        Ok(RunType::DryRun { state, stdout })
+    } else if state
+        .packages
+        .iter()
+        .filter(|package| package.prepared_release.is_some())
+        .count()
+        == 0
+    {
+        Err(StepError::NoRelease)
+    } else {
+        Ok(RunType::Real(state))
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Release {
-    pub(crate) version: Version,
-    pub(crate) changelog: String,
-    pub(crate) package_name: Option<String>,
+    pub(crate) new_changelog: String,
+    pub(crate) new_version: Version,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum Change {
+    ConventionalCommit(ConventionalCommit),
+    ChangeSet(PackageChange),
+}
+
+impl Change {
+    fn change_type(&self) -> ChangeType {
+        match self {
+            Change::ConventionalCommit(commit) => commit.change_type.clone(),
+            Change::ChangeSet(change) => (&change.change_type).into(),
+        }
+    }
+
+    fn summary(&self) -> String {
+        match self {
+            Change::ConventionalCommit(commit) => commit.message.clone(),
+            Change::ChangeSet(change) => change.summary.clone(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -151,28 +215,37 @@ impl From<Version> for CurrentVersions {
 pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     let (mut state, mut dry_run_stdout) = run_type.decompose();
 
-    for release in &state.releases {
-        let prepared = match release {
-            Prepared(release) => release,
-            Bumped { .. } => return Err(StepError::ReleaseNotPrepared),
-        };
-
-        let github_config = state.github_config.clone();
-        if let Some(github_config) = github_config {
-            state.github = github::release(
-                prepared,
-                state.github,
-                &github_config,
-                dry_run_stdout.as_mut(),
-            )?;
-        } else {
-            git::release(dry_run_stdout.as_mut(), prepared)?;
+    for package in &state.packages {
+        if let Some(release) = package.prepared_release.as_ref() {
+            let github_config = state.github_config.clone();
+            if let Some(github_config) = github_config {
+                state.github = github::release(
+                    &package.name,
+                    &release.new_version,
+                    &release.new_changelog,
+                    state.github,
+                    &github_config,
+                    dry_run_stdout.as_mut(),
+                )?;
+            } else {
+                git::release(dry_run_stdout.as_mut(), &release.new_version, &package.name)?;
+            }
         }
     }
 
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { stdout, state })
     } else {
+        if state
+            .packages
+            .iter()
+            .filter(|p| p.prepared_release.is_some())
+            .count()
+            == 0
+        {
+            return Err(StepError::ReleaseNotPrepared);
+        }
+
         Ok(RunType::Real(state))
     }
 }
