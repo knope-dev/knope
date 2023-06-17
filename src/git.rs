@@ -296,18 +296,14 @@ pub(crate) fn get_commit_messages_after_last_stable_version(
                             ancestors
                                 .into_iter()
                                 .filter_map(Result::ok)
-                                .take_while(|id| {
+                                .take_while(|info| {
                                     if let Some(tag_id) = tag_oid {
-                                        *id != tag_id
+                                        info.id != tag_id
                                     } else {
                                         true
                                     }
                                 })
-                                .filter_map(|id| {
-                                    repo.find_object(id)
-                                        .ok()
-                                        .and_then(|object| object.try_into_commit().ok())
-                                })
+                                .filter_map(|info| info.object().ok())
                         })
                 })
                 .flatten()
