@@ -27,7 +27,13 @@ You can have [multiple packages in one repo](../packages.md#multiple-packages). 
 2. If a commit does not have a scope, it applies to all packages.
 3. If a commit has a scope, and _any_ package has defined a `scopes` array, the commit will only apply to those packages which have that scope defined in their `scopes` array.
 
-## Changelog sections
+## Changelog format
+
+### Version titles
+
+The title of each version is a combination of its semantic version (e.g., `1.2.3`) and the UTC date of when it was released (e.g., `(2017-04-09)`). UTC is used for simplicity—in practice, the exact _day_ of a release is not usually as important as the general timing.
+
+### Change sections
 
 Sections are only added to the changelog for each version as needed—if there are no commits that meet the requirements for a section, that section will not be added. The built-in sections are:
 
@@ -85,19 +91,19 @@ type = "PrepareRelease"
 And your changelog looks like this (describing some pre-releases you already have):
 
 ```md
-## 2.0.0-rc.1
+## 2.0.0-rc.1 (2024-03-14)
 
 ### Bug Fixes
 
 - A bug in the first `rc` that we fixed.
 
-## 2.0.0-rc.0
+## 2.0.0-rc.0 (2024-02-29)
 
 ### Breaking Changes
 
 - Cool new API
 
-## 1.14.0
+## 1.14.0 (2023-12-25)
 
 The last 1.x release.
 ```
@@ -105,7 +111,7 @@ The last 1.x release.
 Now you're ready to release 2.0.0—the version that's going to come after 2.0.0-rc.1. If you run the defined `release` rule, it will go all the way back to the tag `v1.14.0` and use the commits from that point to create the new version. In the end, you'll get version 2.0.0 with a new changelog entry like this:
 
 ```md
-## 2.0.0
+## 2.0.0 (2024-04-09)
 
 ### Breaking Changes
 
@@ -153,7 +159,7 @@ Here, the configured scopes are the same a the name of the package. This is comm
 When the `release` workflow is run, the `cli` package will be bumped to 1.1.0 and the `lib` package will be bumped to 0.9.0. The changelog for `cli` will look like this:
 
 ```md
-## 1.1.0
+## 1.1.0 (2022-04-09)
 
 ### Features
 
@@ -167,7 +173,7 @@ When the `release` workflow is run, the `cli` package will be bumped to 1.1.0 an
 And the changelog for `lib` will look like this:
 
 ```md
-## 0.9.0
+## 0.9.0 (2022-03-14)
 
 ### Breaking Changes
 

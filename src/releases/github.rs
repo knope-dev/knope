@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::{
     app_config::get_or_prompt_for_github_token,
     config::GitHub,
-    releases::{git::tag_name, semver::Version},
+    releases::{git::tag_name, Release},
     state,
     state::GitHub::{Initialized, New},
     step::StepError,
@@ -13,25 +13,25 @@ use crate::{
 
 pub(crate) fn release(
     package_name: &Option<String>,
-    version: &Version,
-    changelog: &str,
+    release: &Release,
     github_state: state::GitHub,
     github_config: &GitHub,
     dry_run_stdout: Option<&mut Box<dyn Write>>,
 ) -> Result<state::GitHub, StepError> {
-    let version_string = version.to_string();
+    let version = &release.new_version;
+    let release_title = release.title()?;
 
     let tag_name = tag_name(version, package_name);
     let name = if let Some(package_name) = package_name {
-        format!("{package_name} {version_string}")
+        format!("{package_name} {release_title}")
     } else {
-        version_string
+        release_title
     };
 
     let github_release = GitHubRelease {
         tag_name: &tag_name,
         name: &name,
-        body: changelog,
+        body: &release.new_changelog,
         prerelease: version.is_prerelease(),
     };
 
@@ -43,8 +43,8 @@ pub(crate) fn release(
         };
         writeln!(
             stdout,
-            "Would create a {} on GitHub with name and tag {} and body:\n{}",
-            release_type, github_release.tag_name, github_release.body
+            "Would create a {} on GitHub with name {} and tag {} and body:\n{}",
+            release_type, name, github_release.tag_name, github_release.body
         )?;
         return Ok(github_state);
     }

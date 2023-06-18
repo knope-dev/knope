@@ -5,10 +5,10 @@ use std::{
     path::Path,
 };
 
-use snapbox::{
-    assert_eq_path,
-    cmd::{cargo_bin, Command},
-};
+use helpers::*;
+use snapbox::cmd::{cargo_bin, Command};
+
+mod helpers;
 
 /// Test upgrading the deprecated `[[packages]]` section to the new `[package]` section.
 #[test]
@@ -20,16 +20,16 @@ fn upgrade_packages() {
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
 
     // Act
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("--upgrade")
         .current_dir(temp_path)
         .assert();
 
     // Assert
-    assert
+    output_assert
         .success()
         .stdout_eq("Upgrading deprecated [[packages]] syntax to [package]\n");
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("expected_knope.toml"),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
@@ -45,14 +45,14 @@ fn upgrade_nothing() {
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
 
     // Act
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("--upgrade")
         .current_dir(temp_path)
         .assert();
 
     // Assert
-    assert.success().stdout_eq("Nothing to upgrade\n");
-    assert_eq_path(
+    output_assert.success().stdout_eq("Nothing to upgrade\n");
+    assert().matches_path(
         source_path.join("expected_knope.toml"),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );

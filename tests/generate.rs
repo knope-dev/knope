@@ -3,14 +3,14 @@ use std::{
     path::Path,
 };
 
-use git_repo_helpers::*;
+use helpers::*;
 use rstest::rstest;
 use snapbox::{
     assert_eq_path,
     cmd::{cargo_bin, Command},
 };
 
-mod git_repo_helpers;
+mod helpers;
 
 /// Run `--generate` on a repo with no remote.
 #[test]

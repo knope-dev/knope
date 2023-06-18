@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::{path::Path, process::Command};
 
 use itertools::Itertools;

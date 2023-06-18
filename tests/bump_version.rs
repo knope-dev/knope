@@ -2,14 +2,11 @@
 
 use std::{fs::read_to_string, path::Path};
 
-use git_repo_helpers::*;
+use helpers::*;
 use rstest::rstest;
-use snapbox::{
-    assert_eq_path,
-    cmd::{cargo_bin, Command},
-};
+use snapbox::cmd::{cargo_bin, Command};
 
-mod git_repo_helpers;
+mod helpers;
 
 /// Test all the `BumpVersion` rules.
 #[rstest]
@@ -56,12 +53,12 @@ fn bump_version(
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join(format!(
+        .stdout_matches_path(source_path.join(format!(
             "{workflow}_{current_version}_{expected_version}_dry_run_output.txt"
         )));
     actual_assert.success().stdout_eq("");
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join(format!(
             "{workflow}_{current_version}_{expected_version}_cargo.toml"
         )),
@@ -103,12 +100,12 @@ fn multiple_packages(#[case] workflow: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
 
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert_eq_path(
+        assert().matches_path(
             expected_path.join(file),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -150,12 +147,12 @@ fn multiple_packages_pre(#[case] workflow: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
 
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert_eq_path(
+        assert().matches_path(
             expected_path.join(file),
             read_to_string(temp_path.join(file)).unwrap(),
         );

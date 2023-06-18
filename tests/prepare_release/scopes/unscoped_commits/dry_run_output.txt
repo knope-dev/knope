@@ -1,6 +1,6 @@
 Would bump Cargo.toml to 1.1.0
 Would add the following to FIRST_CHANGELOG.md:
-## 1.1.0
+## 1.1.0 ([DATE])
 
 ### Features
 
@@ -15,7 +15,7 @@ Would add files to git:
   FIRST_CHANGELOG.md
 Would bump pyproject.toml to 0.2.0
 Would add the following to SECOND_CHANGELOG.md:
-## 0.2.0
+## 0.2.0 ([DATE])
 
 ### Breaking Changes
 

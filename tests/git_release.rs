@@ -3,13 +3,10 @@ use std::{
     path::Path,
 };
 
-use git_repo_helpers::*;
-use snapbox::{
-    assert_eq_path,
-    cmd::{cargo_bin, Command},
-};
+use helpers::*;
+use snapbox::cmd::{cargo_bin, Command};
 
-mod git_repo_helpers;
+mod helpers;
 
 /// Run a `PreRelease` then `Release` for a repo not configured for GitHub.
 ///
@@ -46,15 +43,15 @@ fn git_release() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
         .stdout_matches_path(source_path.join("output.txt"));
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -101,9 +98,11 @@ fn multiple_packages() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
+        .with_assert(assert())
         .stdout_matches_path(source_path.join("output.txt"));
 
     for file in [
@@ -113,7 +112,7 @@ fn multiple_packages() {
         "pyproject.toml",
         "package.json",
     ] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );

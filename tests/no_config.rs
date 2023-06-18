@@ -2,11 +2,11 @@
 
 use std::{fs::copy, path::Path};
 
-use git_repo_helpers::*;
+use helpers::*;
 use rstest::rstest;
 use snapbox::cmd::{cargo_bin, Command};
 
-mod git_repo_helpers;
+mod helpers;
 
 /// Run `knope release --dry-run` on a repo with no remote.
 #[test]
@@ -23,12 +23,13 @@ fn release_no_remote() {
         .arg("release")
         .arg("--dry-run")
         .current_dir(temp_path)
+        .with_assert(assert())
         .assert();
 
     // Assert
     assert
         .success()
-        .stdout_eq_path(source_path.join("stdout.txt"));
+        .stdout_matches_path(source_path.join("stdout.txt"));
 }
 
 /// Run `knope release --dry-run` on a repo with supported metadata files.
@@ -58,13 +59,14 @@ fn test_packages(#[case] source_files: &[&str], #[case] case: &str) {
     let assert = Command::new(cargo_bin!("knope"))
         .arg("release")
         .arg("--dry-run")
+        .with_assert(assert())
         .current_dir(temp_path)
         .assert();
 
     // Assert
     assert
         .success()
-        .stdout_eq_path(source_path.join(format!("{case}_stdout.txt")));
+        .stdout_matches_path(source_path.join(format!("{case}_stdout.txt")));
 }
 
 /// Run `knope release --dry-run` on a repo with a GitHub remote to test that integration.
@@ -84,13 +86,14 @@ fn generate_github(#[case] remote: &str) {
     let assert = Command::new(cargo_bin!("knope"))
         .arg("release")
         .arg("--dry-run")
+        .with_assert(assert())
         .current_dir(temp_path)
         .assert();
 
     // Assert
     assert
         .success()
-        .stdout_eq_path(source_path.join("stdout.txt"));
+        .stdout_matches_path(source_path.join("stdout.txt"));
 }
 
 fn setup_commits(path: &Path) {
