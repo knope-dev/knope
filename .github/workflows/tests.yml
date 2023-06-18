@@ -21,7 +21,7 @@ jobs:
           cp cargo-binstall $HOME/.cargo/bin
 
       - name: Install nightly toolchain (for formatting)
-        run: rustup toolchain install nightly
+        run: rustup toolchain install nightly --component rustfmt
 
       - name: Install Just
         run: cargo-binstall --no-confirm just --force
