@@ -20,7 +20,7 @@ test:
 
 lint:
     cargo clippy -- -D warnings
-    cargo deny check
+    cargo-deny check
 
 # Reformat all files, requires `npx` and `install-lint-dependencies`
 reformat:
