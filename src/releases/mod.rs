@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use ::changesets::PackageChange;
+use time::{macros::format_description, OffsetDateTime};
 
 pub(crate) use self::{
     changesets::{create_change_file, ChangeType},
@@ -69,10 +70,31 @@ pub(crate) fn prepare_release(
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Release {
     pub(crate) new_changelog: String,
     pub(crate) new_version: Version,
+    date: OffsetDateTime,
+}
+
+impl Release {
+    pub(crate) fn new(changelog: String, version: Version) -> Release {
+        Release {
+            new_changelog: changelog,
+            new_version: version,
+            date: OffsetDateTime::now_utc(),
+        }
+    }
+
+    pub(crate) fn title(&self) -> Result<String, StepError> {
+        let format = format_description!("[year]-[month]-[day]");
+        let date = self.date.format(&format)?;
+        Ok(format!("{} ({})", self.new_version, date))
+    }
+
+    pub(crate) fn changelog_entry(&self) -> Result<String, StepError> {
+        Ok(format!("## {}\n\n{}", self.title()?, self.new_changelog))
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -221,8 +243,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
             if let Some(github_config) = github_config {
                 state.github = github::release(
                     &package.name,
-                    &release.new_version,
-                    &release.new_changelog,
+                    release,
                     state.github,
                     &github_config,
                     dry_run_stdout.as_mut(),

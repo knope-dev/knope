@@ -1,6 +1,6 @@
 Would bump Cargo.toml to 1.0.1
 Would add the following to FIRST_CHANGELOG.md:
-## 1.0.1
+## 1.0.1 ([DATE])
 
 ### Fixes
 

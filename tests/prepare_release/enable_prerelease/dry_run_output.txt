@@ -1,6 +1,6 @@
 Would bump Cargo.toml to 2.0.0-rc.1
 Would add the following to CHANGELOG.md:
-## 2.0.0-rc.1
+## 2.0.0-rc.1 ([DATE])
 
 ### Breaking Changes
 

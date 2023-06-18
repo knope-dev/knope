@@ -1,6 +1,6 @@
 Would bump package.json to 2.0.0
 Would add the following to CHANGELOG.md:
-## 2.0.0
+## 2.0.0 ([DATE])
 
 ### Breaking Changes
 

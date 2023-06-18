@@ -1,9 +1,9 @@
 use std::{fs::copy, path::Path};
 
-use git_repo_helpers::*;
+use helpers::*;
 use snapbox::cmd::{cargo_bin, Command};
 
-mod git_repo_helpers;
+mod helpers;
 
 /// Run `--validate` with a config file that has lots of problems.
 #[test]
@@ -43,7 +43,7 @@ fn validate_old_packages() {
         .assert();
     assert
         .success()
-        .stdout_eq_path("tests/validate/old_package_syntax.txt");
+        .stdout_matches_path("tests/validate/old_package_syntax.txt");
 }
 
 /// Run `--validate` with a config file that has both package configs—which is a conflict.

@@ -1,18 +1,21 @@
 use std::io::Write;
 
 use indexmap::IndexMap;
-use itertools::Itertools;
 
-use super::{semver::Version, Package};
-use crate::{config::ChangeLogSectionName, releases::ChangeType, step::StepError};
+use super::Package;
+use crate::{
+    config::ChangeLogSectionName,
+    releases::{semver::Version, ChangeType, Release},
+    step::StepError,
+};
 
 impl Package {
     /// Adds content from `release` to `Self::changelog` if it exists.
     pub(crate) fn write_changelog(
         &mut self,
-        version: &Version,
+        version: Version,
         dry_run: &mut Option<Box<dyn Write>>,
-    ) -> Result<String, StepError> {
+    ) -> Result<Release, StepError> {
         let mut fixes = Vec::new();
         let mut features = Vec::new();
         let mut breaking_changes = Vec::new();
@@ -34,70 +37,64 @@ impl Package {
             }
         }
 
-        let new_changes = new_changelog_lines(
-            &version.to_string(),
-            fixes,
-            features,
-            breaking_changes,
-            extra_sections,
-        );
-        let new_content = new_changes.join("\n");
+        let new_changelog_body = new_changelog(fixes, features, breaking_changes, extra_sections);
+        let release = Release::new(new_changelog_body, version);
+        let new_changelog = release.changelog_entry()?;
 
         if let Some(changelog) = self.changelog.as_mut() {
-            changelog.content = add_version_to_changelog(&changelog.content, &new_changes);
+            changelog.content = add_version_to_changelog(&changelog.content, &new_changelog);
             if let Some(stdout) = dry_run {
                 writeln!(
                     stdout,
                     "Would add the following to {}:",
                     changelog.path.display()
                 )?;
-                writeln!(stdout, "{}", &new_content)?;
+                writeln!(stdout, "{}", &new_changelog)?;
             } else {
                 std::fs::write(&changelog.path, &changelog.content)?;
             }
         };
 
-        Ok(new_content)
+        Ok(release)
     }
 }
 
 /// Take in some existing markdown in the expected changelog format, find the top entry, and
 /// put the new version above it.
-pub(super) fn add_version_to_changelog(existing: &str, new_changes: &[String]) -> String {
-    let mut lines = existing.lines();
-    let mut changelog = lines
-        .take_while_ref(|line| !line.starts_with("##"))
-        .chain(new_changes.iter().map(String::as_str))
-        .join("\n");
+pub(super) fn add_version_to_changelog(existing: &str, new_changes: &str) -> String {
+    let mut changelog = String::new();
+    let mut not_written = true;
 
-    if let Some(existing) = lines.next() {
-        // Give an extra space between the new section and the existing section.
-        changelog.push('\n');
-        changelog.push_str(existing);
+    for line in existing.lines() {
+        if line.starts_with("##") && not_written {
+            changelog.push_str(new_changes);
+            changelog.push('\n');
+            not_written = false;
+        }
+        changelog.push_str(line);
         changelog.push('\n');
     }
-    changelog.push_str(&lines.join("\n"));
+
+    if not_written {
+        changelog.push_str(new_changes);
+    }
 
     if existing.ends_with('\n') && !changelog.ends_with('\n') {
-        // Preserve whitespace at end of the file.
+        // Preserve white space at end of file
         changelog.push('\n');
     }
+
     changelog
 }
 
-pub(super) fn new_changelog_lines(
-    title: &str,
+pub(super) fn new_changelog(
     fixes: Vec<String>,
     features: Vec<String>,
     breaking_changes: Vec<String>,
     extra_sections: IndexMap<ChangeLogSectionName, Vec<String>>,
-) -> Vec<String> {
-    const HEADERS_AND_PADDING: usize = 10;
-    let mut blocks = Vec::with_capacity(
-        fixes.len() + features.len() + breaking_changes.len() + HEADERS_AND_PADDING,
-    );
+) -> String {
+    let mut blocks = Vec::new();
 
-    blocks.push(format!("## {title}\n"));
     if !breaking_changes.is_empty() {
         blocks.extend(create_section("Breaking Changes", breaking_changes));
     }
@@ -110,7 +107,7 @@ pub(super) fn new_changelog_lines(
     for (section_title, notes) in extra_sections {
         blocks.extend(create_section(section_title.as_ref(), notes));
     }
-    blocks
+    blocks.join("\n")
 }
 
 fn create_section(title: &str, items: Vec<String>) -> Vec<String> {
@@ -154,8 +151,6 @@ Some details about the keepachangelog format
 
 Sometimes a second paragraph
 
-## 0.2.0 - 2020-12-31
-
 ### Breaking Changes
 
 #### Breaking change
@@ -194,8 +189,7 @@ Sometimes a second paragraph
             ChangeLogSectionName::from("More stuff"),
             vec![String::from("stuff")],
         );
-        let new_changes = new_changelog_lines(
-            "0.2.0 - 2020-12-31",
+        let new_changes = new_changelog(
             vec!["Fixed something".to_string()],
             vec![String::from("New Feature"), String::from("Another feature")],
             vec![String::from("Breaking change")],
@@ -220,8 +214,6 @@ Some details about the keepachangelog format
 
 Sometimes a second paragraph
 
-## 0.2.0 - 2020-12-31
-
 ### Breaking Changes
 
 #### Breaking change
@@ -235,8 +227,7 @@ Sometimes a second paragraph
 #### Fixed something
 "##;
 
-        let new_changes = new_changelog_lines(
-            "0.2.0 - 2020-12-31",
+        let new_changes = new_changelog(
             vec!["Fixed something".to_string()],
             vec![String::from("New Feature")],
             vec![String::from("Breaking change")],

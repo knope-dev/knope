@@ -424,6 +424,12 @@ pub(super) enum StepError {
         )
     )]
     CouldNotReadChangeSet(#[from] changesets::LoadingError),
+    #[error("Failed to format a date: {0}")]
+    #[diagnostic(
+        code(step::could_not_format_date),
+        help("This is likely a bug, please report it to https://github.com/knope-dev/knope")
+    )]
+    CouldNotFormatDate(#[from] time::error::Format),
 }
 
 impl From<tag::Error> for StepError {
