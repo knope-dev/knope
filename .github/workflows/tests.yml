@@ -24,7 +24,7 @@ jobs:
         run: cargo-binstall --no-confirm just --force
 
       - name: Run CI
-        run: just install-all-dependencies ci binstall_args="--force"
+        run: just binstall_args="--force" install-all-dependencies ci
 
   validate-config:
     name: Validate Knope Config
