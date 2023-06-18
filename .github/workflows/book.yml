@@ -33,14 +33,12 @@ jobs:
           tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
           cp cargo-binstall $HOME/.cargo/bin
 
-      - name: Install cargo-make
-        run: cargo-binstall --no-confirm cargo-make --force
+      - name: Install Just
+        run: cargo-binstall --no-confirm just --force
 
-      - name: Preinstall mdbook dependencies
-        run: cargo-binstall --no-confirm mdbook mdbook-linkcheck mdbook-admonish --force
+      - name: Build docs
+        run: just binstall_args="--force" install-book-dependencies build-docs
 
-      - name: Build the book
-        run: cargo make book
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
