@@ -98,13 +98,9 @@ impl Package {
         let new_version = bump(versions, &rule)?;
 
         self = self.write_version(&new_version, dry_run)?;
-        let new_changelog = self.write_changelog(&new_version, dry_run)?;
+        self.prepared_release = Some(self.write_changelog(new_version, dry_run)?);
         self.stage_changes_to_git(dry_run)?;
 
-        self.prepared_release = Some(Release {
-            new_changelog,
-            new_version,
-        });
         Ok(self)
     }
     fn stage_changes_to_git(&self, dry_run: &mut Option<Box<dyn Write>>) -> Result<(), StepError> {

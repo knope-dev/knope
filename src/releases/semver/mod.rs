@@ -113,10 +113,7 @@ pub(crate) fn bump_version_and_update_state(
         .map(|package| {
             let version = bump(package.get_version()?, rule)?;
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            package.prepared_release = Some(Release {
-                new_changelog: String::new(),
-                new_version: version,
-            });
+            package.prepared_release = Some(Release::new(String::new(), version));
             Ok(package)
         })
         .collect::<Result<Vec<Package>, StepError>>()?;

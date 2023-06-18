@@ -6,15 +6,12 @@ use std::{
 };
 
 use changesets::{Change, ChangeType, UniqueId, Versioning};
-use git_repo_helpers::*;
+use helpers::*;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use snapbox::{
-    assert_eq_path,
-    cmd::{cargo_bin, Command},
-};
+use snapbox::cmd::{cargo_bin, Command};
 
-mod git_repo_helpers;
+mod helpers;
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release.
 #[test]
@@ -36,7 +33,7 @@ fn prerelease_after_release() {
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .current_dir(temp_dir.path())
         .assert();
@@ -47,18 +44,19 @@ fn prerelease_after_release() {
         .assert();
 
     // Assert.
-    assert
+    output_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -85,7 +83,7 @@ fn override_prerelease_label_with_option() {
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .arg("--prerelease-label=alpha")
         .current_dir(temp_dir.path())
@@ -98,18 +96,19 @@ fn override_prerelease_label_with_option() {
         .assert();
 
     // Assert.
-    assert
+    output_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -136,7 +135,7 @@ fn override_prerelease_label_with_env() {
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .env("KNOPE_PRERELEASE_LABEL", "alpha")
         .current_dir(temp_dir.path())
@@ -149,18 +148,19 @@ fn override_prerelease_label_with_env() {
         .assert();
 
     // Assert.
-    assert
+    output_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -187,7 +187,7 @@ fn enable_prerelease_label_with_option() {
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .arg("--prerelease-label=rc")
         .current_dir(temp_dir.path())
@@ -200,18 +200,19 @@ fn enable_prerelease_label_with_option() {
         .assert();
 
     // Assert.
-    assert
+    output_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -238,7 +239,7 @@ fn enable_prerelease_label_with_env() {
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .env("KNOPE_PRERELEASE_LABEL", "rc")
         .current_dir(temp_dir.path())
@@ -251,18 +252,19 @@ fn enable_prerelease_label_with_env() {
         .assert();
 
     // Assert.
-    assert
+    output_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -292,7 +294,7 @@ fn prerelease_label_option_overrides_env() {
     }
 
     // Act.
-    let assert = Command::new(cargo_bin!("knope"))
+    let output_assert = Command::new(cargo_bin!("knope"))
         .arg("prerelease")
         .env("KNOPE_PRERELEASE_LABEL", "alpha")
         .arg("--prerelease-label=rc")
@@ -307,18 +309,19 @@ fn prerelease_label_option_overrides_env() {
         .assert();
 
     // Assert.
-    assert
+    output_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
 
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -356,15 +359,16 @@ fn second_prerelease() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
-    assert_eq_path(
+        .stdout_matches_path(source_path.join("output.txt"));
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -416,11 +420,12 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join(format!("{knope_toml}_dry_run_output.txt")));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join(format!("{knope_toml}_dry_run_output.txt")));
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
-    assert_eq_path(
+        .stdout_matches_path(source_path.join("output.txt"));
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
@@ -431,7 +436,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
         } else {
             String::from(file)
         };
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(expected_path),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -486,9 +491,10 @@ fn prepare_release_pyproject_toml(#[case] input_file: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
-    assert_eq_path(
+    assert().matches_path(
         source_path.join(format!("expected_{input_file}.toml")),
         read_to_string(temp_path.join("pyproject.toml")).unwrap(),
     );
@@ -541,7 +547,7 @@ fn prepare_release_versioned_file_not_found(#[case] knope_toml: &str) {
     actual_assert
         .failure()
         .stderr_eq_path(source_path.join(format!("{knope_toml}_MISSING_output.txt")));
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
@@ -629,15 +635,16 @@ fn prepare_release_creates_missing_changelog() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
-    assert_eq_path(
+        .stdout_matches_path(source_path.join("output.txt"));
+    assert().matches_path(
         source_path.join("NEW_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -687,12 +694,12 @@ fn test_prepare_release_multiple_files_inconsistent_versions() {
     );
 
     // Nothing should change because it errored.
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Cargo_different_version.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
     for file in ["pyproject.toml", "package.json", "CHANGELOG.md"] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(file),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -744,12 +751,12 @@ fn test_prepare_release_invalid_versioned_file_format() {
         .stderr_eq_path(source_path.join("invalid_versioned_file_format_knope_output.txt"));
 
     // Nothing should change because it errored.
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(file),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -810,28 +817,29 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
     };
     dry_run_assert
         .success()
-        .stdout_eq_path(expected_dry_run_output);
+        .with_assert(assert())
+        .stdout_matches_path(expected_dry_run_output);
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
+        .stdout_matches_path(source_path.join("output.txt"));
 
     for changelog_name in all_changelogs {
         match changelog {
             Some(changelog) if changelog_name == changelog => {
-                assert_eq_path(
+                assert().matches_path(
                     source_path.join("EXPECTED_CHANGELOG.md"),
                     read_to_string(temp_path.join(changelog_name)).unwrap(),
                 );
             }
             _ => {
-                assert_eq_path(
+                assert().matches_path(
                     source_path.join("CHANGELOG.md"),
                     read_to_string(temp_path.join(changelog_name)).unwrap(),
                 );
             }
         }
     }
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -872,11 +880,12 @@ fn no_versioned_files() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("output.txt"));
-    assert_eq_path(
+        .stdout_matches_path(source_path.join("output.txt"));
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
@@ -923,13 +932,14 @@ fn release_after_prerelease() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -967,13 +977,14 @@ fn go_modules() {
     // Assert 1—version stays at 1.x
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("1.1_dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("1.1_dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_1.1_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_1.1_go.mod"),
         read_to_string(temp_path.join("go.mod")).unwrap(),
     );
@@ -997,13 +1008,14 @@ fn go_modules() {
     // Assert 2—version goes to 2.0
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("2.0_dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("2.0_dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_2.0_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_2.0_go.mod"),
         read_to_string(temp_path.join("go.mod")).unwrap(),
     );
@@ -1050,7 +1062,8 @@ fn multiple_packages() {
     // Assert.
     dry_run_output
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
 
     for file in [
@@ -1060,7 +1073,7 @@ fn multiple_packages() {
         "pyproject.toml",
         "package.json",
     ] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -1097,7 +1110,8 @@ fn no_scopes_defined() {
     // Assert.
     dry_run_output
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
 
     for file in [
@@ -1106,7 +1120,7 @@ fn no_scopes_defined() {
         "Cargo.toml",
         "pyproject.toml",
     ] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -1144,7 +1158,8 @@ fn unscoped_commits_apply_to_all_packages() {
     // Assert.
     dry_run_output
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
 
     for file in [
@@ -1153,7 +1168,7 @@ fn unscoped_commits_apply_to_all_packages() {
         "Cargo.toml",
         "pyproject.toml",
     ] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -1192,7 +1207,8 @@ fn apply_scopes() {
     // Assert.
     dry_run_output
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
 
     for file in [
@@ -1201,7 +1217,7 @@ fn apply_scopes() {
         "Cargo.toml",
         "pyproject.toml",
     ] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -1237,11 +1253,12 @@ fn skip_unchanged_packages() {
     // Assert.
     dry_run_output
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stdout_eq("");
 
     for file in ["FIRST_CHANGELOG.md", "Cargo.toml", "pyproject.toml"] {
-        assert_eq_path(
+        assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),
             read_to_string(temp_path.join(file)).unwrap(),
         );
@@ -1315,11 +1332,12 @@ fn handle_pre_versions_that_are_too_new() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("actual_output.txt"));
-    assert_eq_path(
+        .stdout_matches_path(source_path.join("actual_output.txt"));
+    assert().matches_path(
         source_path.join("EXPECTED_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
@@ -1362,15 +1380,16 @@ fn merge_commits() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
-        .stdout_eq_path(source_path.join("actual_output.txt"));
-    assert_eq_path(
+        .stdout_matches_path(source_path.join("actual_output.txt"));
+    assert().matches_path(
         source_path.join("EXPECTED_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
@@ -1424,21 +1443,22 @@ fn notes() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(source_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert.success().stderr_eq("");
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_pyproject.toml"),
         read_to_string(temp_path.join("pyproject.toml")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_FIRST_CHANGELOG.md"),
         read_to_string(temp_path.join("FIRST_CHANGELOG.md")).unwrap(),
     );
-    assert_eq_path(
+    assert().matches_path(
         source_path.join("EXPECTED_SECOND_CHANGELOG.md"),
         read_to_string(temp_path.join("SECOND_CHANGELOG.md")).unwrap(),
     );
@@ -1497,7 +1517,8 @@ fn changesets() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_eq_path(src_path.join("dry_run_output.txt"));
+        .with_assert(assert())
+        .stdout_matches_path(src_path.join("dry_run_output.txt"));
     actual_assert.success().stderr_eq("").stdout_eq("");
 
     let status = status(temp_path);
@@ -1508,7 +1529,7 @@ fn changesets() {
         "FIRST_CHANGELOG.md",
         "SECOND_CHANGELOG.md",
     ] {
-        assert_eq_path(
+        assert().matches_path(
             src_path.join(format!("EXPECTED_{}", file)),
             read_to_string(temp_path.join(file)).unwrap(),
         );
