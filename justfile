@@ -35,8 +35,10 @@ check-format:
 
 # Install dependencies for `serve-book`, `build-book`, and some of `ci`. Requires `cargo-binstall`
 install-book-dependencies:
-    cargo binstall --no-confirm mdbook mdbook-linkcheck mdbook-admonish
+    cargo binstall --no-confirm mdbook mdbook-linkcheck mdbook-admonish {{binstall_args}}
 
 # Install dependencies for `lint`, `default`, `check-format`, `reformat`, and some of `ci`. Requires `cargo-binstall`
 install-lint-dependencies:
-    cargo binstall --no-confirm cargo-deny taplo-cli
+    cargo binstall --no-confirm cargo-deny taplo-cli {{binstall_args}}
+
+binstall_args := ""
