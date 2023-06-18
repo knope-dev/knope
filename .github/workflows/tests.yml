@@ -20,45 +20,11 @@ jobs:
           tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
           cp cargo-binstall $HOME/.cargo/bin
 
-      - name: Install cargo-make
-        run: cargo-binstall --no-confirm cargo-make --force
-
-      - name: Preinstall cargo-deny
-        run: cargo-binstall --no-confirm cargo-deny --force
+      - name: Install Just
+        run: cargo-binstall --no-confirm just --force
 
       - name: Run CI
-        run: makers ci-flow
-        env:
-          CARGO_MAKE_BUILD_EXAMPLES: true
-
-      - name: Preinstall mdbook dependencies
-        run: cargo-binstall --no-confirm mdbook mdbook-admonish mdbook-linkcheck --force
-
-      - name: Test building the book
-        run: cargo make book
-
-  check-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: |
-          rustup override set nightly
-          rustup update nightly
-          rustup component add rustfmt
-
-      - name: Install cargo-binstall
-        run: |
-          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-          cp cargo-binstall $HOME/.cargo/bin
-
-      - name: Install cargo-make
-        run: cargo-binstall --no-confirm cargo-make --force
-
-      - name: Install taplo
-        run: cargo-binstall --no-confirm taplo-cli --force
-
-      - run: cargo make check-format
+        run: just install-all-dependencies ci
 
   validate-config:
     name: Validate Knope Config

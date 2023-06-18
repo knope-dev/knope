@@ -2,20 +2,15 @@
 
 Knope is open to all kinds of contributions—if you want to contribute code there are a few helpful hints.
 
-## cargo-make
+## `just` and `justfile`
 
-We use [`cargo-make`](https://sagiegurari.github.io/cargo-make/) to make running some development tasks easier. You do not _need_ `cargo-make`, but it is recommended. Here are the common tasks you'll want to run:
-
-1. `cargo make` will run all the development tasks, reformatting code, linting, and running tests.
-2. `cargo make serve-book` builds the docs, watches for changes, and starts a local webserver to view them.
-3. `cargo make ci-flow` will run _most_ of what CI does, excluding building the docs and checking formatting.
-4. `cargo make check-format` checks the formatting of the code the same way that CI will.
+[`just`](https://just.systems/man/en/chapter_1.html) is a command runner (like `make`) which makes it easier to run common tasks the same way in multiple platforms. Specifically, you can run the same sorts of commands that CI does to replicate failures (or prevent them) locally! Start by installing via [your favorite method](https://just.systems/man/en/chapter_4.html) (personally, I use [`cargo binstall just`][cargo-binstall]). Then, run `just -l` to see all the available commands.
 
 ## Formatting
 
 We use `rustfmt` to format Rust code, but we depend on unstable features (e.g., sorting imports). You need to install the nightly toolchain (e.g., `rustup toolchain install nightly`) before formatting the code.
 
-We also use [Prettier](https://prettier.io) to format Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx)) and [Taplo](https://crates.io/crates/taplo-cli) for formatting TOML. Taplo will be installed automatically if using `cargo-make`, but `npx` must be available to run Prettier.
+We also use [Prettier](https://prettier.io) to format Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx)) and [Taplo](https://crates.io/crates/taplo-cli) for formatting TOML. `just install-all-dependencies` will install Taplo (via [cargo-binstall], which must be installed separately), but will not install NPM.
 
 ## Snapshot Tests
 
@@ -29,3 +24,5 @@ The general workflow for a snapshot test is:
 4. Run the command and verify the output using snapbox.
 
 A good example of this is the `prerelease_after_release` test in `tests/prepare_release.rs`.
+
+[cargo-binstall]: https://github.com/cargo-bins/cargo-binstall
