@@ -37,7 +37,7 @@ jobs:
         run: cargo-binstall --no-confirm just --force
 
       - name: Build docs
-        run: just install-book-dependencies build-docs
+        run: just binstall_args="--force" install-book-dependencies build-docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1

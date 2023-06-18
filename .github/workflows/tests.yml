@@ -20,6 +20,9 @@ jobs:
           tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
           cp cargo-binstall $HOME/.cargo/bin
 
+      - name: Install nightly toolchain (for formatting)
+        run: rustup toolchain install nightly
+
       - name: Install Just
         run: cargo-binstall --no-confirm just --force
 
