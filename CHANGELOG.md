@@ -4,6 +4,82 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.8.0 (2023-06-19)
+
+### Breaking Changes
+
+#### Changelog entries now use 4th level headers instead of bullets
+
+In order to support more detailed changelogs via [changesets](https://knope-dev.github.io/knope/config/step/PrepareRelease.html) (like the extra text you're seeing right now!) instead of each change entry being a single bullet under the appropriate category (e.g., `### Breaking Changes` above), it will be a fourth-level header (`####`). So, where _this_ changelog entry would have currently looked like this:
+
+```markdown
+### Breaking Changes
+
+- Changelog entries now use 4th level headers instead of bullets
+```
+
+It now looks like what you're seeing:
+
+```markdown
+### Breaking Changes
+
+#### Changelog entries now use 4th level headers instead of bullets
+
+... recursion omitted
+```
+
+If a change note starts with `#### ` already (like in changesets), it will be left alone.
+
+### Features
+
+#### Move GitHub Release headers up a level (#467, #472)
+
+#### Added dates to version titles
+
+There are now release dates in both changelogs and version names on GitHub. This probably won't break your releases, but you will have a different format for release notes which could be jarring. The date is in the format `YYYY-MM-DD` and will always be based on UTC time (so if you do a release late at night on the east coast of the United States, the date will be the next day).
+
+Previously, the changelog entry title would look like this:
+
+```markdown
+## 1.0.0
+```
+
+And now it will look like this:
+
+```markdown
+## 1.0.0 (2023-06-10)
+```
+
+#### Report files to be added to git in `--dry-run`
+
+The [`PrepareRelease`](https://knope-dev.github.io/knope/config/step/PrepareRelease.html) adds modified files to Git. Now, when running with the `--dry-run` option, it will report which files would be added to Git (for easier debugging).
+
+> Note: The default `knope release` workflow includes this [`PrepareRelease`] step.
+
+#### Remove duplicate version from GitHub release name
+
+Release notes in GitHub releases used to copy the entire section of the changelog, including the version number. Because the name of the release also includes the version, you'd see the version twice, like:
+
+```markdown
+# 1.0.0
+
+## 1.0.0
+
+... notes here
+```
+
+Now, that second `## 1.0.0` is omitted from the body of the release.
+
+#### Added support for changesets
+
+Leveraging the new [changesets crate](https://github.com/knope-dev/changesets), Knope now supports [changesets](https://github.com/changesets/changesets)! In short, you can run `knope document-change` (if using default workflows) or add the new [`CreateChangeFile`] step to a workflow to generate a new Markdown file in the `.changeset` directory. You can then fill in any additional details below the generated header in the generated Markdown file. The next time the `PrepareRelease` step runs (e.g., in the default `knope release` workflow), all change files will be consumed to help generate a new version and changelog (along with any conventional commits).
+
+For additional details, see:
+
+- [`PrepareRelease` step](https://knope-dev.github.io/knope/config/step/PrepareRelease.html)
+- [`CreateChangeFile` step](https://knope-dev.github.io/knope/config/step/CreateChangeFile.html)
+- [Packages (for how you can customize changelog sections)](https://knope-dev.github.io/knope/config/packages.html)
+
 ## 0.7.4
 
 ### Features
