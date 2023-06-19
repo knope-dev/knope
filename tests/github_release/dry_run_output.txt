@@ -10,7 +10,6 @@ Would add files to git:
   Cargo.toml
   CHANGELOG.md
 Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
-### Features
+## Features
 
-#### New feature
-
+### New feature

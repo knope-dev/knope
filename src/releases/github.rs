@@ -28,10 +28,24 @@ pub(crate) fn release(
         release_title
     };
 
+    let body = release
+        .new_changelog
+        .lines()
+        .map(|line| {
+            if line.starts_with("##") {
+                #[allow(clippy::indexing_slicing)] // Just checked len above
+                &line[1..] // Reduce header level by one
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
     let github_release = GitHubRelease {
         tag_name: &tag_name,
         name: &name,
-        body: &release.new_changelog,
+        body,
         prerelease: version.is_prerelease(),
     };
 
@@ -76,6 +90,6 @@ pub(crate) fn release(
 struct GitHubRelease<'a> {
     tag_name: &'a str,
     name: &'a str,
-    body: &'a str,
+    body: String,
     prerelease: bool,
 }

@@ -43,9 +43,11 @@ fn git_release() {
     // Assert.
     dry_run_assert
         .success()
+        .with_assert(assert())
         .stdout_matches_path(source_path.join("dry_run_output.txt"));
     actual_assert
         .success()
+        .with_assert(assert())
         .stdout_matches_path(source_path.join("output.txt"));
     assert().matches_path(
         source_path.join("EXPECTED_CHANGELOG.md"),
