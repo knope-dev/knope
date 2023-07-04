@@ -32,7 +32,7 @@ thiserror = "1.0.41"
 gix = "0.47.0"
 log = "0.4.19"
 env_logger = "0.10.0"
-indexmap = "1.9.3"
+indexmap = "2.0.0"
 inquire = { version = "0.6.2", default-features = false, features = [
   "crossterm",
 ] }
