@@ -10,6 +10,8 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
+          sparse-checkout: |
+            .changeset
       - uses: Swatinem/rust-cache@v2
       - run: |
           cargo run -- release --dry-run

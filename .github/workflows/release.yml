@@ -11,6 +11,8 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
+          sparse-checkout: |
+            .changeset
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
