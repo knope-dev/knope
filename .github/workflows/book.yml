@@ -40,7 +40,7 @@ jobs:
         run: just binstall_args="--force" install-book-dependencies build-docs
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v2
         with:
           path: './docs/book/html'
       - name: Deploy to GitHub Pages
