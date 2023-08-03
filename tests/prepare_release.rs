@@ -1580,3 +1580,110 @@ fn output_of_invalid_changesets() {
         .failure()
         .stderr_eq_path(src_path.join("failure.txt"));
 }
+
+#[test]
+fn override_version() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/override_version");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v0.1.0");
+    commit(temp_path, "fix: A bug fix");
+
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--override-version=1.0.0")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--override-version=1.0.0")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in ["CHANGELOG.md", "Cargo.toml"] {
+        assert().matches_path(
+            source_path.join(format!("EXPECTED_{file}")),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+#[test]
+fn override_version_multiple_packages() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/override_version_multiple_packages");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "first/v0.1.0");
+    tag(temp_path, "second/v1.2.3");
+    tag(temp_path, "third/v4.5.5");
+    commit(temp_path, "fix: A bug fix");
+
+    for file in [
+        "knope.toml",
+        "FIRST_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+        "SECOND_CHANGELOG.md",
+        "package.json",
+        "THIRD_CHANGELOG.md",
+    ] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--override-version=first=1.0.0")
+        .arg("--override-version=second=4.5.6")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--override-version=first=1.0.0")
+        .arg("--override-version=second=4.5.6")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    for file in [
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+        "THIRD_CHANGELOG.md",
+        "Cargo.toml",
+        "pyproject.toml",
+        "package.json",
+    ] {
+        assert().matches_path(
+            source_path.join(format!("EXPECTED_{file}")),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}

@@ -158,3 +158,89 @@ fn multiple_packages_pre(#[case] workflow: &str) {
         );
     }
 }
+
+#[test]
+fn override_version_single_package() {
+    // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    let current_version = "0.1.0";
+    tag(temp_path, &format!("v{current_version}"));
+    let source_path = Path::new("tests/bump_version");
+
+    let knope_toml = temp_dir.path().join("knope.toml");
+    std::fs::copy(source_path.join("knope.toml"), knope_toml).unwrap();
+    let cargo_toml = temp_dir.path().join("Cargo.toml");
+    std::fs::copy(source_path.join("Cargo.toml"), cargo_toml).unwrap();
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("bump-major")
+        .arg("--override-version=1.0.0")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("bump-major")
+        .arg("--override-version=1.0.0")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_matches_path(source_path.join("override_dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+
+    assert().matches_path(
+        source_path.join("override_cargo.toml"),
+        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
+    );
+}
+
+#[test]
+fn override_version_multiple_packages() {
+    // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.2.3"); // Need to have stable version as tag if pre version in Cargo.toml.
+    let source_path = Path::new("tests/bump_version/multiple_packages");
+    let expected_path = source_path.join("override");
+
+    for file in ["knope.toml", "Cargo.toml", "pyproject.toml", "package.json"] {
+        std::fs::copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("bump-major")
+        .arg("--override-version=rust=1.0.0")
+        .arg("--override-version=python=4.3.2")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("bump-major")
+        .arg("--override-version=rust=1.0.0")
+        .arg("--override-version=python=4.3.2")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stderr_eq("");
+    actual_assert.success().stdout_eq("").stderr_eq("");
+
+    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
+        assert().matches_path(
+            expected_path.join(file),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}

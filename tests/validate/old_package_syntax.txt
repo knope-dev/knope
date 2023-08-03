@@ -1,1 +1,0 @@
-WARNING: The [[packages]] syntax is deprecated, use [package] instead. Run knope --upgrade to do this automatically.

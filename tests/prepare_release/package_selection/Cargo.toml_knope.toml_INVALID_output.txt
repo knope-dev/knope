@@ -1,8 +1,4 @@
 Error:   × Problem with workflow release
 
-Error: step::invalid_cargo_toml (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
-
-  × The file Cargo.toml was an incorrect format
-  help: knope expects the Cargo.toml file to have a `package.version`
-        property. Workspace support is coming soon!
+Error:   × The file Cargo.toml was an incorrect format
 

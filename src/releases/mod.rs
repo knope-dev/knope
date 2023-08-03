@@ -6,7 +6,9 @@ use time::{macros::format_description, OffsetDateTime};
 pub(crate) use self::{
     changesets::{create_change_file, ChangeType},
     git::{get_current_versions_from_tag, tag_name},
-    package::{find_packages, suggested_package_toml, Package},
+    package::{
+        find_packages, suggested_package_toml, ChangelogSectionSource, Package, PackageName,
+    },
     semver::{bump_version_and_update_state as bump_version, Rule},
 };
 use crate::{
@@ -16,16 +18,17 @@ use crate::{
 };
 
 mod cargo;
-mod changelog;
+pub(crate) mod changelog;
 mod changesets;
 mod conventional_commits;
-mod git;
+pub(crate) mod git;
 mod github;
-mod go;
+pub(crate) mod go;
 mod package;
 mod package_json;
 mod pyproject;
 pub(crate) mod semver;
+pub(crate) mod versioned_file;
 
 use conventional_commits::ConventionalCommit;
 pub(crate) use non_empty_map::PrereleaseMap;

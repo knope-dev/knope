@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// A workflow is basically the state machine to run for a single execution of knope.
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Workflow {
     /// The display name of this Workflow. This is what you'll see when you go to select it.
     pub(crate) name: String,
