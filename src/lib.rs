@@ -154,11 +154,20 @@ fn build_cli(config: &ConfigSource) -> Command {
 
     for workflow in &config.workflows {
         let mut subcommand = Command::new(workflow.name.clone());
-        if workflow
+        let contains_bump_version = workflow
             .steps
             .iter()
-            .any(|step| matches!(*step, Step::BumpVersion(_) | Step::PrepareRelease(_)))
-        {
+            .any(|step| matches!(*step, Step::BumpVersion(_)));
+        let contains_prepare_release = workflow
+            .steps
+            .iter()
+            .any(|step| matches!(*step, Step::PrepareRelease(_)));
+        if contains_bump_version || contains_prepare_release {
+            if let Some(arg) = version_override_arg.clone() {
+                subcommand = subcommand.arg(arg);
+            }
+        }
+        if contains_prepare_release {
             subcommand = subcommand
                 .arg(
                     Arg::new(PRERELEASE_LABEL)
@@ -166,9 +175,6 @@ fn build_cli(config: &ConfigSource) -> Command {
                         .help("Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime.")
                         .env("KNOPE_PRERELEASE_LABEL")
                 );
-            if let Some(arg) = version_override_arg.clone() {
-                subcommand = subcommand.arg(arg);
-            }
         }
 
         command = command.subcommand(subcommand);

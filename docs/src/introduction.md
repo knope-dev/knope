@@ -22,16 +22,40 @@ Running `knope` on its own will prompt you to select a defined workflow (if any)
 
 There are a few options you can pass to `knope` to control how it behaves.
 
-1. `--help` prints out a help message and exits.
-2. `--version` prints out the version of `knope` and exits.
-3. `--generate` will generate a `knope.toml` file in the current directory.
-4. `--validate` will check your `knope.toml` to make sure every workflow in it is valid, then exit. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid.
-5. `--dry-run` will pretend to run the selected workflow (either via arg or prompt), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout.
-6. `--prerelease-label` will override the `prerelease_label` for any [`PrepareRelease`] step run.
-7. `--override-version` allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This has two formats, depending on whether there is [one package](config/packages.md#a-single-package-with-a-single-versioned-file) or [multiple packages](config/packages.md#multiple-packages):
+#### `--help`
+
+Prints out a help message containing available workflows and options, then exits.
+
+#### `--version`
+
+Prints out the version of `knope` and exits.
+
+#### `--generate`
+
+Generates a `knope.toml` file in the current directory. _This cannot be used if there is already a `knope.toml` file present._
+
+#### `--upgrade`
+
+Upgrades your `knope.toml` file from deprecated syntax to the new syntax in preparation for the next breaking release.
+
+#### `--validate`
+
+Checks your `knope.toml` to make sure every workflow in it is valid, then exits. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid. _This cannot be used if there is no `knope.toml` file present._
+
+
+#### `--dry-run`
+
+Pretends to run the selected workflow (one must be provided), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout. For example, to see what `knope release` _would_ do without creating an actual release, run `knope release --dry-run`.
+
+#### `--prerelease-label`
+
+Overrides the `prerelease_label` for any [`PrepareRelease`] step run. _This option can only be provided after a workflow which contains a [`PrepareRelease`] step._
+
+#### `--override-version`
+
+Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is [one package](config/packages.md#a-single-package-with-a-single-versioned-file) or [multiple packages](config/packages.md#multiple-packages):
    1. `--override-version 1.0.0` will set the version to `1.0.0` if there is only one package configured (error if multiple packages are configured).
    2. `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0` if there are multiple packages configured (error if only one package is configured).
-8. `--upgrade` will upgrade your `knope.toml` file from deprecated syntax to the new syntax in preparation for the next breaking release.
 
 ### Environment Variables
 
