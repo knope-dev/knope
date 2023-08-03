@@ -42,7 +42,6 @@ Upgrades your `knope.toml` file from deprecated syntax to the new syntax in prep
 
 Checks your `knope.toml` to make sure every workflow in it is valid, then exits. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid. _This cannot be used if there is no `knope.toml` file present._
 
-
 #### `--dry-run`
 
 Pretends to run the selected workflow (one must be provided), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout. For example, to see what `knope release` _would_ do without creating an actual release, run `knope release --dry-run`.
@@ -54,8 +53,9 @@ Overrides the `prerelease_label` for any [`PrepareRelease`] step run. _This opti
 #### `--override-version`
 
 Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is [one package](config/packages.md#a-single-package-with-a-single-versioned-file) or [multiple packages](config/packages.md#multiple-packages):
-   1. `--override-version 1.0.0` will set the version to `1.0.0` if there is only one package configured (error if multiple packages are configured).
-   2. `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0` if there are multiple packages configured (error if only one package is configured).
+
+1.  `--override-version 1.0.0` will set the version to `1.0.0` if there is only one package configured (error if multiple packages are configured).
+2.  `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0` if there are multiple packages configured (error if only one package is configured).
 
 ### Environment Variables
 
