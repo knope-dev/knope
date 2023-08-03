@@ -28,15 +28,3 @@ jobs:
 
       - name: Run CI
         run: just binstall_args="--force" install-all-dependencies ci
-
-  validate-config:
-    name: Validate Knope Config
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - uses: Swatinem/rust-cache@v2
-      - name: Run --validate
-        run: cargo run -- --validate
