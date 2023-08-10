@@ -154,9 +154,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.3.2"
+version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dbe3c979c178231552ecba20214a8272df4e09f232a87aef4320cf06539aded"
+checksum = "630be753d4e58660abd17930c71b647fe46c27ea6b63cc59e1e3851406972e42"
 
 [[package]]
 name = "bstr"
@@ -503,6 +503,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastrand"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6999dc1837253364c2ebb0704ba97994bd874e8f195d665c50b7548f6ea92764"
+
+[[package]]
 name = "filetime"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -738,7 +744,7 @@ version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4783caa23062f86acfd1bc9e72c62250923d1673171ce1a524d9486f8a4556a8"
 dependencies = [
- "bitflags 2.3.2",
+ "bitflags 2.3.3",
  "bstr",
  "gix-path",
  "libc",
@@ -837,7 +843,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f45cd7ab22faf154db0a9f5a8011ba9cda8b298b61b7299f43a21bbaf0b3f208"
 dependencies = [
- "bitflags 2.3.2",
+ "bitflags 2.3.3",
  "bstr",
  "gix-features",
  "gix-path",
@@ -882,7 +888,7 @@ version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ef2fa392d351e62ac3a6309146f61880abfbe0c07474e075d3b2ac78a6834a5"
 dependencies = [
- "bitflags 2.3.2",
+ "bitflags 2.3.3",
  "bstr",
  "btoi",
  "filetime",
@@ -927,7 +933,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b626aafb9f4088058f1baa5d2029b2191820c84f6c81e43535ba70bfdc7b7d56"
 dependencies = [
- "bitflags 2.3.2",
+ "bitflags 2.3.3",
  "gix-commitgraph",
  "gix-date",
  "gix-hash",
@@ -1021,7 +1027,7 @@ dependencies = [
  "gix-command",
  "gix-config-value",
  "parking_lot",
- "rustix",
+ "rustix 0.37.20",
  "thiserror",
 ]
 
@@ -1107,7 +1113,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47f09860e2ddc7b13119e410c46d8e9f870acc7933fb53ae65817af83a8c9f80"
 dependencies = [
- "bitflags 2.3.2",
+ "bitflags 2.3.3",
  "gix-path",
  "libc",
  "windows",
@@ -1170,7 +1176,7 @@ version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ca284c260845bc0724050aec59c7a596407678342614cdf5a1d69e044f29a36"
 dependencies = [
- "fastrand",
+ "fastrand 1.9.0",
 ]
 
 [[package]]
@@ -1354,7 +1360,7 @@ checksum = "adcf93614601c8129ddf72e2d5633df827ba6551541c6d8c59520a371475be1f"
 dependencies = [
  "hermit-abi",
  "io-lifetimes",
- "rustix",
+ "rustix 0.37.20",
  "windows-sys",
 ]
 
@@ -1488,6 +1494,12 @@ name = "linux-raw-sys"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef53942eb7bf7ff43a617b3e2c1c4a5ecf5944a7c1bc12d7ee39bbb15e5c1519"
+
+[[package]]
+name = "linux-raw-sys"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57bcfdad1b858c2db7c38303a6d2ad4dfaf5eb53dfeb0910128b2c26d6158503"
 
 [[package]]
 name = "lock_api"
@@ -1891,7 +1903,20 @@ dependencies = [
  "errno",
  "io-lifetimes",
  "libc",
- "linux-raw-sys",
+ "linux-raw-sys 0.3.8",
+ "windows-sys",
+]
+
+[[package]]
+name = "rustix"
+version = "0.38.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac5ffa1efe7548069688cd7028f32591853cd7b5b756d41bcffd2353e4fc75b4"
+dependencies = [
+ "bitflags 2.3.3",
+ "errno",
+ "libc",
+ "linux-raw-sys 0.4.5",
  "windows-sys",
 ]
 
@@ -2130,15 +2155,14 @@ dependencies = [
 
 [[package]]
 name = "tempfile"
-version = "3.6.0"
+version = "3.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31c0432476357e58790aaa47a8efb0c5138f137343f3b5f23bd36a27e3b0a6d6"
+checksum = "dc02fddf48964c42031a0b3fe0428320ecf3a73c401040fc0096f97794310651"
 dependencies = [
- "autocfg",
  "cfg-if",
- "fastrand",
+ "fastrand 2.0.0",
  "redox_syscall 0.3.5",
- "rustix",
+ "rustix 0.38.3",
  "windows-sys",
 ]
 
