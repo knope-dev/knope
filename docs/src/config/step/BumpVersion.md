@@ -85,7 +85,7 @@ Remove the pre-release component of the semantic version (e.g. 1.2.3-rc.4 -> 1.2
 2. The second component (`1`) serves as the `Major` component, and will be incremented whenever the `Major` rule is applied.
 3. The third component (`2`) serves as **both** `Minor` and `Patch` and will be incremented when either rule is applied.
 
-If you want to go from a 0.x version to a 1.x version, you must provide the `--override-version` [command line option](../../introduction.md#cli-arguments).
+If you want to go from a 0.x version to a 1.x version, you must provide the `--override-version` [command line option](../../introduction.md#--override-version).
 
 ## Errors
 

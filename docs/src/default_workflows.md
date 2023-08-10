@@ -17,6 +17,12 @@ Without any config, you can run `knope release` to create a new release from [co
    1. If your remote is GitHub, create a new release on GitHub with the same body as the changelog entry. **This requires a `GITHUB_TOKEN` environment variable to be set.**
    2. If the remote is not GitHub, a tag will be created and pushed to the remote.
 
+### Additional Options
+
+1. `--dry-run` will run the workflow without modifying any files or interacting with the remote. Instead, all the steps that _would_ happen will be printed to the screen so you can verify what will happen.
+2. `--prerelease-label` will tell `knope` to create a prerelease with a given label. For example, `knope release --prerelease-label rc` will create a release with the _next_ calculated version (as if you had run `knope release`), but with the `-rc.0` suffix (or `rc.1`, `rc.2`, etc. if you have already created a release with that label).
+3. `--override-version` will tell `knope` to use a specific version instead of calculating the next one. For example, `knope release --override-version 1.2.3` will create a release with the version `1.2.3`. This is especially useful when moving from a `0.x.x` version to `1.0.0`.
+
 ## `document-change`
 
 Without any config, you can run `knope document-change` to run the [`CreateChangeFile`] step. Because there is only one package configured by default, this step will be skipped and a special, default package will be used.
@@ -24,7 +30,6 @@ Without any config, you can run `knope document-change` to run the [`CreateChang
 ### Additional Options
 
 1. `--dry-run` will run the workflow without modifying any files or interacting with the remote. Instead, all the steps that _would_ happen will be printed to the screen so you can verify what will happen.
-2. `--prerelease-label` will tell `knope` to create a prerelease with a given label. For example, `knope release --prerelease-label rc` will create a release with the _next_ calculated version (as if you had run `knope release`), but with the `-rc.0` suffix (or `rc.1`, `rc.2`, etc. if you have already created a release with that label).
 
 [conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
 [semantic version]: https://semver.org
