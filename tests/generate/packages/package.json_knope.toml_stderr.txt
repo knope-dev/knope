@@ -6,8 +6,8 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
 
   × No packages are defined
   help: You must define at least one package in the [[packages]] section
-        of knope.toml. Found the package metadata files package.json in the
-        current directory. You may need to add this to your knope.toml:
+        of knope.toml. Found some package metadata files in the current
+        directory. You may need to add this to your knope.toml:
         
         ```
         [package]

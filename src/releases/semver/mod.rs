@@ -111,7 +111,11 @@ pub(crate) fn bump_version_and_update_state(
         .packages
         .into_iter()
         .map(|package| {
-            let version = bump(package.get_version()?, rule)?;
+            let version = if let Some(override_version) = package.override_version.clone() {
+                override_version
+            } else {
+                bump(package.get_version()?, rule)?
+            };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
             package.prepared_release = Some(Release::new(String::new(), version));
             Ok(package)
@@ -130,7 +134,11 @@ impl Package {
         let version_from_files = self
             .versioned_files
             .iter()
-            .map(|versioned_file| versioned_file.get_version(self.name.as_deref()))
+            .map(|versioned_file| {
+                versioned_file
+                    .get_version(self.name.as_deref())
+                    .map_err(StepError::from)
+            })
             .map(|result| result.and_then(|version_string| Version::from_str(&version_string)))
             .reduce(|accumulator, version| match (version, accumulator) {
                 (Ok(version), Ok(accumulator)) => {

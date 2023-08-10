@@ -7,7 +7,7 @@ use log::{debug, error, trace, warn};
 use crate::{
     issues::Issue,
     prompt::select,
-    releases::{get_current_versions_from_tag, tag_name},
+    releases::{get_current_versions_from_tag, tag_name, PackageName},
     state,
     step::StepError,
     RunType,
@@ -251,7 +251,7 @@ mod test_branch_name_from_issue {
 }
 
 pub(crate) fn get_commit_messages_after_last_stable_version(
-    package_name: &Option<String>,
+    package_name: &Option<PackageName>,
 ) -> Result<Vec<String>, StepError> {
     let target_version = get_current_versions_from_tag(package_name.as_deref())?.stable;
     let reference = if let Some(version) = target_version {

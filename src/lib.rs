@@ -20,15 +20,19 @@
     )
 )]
 
-use std::io::stdout;
+use std::{io::stdout, str::FromStr};
 
-use clap::Parser;
+use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
+use itertools::Itertools;
 use miette::{miette, Result};
-use prompt::select;
+use releases::semver::Version;
 
 use crate::{
-    config::Config,
+    config::{Config, ConfigSource},
+    releases::PackageName,
     state::{RunType, State},
+    step::Step,
+    workflow::Workflow,
 };
 
 mod app_config;
@@ -50,19 +54,22 @@ mod workflow;
 /// 2. `knope.toml` not valid
 /// 3. Selected workflow not found
 /// 4. Passthrough errors of selected workflow
-pub fn run(cli: Cli) -> Result<()> {
-    if cli.generate {
+pub fn run() -> Result<()> {
+    let config = Config::load()?;
+
+    let mut matches = build_cli(&config).get_matches();
+
+    let mut config = config.into_inner();
+
+    if let Ok(Some(true)) = matches.try_get_one("generate") {
         println!("Generating a knope.toml file");
         let config = config::generate();
         return config.write_out();
     }
 
-    let preselected_workflow = cli.workflow;
-
-    let mut config = Config::load()?;
-
-    if cli.upgrade {
-        let upgraded = config.upgrade();
+    if let Ok(Some(true)) = matches.try_get_one("upgrade") {
+        // If adding new upgrade, make a function to detect and call here.
+        let upgraded = false;
         return if upgraded {
             config.write_out()
         } else {
@@ -71,34 +78,34 @@ pub fn run(cli: Cli) -> Result<()> {
         };
     }
 
-    if let Some(prerelease_label) = cli.prerelease_label {
-        config.set_prerelease_label(&prerelease_label);
-    }
-    let packages = config.packages()?;
-    let state = State::new(config.jira, config.github, packages);
+    let (subcommand, mut sub_matches) = matches.remove_subcommand().unzip();
 
-    if cli.validate {
-        workflow::validate(config.workflows, state)?;
+    sub_matches.as_ref().and_then(|matches| {
+        matches
+            .try_get_one::<String>("prerelease-label")
+            .ok()
+            .flatten()
+            .map(|prerelease_label| {
+                config.set_prerelease_label(prerelease_label);
+            })
+    });
+
+    let (state, workflows) = create_state(config, sub_matches.as_mut())?;
+
+    if let Ok(Some(true)) = matches.try_get_one("validate") {
+        workflow::validate(workflows, state)?;
         return Ok(());
     }
 
-    let workflow_name = if let Some(workflow_name) = preselected_workflow {
-        workflow_name
-    } else {
-        let workflow_names: Vec<&str> = config
-            .workflows
-            .iter()
-            .map(|workflow| workflow.name.as_str())
-            .collect();
-        select(workflow_names, "Select a workflow").map(String::from)?
-    };
-    let workflow = config
-        .workflows
+    let subcommand = subcommand.ok_or_else(|| {
+        miette!("No workflow selected. Run `knope --help` for a list of options.")
+    })?;
+    let workflow = workflows
         .into_iter()
-        .find(|w| w.name == workflow_name)
-        .ok_or_else(|| miette!("No workflow named {}", workflow_name))?;
+        .find(|w| w.name == subcommand)
+        .ok_or_else(|| miette!("No workflow named {}", subcommand))?;
 
-    let state = if cli.dry_run {
+    let state = if matches.get_flag("dry-run") {
         RunType::DryRun {
             state,
             stdout: Box::new(stdout()),
@@ -111,46 +118,159 @@ pub fn run(cli: Cli) -> Result<()> {
     Ok(())
 }
 
-/// The CLI application defined as a struct.
-///
-/// Use [`Cli::parse()`] to parse the command line arguments.
-#[derive(Clone, Parser)]
-#[command(long_about = None)]
-#[allow(clippy::struct_excessive_bools)]
-pub struct Cli {
-    /// Name a workflow to bypass the interactive select and just run it. If not provided,
-    /// you'll be asked to select one.
-    workflow: Option<String>,
+const OVERRIDE_ONE_VERSION: &str = "override-one-version";
+const OVERRIDE_MULTIPLE_VERSIONS: &str = "override-multiple-versions";
 
-    #[arg(long)]
-    /// Pretend to run a workflow, outputting what _would_ happen without actually doing it.
-    dry_run: bool,
+const PRERELEASE_LABEL: &str = "prerelease-label";
 
-    #[arg(long)]
-    /// Generate a new `knope.toml` file.
-    generate: bool,
+fn build_cli(config: &ConfigSource) -> Command {
+    let mut command = command!().propagate_version(true).arg(arg!(--"dry-run" "Pretend to run a workflow, outputting what _would_ happen without actually doing it.").global(true));
+    let config = match config {
+        ConfigSource::Default(config) => {
+            command = command
+                .arg(arg!(--generate "Generate a knope.toml file").action(ArgAction::SetTrue));
+            config
+        }
+        ConfigSource::File(config) => {
+            command = command.arg(arg!(--upgrade "Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax."));
+            command = command.arg(arg!(--validate "Check that the `knope.toml` file is valid."));
+            config
+        }
+    };
 
-    #[arg(long, env = "KNOPE_PRERELEASE_LABEL")]
-    /// Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime.
-    prerelease_label: Option<String>,
+    let version_override_arg = if config.packages.is_empty() {
+        None
+    } else if config.packages.len() == 1 {
+        Some(Arg::new(OVERRIDE_ONE_VERSION)
+            .long("override-version")
+            .help("Override the version set by `BumpVersion` or `PrepareRelease` for the package.")
+            .value_parser(value_parser!(Version)))
+    } else {
+        Some(Arg::new(OVERRIDE_MULTIPLE_VERSIONS)
+            .long("override-version")
+            .help("Override the version set by `BumpVersion` or `PrepareRelease` for multiple packages. Format is like package_name=version, can be set multiple times.")
+            .action(ArgAction::Append).value_parser(value_parser!(VersionOverride)))
+    };
 
-    #[arg(long)]
-    /// Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax.
-    upgrade: bool,
+    for workflow in &config.workflows {
+        let mut subcommand = Command::new(workflow.name.clone());
+        let contains_bump_version = workflow
+            .steps
+            .iter()
+            .any(|step| matches!(*step, Step::BumpVersion(_)));
+        let contains_prepare_release = workflow
+            .steps
+            .iter()
+            .any(|step| matches!(*step, Step::PrepareRelease(_)));
+        if contains_bump_version || contains_prepare_release {
+            if let Some(arg) = version_override_arg.clone() {
+                subcommand = subcommand.arg(arg);
+            }
+        }
+        if contains_prepare_release {
+            subcommand = subcommand
+                .arg(
+                    Arg::new(PRERELEASE_LABEL)
+                        .long("prerelease-label")
+                        .help("Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime.")
+                        .env("KNOPE_PRERELEASE_LABEL")
+                );
+        }
 
-    #[arg(long)]
-    /// Check that the `knope.toml` file is valid.
-    validate: bool,
+        command = command.subcommand(subcommand);
+    }
+    command
+}
+
+fn create_state(
+    config: Config,
+    mut sub_matches: Option<&mut ArgMatches>,
+) -> Result<(State, Vec<Workflow>)> {
+    let Config {
+        mut packages,
+        workflows,
+        jira,
+        github,
+    } = config;
+    if let Some(version_override) = sub_matches
+        .as_deref_mut()
+        .and_then(|matches| matches.try_remove_one::<Version>(OVERRIDE_ONE_VERSION).ok())
+        .flatten()
+    {
+        if let Some(package) = packages.first_mut() {
+            package.override_version = Some(version_override);
+        }
+    } else {
+        let mut overrides = sub_matches
+            .and_then(|matches| {
+                matches
+                    .try_remove_many::<VersionOverride>(OVERRIDE_MULTIPLE_VERSIONS)
+                    .ok()
+            })
+            .into_iter()
+            .flatten()
+            .flatten()
+            .collect_vec();
+        for package in &mut packages {
+            let override_index = overrides
+                .iter()
+                .find_position(|version_override| {
+                    package
+                        .name
+                        .as_ref()
+                        .is_some_and(|name| *name == version_override.package)
+                })
+                .map(|(index, _)| index);
+
+            let version = override_index
+                .map(|index| overrides.remove(index))
+                .map(|version_override| version_override.version);
+
+            package.override_version = version;
+        }
+        if !overrides.is_empty() {
+            return Err(miette!(
+                "Unknown package(s) to override: {}",
+                overrides
+                    .into_iter()
+                    .map(|version_override| version_override.package.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+    }
+
+    let state = State::new(jira, github, packages);
+    Ok((state, workflows))
+}
+
+#[derive(Clone, Debug)]
+struct VersionOverride {
+    package: PackageName,
+    version: Version,
+}
+
+impl FromStr for VersionOverride {
+    type Err = miette::Report;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let (package, version_string) = s.split_once('=').ok_or_else(|| {
+            miette!("package override should be formatted like package_name=version")
+        })?;
+
+        Ok(Self {
+            package: package.into(),
+            version: version_string.parse()?,
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use clap::CommandFactory;
-
     use super::*;
 
     #[test]
     fn verify_app() {
-        Cli::command().debug_assert();
+        build_cli(&ConfigSource::Default(config::generate())).debug_assert();
     }
 }

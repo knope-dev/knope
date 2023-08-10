@@ -8,13 +8,14 @@ use gix::{
     traverse::commit::ancestors,
 };
 use inquire::InquireError;
+use log::error;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
     command, git, issues, releases,
-    releases::{semver::Label, suggested_package_toml},
+    releases::{changelog, semver::Label, suggested_package_toml},
     state::RunType,
 };
 
@@ -192,20 +193,6 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
     )]
     InconsistentVersions(String, String),
-    #[error("The versioned file {0} is not a supported format")]
-    #[diagnostic(
-        code(step::versioned_file_format),
-        help("All filed included in [[packages]] versioned_files must be a supported format"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    VersionedFileFormat(PathBuf),
-    #[error("The file {0} was an incorrect format")]
-    #[diagnostic(
-        code(step::invalid_package_json),
-        help("knope expects the package.json file to be an object with a top level `version` property"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    InvalidPackageJson(PathBuf),
     #[error("The file {0} was an incorrect format")]
     #[diagnostic(
         code(step::invalid_pyproject),
@@ -217,13 +204,10 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     InvalidPyProject(PathBuf),
-    #[error("The file {0} was an incorrect format")]
-    #[diagnostic(
-        code(step::invalid_cargo_toml),
-        help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    InvalidCargoToml(PathBuf),
+    #[error(transparent)]
+    Go(#[from] releases::go::Error),
+    #[error(transparent)]
+    VersionedFile(#[from] releases::versioned_file::Error),
     #[error("Trouble communicating with a remote API")]
     #[diagnostic(
         code(step::api_request_error),
@@ -236,22 +220,18 @@ pub(super) enum StepError {
     ApiRequestError,
     #[error("Trouble decoding the response from a remote API")]
     #[diagnostic(
-    code(step::api_response_error),
-    help(
-    "This occurred during a step that requires communicating with a remote API \
-             (e.g., GitHub or Jira). If we were unable to decode the response, it's probably a bug."
-    )
-    )]
-    ApiResponseError(#[source] Option<serde_json::Error>),
-    #[error("I/O error")]
-    #[diagnostic(
-        code(step::io_error),
+        code(step::api_response_error),
         help(
-            "This occurred during a step that requires reading or writing to... something. The \
-            problem could be a network issue or a file permission issue."
+        "This occurred during a step that requires communicating with a remote API \
+                 (e.g., GitHub or Jira). If we were unable to decode the response, it's probably a bug."
         )
     )]
-    IoError(#[from] std::io::Error),
+    ApiResponseError(#[source] Option<serde_json::Error>),
+    #[error(transparent)]
+    #[diagnostic(code(step::io))]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Git(#[from] releases::git::Error),
     #[error("Not a Git repo.")]
     #[diagnostic(
         code(step::not_a_git_repo),
@@ -379,37 +359,6 @@ pub(super) enum StepError {
         help("Only one package in [package] is currently supported for this step.")
     )]
     TooManyPackages,
-    #[error("Conflicting packages definition")]
-    #[diagnostic(
-        code(step::conflicting_packages),
-        help("You must define _either_ a [package] section or a [packages] section in knope.toml, not both."),
-        url("https://knope-dev.github.io/knope/config/packages.html")
-    )]
-    ConflictingPackages,
-    #[error("File {0} does not exist")]
-    #[diagnostic(
-        code(step::file_not_found),
-        help("Attempted to interact with a file that doesn't exist in the current directory.")
-    )]
-    FileNotFound(PathBuf),
-    #[error("No module line found in go.mod file")]
-    #[diagnostic(
-        code(step::no_module_line),
-        help("The go.mod file does not contain a module line. This is required for the step to work."),
-    )]
-    MissingModuleLine,
-    #[error("The module line {0} in go.mod could not be parsed")]
-    #[diagnostic(
-        code(step::malformed_module_line),
-        help("The go.mod file contains an invalid module line.")
-    )]
-    MalformedModuleLine(String),
-    #[error("Failed to serialize to TOML")]
-    #[diagnostic(
-        code(step::failed_toml_serialize),
-        help("If you see this error, it's a bug. Please report on GitHub.")
-    )]
-    FailedTomlSerialization,
     #[error("Failed to create the file {0}")]
     #[diagnostic(
         code(step::could_not_create_file),
@@ -430,6 +379,14 @@ pub(super) enum StepError {
         help("This is likely a bug, please report it to https://github.com/knope-dev/knope")
     )]
     CouldNotFormatDate(#[from] time::error::Format),
+    #[error(transparent)]
+    Changelog(#[from] changelog::Error),
+    #[error("Could not serialize generated TOML")]
+    #[diagnostic(
+        code(step::could_not_serialize_toml),
+        help("This is a bug, please report it to https://github.com/knope-dev/knope")
+    )]
+    GeneratedTOML(#[from] toml::ser::Error),
 }
 
 impl From<tag::Error> for StepError {

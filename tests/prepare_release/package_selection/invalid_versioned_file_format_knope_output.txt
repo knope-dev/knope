@@ -1,6 +1,13 @@
-Error: step::versioned_file_format (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
+Error: config::package_format (https://knope-dev.github.io/knope/config/packages.html)
 
-  × The versioned file setup.py is not a supported format
-  help: All filed included in [[packages]] versioned_files must be a
-        supported format
+  × The package definition is invalid: The versioned file setup.py is not a
+  │ supported format
+   ╭─[1:1]
+ 1 │ ╭─▶ [package]
+ 2 │ │   versioned_files = ["setup.py"]
+ 3 │ ├─▶ changelog = "CHANGELOG.md"
+   · ╰──── defined here
+ 4 │     
+   ╰────
+  help: Check the package definition is valid.
 

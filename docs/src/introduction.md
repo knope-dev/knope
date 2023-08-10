@@ -1,4 +1,4 @@
-![A purple binder, stuffed to the brim with papers. The word "Knope" is written on the front](favicon.png)
+kno![A purple binder, stuffed to the brim with papers. The word "Knope" is written on the front](favicon.png)
 
 # Introduction
 
@@ -12,23 +12,47 @@ For some use-cases, you don't need to create a `knope.toml` file! If no file is 
 
 You create a file called `knope.toml` in your project directory which defines some workflows. The format of this file is described in [the chapter on config][config], the key piece to which is the `workflows` array. You can get started quickly with `knope --generate` which will give you some starter workflows.
 
-Once you've got a config set up, you just run this program (`knope` if you installed normally via cargo). That will prompt you to select one of your configured workflows. Do that and you're off to the races!
+In order to run a workflow (whether via a custom file or a [default workflow](default_workflows.md)), you run `knope <workflow name>`. For example, `knope release` will run a workflow named `release` (and error if such a workflow does not exist). You can also run `knope --help` to see a list of available workflows.
 
 ## CLI Arguments
 
-Running `knope` on its own will prompt you to select a defined workflow (if any). You can quickly run a workflow by passing the workflow's `name` as a positional argument. This is the only positional argument `knope` accepts, so `knope release` expects there to be a workflow named `release` and will try to run that workflow.
+Except for a few options, `knope` must always be run with one positional argument, the name of the workflow to be run. So `knope release` expects there to be a workflow named `release` (as there is in the [default workflows](default_workflows.md)). Here are all the options that can be passed, note that some of them are situational (e.g., only available when running a relevant workflow):
 
-### Options
+### `--help`
 
-There are a few options you can pass to `knope` to control how it behaves.
+Prints out a help message containing available workflows and options, then exits. This can be run without any positional workflow argument.
 
-1. `--help` prints out a help message and exits.
-2. `--version` prints out the version of `knope` and exits.
-3. `--generate` will generate a `knope.toml` file in the current directory.
-4. `--validate` will check your `knope.toml` to make sure every workflow in it is valid, then exit. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid.
-5. `--dry-run` will pretend to run the selected workflow (either via arg or prompt), but will not actually perform any work (e.g., external commands, file I/O, API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to stdout.
-6. `--prerelease-label` will override the `prerelease_label` for any [`PrepareRelease`] step run.
-7. `--upgrade` will upgrade your `knope.toml` file from deprecated syntax to the new syntax in preparation for the next breaking release.
+### `--version`
+
+Prints out the version of `knope` and exits. This can be run without any positional workflow argument.
+
+### `--generate`
+
+Generates a `knope.toml` file in the current directory. _This cannot be used if there is already a `knope.toml` file present._
+
+### `--upgrade`
+
+Upgrades your `knope.toml` file from deprecated syntax to the new syntax in preparation for the next breaking release. _This can only be used if you have a `knope.toml` file, not if you are using the [default workflows](default_workflows.md)._
+
+### `--validate`
+
+Checks your `knope.toml` to make sure every workflow in it is valid, then exits. This could be useful to run in CI to make sure that your config is always valid. The exit code of this command will be 0 only if the config is valid. _This cannot be used if there is no `knope.toml` file present._
+
+### `--dry-run`
+
+Pretends to run the selected workflow (one must be provided), but will not actually perform any work (for example, no external commands, file I/O, or API calls). Detects the same errors as `--validate` but also outputs info about what _would_ happen to the standard output (likely your terminal window). For example, to see what `knope release` _would_ do without creating an actual release, run `knope release --dry-run`.
+
+#### `--prerelease-label`
+
+Overrides the `prerelease_label` for any [`PrepareRelease`] step run. _This option can only be provided after a workflow which contains a [`PrepareRelease`] step._
+
+#### `--override-version`
+
+Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is [one package](config/packages.md#a-single-package-with-a-single-versioned-file) or [multiple packages](config/packages.md#multiple-packages).
+
+If the single-package format is used (as it is for the [default workflows](default_workflows.md), `--override-version 1.0.0` will set the version to `1.0.0`.
+
+If the multi-package syntax is used (**even if only one package is configured with it**), you must specify the name of each package that should be overriden. For example, `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0`, erroring if either of those packages is not configured.
 
 ### Environment Variables
 
@@ -64,4 +88,5 @@ The logo is a binder in reference to Leslie Knope's love of binders. The binder 
 [workflow]: config/workflow.md
 [step]: config/step/step.md
 [`preparerelease`]: config/step/PrepareRelease.md
+[`bumpversion`]: config/step/BumpVersion.md
 [github config]: config/github.md

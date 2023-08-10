@@ -1,13 +1,15 @@
 use std::{env::current_dir, io::Write, str::FromStr};
 
 use gix::{object::Kind, open, refs::transaction::PreviousValue};
+use miette::Diagnostic;
+use thiserror::Error;
 
 use crate::{
-    releases::{semver::Version, CurrentVersions},
+    releases::{semver::Version, CurrentVersions, PackageName},
     step::StepError,
 };
 
-pub(crate) fn tag_name(version: &Version, package_name: &Option<String>) -> String {
+pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) -> String {
     let prefix = package_name
         .as_ref()
         .map_or_else(|| "v".to_string(), |name| format!("{name}/v"));
@@ -17,7 +19,7 @@ pub(crate) fn tag_name(version: &Version, package_name: &Option<String>) -> Stri
 pub(crate) fn release(
     dry_run_stdout: Option<&mut Box<dyn Write>>,
     version: &Version,
-    package_name: &Option<String>,
+    package_name: &Option<PackageName>,
 ) -> Result<(), StepError> {
     let tag = tag_name(version, package_name);
 
@@ -44,21 +46,19 @@ pub(crate) fn release(
 
 pub(crate) fn get_current_versions_from_tag(
     prefix: Option<&str>,
-) -> Result<CurrentVersions, StepError> {
-    let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
-    let references = repo.references().map_err(|_e| StepError::NotAGitRepo)?;
-    let tags = references
-        .tags()
-        .map_err(|_e| StepError::NotAGitRepo)?
-        .flat_map(|tag| {
-            tag.map(|reference| {
-                reference
-                    .name()
-                    .as_bstr()
-                    .to_string()
-                    .replace("refs/tags/", "")
-            })
-        });
+) -> Result<CurrentVersions, Error> {
+    let repo = open(current_dir().map_err(Error::CurrentDirectory)?)
+        .map_err(|err| Error::OpenGitRepo(Box::new(err)))?;
+    let references = repo.references()?;
+    let tags = references.tags()?.flat_map(|tag| {
+        tag.map(|reference| {
+            reference
+                .name()
+                .as_bstr()
+                .to_string()
+                .replace("refs/tags/", "")
+        })
+    });
     let mut current_versions = CurrentVersions::default();
     let pattern = prefix
         .as_ref()
@@ -74,4 +74,20 @@ pub(crate) fn get_current_versions_from_tag(
     }
 
     Ok(current_versions)
+}
+
+#[derive(Debug, Diagnostic, Error)]
+pub(crate) enum Error {
+    #[error("Could not determine current directory: {0}")]
+    CurrentDirectory(std::io::Error),
+    #[error("Could not open Git repository: {0}")]
+    #[diagnostic(
+        code(git::open_git_repo),
+        help("Please check that the current directory is a Git repository.")
+    )]
+    OpenGitRepo(#[source] Box<open::Error>),
+    #[error("Could not get Git references to parse tags: {0}")]
+    GitReferences(#[from] gix::reference::iter::Error),
+    #[error("Could not get Git tags: {0}")]
+    Tags(#[from] gix::reference::iter::init::Error),
 }

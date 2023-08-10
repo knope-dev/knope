@@ -1,6 +1,13 @@
-Error: step::file_not_found
+Error: config::package_format (https://knope-dev.github.io/knope/config/packages.html)
 
-  × File Cargo.toml does not exist
-  help: Attempted to interact with a file that doesn't exist in the current
-        directory.
+  × The package definition is invalid: Error reading file Cargo.toml: No such
+  │ file or directory (os error 2)
+   ╭─[1:1]
+ 1 │ ╭─▶ [package]
+ 2 │ │   versioned_files = ["Cargo.toml"]
+ 3 │ ├─▶ changelog = "CHANGELOG.md"
+   · ╰──── defined here
+ 4 │     
+   ╰────
+  help: Check the package definition is valid.
 

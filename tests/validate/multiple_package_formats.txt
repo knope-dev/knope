@@ -1,6 +1,15 @@
-Error: step::conflicting_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: config::conflicting_packages (https://knope-dev.github.io/knope/config/packages.html)
 
-  × Conflicting packages definition
-  help: You must define _either_ a [package] section or a [packages] section
-        in knope.toml, not both.
+  × You cannot define both `packages` and `package`
+   ╭─[1:1]
+ 1 │ [package]
+   · ────┬────
+   ·     ╰── `package` defined here
+ 2 │ 
+ 3 │ [packages.knope]
+   · ────────┬───────
+   ·         ╰── `packages` defined here
+ 4 │ 
+   ╰────
+  help: Add the `package` as a key under `packages` instead.
 

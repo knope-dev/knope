@@ -5,14 +5,14 @@ use serde::Serialize;
 use crate::{
     app_config::get_or_prompt_for_github_token,
     config::GitHub,
-    releases::{git::tag_name, Release},
+    releases::{git::tag_name, PackageName, Release},
     state,
     state::GitHub::{Initialized, New},
     step::StepError,
 };
 
 pub(crate) fn release(
-    package_name: &Option<String>,
+    package_name: &Option<PackageName>,
     release: &Release,
     github_state: state::GitHub,
     github_config: &GitHub,

@@ -1,0 +1,33 @@
+Would bump Cargo.toml to 1.0.0
+Would add the following to FIRST_CHANGELOG.md:
+## 1.0.0 ([DATE])
+
+### Fixes
+
+#### A bug fix
+
+Would add files to git:
+  Cargo.toml
+  FIRST_CHANGELOG.md
+Would bump package.json to 4.5.6
+Would add the following to SECOND_CHANGELOG.md:
+## 4.5.6 ([DATE])
+
+### Fixes
+
+#### A bug fix
+
+Would add files to git:
+  package.json
+  SECOND_CHANGELOG.md
+Would bump pyproject.toml to 4.5.6
+Would add the following to THIRD_CHANGELOG.md:
+## 4.5.6 ([DATE])
+
+### Fixes
+
+#### A bug fix
+
+Would add files to git:
+  pyproject.toml
+  THIRD_CHANGELOG.md

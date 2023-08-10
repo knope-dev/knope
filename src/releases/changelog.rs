@@ -1,6 +1,8 @@
-use std::io::Write;
+use std::{fs::read_to_string, io::Write, path::PathBuf};
 
 use indexmap::IndexMap;
+use miette::Diagnostic;
+use thiserror::Error;
 
 use super::Package;
 use crate::{
@@ -8,6 +10,37 @@ use crate::{
     releases::{semver::Version, ChangeType, Release},
     step::StepError,
 };
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Changelog {
+    pub(crate) path: PathBuf,
+    pub(crate) content: String,
+}
+
+impl TryFrom<PathBuf> for Changelog {
+    type Error = Error;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let content = if path.exists() {
+            read_to_string(&path).map_err(|e| Error::File(path.clone(), e))?
+        } else {
+            String::new()
+        };
+        Ok(Self { path, content })
+    }
+}
+
+#[derive(Debug, Diagnostic, Error)]
+pub(crate) enum Error {
+    #[error("Error reading file {0}: {1}")]
+    #[diagnostic(
+        code(changelog::io),
+        help("Please check that the file exists and is readable.")
+    )]
+    File(PathBuf, #[source] std::io::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
 
 impl Package {
     /// Adds content from `release` to `Self::changelog` if it exists.
