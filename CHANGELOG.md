@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.9.0 (2023-08-10)
+
+### Breaking Changes
+
+#### Removed the deprecated `[[packages]]` syntax
+
+If you're using the old syntax, run `knope --upgrade` _before_ switching to this version.
+
+#### `--generate` can no longer be used if a `knope.toml` file already exists
+
+#### Workflows can no longer be selected interactively
+
+Previously, it was valid to invoke `knope` with no arguments, and the user would be prompted interactively to select a workflow. Now, a workflow must be provided as a positional argument, for example, `knope release`.
+
+#### The `--prerelease-label` option can only be provided after a workflow
+
+Previously, the `--prerelease-label` CLI option was always available globally and would simply be ignored if it was not useful for the selected workflow. Now, it can only be provided _after_ the name of a workflow which can use the option (right now, only a workflow which contains a [`PrepareRelease`](https://knope-dev.github.io/knope/config/step/PrepareRelease.html) step). For example, with the default workflow, `knope release --prerelease-label="rc"` is valid, but **none of these are valid**:
+
+- `knope --prerelease-label="rc" release`
+- `knope document-change --prerelease-label="rc"`
+
+#### `--upgrade` can no longer be used if there is no `knope.toml` file
+
+#### `--validate` can no longer be used if there is no `knope.toml` file
+
+### Features
+
+#### Added the `--override-version` option to manually set the next version
+
+Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is [one package](https://knope-dev.github.io/knope/config/packages.html#a-single-package-with-a-single-versioned-file) or [multiple packages](https://knope-dev.github.io/knope/config/packages.html#multiple-packages):
+
+1. `--override-version 1.0.0` will set the version to `1.0.0` if there is only one package configured (error if multiple packages are configured).
+2. `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0` if there are multiple packages configured (error if only one package is configured).
+
+This closes [#497](https://github.com/knope-dev/knope/issues/497).
+
+#### `knope --help` now lists all available workflows
+
 ## 0.8.0 (2023-06-19)
 
 ### Breaking Changes
