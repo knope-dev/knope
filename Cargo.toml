@@ -22,7 +22,7 @@ serde_json = { version = "1.0.104", features = ["preserve_order"] }
 git2 = { version = "0.17.2", default-features = false }
 execute = "0.2.12"
 platform-dirs = "0.3.0"
-git-conventional = "0.12.3"
+git-conventional = "0.12.4"
 ureq = { version = "2.7.1", features = ["json"] }
 http = "0.2.9"
 clap = { version = "4.3.21", features = ["cargo", "string", "env"] }
