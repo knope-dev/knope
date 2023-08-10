@@ -8,3 +8,5 @@ Allows you to manually determine the next version for a [`BumpVersion`] or [`Pre
 
 1. `--override-version 1.0.0` will set the version to `1.0.0` if there is only one package configured (error if multiple packages are configured).
 2. `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0` if there are multiple packages configured (error if only one package is configured).
+
+This closes [#497](https://github.com/knope-dev/knope/issues/497).
