@@ -169,8 +169,8 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "hashbrown", version = "0.12.3", depth = 10 },  # gix-diff -> imara-diff
-  { name = "redox_syscall", version = "0.2", depth = 10 }, # Needed for platform-dirs and everything I can find that replaces it. Also not included in any prebuilt bins so... 🤷🏻
+  { name = "hashbrown", version = "0.12.3", depth = 10 },   # gix-diff -> imara-diff
+  { name = "redox_syscall", version = "0.2", depth = 10 },  # Needed for platform-dirs and everything I can find that replaces it. Also not included in any prebuilt bins so... 🤷🏻
   { name = "rustls-webpki", version = "0.100", depth = 1 }, # Waiting on update to ureq
 ]
 
