@@ -12,11 +12,11 @@ For some use-cases, you don't need to create a `knope.toml` file! If no file is 
 
 You create a file called `knope.toml` in your project directory which defines some workflows. The format of this file is described in [the chapter on config][config], the key piece to which is the `workflows` array. You can get started quickly with `knope --generate` which will give you some starter workflows.
 
-In order to run a workflow (whether via a custom file or a [default workflow](default_workflows)), you run `knope <workflow name>`. For example, `knope release` will run a workflow named `release` (and error if such a workflow does not exist). You can also run `knope --help` to see a list of available workflows.
+In order to run a workflow (whether via a custom file or a [default workflow](default_workflows.md)), you run `knope <workflow name>`. For example, `knope release` will run a workflow named `release` (and error if such a workflow does not exist). You can also run `knope --help` to see a list of available workflows.
 
 ## CLI Arguments
 
-Except for a few options, `knope` must always be run with one positional argument, the name of the workflow to be run. So `knope release` expects there to be a workflow named `release` (as there is in the [default workflows](default_workflows)). Here are all the options that can be passed, note that some of them are situational (e.g., only available when running a relevant workflow):
+Except for a few options, `knope` must always be run with one positional argument, the name of the workflow to be run. So `knope release` expects there to be a workflow named `release` (as there is in the [default workflows](default_workflows.md)). Here are all the options that can be passed, note that some of them are situational (e.g., only available when running a relevant workflow):
 
 ### `--help`
 
@@ -32,7 +32,7 @@ Generates a `knope.toml` file in the current directory. _This cannot be used if 
 
 ### `--upgrade`
 
-Upgrades your `knope.toml` file from deprecated syntax to the new syntax in preparation for the next breaking release. _This can only be used if you have a `knope.toml` file, not if you are using the [default workflows](default_workflows)._
+Upgrades your `knope.toml` file from deprecated syntax to the new syntax in preparation for the next breaking release. _This can only be used if you have a `knope.toml` file, not if you are using the [default workflows](default_workflows.md)._
 
 ### `--validate`
 
@@ -50,7 +50,7 @@ Overrides the `prerelease_label` for any [`PrepareRelease`] step run. _This opti
 
 Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is [one package](config/packages.md#a-single-package-with-a-single-versioned-file) or [multiple packages](config/packages.md#multiple-packages).
 
-If the single-package format is used (as it is for the [default workflows](default_workflows), `--override-version 1.0.0` will set the version to `1.0.0`.
+If the single-package format is used (as it is for the [default workflows](default_workflows.md), `--override-version 1.0.0` will set the version to `1.0.0`.
 
 If the multi-package syntax is used (**even if only one package is configured with it**), you must specify the name of each package that should be overriden. For example, `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0`, erroring if either of those packages is not configured.
 
