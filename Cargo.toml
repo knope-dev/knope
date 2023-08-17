@@ -25,10 +25,10 @@ platform-dirs = "0.3.0"
 git-conventional = "0.12.4"
 ureq = { version = "2.7.1", features = ["json"] }
 http = "0.2.9"
-clap = { version = "4.3.21", features = ["cargo", "string", "env"] }
+clap = { version = "4.3.22", features = ["cargo", "string", "env"] }
 itertools = "0.11.0"
 miette = { version = "5.10.0", features = ["fancy"] }
-thiserror = "1.0.46"
+thiserror = "1.0.47"
 gix = "0.51.0"
 log = "0.4.20"
 env_logger = "0.10.0"
