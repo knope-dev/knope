@@ -1,6 +1,6 @@
-Would bump Cargo.toml to 2.0.0
-Would bump package.json to 2.0.0
-Would bump pyproject.toml to 2.0.0
+Would write 2.0.0 to Cargo.toml
+Would write 2.0.0 to package.json
+Would write 2.0.0 to pyproject.toml
 Would add the following to CHANGELOG.md:
 ## 2.0.0 ([DATE])
 

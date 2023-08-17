@@ -1,4 +1,15 @@
 Error:   × Problem with workflow release
 
-Error:   × The file Cargo.toml was an incorrect format
+Error:   × Error deserializing Cargo.toml: TOML parse error at line 1, column 1
+  │   |
+  │ 1 |
+  │   | ^
+  │ missing field `package`
+  │ 
+  ╰─▶ TOML parse error at line 1, column 1
+        |
+      1 |
+        | ^
+      missing field `package`
+      
 

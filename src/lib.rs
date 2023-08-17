@@ -38,6 +38,7 @@ use crate::{
 mod app_config;
 mod command;
 mod config;
+mod fs;
 mod git;
 mod issues;
 mod prompt;

@@ -1,1 +1,1 @@
-Would bump Cargo.toml to 1.2.4
+Would write 1.2.4 to Cargo.toml

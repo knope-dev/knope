@@ -1,16 +1,18 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use miette::Diagnostic;
 use serde::Deserialize;
+use thiserror::Error;
 use toml::Spanned;
 
-use crate::step::StepError;
+use crate::fs;
 
-/// Extrat the consistent version from a `pyproject.toml` file's content or return an error.
+/// Extract the consistent version from a `pyproject.toml` file's content or return an error.
 ///
 /// `path` is used for error reporting.
-pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, StepError> {
+pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, Error> {
     toml::from_str::<PyProject>(content)
-        .map_err(|_| StepError::InvalidPyProject(path.into()))
+        .map_err(|source| Error::Deserialization(path.into(), source))
         .and_then(|pyproject| pyproject.version(path))
 }
 
@@ -18,13 +20,51 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, StepErro
 ///
 /// `path` is used for error reporting.
 pub(crate) fn set_version(
+    dry_run: &mut Option<Box<dyn std::io::Write>>,
     pyproject_toml: String,
     new_version: &str,
     path: &Path,
-) -> Result<String, StepError> {
-    toml::from_str(&pyproject_toml)
-        .map_err(|_| StepError::InvalidPyProject(path.into()))
-        .map(|pyproject: PyProject| pyproject.set_version(pyproject_toml, new_version))
+) -> Result<String, Error> {
+    let contents = toml::from_str(&pyproject_toml)
+        .map_err(|source| Error::Deserialization(path.into(), source))
+        .map(|pyproject: PyProject| pyproject.set_version(pyproject_toml, new_version))?;
+    fs::write(dry_run, new_version, path, &contents)?;
+    Ok(contents)
+}
+
+#[derive(Debug, Diagnostic, Error)]
+pub(crate) enum Error {
+    #[error(transparent)]
+    Fs(#[from] fs::Error),
+    #[error("Could not deserialize {0} as a pyproject.toml: {1}")]
+    #[diagnostic(
+        code(pyproject::invalid),
+        help(
+        "knope expects the pyproject.toml file to have a `tool.poetry.version` or \
+                    `project.version` property. If you use a different location for your version, please \
+                    open an issue to add support."
+        ),
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+    )]
+    Deserialization(PathBuf, #[source] toml::de::Error),
+    #[error("Found conflicting versions {project} and {poetry} in {path}")]
+    #[diagnostic(
+        code(pyproject::inconsistent),
+        help("Make sure [project.version] and [tool.poetry.version] are the same."),
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+    )]
+    InconsistentVersions {
+        project: String,
+        poetry: String,
+        path: PathBuf,
+    },
+    #[error("No versions were found in {0}")]
+    #[diagnostic(
+        code(pyproject::no_versions),
+        help("Make sure [project.version] or [tool.poetry.version] is set."),
+        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+    )]
+    NoVersions(PathBuf),
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,7 +76,7 @@ struct PyProject {
 impl PyProject {
     /// Get the consistent version from `pyproject.toml` or error.
     /// `path` is used for better error messages.
-    fn version(self, path: &Path) -> Result<String, StepError> {
+    fn version(self, path: &Path) -> Result<String, Error> {
         let (poetry_version, project_version) = self.into_versions();
 
         match (poetry_version, project_version) {
@@ -44,15 +84,16 @@ impl PyProject {
                 if poetry_version == project_version {
                     Ok(poetry_version.into_inner())
                 } else {
-                    Err(StepError::InconsistentVersions(
-                        poetry_version.into_inner(),
-                        project_version.into_inner(),
-                    ))
+                    Err(Error::InconsistentVersions {
+                        poetry: poetry_version.into_inner(),
+                        project: project_version.into_inner(),
+                        path: path.into(),
+                    })
                 }
             }
             (Some(poetry_version), None) => Ok(poetry_version.into_inner()),
             (None, Some(project_version)) => Ok(project_version.into_inner()),
-            (None, None) => Err(StepError::InvalidPyProject(path.into())),
+            (None, None) => Err(Error::NoVersions(path.into())),
         }
     }
 
@@ -156,9 +197,11 @@ mod tests {
         "###;
 
         match get_version(content, PathBuf::new().as_path()) {
-            Err(StepError::InconsistentVersions(first, second)) => {
-                assert_eq!(first, "1.0.0".to_string());
-                assert_eq!(second, "2.3.4".to_string());
+            Err(Error::InconsistentVersions {
+                poetry, project, ..
+            }) => {
+                assert_eq!(poetry, "1.0.0".to_string());
+                assert_eq!(project, "2.3.4".to_string());
             }
             other => panic!("Unexpected result {other:?}"),
         }
@@ -176,7 +219,14 @@ mod tests {
         version = "0.1.0-rc.0"
         "###;
 
-        let new = set_version(String::from(content), "1.2.3-rc.4", &PathBuf::new()).unwrap();
+        let stdout = Box::<Vec<u8>>::default();
+        let new = set_version(
+            &mut Some(stdout),
+            String::from(content),
+            "1.2.3-rc.4",
+            &PathBuf::new(),
+        )
+        .unwrap();
 
         let expected = r###"
         [tool.poetry]

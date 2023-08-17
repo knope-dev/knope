@@ -17,30 +17,34 @@ pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) ->
 }
 
 pub(crate) fn release(
-    dry_run_stdout: Option<&mut Box<dyn Write>>,
+    dry_run_stdout: &mut Option<Box<dyn Write>>,
     version: &Version,
     package_name: &Option<PackageName>,
 ) -> Result<(), StepError> {
     let tag = tag_name(version, package_name);
 
-    if let Some(stdout) = dry_run_stdout {
-        writeln!(stdout, "Would create Git tag {tag}")?;
-        return Ok(());
-    }
+    create_tag(dry_run_stdout, tag)?;
 
-    let repo = open(current_dir()?).map_err(|_e| StepError::NotAGitRepo)?;
+    Ok(())
+}
+
+pub(crate) fn create_tag(dry_run: &mut Option<Box<dyn Write>>, name: String) -> Result<(), Error> {
+    if let Some(stdout) = dry_run {
+        return writeln!(stdout, "Would create Git tag {name}").map_err(Error::Stdout);
+    }
+    let repo = open(current_dir().map_err(Error::CurrentDirectory)?)
+        .map_err(|err| Error::OpenGitRepo(Box::new(err)))?;
     let head = repo.head_commit()?;
     repo.tag(
-        tag,
+        name,
         head.id,
         Kind::Commit,
         repo.committer()
             .transpose()
-            .map_err(|_| StepError::NoCommitter)?,
+            .map_err(|_| Error::NoCommitter)?,
         "",
         PreviousValue::Any,
     )?;
-
     Ok(())
 }
 
@@ -90,4 +94,23 @@ pub(crate) enum Error {
     GitReferences(#[from] gix::reference::iter::Error),
     #[error("Could not get Git tags: {0}")]
     Tags(#[from] gix::reference::iter::init::Error),
+    #[error("Could not find head commit: {0}")]
+    HeadCommit(#[from] gix::reference::head_commit::Error),
+    #[error("Could not determine Git committer to commit changes")]
+    #[diagnostic(
+        code(git::no_committer),
+        help(
+            "We couldn't determine who to commit the changes as. Please set the `user.name` and \
+                `user.email` Git config options."
+        )
+    )]
+    NoCommitter,
+    #[error("Could not create a tag: {0}")]
+    #[diagnostic(
+        code(git::tag_failed),
+        help("A Git tag could not be created for the release.")
+    )]
+    CreateTagError(#[from] gix::tag::Error),
+    #[error("Failed to write to stdout")]
+    Stdout(#[source] std::io::Error),
 }

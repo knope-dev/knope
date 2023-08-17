@@ -1,4 +1,4 @@
-Would bump Cargo.toml to 1.0.1
+Would write 1.0.1 to Cargo.toml
 Would add the following to FIRST_CHANGELOG.md:
 ## 1.0.1 ([DATE])
 
@@ -19,7 +19,7 @@ Would add the following to FIRST_CHANGELOG.md:
 Would add files to git:
   Cargo.toml
   FIRST_CHANGELOG.md
-Would bump pyproject.toml to 0.1.1
+Would write 0.1.1 to pyproject.toml
 Would add the following to SECOND_CHANGELOG.md:
 ## 0.1.1 ([DATE])
 

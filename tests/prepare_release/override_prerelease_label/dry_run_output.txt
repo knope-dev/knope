@@ -1,4 +1,4 @@
-Would bump Cargo.toml to 2.0.0-alpha.1
+Would write 2.0.0-alpha.1 to Cargo.toml
 Would add the following to CHANGELOG.md:
 ## 2.0.0-alpha.1 ([DATE])
 

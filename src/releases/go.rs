@@ -1,7 +1,12 @@
+use std::path::Path;
+
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::releases::semver::Version;
+use crate::{
+    fs,
+    releases::{git, semver::Version},
+};
 
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
@@ -17,16 +22,34 @@ pub(crate) enum Error {
         help("The go.mod file contains an invalid module line.")
     )]
     MalformedModuleLine(String),
+    #[error(transparent)]
+    Git(#[from] git::Error),
+    #[error(transparent)]
+    Fs(#[from] fs::Error),
 }
 
-pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<String, Error> {
+pub(crate) fn set_version(
+    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    content: String,
+    new_version: &Version,
+    path: &Path,
+) -> Result<String, Error> {
+    let parent_dir = path.parent().map(Path::to_string_lossy);
+    if let Some(parent_dir) = parent_dir {
+        if !parent_dir.is_empty() {
+            let tag = format!("{parent_dir}/v{new_version}");
+            git::create_tag(dry_run, tag)?;
+        }
+        // If there's not a nested dir, the tag will equal the release tag, so creating it here would cause a conflict later.
+    }
+
     let new_major = new_version.stable_component().major;
     if new_major == 0 || new_major == 1 {
         // These major versions aren't recorded in go.mod
-        return Ok(go_mod);
+        return Ok(content);
     }
 
-    let module_line = go_mod
+    let module_line = content
         .lines()
         .find(|line| line.starts_with("module "))
         .ok_or(Error::MissingModuleLine)?;
@@ -46,17 +69,23 @@ pub(crate) fn set_version(go_mod: String, new_version: &Version) -> Result<Strin
     } else {
         None
     };
-    if let Some(existing_version) = existing_version {
+    let new_contents = if let Some(existing_version) = existing_version {
         if existing_version == new_version.stable_component().major {
-            // Major version has not changed—keep existing content
-            return Ok(go_mod);
+            None
+        } else {
+            let new_version_string = format!("v{new_major}");
+            let new_module_line = format!("module {uri}/{new_version_string}");
+            Some(content.replace(module_line, &new_module_line))
         }
-        let new_version_string = format!("v{new_major}");
-        let new_module_line = format!("module {uri}/{new_version_string}");
-        Ok(go_mod.replace(module_line, &new_module_line))
     } else {
         // No existing version found—add new line
         let new_module_line = format!("module {module}/v{new_major}");
-        Ok(go_mod.replace(module_line, &new_module_line))
+        Some(content.replace(module_line, &new_module_line))
+    };
+    if let Some(new_contents) = new_contents {
+        fs::write(dry_run, &new_version.to_string(), path, &new_contents)?;
+        Ok(new_contents)
+    } else {
+        Ok(content)
     }
 }

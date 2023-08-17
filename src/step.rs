@@ -4,7 +4,6 @@ use gix::{
     objs::decode,
     reference::{head_commit, peel},
     revision::walk,
-    tag,
     traverse::commit::ancestors,
 };
 use inquire::InquireError;
@@ -193,17 +192,6 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
     )]
     InconsistentVersions(String, String),
-    #[error("The file {0} was an incorrect format")]
-    #[diagnostic(
-        code(step::invalid_pyproject),
-        help(
-            "knope expects the pyproject.toml file to have a `tool.poetry.version` or \
-            `project.version` property. If you use a different location for your version, please \
-            open an issue to add support."
-        ),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    InvalidPyProject(PathBuf),
     #[error(transparent)]
     Go(#[from] releases::go::Error),
     #[error(transparent)]
@@ -260,15 +248,6 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
     )]
     UncommittedChanges,
-    #[error("Could not determine Git committer to commit changes")]
-    #[diagnostic(
-        code(step::no_committer),
-        help(
-            "We couldn't determine who to commit the changes as. Please set the `user.name` and \
-            `user.email` Git config options."
-        )
-    )]
-    NoCommitter,
     #[error("Could not complete checkout")]
     #[diagnostic(
         code(step::incomplete_checkout),
@@ -291,12 +270,6 @@ pub(super) enum StepError {
         help("This step requires HEAD to point to a commit—it was not.")
     )]
     HeadCommitError(#[from] head_commit::Error),
-    #[error("Could not create a tag")]
-    #[diagnostic(
-        code(step::create_tag_error),
-        help("A Git tag could not be created for the release.")
-    )]
-    CreateTagError,
     #[error("Something went wrong with Git")]
     #[diagnostic(
         code(step::unknown_git_error),
@@ -387,12 +360,6 @@ pub(super) enum StepError {
         help("This is a bug, please report it to https://github.com/knope-dev/knope")
     )]
     GeneratedTOML(#[from] toml::ser::Error),
-}
-
-impl From<tag::Error> for StepError {
-    fn from(_: tag::Error) -> Self {
-        Self::CreateTagError
-    }
 }
 
 impl StepError {

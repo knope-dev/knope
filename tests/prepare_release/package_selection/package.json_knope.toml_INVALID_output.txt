@@ -1,4 +1,6 @@
 Error:   × Problem with workflow release
 
-Error:   × The file package.json was an incorrect format
+Error:   × Error deserializing package.json: EOF while parsing a value at line 1
+  │ column 0
+  ╰─▶ EOF while parsing a value at line 1 column 0
 

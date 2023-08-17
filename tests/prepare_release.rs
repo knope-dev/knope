@@ -891,9 +891,8 @@ fn no_versioned_files() {
     );
 
     // The release step should have created a tag with the right new version.
-    let expected_tag = "v1.1.0";
-    let actual_tag = describe(temp_path, None);
-    assert_eq!(expected_tag, actual_tag);
+    let actual_tags = get_tags(temp_path);
+    assert_eq!(vec!["v1.1.0"], actual_tags);
 }
 
 /// If `PrepareRelease` is run with no `prerelease_label`, it should skip any prerelease tags
@@ -988,8 +987,8 @@ fn go_modules() {
         source_path.join("EXPECTED_1.1_go.mod"),
         read_to_string(temp_path.join("go.mod")).unwrap(),
     );
-    let tag = describe(temp_path, None);
-    assert_eq!("v1.1.0", tag);
+    let tags = get_tags(temp_path);
+    assert_eq!(tags, vec!["v1.1.0"]);
 
     // Arrange 2—version goes to 2.0
     commit(temp_path, "feat!: Breaking change");
@@ -1019,8 +1018,89 @@ fn go_modules() {
         source_path.join("EXPECTED_2.0_go.mod"),
         read_to_string(temp_path.join("go.mod")).unwrap(),
     );
-    let tag = describe(temp_path, None);
-    assert_eq!("v2.0.0", tag);
+    let tags = get_tags(temp_path);
+    assert_eq!(vec!["v2.0.0"], tags);
+}
+
+/// In addition to the >2.x rules above, there is also a tagging pattern that must be kept-to
+#[test]
+fn go_modules_in_subdirectory() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/go_modules_in_subdirectory");
+
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    // This is the version of the Go package, but there is no project-wide tag, so _both_ commits should be included.
+    tag(temp_path, "sub_dir/v1.0.0");
+    commit(temp_path, "feat: New feature");
+
+    for file in ["knope.toml", "CHANGELOG.md"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+    let sub_dir = temp_path.join("sub_dir");
+    create_dir(&sub_dir).unwrap();
+    copy(source_path.join("go.mod"), sub_dir.join("go.mod")).unwrap();
+
+    // Act 1—version stays at 1.x
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert 1—version stays at 1.x
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("1.1_dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert().matches_path(
+        source_path.join("EXPECTED_1.1_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert().matches_path(
+        source_path.join("EXPECTED_1.1_go.mod"),
+        read_to_string(sub_dir.join("go.mod")).unwrap(),
+    );
+    let tags = get_tags(temp_path);
+    assert_eq!(vec!["sub_dir/v1.1.0", "v1.1.0"], tags);
+
+    // Arrange 2—version goes to 2.0
+    commit(temp_path, "feat!: Breaking change");
+
+    // Act 2—version goes to 2.0
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert 2—version goes to 2.0
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("2.0_dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert().matches_path(
+        source_path.join("EXPECTED_2.0_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+    assert().matches_path(
+        source_path.join("EXPECTED_2.0_go.mod"),
+        read_to_string(sub_dir.join("go.mod")).unwrap(),
+    );
+    let tags = get_tags(temp_path);
+    assert_eq!(tags, vec!["sub_dir/v2.0.0", "v2.0.0"]);
 }
 
 /// Verify that PrepareRelease will operate on all defined packages independently
