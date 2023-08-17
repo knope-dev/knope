@@ -1,6 +1,6 @@
 Would delete: .changeset/breaking_change.md
-Would bump Cargo.toml to 2.0.0
-Would bump pyproject.toml to 2.0.0
+Would write 2.0.0 to Cargo.toml
+Would write 2.0.0 to pyproject.toml
 Would add the following to FIRST_CHANGELOG.md:
 ## 2.0.0 ([DATE])
 
@@ -19,7 +19,7 @@ Would add files to git:
   pyproject.toml
   FIRST_CHANGELOG.md
   .changeset/breaking_change.md
-Would bump package.json to 0.4.7
+Would write 0.4.7 to package.json
 Would add the following to SECOND_CHANGELOG.md:
 ## 0.4.7 ([DATE])
 

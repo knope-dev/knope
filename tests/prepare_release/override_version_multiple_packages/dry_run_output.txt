@@ -1,4 +1,4 @@
-Would bump Cargo.toml to 1.0.0
+Would write 1.0.0 to Cargo.toml
 Would add the following to FIRST_CHANGELOG.md:
 ## 1.0.0 ([DATE])
 
@@ -9,7 +9,7 @@ Would add the following to FIRST_CHANGELOG.md:
 Would add files to git:
   Cargo.toml
   FIRST_CHANGELOG.md
-Would bump package.json to 4.5.6
+Would write 4.5.6 to package.json
 Would add the following to SECOND_CHANGELOG.md:
 ## 4.5.6 ([DATE])
 
@@ -20,7 +20,7 @@ Would add the following to SECOND_CHANGELOG.md:
 Would add files to git:
   package.json
   SECOND_CHANGELOG.md
-Would bump pyproject.toml to 4.5.6
+Would write 4.5.6 to pyproject.toml
 Would add the following to THIRD_CHANGELOG.md:
 ## 4.5.6 ([DATE])
 

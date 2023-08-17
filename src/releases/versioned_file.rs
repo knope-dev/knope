@@ -1,16 +1,16 @@
 use std::{
     ffi::OsStr,
-    fs::{read_to_string, write},
+    fs::read_to_string,
+    io::Write,
     path::{Path, PathBuf},
 };
 
 use itertools::Itertools;
-use log::trace;
 use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::releases::{
-    cargo, get_current_versions_from_tag, go, package_json, pyproject, semver::Version,
+    cargo, get_current_versions_from_tag, git, go, package_json, pyproject, semver::Version,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -58,51 +58,33 @@ pub(crate) enum Error {
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     VersionedFileFormat(PathBuf),
-    #[error("The file {0} was an incorrect format")]
-    #[diagnostic(
-        code(step::invalid_cargo_toml),
-        help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    InvalidCargoToml(PathBuf),
-    #[error("The file {0} was an incorrect format")]
-    #[diagnostic(
-        code(step::invalid_package_json),
-        help("knope expects the package.json file to be an object with a top level `version` property"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    InvalidPackageJson(PathBuf),
-    #[error("The file {0} was an incorrect format")]
-    #[diagnostic(
-        code(step::invalid_pyproject),
-        help(
-        "knope expects the pyproject.toml file to have a `tool.poetry.version` or \
-                `project.version` property. If you use a different location for your version, please \
-                open an issue to add support."
-        ),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
-    )]
-    InvalidPyProject(PathBuf),
     #[error(transparent)]
-    Git(#[from] crate::releases::git::Error),
+    Git(#[from] git::Error),
     #[error(transparent)]
-    Go(#[from] crate::releases::go::Error),
+    Go(#[from] go::Error),
+    #[error(transparent)]
+    Cargo(#[from] cargo::Error),
+    #[error(transparent)]
+    PyProject(#[from] pyproject::Error),
+    #[error(transparent)]
+    PackageJson(#[from] package_json::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
 
 impl VersionedFile {
-    pub(crate) fn get_version(&self, package_name: Option<&str>) -> Result<String> {
-        self.format
-            .get_version(&self.content, package_name, &self.path)
+    pub(crate) fn get_version(&self) -> Result<String> {
+        self.format.get_version(&self.content, &self.path)
     }
 
-    pub(crate) fn set_version(&mut self, version_str: &Version) -> Result<()> {
-        self.content = self
-            .format
-            .set_version(self.content.clone(), version_str, &self.path)?;
-        trace!("Writing {} to {}", self.content, self.path.display());
-        write(&self.path, &self.content).map_err(|e| Error::Io(self.path.clone(), e))?;
+    pub(crate) fn set_version(
+        &mut self,
+        dry_run: &mut Option<Box<dyn Write>>,
+        version_str: &Version,
+    ) -> Result<()> {
+        self.content =
+            self.format
+                .set_version(dry_run, self.content.clone(), version_str, &self.path)?;
         Ok(())
     }
 }
@@ -134,28 +116,26 @@ impl TryFrom<&PathBuf> for PackageFormat {
 impl PackageFormat {
     /// Get the version from `content` for package named `name` (if any name).
     /// `path` is used for error reporting.
-    pub(crate) fn get_version(
-        self,
-        content: &str,
-        name: Option<&str>,
-        path: &Path,
-    ) -> Result<String> {
+    pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<String> {
         match self {
-            PackageFormat::Cargo => {
-                cargo::get_version(content).map_err(|_| Error::InvalidCargoToml(path.into()))
+            PackageFormat::Cargo => cargo::get_version(content, path).map_err(Error::Cargo),
+            PackageFormat::Poetry => {
+                pyproject::get_version(content, path).map_err(Error::PyProject)
             }
-            PackageFormat::Poetry => pyproject::get_version(content, path)
-                .map_err(|_| Error::InvalidPyProject(path.into())),
-            PackageFormat::JavaScript => package_json::get_version(content)
-                .map_err(|_| Error::InvalidPackageJson(path.into())),
-            PackageFormat::Go => get_current_versions_from_tag(name)
-                .map(|current_versions| {
-                    current_versions
-                        .into_latest()
-                        .unwrap_or_default()
-                        .to_string()
-                })
-                .map_err(Error::from),
+            PackageFormat::JavaScript => {
+                package_json::get_version(content, path).map_err(Error::PackageJson)
+            }
+            PackageFormat::Go => {
+                let prefix = path.parent().map(Path::to_string_lossy);
+                get_current_versions_from_tag(prefix.as_deref())
+                    .map(|current_versions| {
+                        current_versions
+                            .into_latest()
+                            .unwrap_or_default()
+                            .to_string()
+                    })
+                    .map_err(Error::from)
+            }
         }
     }
 
@@ -164,22 +144,27 @@ impl PackageFormat {
     /// `path` is only used for error reporting.
     pub(crate) fn set_version(
         self,
+        dry_run: &mut Option<Box<dyn Write>>,
         content: String,
         new_version: &Version,
         path: &Path,
     ) -> Result<String> {
         match self {
-            PackageFormat::Cargo => cargo::set_version(content, &new_version.to_string())
-                .map_err(|_| Error::InvalidCargoToml(path.into())),
+            PackageFormat::Cargo => {
+                cargo::set_version(dry_run, content, &new_version.to_string(), path)
+                    .map_err(Error::from)
+            }
             PackageFormat::Poetry => {
-                pyproject::set_version(content, &new_version.to_string(), path)
-                    .map_err(|_| Error::InvalidPyProject(path.into()))
+                pyproject::set_version(dry_run, content, &new_version.to_string(), path)
+                    .map_err(Error::from)
             }
             PackageFormat::JavaScript => {
-                package_json::set_version(&content, &new_version.to_string())
-                    .map_err(|_| Error::InvalidPackageJson(path.into()))
+                package_json::set_version(dry_run, &content, &new_version.to_string(), path)
+                    .map_err(Error::PackageJson)
             }
-            PackageFormat::Go => go::set_version(content, new_version).map_err(Error::from),
+            PackageFormat::Go => {
+                go::set_version(dry_run, content, new_version, path).map_err(Error::from)
+            }
         }
     }
 }

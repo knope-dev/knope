@@ -57,8 +57,8 @@ fn git_release() {
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
-    let tag = describe(temp_path, None);
-    assert_eq!(tag, "v1.1.0");
+    let tags = get_tags(temp_path);
+    assert_eq!(tags, vec!["v1.1.0"]);
 }
 
 /// Verify that Release will operate on all defined packages independently
@@ -119,6 +119,5 @@ fn multiple_packages() {
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
-    assert_eq!(describe(temp_path, Some("first/*")), "first/v2.0.0");
-    assert_eq!(describe(temp_path, Some("second/*")), "second/v0.5.0");
+    assert_eq!(get_tags(temp_path), vec!["first/v2.0.0", "second/v0.5.0"]);
 }

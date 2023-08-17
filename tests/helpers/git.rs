@@ -142,13 +142,10 @@ pub fn merge_branch(path: &Path, name: &str) {
     debug!("{}", String::from_utf8_lossy(&output.stdout));
 }
 
-/// Get the current tag, panicking if there is no tag.
-pub fn describe(path: &Path, pattern: Option<&str>) -> String {
+/// Get the current tags describing HEAD
+pub fn get_tags(path: &Path) -> Vec<String> {
     let mut cmd = Command::new("git");
-    cmd.arg("describe").arg("--tags");
-    if let Some(pattern) = pattern {
-        cmd.arg("--match").arg(pattern);
-    }
+    cmd.arg("tag").arg("--contains").arg("HEAD");
 
     let output = cmd.current_dir(path).output().unwrap();
     assert!(
@@ -156,7 +153,12 @@ pub fn describe(path: &Path, pattern: Option<&str>) -> String {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    String::from_utf8_lossy(&output.stdout).trim().to_string()
+    String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .lines()
+        .map(String::from)
+        .sorted()
+        .collect_vec()
 }
 
 /// Add all files to git

@@ -252,7 +252,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
                     dry_run_stdout.as_mut(),
                 )?;
             } else {
-                git::release(dry_run_stdout.as_mut(), &release.new_version, &package.name)?;
+                git::release(&mut dry_run_stdout, &release.new_version, &package.name)?;
             }
         }
     }

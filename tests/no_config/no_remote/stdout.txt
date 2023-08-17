@@ -1,4 +1,4 @@
-Would bump Cargo.toml to 2.0.0
+Would write 2.0.0 to Cargo.toml
 Would add files to git:
   Cargo.toml
 Would run git commit -m "chore: prepare release 2.0.0"

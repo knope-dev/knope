@@ -1,4 +1,4 @@
 Error:   × Problem with workflow release
 
-Error:   × The file pyproject.toml was an incorrect format
+Error:   × No versions were found in pyproject.toml
 

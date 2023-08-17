@@ -134,11 +134,7 @@ impl Package {
         let version_from_files = self
             .versioned_files
             .iter()
-            .map(|versioned_file| {
-                versioned_file
-                    .get_version(self.name.as_deref())
-                    .map_err(StepError::from)
-            })
+            .map(|versioned_file| versioned_file.get_version().map_err(StepError::from))
             .map(|result| result.and_then(|version_string| Version::from_str(&version_string)))
             .reduce(|accumulator, version| match (version, accumulator) {
                 (Ok(version), Ok(accumulator)) => {
@@ -174,15 +170,7 @@ impl Package {
         dry_run: &mut Option<Box<dyn Write>>,
     ) -> Result<Self, StepError> {
         for versioned_file in &mut self.versioned_files {
-            if let Some(stdio) = dry_run.as_deref_mut() {
-                writeln!(
-                    stdio,
-                    "Would bump {} to {version}",
-                    versioned_file.path.display()
-                )?;
-            } else {
-                versioned_file.set_version(version)?;
-            }
+            versioned_file.set_version(dry_run, version)?;
         }
         Ok(self)
     }
