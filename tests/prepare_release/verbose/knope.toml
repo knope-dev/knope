@@ -1,6 +1,7 @@
 [packages.first]
 versioned_files = ["Cargo.toml", "pyproject.toml"]
 changelog = "FIRST_CHANGELOG.md"
+scopes = ["first"]
 
 [packages.second]
 versioned_files = ["package.json"]
