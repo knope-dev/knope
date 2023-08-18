@@ -1,0 +1,23 @@
+Determining new version for first
+commit "feat: A feature" implies rule MINOR
+commit "feat!: A breaking feature" implies rule MAJOR
+commit "fix: A bug fix" implies rule PATCH
+commit "fix!: A breaking bug fix" implies rule MAJOR
+commit "BREAKING CHANGE: A breaking change" implies rule MAJOR
+commit "feat(first): A feature for the first package" implies rule MINOR
+commit "BREAKING CHANGE: Another breaking change" implies rule MAJOR
+commit "feat: A feature with a separate breaking change" implies rule MINOR
+changeset "breaking_change.md" implies rule MAJOR
+changeset "feature.md" implies rule MINOR
+New version is 2.0.0
+Determining new version for second
+commit "feat: A feature" implies rule MINOR
+commit "feat!: A breaking feature" implies rule MAJOR
+commit "fix: A bug fix" implies rule PATCH
+commit "fix!: A breaking bug fix" implies rule MAJOR
+commit "BREAKING CHANGE: A breaking change" implies rule MAJOR
+commit "feat(first): A feature for the first package" implies rule MINOR
+commit "BREAKING CHANGE: Another breaking change" implies rule MAJOR
+commit "feat: A feature with a separate breaking change" implies rule MINOR
+changeset "feature.md" implies rule PATCH
+New version is 0.5.0

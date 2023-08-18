@@ -1,4 +1,4 @@
-use std::{io::Write, str::FromStr};
+use std::{fmt::Display, io::Write, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
@@ -47,6 +47,16 @@ pub(crate) enum ConventionalRule {
     Minor,
     #[default]
     Patch,
+}
+
+impl Display for ConventionalRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConventionalRule::Major => write!(f, "MAJOR"),
+            ConventionalRule::Minor => write!(f, "MINOR"),
+            ConventionalRule::Patch => write!(f, "PATCH"),
+        }
+    }
 }
 
 impl Ord for ConventionalRule {

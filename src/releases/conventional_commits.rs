@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use git_conventional::{Commit, Type};
 use log::debug;
 
@@ -11,6 +13,7 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ConventionalCommit {
     pub(crate) change_type: ChangeType,
+    pub(crate) original_source: String,
     pub(crate) message: String,
 }
 
@@ -48,13 +51,47 @@ impl ConventionalCommit {
                     conventional_commits.push(Self {
                         change_type: ChangeType::from(source),
                         message: footer.value().to_string(),
+                        original_source: format!(
+                            "{}{} {}",
+                            footer.token(),
+                            footer.separator(),
+                            footer.value()
+                        ),
                     });
                 }
             }
             if let Some(breaking_message) = commit.breaking_description() {
+                let original_source = commit
+                    .footers()
+                    .iter()
+                    .find(|footer| footer.breaking())
+                    .map_or_else(
+                        || {
+                            let commit_scope = commit
+                                .scope()
+                                .map(|s| s.to_string())
+                                .map(|it| format!("({it})"))
+                                .unwrap_or_default();
+                            format!(
+                                "{}{commit_scope}!: {summary}",
+                                commit.type_(),
+                                summary = commit.description()
+                            )
+                        },
+                        |footer| {
+                            format!(
+                                "{}{} {}",
+                                footer.token(),
+                                footer.separator(),
+                                footer.value()
+                            )
+                        },
+                    );
+
                 conventional_commits.push(Self {
                     change_type: ChangeType::Breaking,
                     message: breaking_message.to_string(),
+                    original_source,
                 });
                 if breaking_message == commit.description() {
                     // There is no separate breaking change message, so the normal description is used.
@@ -63,19 +100,38 @@ impl ConventionalCommit {
                 }
             }
 
+            let commit_scope = commit
+                .scope()
+                .map(|s| s.to_string())
+                .map(|it| format!("({it})"))
+                .unwrap_or_default();
+            let original_source = format!(
+                "{}{commit_scope}: {summary}",
+                commit.type_(),
+                summary = commit.description()
+            );
+
             if commit.type_() == Type::FEAT {
                 conventional_commits.push(Self {
                     change_type: ChangeType::Feature,
                     message: commit.description().to_string(),
+                    original_source,
                 });
             } else if commit.type_() == Type::FIX {
                 conventional_commits.push(Self {
                     change_type: ChangeType::Fix,
                     message: commit.description().to_string(),
+                    original_source,
                 });
             }
         }
         conventional_commits
+    }
+}
+
+impl Display for ConventionalCommit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.original_source)
     }
 }
 
@@ -102,19 +158,23 @@ mod test_conventional_commits {
             vec![
                 ConventionalCommit {
                     change_type: ChangeType::Fix,
-                    message: String::from("a bug")
+                    message: String::from("a bug"),
+                    original_source: String::from("fix: a bug")
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
-                    message: String::from("a breaking bug fix")
+                    message: String::from("a breaking bug fix"),
+                    original_source: String::from("fix!: a breaking bug fix")
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
-                    message: String::from("add a feature")
+                    message: String::from("add a feature"),
+                    original_source: String::from("feat!: add a feature")
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Feature,
-                    message: String::from("add another feature")
+                    message: String::from("add another feature"),
+                    original_source: String::from("feat: add another feature")
                 }
             ]
         );
@@ -133,19 +193,23 @@ mod test_conventional_commits {
             vec![
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
-                    message: String::from("something broke")
+                    message: String::from("something broke"),
+                    original_source: String::from("BREAKING CHANGE: something broke"),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Fix,
-                    message: String::from("a bug")
+                    message: String::from("a bug"),
+                    original_source: String::from("fix: a bug"),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
-                    message: String::from("something else broke")
+                    message: String::from("something else broke"),
+                    original_source: String::from("BREAKING CHANGE: something else broke"),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Feature,
-                    message: String::from("a features")
+                    message: String::from("a features"),
+                    original_source: String::from("feat: a features"),
                 },
             ]
         );
@@ -179,11 +243,15 @@ mod test_conventional_commits {
             vec![
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
-                    message: String::from("Wrong scope breaking change!")
+                    message: String::from("Wrong scope breaking change!"),
+                    original_source: String::from(
+                        "feat(wrong_scope)!: Wrong scope breaking change!"
+                    ),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Fix,
-                    message: String::from("No scope")
+                    message: String::from("No scope"),
+                    original_source: String::from("fix: No scope"),
                 },
             ]
         );
@@ -202,7 +270,8 @@ mod test_conventional_commits {
             conventional_commits,
             vec![ConventionalCommit {
                 change_type: ChangeType::Fix,
-                message: String::from("No scope")
+                message: String::from("No scope"),
+                original_source: String::from("fix: No scope"),
             },]
         );
     }
@@ -228,11 +297,13 @@ mod test_conventional_commits {
             vec![
                 ConventionalCommit {
                     change_type: ChangeType::Feature,
-                    message: String::from("Right scope feature")
+                    message: String::from("Right scope feature"),
+                    original_source: String::from("feat(scope): Right scope feature"),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Fix,
-                    message: String::from("No scope")
+                    message: String::from("No scope"),
+                    original_source: String::from("fix: No scope"),
                 },
             ]
         );
@@ -262,7 +333,8 @@ mod test_conventional_commits {
                 change_type: ChangeType::Custom(ChangelogSectionSource::CommitFooter(
                     "custom-footer".into()
                 )),
-                message: String::from("hello")
+                message: String::from("hello"),
+                original_source: String::from("custom-footer: hello"),
             },]
         );
     }

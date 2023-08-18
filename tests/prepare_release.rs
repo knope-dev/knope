@@ -1767,3 +1767,89 @@ fn override_version_multiple_packages() {
         );
     }
 }
+
+/// The PrepareRelease step should print out every commit and changeset summary that will be included,
+/// which packages those commits/changesets are applicable to,
+/// and the semantic rules applicable to each change, as well as the final rule and version selected
+/// for each package when the `--verbose` flag is provided.
+#[test]
+fn verbose() {
+    // Arrange a project with two packages. Add a changeset file for the _first_ package only
+    // that has a breaking change. Add a conventional commit for _both_ packages with a feature.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "first/v1.2.3");
+    tag(temp_path, "second/v0.4.6");
+    commit(temp_path, "feat: A feature");
+    commit(temp_path, "feat!: A breaking feature");
+    commit(temp_path, "fix: A bug fix");
+    commit(temp_path, "fix!: A breaking bug fix");
+    commit(
+        temp_path,
+        "chore: A chore with a breaking footer\n\nBREAKING CHANGE: A breaking change",
+    );
+    commit(temp_path, "feat(first): A feature for the first package");
+    commit(temp_path, "feat: A feature with a separate breaking change\n\nBREAKING CHANGE: Another breaking change");
+
+    let changeset_path = temp_path.join(".changeset");
+    create_dir(&changeset_path).unwrap();
+    Change {
+        unique_id: UniqueId::from("breaking_change"),
+        summary: "#### A breaking changeset\n\nA breaking change for only the first package"
+            .to_string(),
+        versioning: Versioning::from(("first", ChangeType::Major)),
+    }
+    .write_to_directory(&changeset_path)
+    .unwrap();
+    Change {
+        unique_id: UniqueId::from("feature"),
+        summary:
+            "#### A feature for first, fix for second\n\nAnd even some details which aren't visible"
+                .to_string(),
+        versioning: Versioning::try_from_iter([
+            ("first", ChangeType::Minor),
+            ("second", ChangeType::Patch),
+        ])
+        .unwrap(),
+    }
+    .write_to_directory(&changeset_path)
+    .unwrap();
+
+    let src_path = Path::new("tests/prepare_release/verbose");
+    for file in [
+        "knope.toml",
+        "Cargo.toml",
+        "package.json",
+        "pyproject.toml",
+        "FIRST_CHANGELOG.md",
+        "SECOND_CHANGELOG.md",
+    ] {
+        copy(src_path.join(file), temp_path.join(file)).unwrap();
+    }
+    add_all(temp_path);
+
+    // Act—run a PrepareRelease step to bump versions and update changelogs
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .arg("--verbose")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("--verbose")
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(src_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stderr_eq("")
+        .stdout_matches_path(src_path.join("output.txt"));
+}

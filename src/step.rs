@@ -16,6 +16,7 @@ use crate::{
     command, git, issues, releases,
     releases::{changelog, semver::Label, suggested_package_toml},
     state::RunType,
+    workflow::Verbose,
 };
 
 /// Each variant describes an action you can take using knope, they are used when defining your
@@ -84,7 +85,7 @@ pub(crate) enum Step {
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, StepError> {
+    pub(crate) fn run(self, run_type: RunType, verbose: Verbose) -> Result<RunType, StepError> {
         match self {
             Step::SelectJiraIssue { status } => issues::select_jira_issue(&status, run_type),
             Step::TransitionJiraIssue { status } => {
@@ -100,7 +101,7 @@ impl Step {
                 command::run_command(run_type, command, variables)
             }
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(run_type, &prepare_release)
+                releases::prepare_release(run_type, &prepare_release, verbose)
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type),
             Step::Release => releases::release(run_type),
