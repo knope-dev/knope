@@ -42,5 +42,5 @@ time = { version = "0.3.25" }
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
-snapbox = "0.4.10"
+snapbox = "0.4.12"
 tempfile = "3.8.0"
