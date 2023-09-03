@@ -85,7 +85,6 @@ pub(crate) fn release(
         })?;
 
     if let Some(assets) = assets {
-        let assets_url = format!("{}/assets", response.url);
         for asset in assets {
             let file = std::fs::File::open(&asset.path).map_err(|source| {
                 Error::CouldNotReadAssetFile {
@@ -93,7 +92,8 @@ pub(crate) fn release(
                     source,
                 }
             })?;
-            ureq::post(&assets_url)
+            let asset_url = format!("{}/assets?name={}", response.url, asset.name);
+            ureq::post(&asset_url)
                 .set("Authorization", &token_header)
                 .send(file)
                 .map_err(|source| Error::ApiRequest {
