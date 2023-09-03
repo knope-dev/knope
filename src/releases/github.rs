@@ -97,11 +97,13 @@ pub(crate) fn release(
             let upload_url = upload_template.set("name", asset.name.as_str()).build();
             ureq::post(&upload_url)
                 .set("Authorization", &token_header)
+                .set("Content-Type", "application/octet-stream")
                 .send(file)
                 .map_err(|source| Error::ApiRequest {
                     source: Box::new(source),
                     activity: format!(
-                        "uploading asset {name}. Release has been created but not published!"
+                        "uploading asset {name}. Release has been created but not published!",
+                        name = asset.name
                     ),
                 })?;
         }
