@@ -20,7 +20,7 @@ name = "knope-aarch64-apple-darwin"
 
 
 [[workflows]]
-name = "release"
+name = "prepare-release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
@@ -31,6 +31,9 @@ command = "git commit -m \"chore: prepare release $version\" && git push"
 
 [workflows.steps.variables]
 "$version" = "Version"
+
+[[workflows]]
+name = "release"
 
 [[workflows.steps]]
 type = "Release"
