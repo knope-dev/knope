@@ -61,6 +61,7 @@ pub fn run() -> Result<()> {
     let mut matches = build_cli(&config).get_matches();
 
     let mut config = config.into_inner();
+    let verbose = matches.get_flag(VERBOSE).into();
 
     if let Ok(Some(true)) = matches.try_get_one("generate") {
         println!("Generating a knope.toml file");
@@ -94,7 +95,7 @@ pub fn run() -> Result<()> {
     let (state, workflows) = create_state(config, sub_matches.as_mut())?;
 
     if let Ok(Some(true)) = matches.try_get_one("validate") {
-        workflow::validate(workflows, state)?;
+        workflow::validate(workflows, state, verbose)?;
         return Ok(());
     }
 
@@ -115,17 +116,29 @@ pub fn run() -> Result<()> {
         RunType::Real(state)
     };
 
-    workflow::run(workflow, state)?;
+    workflow::run(workflow, state, verbose)?;
     Ok(())
 }
 
 const OVERRIDE_ONE_VERSION: &str = "override-one-version";
 const OVERRIDE_MULTIPLE_VERSIONS: &str = "override-multiple-versions";
-
 const PRERELEASE_LABEL: &str = "prerelease-label";
+const VERBOSE: &str = "verbose";
 
 fn build_cli(config: &ConfigSource) -> Command {
-    let mut command = command!().propagate_version(true).arg(arg!(--"dry-run" "Pretend to run a workflow, outputting what _would_ happen without actually doing it.").global(true));
+    let mut command = command!()
+        .propagate_version(true)
+        .arg(
+            Arg::new("dry-run").long("dry-run")
+                .help("Pretend to run a workflow, outputting what _would_ happen without actually doing it.")
+                .action(ArgAction::SetTrue)
+                .global(true)
+        ).arg(
+        Arg::new(VERBOSE).long(VERBOSE).short('v')
+            .help("Print extra information (for debugging)")
+            .action(ArgAction::SetTrue)
+            .global(true)
+    );
     let config = match config {
         ConfigSource::Default(config) => {
             command = command

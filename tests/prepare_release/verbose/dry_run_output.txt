@@ -1,0 +1,120 @@
+Would delete: .changeset/breaking_change.md
+Would delete: .changeset/feature.md
+Would delete: .changeset/feature.md
+Determining new version for first
+commit feat: A feature
+	implies rule MINOR
+commit feat!: A breaking feature
+	implies rule MAJOR
+commit fix: A bug fix
+	implies rule PATCH
+commit fix!: A breaking bug fix
+	implies rule MAJOR
+commit chore: A chore with a breaking footer
+	Containing footer BREAKING CHANGE: A breaking change
+	implies rule MAJOR
+commit feat(first): A feature for the first package
+	implies rule MINOR
+commit feat: A feature with a separate breaking change
+	Containing footer BREAKING CHANGE: Another breaking change
+	implies rule MAJOR
+commit feat: A feature with a separate breaking change
+	implies rule MINOR
+changeset breaking_change.md
+	implies rule MAJOR
+changeset feature.md
+	implies rule MINOR
+Using MAJOR rule to bump from 1.2.3 to 2.0.0
+Would write 2.0.0 to Cargo.toml
+Would write 2.0.0 to pyproject.toml
+Would add the following to FIRST_CHANGELOG.md:
+## 2.0.0 ([DATE])
+
+### Breaking Changes
+
+#### A breaking feature
+
+#### A breaking bug fix
+
+#### A breaking change
+
+#### Another breaking change
+
+#### A breaking changeset
+
+A breaking change for only the first package
+
+### Features
+
+#### A feature
+
+#### A feature for the first package
+
+#### A feature with a separate breaking change
+
+#### A feature for first, fix for second
+
+And even some details which aren't visible
+
+### Fixes
+
+#### A bug fix
+
+Would add files to git:
+  Cargo.toml
+  pyproject.toml
+  FIRST_CHANGELOG.md
+  .changeset/breaking_change.md
+  .changeset/feature.md
+Determining new version for second
+commit feat: A feature
+	implies rule MINOR
+commit feat!: A breaking feature
+	implies rule MAJOR
+commit fix: A bug fix
+	implies rule PATCH
+commit fix!: A breaking bug fix
+	implies rule MAJOR
+commit chore: A chore with a breaking footer
+	Containing footer BREAKING CHANGE: A breaking change
+	implies rule MAJOR
+commit feat: A feature with a separate breaking change
+	Containing footer BREAKING CHANGE: Another breaking change
+	implies rule MAJOR
+commit feat: A feature with a separate breaking change
+	implies rule MINOR
+changeset feature.md
+	implies rule PATCH
+Rule is MAJOR, but major component is 0. Bumping minor component from 0.4.6 to 0.5.0
+Would write 0.5.0 to package.json
+Would add the following to SECOND_CHANGELOG.md:
+## 0.5.0 ([DATE])
+
+### Breaking Changes
+
+#### A breaking feature
+
+#### A breaking bug fix
+
+#### A breaking change
+
+#### Another breaking change
+
+### Features
+
+#### A feature
+
+#### A feature with a separate breaking change
+
+### Fixes
+
+#### A bug fix
+
+#### A feature for first, fix for second
+
+And even some details which aren't visible
+
+Would add files to git:
+  package.json
+  SECOND_CHANGELOG.md
+  .changeset/feature.md

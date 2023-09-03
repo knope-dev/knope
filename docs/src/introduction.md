@@ -26,6 +26,10 @@ Prints out a help message containing available workflows and options, then exits
 
 Prints out the version of `knope` and exits. This can be run without any positional workflow argument.
 
+### `--verbose`
+
+Generally makes `knope` spit out a _lot_ of extra detail to stdout to help with diagnosing issues.
+
 ### `--generate`
 
 Generates a `knope.toml` file in the current directory. _This cannot be used if there is already a `knope.toml` file present._
