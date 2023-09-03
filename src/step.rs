@@ -6,14 +6,13 @@ use gix::{
     revision::walk,
     traverse::commit::ancestors,
 };
-use inquire::InquireError;
 use log::error;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    command, git, issues, releases,
+    app_config, command, git, issues, prompt, releases,
     releases::{changelog, semver::Label, suggested_package_toml},
     state::RunType,
 };
@@ -145,15 +144,6 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/github.html")
     )]
     GitHubNotConfigured,
-    #[error("Could not open configuration path")]
-    #[diagnostic(
-        code(step::could_not_open_config_path),
-        help(
-            "Knope attempts to store config in a local config directory, this error may be a \
-            permissions issue or may mean you're using an obscure operating system"
-        )
-    )]
-    CouldNotOpenConfigPath,
     #[error("Could not increment pre-release version {0}")]
     #[diagnostic(
         code(step::invalid_pre_release_version),
@@ -306,19 +296,6 @@ pub(super) enum StepError {
         help("This step requires decoding a commit message. If this fails, it may be a bug.")
     )]
     DecodeError(#[from] decode::Error),
-    #[error("Failed to get user input")]
-    #[diagnostic(
-        code(step::user_input_error),
-        help("This step requires user input, but no user input was provided. Try running the step again."),
-    )]
-    UserInput(#[from] InquireError),
-    #[error("PrepareRelease needs to occur before this step")]
-    #[diagnostic(
-        code(step::release_not_prepared),
-        help("You must call the PrepareRelease step before this one."),
-        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html")
-    )]
-    ReleaseNotPrepared,
     #[error("No packages are defined")]
     #[diagnostic(
         code(step::no_defined_packages),
@@ -360,6 +337,14 @@ pub(super) enum StepError {
         help("This is a bug, please report it to https://github.com/knope-dev/knope")
     )]
     GeneratedTOML(#[from] toml::ser::Error),
+    #[error(transparent)]
+    GitHub(#[from] releases::github::Error),
+    #[error(transparent)]
+    Release(#[from] releases::Error),
+    #[error(transparent)]
+    AppConfig(#[from] app_config::Error),
+    #[error(transparent)]
+    Prompt(#[from] prompt::Error),
 }
 
 impl StepError {

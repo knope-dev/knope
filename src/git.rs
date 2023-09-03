@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, path::PathBuf, str::FromStr};
+use std::{collections::VecDeque, ops::Deref, path::PathBuf, str::FromStr};
 
 use git2::{build::CheckoutBuilder, Branch, BranchType, IndexAddOption, Repository};
 use itertools::Itertools;
@@ -251,9 +251,10 @@ mod test_branch_name_from_issue {
 }
 
 pub(crate) fn get_commit_messages_after_last_stable_version(
-    package_name: &Option<PackageName>,
+    package_name: Option<&PackageName>,
 ) -> Result<Vec<String>, StepError> {
-    let target_version = get_current_versions_from_tag(package_name.as_deref())?.stable;
+    let target_version =
+        get_current_versions_from_tag(package_name.map(PackageName::deref))?.stable;
     let reference = if let Some(version) = target_version {
         let tag = tag_name(&version.into(), package_name);
         debug!("Processing all commits since tag {tag}");

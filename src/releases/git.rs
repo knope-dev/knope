@@ -9,7 +9,7 @@ use crate::{
     step::StepError,
 };
 
-pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) -> String {
+pub(crate) fn tag_name(version: &Version, package_name: Option<&PackageName>) -> String {
     let prefix = package_name
         .as_ref()
         .map_or_else(|| "v".to_string(), |name| format!("{name}/v"));
@@ -19,7 +19,7 @@ pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) ->
 pub(crate) fn release(
     dry_run_stdout: &mut Option<Box<dyn Write>>,
     version: &Version,
-    package_name: &Option<PackageName>,
+    package_name: Option<&PackageName>,
 ) -> Result<(), StepError> {
     let tag = tag_name(version, package_name);
 

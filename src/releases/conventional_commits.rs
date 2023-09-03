@@ -272,7 +272,7 @@ fn get_conventional_commits_after_last_stable_version(
     package: &Package,
     consider_scopes: bool,
 ) -> Result<Vec<ConventionalCommit>, StepError> {
-    let commit_messages = get_commit_messages_after_last_stable_version(&package.name)?;
+    let commit_messages = get_commit_messages_after_last_stable_version(package.name.as_ref())?;
     Ok(ConventionalCommit::from_commit_messages(
         &commit_messages,
         consider_scopes,

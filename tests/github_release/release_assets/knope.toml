@@ -1,0 +1,27 @@
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[package.assets]]
+name = "first_thing"
+path = "assets/first_thing"
+
+[[package.assets]]
+name = "second_thing"
+path = "assets/second_thing"
+
+[[workflows]]
+name = "prepare-release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "Release"
+
+[github]
+owner = "knope-dev"
+repo = "knope"

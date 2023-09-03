@@ -1,0 +1,46 @@
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[package.assets]]
+path = "artifact/knope-x86_64-unknown-linux-musl.tgz"
+name = "knope-x86_64-unknown-linux-musl"
+
+[[package.assets]]
+path = "artifact/knope-x86_64-pc-windows-msvc.tgz"
+name = "knope-x86_64-pc-windows-msvc"
+
+[[package.assets]]
+path = "artifact/knope-x86_64-apple-darwin.tgz"
+name = "knope-x86_64-apple-darwin"
+
+[[package.assets]]
+path = "artifact/knope-aarch64-apple-darwin.tgz"
+name = "knope-aarch64-apple-darwin"
+
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m \"chore: prepare release $version\" && git push"
+
+[workflows.steps.variables]
+"$version" = "Version"
+
+[[workflows.steps]]
+type = "Release"
+
+[[workflows]]
+name = "document-change"
+
+[[workflows.steps]]
+type = "CreateChangeFile"
+
+[github]
+owner = "knope-dev"
+repo = "knope"

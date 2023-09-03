@@ -191,7 +191,7 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, packages());
         let version = Version::new(1, 2, 3, None);
-        state.packages[0].prepared_release = Some(Release::new(String::new(), version.clone()));
+        state.packages[0].prepared_release = Some(Release::new(None, version.clone()));
 
         let command = replace_variables(command, variables, &state).unwrap();
 

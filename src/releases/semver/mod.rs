@@ -117,7 +117,7 @@ pub(crate) fn bump_version_and_update_state(
                 bump(package.get_version()?, rule)?
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            package.prepared_release = Some(Release::new(String::new(), version));
+            package.prepared_release = Some(Release::new(None, version));
             Ok(package)
         })
         .collect::<Result<Vec<Package>, StepError>>()?;
@@ -129,10 +129,26 @@ pub(crate) fn bump_version_and_update_state(
 }
 
 impl Package {
-    /// Get the current version of a package.
+    /// Get the current version of a package determined by the last tag for the package _and_ the
+    /// version in versioned files. The version from files takes precedent over version from tag.
     pub(crate) fn get_version(&self) -> Result<CurrentVersions, StepError> {
-        let version_from_files = self
-            .versioned_files
+        let mut current_versions = get_current_versions_from_tag(self.name.as_deref())?;
+
+        if let Some(version_from_files) = self.version_from_files()? {
+            current_versions.update_version(version_from_files);
+        }
+
+        Ok(current_versions)
+    }
+
+    /// The version of the package per its versioned files.
+    ///
+    /// # Errors
+    ///
+    /// 1. If the versions of all versioned files are not consistent
+    /// 2. If the file cannot be parsed into a [`Version`]
+    pub(crate) fn version_from_files(&self) -> Result<Option<Version>, StepError> {
+        self.versioned_files
             .iter()
             .map(|versioned_file| versioned_file.get_version().map_err(StepError::from))
             .map(|result| result.and_then(|version_string| Version::from_str(&version_string)))
@@ -149,15 +165,7 @@ impl Package {
                 }
                 (_, Err(err)) | (Err(err), _) => Err(err),
             })
-            .transpose()?;
-
-        let mut current_versions = get_current_versions_from_tag(self.name.as_deref())?;
-
-        if let Some(version_from_files) = version_from_files {
-            current_versions.update_version(version_from_files);
-        }
-
-        Ok(current_versions)
+            .transpose()
     }
 
     /// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version

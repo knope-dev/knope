@@ -31,6 +31,7 @@ Each package, whether it's defined in the `[package]` section or in the `[packag
 2. `changelog` is the (optional) Markdown file you'd like to add release notes to.
 3. `scopes` is an optional array of [conventional commit scopes] which should be considered for the package when running the [`PrepareRelease`] step.
 4. `extra_changelog_sections` is an optional array of extra sections that can be added to the changelog when running the [`PrepareRelease`] step.
+5. `assets` is a list of files that should be included in the release along with the name that should appear with them. These are only used for GitHub releases by the [`Release`] step.
 
 ### `versioned_files`
 
@@ -92,7 +93,7 @@ extra_changelog_sections = [
 
 ## Examples
 
-### A Single Package with a Single Versioned File
+### A Single Package with a Single Versioned File and multiple Assets
 
 This is the relevant part of Knope's own `knope.toml`, where we keep release notes in a file called `CHANGELOG.md` at the root of the project and version the project using `Cargo.toml` (as this is a Rust project).
 
@@ -101,6 +102,14 @@ This is the relevant part of Knope's own `knope.toml`, where we keep release not
 [package]
 versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
+
+[[package.assets]]
+path = "artifact/my-binary-linux-amd64.tgz"
+name = "linux-amd64.tgz"
+
+[[package.assets]]
+path = "artifact/my-binary-darwin-amd64.tgz"
+name = "darwin-amd64.tgz"
 ```
 
 ### A Single Package with Multiple Versioned Files

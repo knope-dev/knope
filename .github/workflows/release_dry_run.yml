@@ -12,4 +12,4 @@ jobs:
           token: ${{ secrets.PAT }}
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo run -- release --dry-run
+          cargo run -- prepare-release --dry-run

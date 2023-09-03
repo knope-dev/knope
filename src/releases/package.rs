@@ -28,6 +28,7 @@ pub(crate) struct Package {
     pub(crate) prepared_release: Option<Release>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
+    pub(crate) assets: Option<Vec<Asset>>,
 }
 
 impl Package {
@@ -149,6 +150,12 @@ impl Borrow<str> for PackageName {
     fn borrow(&self) -> &str {
         &self.0
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub(crate) struct Asset {
+    pub(crate) path: PathBuf,
+    pub(crate) name: String,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

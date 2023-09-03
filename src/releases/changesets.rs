@@ -5,6 +5,7 @@ use inquire::{MultiSelect, Select};
 use itertools::Itertools;
 
 use crate::{
+    prompt,
     releases::{package::ChangelogSectionSource, Change, Package},
     state::RunType,
     step::StepError,
@@ -27,7 +28,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
             state.packages.clone(),
         )
         .prompt()
-        .map_err(StepError::UserInput)?
+        .map_err(prompt::Error::from)?
     };
 
     let versioning = packages
@@ -51,14 +52,15 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
                 .collect_vec();
             Select::new("What type of change is this?", change_types)
                 .prompt()
-                .map_err(StepError::UserInput)
+                .map_err(prompt::Error::from)
+                .map_err(StepError::from)
                 .map(|change_type| (package_name, change_type.into()))
         })
         .collect::<Result<Versioning, StepError>>()?;
     let summary = inquire::Text::new("What is a short summary of this change?")
         .with_help_message("This will be used as a header in the changelog")
         .prompt()
-        .map_err(StepError::UserInput)?;
+        .map_err(prompt::Error::from)?;
     let unique_id = UniqueId::from(&summary);
     let summary = format!("#### {summary}");
     let change = changesets::Change {
