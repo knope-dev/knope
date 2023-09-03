@@ -72,12 +72,9 @@ impl Package {
             }
             override_version
         } else {
-            let bump_rule = self.bump_rule(verbose);
             let versions = self.get_version()?;
+            let bump_rule = self.bump_rule(verbose);
             let rule = if let Some(pre_label) = prerelease_label {
-                if let Verbose::Yes = verbose {
-                    println!("Pre-release label {pre_label} selected");
-                }
                 Rule::Pre {
                     label: pre_label.clone(),
                     stable_rule: bump_rule,
@@ -85,11 +82,7 @@ impl Package {
             } else {
                 bump_rule.into()
             };
-            let new_version = bump(versions, &rule)?;
-            if let Verbose::Yes = verbose {
-                println!("New version is {new_version}");
-            }
-            new_version
+            bump(versions, &rule, verbose)?
         };
 
         self = self.write_version(&new_version, dry_run)?;

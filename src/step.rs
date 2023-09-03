@@ -96,7 +96,7 @@ impl Step {
             }
             Step::SwitchBranches => git::switch_branches(run_type),
             Step::RebaseBranch { to } => git::rebase_branch(&to, run_type),
-            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule),
+            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule, verbose),
             Step::Command { command, variables } => {
                 command::run_command(run_type, command, variables)
             }
