@@ -1,5 +1,6 @@
 use std::{io::Write, path::PathBuf};
 
+use datta::UriTemplate;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -85,6 +86,7 @@ pub(crate) fn release(
         })?;
 
     if let Some(assets) = assets {
+        let mut upload_template = UriTemplate::new(&response.upload_url);
         for asset in assets {
             let file = std::fs::File::open(&asset.path).map_err(|source| {
                 Error::CouldNotReadAssetFile {
@@ -92,8 +94,8 @@ pub(crate) fn release(
                     source,
                 }
             })?;
-            let asset_url = format!("{}/assets?name={}", response.url, asset.name);
-            ureq::post(&asset_url)
+            let upload_url = upload_template.set("name", asset.name.as_str()).build();
+            ureq::post(&upload_url)
                 .set("Authorization", &token_header)
                 .send(file)
                 .map_err(|source| Error::ApiRequest {
@@ -233,4 +235,5 @@ impl<'a> GitHubRelease<'a> {
 #[derive(Deserialize)]
 struct CreateReleaseResponse {
     url: String,
+    upload_url: String,
 }
