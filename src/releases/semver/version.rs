@@ -59,6 +59,32 @@ pub(crate) struct StableVersion {
     pub(crate) patch: u64,
 }
 
+impl StableVersion {
+    pub(crate) const fn increment_major(self) -> Self {
+        Self {
+            major: self.major + 1,
+            minor: 0,
+            patch: 0,
+        }
+    }
+
+    pub(crate) const fn increment_minor(self) -> Self {
+        Self {
+            major: self.major,
+            minor: self.minor + 1,
+            patch: 0,
+        }
+    }
+
+    pub(crate) const fn increment_patch(self) -> Self {
+        Self {
+            major: self.major,
+            minor: self.minor,
+            patch: self.patch + 1,
+        }
+    }
+}
+
 impl Ord for StableVersion {
     fn cmp(&self, other: &Self) -> Ordering {
         self.major
@@ -71,6 +97,18 @@ impl Ord for StableVersion {
 impl PartialOrd for StableVersion {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Display for StableVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{major}.{minor}.{patch}",
+            major = self.major,
+            minor = self.minor,
+            patch = self.patch
+        )
     }
 }
 

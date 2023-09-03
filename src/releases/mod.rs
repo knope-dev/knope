@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt, fmt::Display};
 
 use ::changesets::PackageChange;
 use time::{macros::format_description, OffsetDateTime};
@@ -35,11 +35,13 @@ pub(crate) use non_empty_map::PrereleaseMap;
 
 use crate::{
     releases::conventional_commits::add_releases_from_conventional_commits, step::PrepareRelease,
+    workflow::Verbose,
 };
 
 pub(crate) fn prepare_release(
     run_type: RunType,
     prepare_release: &PrepareRelease,
+    verbose: Verbose,
 ) -> Result<RunType, StepError> {
     let (mut state, mut dry_run_stdout) = match run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
@@ -54,7 +56,9 @@ pub(crate) fn prepare_release(
         .and_then(|packages| {
             packages
                 .into_iter()
-                .map(|package| package.write_release(prerelease_label, &mut dry_run_stdout))
+                .map(|package| {
+                    package.write_release(prerelease_label, &mut dry_run_stdout, verbose)
+                })
                 .collect()
         })?;
 
@@ -104,6 +108,17 @@ impl Release {
 pub(crate) enum Change {
     ConventionalCommit(ConventionalCommit),
     ChangeSet(PackageChange),
+}
+
+impl Display for Change {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Change::ConventionalCommit(commit) => write!(f, "{commit}"),
+            Change::ChangeSet(change) => {
+                write!(f, "{}", change.unique_id.to_file_name())
+            }
+        }
+    }
 }
 
 impl Change {

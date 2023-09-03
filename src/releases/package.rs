@@ -15,6 +15,7 @@ use crate::{
         Change, Release, Rule,
     },
     step::StepError,
+    workflow::Verbose,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -31,10 +32,20 @@ pub(crate) struct Package {
 }
 
 impl Package {
-    fn bump_rule(&self) -> ConventionalRule {
+    fn bump_rule(&self, verbose: Verbose) -> ConventionalRule {
         self.pending_changes
             .iter()
-            .map(|change| change.change_type().into())
+            .map(|change| {
+                let rule = change.change_type().into();
+                let change_source = match change {
+                    Change::ConventionalCommit(_) => "commit",
+                    Change::ChangeSet(_) => "changeset",
+                };
+                if let Verbose::Yes = verbose {
+                    println!("{change_source} {change}\n\timplies rule {rule}");
+                }
+                rule
+            })
             .max()
             .unwrap_or_default()
     }
@@ -43,16 +54,26 @@ impl Package {
         mut self,
         prerelease_label: &Option<Label>,
         dry_run: &mut Option<Box<dyn Write>>,
+        verbose: Verbose,
     ) -> Result<Self, StepError> {
         if self.pending_changes.is_empty() {
             return Ok(self);
         }
 
+        if let Verbose::Yes = verbose {
+            if let Some(package_name) = &self.name {
+                println!("Determining new version for {package_name}");
+            }
+        }
+
         let new_version = if let Some(override_version) = self.override_version.take() {
+            if let Verbose::Yes = verbose {
+                println!("Using overridden version {override_version}");
+            }
             override_version
         } else {
-            let bump_rule = self.bump_rule();
             let versions = self.get_version()?;
+            let bump_rule = self.bump_rule(verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
                     label: pre_label.clone(),
@@ -61,7 +82,7 @@ impl Package {
             } else {
                 bump_rule.into()
             };
-            bump(versions, &rule)?
+            bump(versions, &rule, verbose)?
         };
 
         self = self.write_version(&new_version, dry_run)?;

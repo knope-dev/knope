@@ -29,6 +29,22 @@ impl Workflow {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum Verbose {
+    Yes,
+    No,
+}
+
+impl From<bool> for Verbose {
+    fn from(verbose: bool) -> Self {
+        if verbose {
+            Verbose::Yes
+        } else {
+            Verbose::No
+        }
+    }
+}
+
 /// A collection of errors from running with the `--validate` option.
 #[derive(Debug, Error, Diagnostic)]
 #[error("There are problems with the defined workflows")]
@@ -47,9 +63,9 @@ pub struct Error {
 }
 
 /// Run a series of [`Step`], each of which updates `state`.
-pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
+pub(crate) fn run(workflow: Workflow, mut state: RunType, verbose: Verbose) -> Result<(), Error> {
     for step in workflow.steps {
-        state = match step.run(state) {
+        state = match step.run(state, verbose) {
             Ok(state) => state,
             Err(err) => {
                 return Err(Error {
@@ -66,6 +82,7 @@ pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
 pub(crate) fn validate(
     workflows: Vec<Workflow>,
     state: State,
+    verbose: Verbose,
 ) -> Result<(), ValidationErrorCollection> {
     let errors = workflows
         .into_iter()
@@ -76,6 +93,7 @@ pub(crate) fn validate(
                     state: state.clone(),
                     stdout: Box::new(sink()),
                 },
+                verbose,
             )
             .err()
         })
