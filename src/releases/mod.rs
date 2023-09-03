@@ -340,25 +340,22 @@ struct PackageWithRelease<'a> {
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
 fn find_prepared_release(package: &Package) -> Result<Option<Release>, StepError> {
-    Ok(package
-        .version_from_files()?
-        .map(|current_version| {
-            get_current_versions_from_tag(package.name.as_deref())
-                .map(CurrentVersions::into_latest)
-                .map(|version_from_tag| {
-                    version_from_tag.and_then(|version_from_tag| {
-                        (version_from_tag != current_version).then_some(current_version)
-                    })
-                })
-        })
-        .transpose()?
-        .flatten()
-        .map(|version_of_new_release| Release {
-            new_changelog: package
-                .changelog
-                .as_ref()
-                .and_then(|changelog| changelog.get_section(&version_of_new_release)),
-            new_version: version_of_new_release,
-            date: OffsetDateTime::now_utc(),
-        }))
+    let Some(current_version) = package.version_from_files()? else {
+        return Ok(None);
+    };
+    let last_tag =
+        get_current_versions_from_tag(package.name.as_deref()).map(CurrentVersions::into_latest)?;
+    let version_of_new_release = match last_tag {
+        Some(last_tag) if last_tag != current_version => current_version,
+        None => current_version,
+        _ => return Ok(None),
+    };
+    Ok(Some(Release {
+        new_changelog: package
+            .changelog
+            .as_ref()
+            .and_then(|changelog| changelog.get_section(&version_of_new_release)),
+        new_version: version_of_new_release,
+        date: OffsetDateTime::now_utc(),
+    }))
 }

@@ -184,3 +184,29 @@ fn auto_generate_release_notes() {
         .with_assert(assert())
         .stdout_matches_path(source_path.join("auto_generate_dry_run_output.txt"));
 }
+
+#[test]
+fn no_previous_tag() {
+    // Arrange a package that is ready to release, but hasn't been released yet
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/github_release/no_previous_tag");
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Run the actual release (but dry-run because don't test GitHub)
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+}
