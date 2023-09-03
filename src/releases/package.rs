@@ -42,7 +42,7 @@ impl Package {
                     Change::ChangeSet(_) => "changeset",
                 };
                 if let Verbose::Yes = verbose {
-                    println!("{change_source} \"{change}\" implies rule {rule}");
+                    println!("{change_source} {change}\n\timplies rule {rule}");
                 }
                 rule
             })

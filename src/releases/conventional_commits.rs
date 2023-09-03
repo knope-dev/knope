@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use git_conventional::{Commit, Type};
+use git_conventional::{Commit, Footer, Type};
 use log::debug;
 
 use crate::{
@@ -45,18 +45,14 @@ impl ConventionalCommit {
         let mut conventional_commits = Vec::with_capacity(commits.len());
 
         for commit in commits {
+            let commit_summary = format_commit_summary(&commit);
             for footer in commit.footers() {
                 let source: ChangelogSectionSource = CommitFooter::from(footer.token()).into();
                 if package.extra_changelog_sections.contains_key(&source) {
                     conventional_commits.push(Self {
                         change_type: ChangeType::from(source),
                         message: footer.value().to_string(),
-                        original_source: format!(
-                            "{}{} {}",
-                            footer.token(),
-                            footer.separator(),
-                            footer.value()
-                        ),
+                        original_source: format_commit_footer(&commit_summary, footer),
                     });
                 }
             }
@@ -64,30 +60,11 @@ impl ConventionalCommit {
                 let original_source = commit
                     .footers()
                     .iter()
-                    .find(|footer| footer.breaking())
+                    .find(|it| it.breaking())
                     .map_or_else(
-                        || {
-                            let commit_scope = commit
-                                .scope()
-                                .map(|s| s.to_string())
-                                .map(|it| format!("({it})"))
-                                .unwrap_or_default();
-                            format!(
-                                "{}{commit_scope}!: {summary}",
-                                commit.type_(),
-                                summary = commit.description()
-                            )
-                        },
-                        |footer| {
-                            format!(
-                                "{}{} {}",
-                                footer.token(),
-                                footer.separator(),
-                                footer.value()
-                            )
-                        },
+                        || commit_summary.clone(),
+                        |breaking_footer| format_commit_footer(&commit_summary, breaking_footer),
                     );
-
                 conventional_commits.push(Self {
                     change_type: ChangeType::Breaking,
                     message: breaking_message.to_string(),
@@ -100,33 +77,53 @@ impl ConventionalCommit {
                 }
             }
 
-            let commit_scope = commit
-                .scope()
-                .map(|s| s.to_string())
-                .map(|it| format!("({it})"))
-                .unwrap_or_default();
-            let original_source = format!(
-                "{}{commit_scope}: {summary}",
-                commit.type_(),
-                summary = commit.description()
-            );
-
             if commit.type_() == Type::FEAT {
                 conventional_commits.push(Self {
                     change_type: ChangeType::Feature,
                     message: commit.description().to_string(),
-                    original_source,
+                    original_source: commit_summary,
                 });
             } else if commit.type_() == Type::FIX {
                 conventional_commits.push(Self {
                     change_type: ChangeType::Fix,
                     message: commit.description().to_string(),
-                    original_source,
+                    original_source: commit_summary,
                 });
             }
         }
         conventional_commits
     }
+}
+
+fn format_commit_summary(commit: &Commit) -> String {
+    let commit_scope = commit
+        .scope()
+        .map(|s| s.to_string())
+        .map(|it| format!("({it})"))
+        .unwrap_or_default();
+    let bang = if commit.breaking() {
+        commit
+            .footers()
+            .iter()
+            .find(|it| it.breaking())
+            .map_or_else(|| "!", |_| "")
+    } else {
+        ""
+    };
+    format!(
+        "{commit_type}{commit_scope}{bang}: {summary}",
+        commit_type = commit.type_(),
+        summary = commit.description()
+    )
+}
+
+fn format_commit_footer(commit_summary: &str, footer: &Footer) -> String {
+    format!(
+        "{commit_summary}\n\tContaining footer {}{} {}",
+        footer.token(),
+        footer.separator(),
+        footer.value()
+    )
 }
 
 impl Display for ConventionalCommit {
@@ -194,7 +191,7 @@ mod test_conventional_commits {
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
                     message: String::from("something broke"),
-                    original_source: String::from("BREAKING CHANGE: something broke"),
+                    original_source: String::from("fix: a bug\n\tContaining footer BREAKING CHANGE: something broke"),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Fix,
@@ -204,7 +201,7 @@ mod test_conventional_commits {
                 ConventionalCommit {
                     change_type: ChangeType::Breaking,
                     message: String::from("something else broke"),
-                    original_source: String::from("BREAKING CHANGE: something else broke"),
+                    original_source: String::from("feat: a features\n\tContaining footer BREAKING CHANGE: something else broke"),
                 },
                 ConventionalCommit {
                     change_type: ChangeType::Feature,
@@ -334,7 +331,9 @@ mod test_conventional_commits {
                     "custom-footer".into()
                 )),
                 message: String::from("hello"),
-                original_source: String::from("custom-footer: hello"),
+                original_source: String::from(
+                    "chore: ignored type\n\tContaining footer custom-footer: hello"
+                ),
             },]
         );
     }
