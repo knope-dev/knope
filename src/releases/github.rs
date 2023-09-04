@@ -76,7 +76,7 @@ pub(crate) fn release(
         .set("Authorization", &token_header)
         .send_json(github_release)
         .map_err(|source| Error::ApiRequest {
-            source: Box::new(source),
+            err: ureq_err_to_string(source),
             activity: "creating a release".to_string(),
         })?
         .into_json()
@@ -88,19 +88,19 @@ pub(crate) fn release(
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
         for asset in assets {
-            let file = std::fs::File::open(&asset.path).map_err(|source| {
-                Error::CouldNotReadAssetFile {
+            let file =
+                std::fs::read(&asset.path).map_err(|source| Error::CouldNotReadAssetFile {
                     path: asset.path.clone(),
                     source,
-                }
-            })?;
+                })?;
             let upload_url = upload_template.set("name", asset.name.as_str()).build();
             ureq::post(&upload_url)
                 .set("Authorization", &token_header)
                 .set("Content-Type", "application/octet-stream")
-                .send(file)
+                .set("Content-Length", &file.len().to_string())
+                .send_bytes(&file)
                 .map_err(|source| Error::ApiRequest {
-                    source: Box::new(source),
+                    err: ureq_err_to_string(source),
                     activity: format!(
                         "uploading asset {name}. Release has been created but not published!",
                         name = asset.name
@@ -113,12 +113,21 @@ pub(crate) fn release(
                 "draft": false
             }))
             .map_err(|source| Error::ApiRequest {
-                source: Box::new(source),
+                err: ureq_err_to_string(source),
                 activity: "publishing release".to_string(),
             })?;
     }
 
     Ok(Initialized { token })
+}
+
+fn ureq_err_to_string(err: ureq::Error) -> String {
+    match err {
+        ureq::Error::Status(code, response) => {
+            format!("{}: {}", code, response.into_string().unwrap_or_default())
+        }
+        ureq::Error::Transport(err) => format!("Transport error: {}", err),
+    }
 }
 
 fn github_release_dry_run(
@@ -173,17 +182,14 @@ pub(crate) enum Error {
     },
     #[error(transparent)]
     AppConfig(#[from] app_config::Error),
-    #[error("Trouble communicating with GitHub while {activity}: {source}")]
+    #[error("Trouble communicating with GitHub while {activity}: {err}")]
     #[diagnostic(
         code(github::api_request_error),
         help(
             "There was a problem communicating with GitHub, this may be a network issue or a permissions issue."
         )
     )]
-    ApiRequest {
-        source: Box<ureq::Error>,
-        activity: String,
-    },
+    ApiRequest { err: String, activity: String },
     #[error("Trouble decoding the response from GitHub while {activity}: {source}")]
     #[diagnostic(
         code(github::api_response_error),
