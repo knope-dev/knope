@@ -19,10 +19,6 @@ If you have multiple packages, you define them like this:
 # package config here
 ```
 
-```admonish warning
-There used to be an older `[[packages]]` syntax. This is deprecated and will be removed in a future version. Please run `knope --upgrade` to upgrade your configuration automatically.
-```
-
 ## Syntax
 
 Each package, whether it's defined in the `[package]` section or in the `[packages]` section, can have these keys:
@@ -89,6 +85,22 @@ changelog = "CHANGELOG.md"
 extra_changelog_sections = [
   { name = "Notes", footers = ["Changelog-Note"], types = ["note"] }
 ]
+```
+
+### `assets`
+
+Assets is a list of files to upload to a GitHub release. They do nothing without [GitHub configuration](./github.md). Assets are per-package. Each asset can optionally have a `name`, this is what it will appear as in GitHub releases. If `name` is omitted, the final component of the path will be used.
+
+```toml
+[package]
+versioned_files = ["Cargo.toml"]
+
+[[package.assets]]
+path = "artifact/my-binary-linux-amd64.tgz"
+name = "linux-amd64.tgz"
+
+[[package.assets]]
+path = "artifact/my-binary-darwin-amd64.tgz"  # name will be "my-binary-darwin-amd64.tgz"
 ```
 
 ## Examples

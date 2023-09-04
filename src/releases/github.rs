@@ -9,7 +9,11 @@ use crate::{
     app_config::get_or_prompt_for_github_token,
     config::GitHub,
     releases,
-    releases::{git::tag_name, package::Asset, PackageName, Release},
+    releases::{
+        git::tag_name,
+        package::{Asset, AssetNameError},
+        PackageName, Release,
+    },
     state,
     state::GitHub::{Initialized, New},
 };
@@ -93,7 +97,8 @@ pub(crate) fn release(
                     path: asset.path.clone(),
                     source,
                 })?;
-            let upload_url = upload_template.set("name", asset.name.as_str()).build();
+            let asset_name = asset.name()?;
+            let upload_url = upload_template.set("name", asset_name.as_str()).build();
             ureq::post(&upload_url)
                 .set("Authorization", &token_header)
                 .set("Content-Type", "application/octet-stream")
@@ -102,8 +107,7 @@ pub(crate) fn release(
                 .map_err(|source| Error::ApiRequest {
                     err: ureq_err_to_string(source),
                     activity: format!(
-                        "uploading asset {name}. Release has been created but not published!",
-                        name = asset.name
+                        "uploading asset {asset_name}. Release has been created but not published!",
                     ),
                 })?;
         }
@@ -155,10 +159,10 @@ fn github_release_dry_run(
     if let Some(assets) = assets {
         writeln!(stdout, "Would upload assets to GitHub:").map_err(Error::Stdout)?;
         for asset in assets {
+            let asset_name = asset.name()?;
             writeln!(
                 stdout,
-                "- {name} from {path}",
-                name = asset.name,
+                "- {asset_name} from {path}",
                 path = asset.path.display(),
             )
             .map_err(Error::Stdout)?;
@@ -205,6 +209,13 @@ pub(crate) enum Error {
     Stdout(std::io::Error),
     #[error(transparent)]
     Release(#[from] releases::Error),
+    #[error("Asset was not uploaded to GitHub, a release was created but is still a draft! {0}")]
+    #[diagnostic(
+        code(github::asset_name_error),
+        help("Try setting the `name` property of the asset manually"),
+        url("https://knope-dev.github.io/knope/config/packages.html#assets")
+    )]
+    AssetNameError(#[from] AssetNameError),
 }
 
 #[derive(Serialize)]

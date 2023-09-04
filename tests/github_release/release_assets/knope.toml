@@ -3,11 +3,10 @@ versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 
 [[package.assets]]
-name = "first_thing"
+name = "first_thing_alt_name"
 path = "assets/first_thing"
 
 [[package.assets]]
-name = "second_thing"
 path = "assets/second_thing"
 
 [[workflows]]
