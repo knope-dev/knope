@@ -36,7 +36,9 @@ use conventional_commits::ConventionalCommit;
 pub(crate) use non_empty_map::PrereleaseMap;
 
 use crate::{
-    releases::{conventional_commits::add_releases_from_conventional_commits, package::Asset},
+    releases::{
+        conventional_commits::add_releases_from_conventional_commits, versioned_file::PackageFormat,
+    },
     step::PrepareRelease,
     workflow::Verbose,
 };
@@ -280,9 +282,8 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
                 .prepared_release
                 .take()
                 .map(|release| PackageWithRelease {
-                    name: package.name.as_ref(),
+                    package: package.clone(),
                     release,
-                    assets: package.assets.as_ref(),
                 })
         })
         .collect_vec();
@@ -294,9 +295,8 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
             .map(|package| {
                 find_prepared_release(package).map(|release| {
                     release.map(|release| PackageWithRelease {
-                        name: package.name.as_ref(),
+                        package: package.clone(),
                         release,
-                        assets: package.assets.as_ref(),
                     })
                 })
             })
@@ -308,20 +308,21 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     for package_to_release in releases {
         if let Some(github_config) = github_config.as_ref() {
             state.github = github::release(
-                package_to_release.name,
+                package_to_release.package.name.as_ref(),
                 &package_to_release.release,
                 state.github,
                 github_config,
                 dry_run_stdout.as_mut(),
-                package_to_release.assets,
+                package_to_release.package.assets.as_ref(),
             )?;
         } else {
             git::release(
                 &mut dry_run_stdout,
                 &package_to_release.release.new_version,
-                package_to_release.name,
+                package_to_release.package.name.as_ref(),
             )?;
         }
+        add_go_mod_tags(&package_to_release, &mut dry_run_stdout)?;
     }
 
     if let Some(stdout) = dry_run_stdout {
@@ -331,10 +332,9 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     }
 }
 
-struct PackageWithRelease<'a> {
-    name: Option<&'a PackageName>,
+struct PackageWithRelease {
+    package: Package,
     release: Release,
-    assets: Option<&'a Vec<Asset>>,
 }
 
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
@@ -358,4 +358,25 @@ fn find_prepared_release(package: &Package) -> Result<Option<Release>, StepError
         new_version: version_of_new_release,
         date: OffsetDateTime::now_utc(),
     }))
+}
+
+/// Go modules have their versions determined by a Git tag. They _also_ have a _piece_ of their
+/// version in the `go.mod` file _sometimes_. For every other language, `PrepareRelease` updates
+/// the version in the file that defines the version (e.g., Cargo.toml). Typically, consumers will
+/// add a new Git commit _after_ `PrepareRelease`, before `Release`, so if we add the Go tag there,
+/// it's in the wrong place. So the `Release` step needs to write the _right_ version.
+fn add_go_mod_tags(
+    package_with_release: &PackageWithRelease,
+    dry_run: &mut Option<Box<dyn std::io::Write>>,
+) -> Result<(), git::Error> {
+    let PackageWithRelease { package, release } = package_with_release;
+    let go_mods = package
+        .versioned_files
+        .iter()
+        .filter(|versioned_file| matches!(versioned_file.format, PackageFormat::Go))
+        .collect_vec();
+    for go_mod in go_mods {
+        go::create_version_tag(&go_mod.path, &release.new_version, dry_run)?;
+    }
+    Ok(())
 }

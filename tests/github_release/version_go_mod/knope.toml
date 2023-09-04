@@ -1,0 +1,19 @@
+[package]
+versioned_files = ["Cargo.toml", "go/go.mod"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "prepare-release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "Release"
+
+[github]
+owner = "knope-dev"
+repo = "knope"

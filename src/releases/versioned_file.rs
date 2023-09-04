@@ -9,9 +9,7 @@ use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::releases::{
-    cargo, get_current_versions_from_tag, git, go, package_json, pyproject, semver::Version,
-};
+use crate::releases::{cargo, git, go, package_json, pyproject, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct VersionedFile {
@@ -125,17 +123,7 @@ impl PackageFormat {
             PackageFormat::JavaScript => {
                 package_json::get_version(content, path).map_err(Error::PackageJson)
             }
-            PackageFormat::Go => {
-                let prefix = path.parent().map(Path::to_string_lossy);
-                get_current_versions_from_tag(prefix.as_deref())
-                    .map(|current_versions| {
-                        current_versions
-                            .into_latest()
-                            .unwrap_or_default()
-                            .to_string()
-                    })
-                    .map_err(Error::from)
-            }
+            PackageFormat::Go => go::get_version(content, path).map_err(Error::Go),
         }
     }
 
@@ -163,7 +151,7 @@ impl PackageFormat {
                     .map_err(Error::PackageJson)
             }
             PackageFormat::Go => {
-                go::set_version(dry_run, content, new_version, path).map_err(Error::from)
+                go::set_version_in_file(dry_run, &content, new_version, path).map_err(Error::from)
             }
         }
     }

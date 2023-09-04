@@ -38,6 +38,14 @@ A package, by Knope's definition, has a single version. There can, however, be m
 3. `package.json` for Node projects
 4. `go.mod` for Go projects using [modules](https://go.dev/ref/mod)
 
+#### A special note on `go.mod`
+
+Go modules don't normally have their entire version in their `go.mod` file, only the major component and only if that component is greater than 1. However, this makes it difficult to track versions, specifically between [`PrepareRelease`] and [`Release`] if they are run in separate workflows. To bypass this, Knope will add a comment in the module line after the module path containing the full version—like `module github.com/knope-dev/knope // v0.0.1`. If a version exists in that format, it will be used. If not, the version will be determined by the latest Git tag.
+
+Updating the version of a `go.mod` file with Knope will completely rewrite the module line, adding in the expected comment syntax. If you have another comment here, you'll want to move it before running Knope. If you have a suggestion for how to improve versioning for Go, please [open an issue][request it as a feature].
+
+#### Other file formats
+
 Want to bump the version of a file that isn't natively supported? [Request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
 
 ```toml
