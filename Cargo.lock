@@ -347,6 +347,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "datta"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b1b21522a40222b0c97683682936f69688c57a189c4d1e38072f5f0f34837b7"
+dependencies = [
+ "regex",
+]
+
+[[package]]
 name = "deranged"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1504,6 +1513,7 @@ dependencies = [
  "base64",
  "changesets",
  "clap",
+ "datta",
  "env_logger",
  "execute",
  "git-conventional",

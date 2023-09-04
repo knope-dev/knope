@@ -1,16 +1,21 @@
-name: Final Release
+name: Release
 
 on:
   workflow_dispatch
 
 jobs:
-  create-release:
+  prepare-release:
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release"
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v5
         with:
@@ -18,8 +23,97 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
           git_push_gpgsign: false
+      - run: cargo run -- prepare-release
+      - name: Store commit
+        id: commit
+        run: echo "::set-output name=sha::$(git rev-parse HEAD)"
+
+  build-artifacts:
+    needs: prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.target }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.prepare-release.outputs.sha }}
       - uses: Swatinem/rust-cache@v2
-      - run: |
-          cargo run -- release
+      - name: Install host target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install musl-tools
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        run: sudo apt-get install -y musl-tools
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Set Archive Name (Non-Windows)
+        id: archive
+        run: echo "archive_name=knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}" >> $GITHUB_ENV
+
+      - name: Set Archive Name (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: echo "archive_name=knope-${{ matrix.target }}-${{ steps.get_release.outputs.tag_name }}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Create Archive Folder
+        run: mkdir ${{ env.archive_name }}
+
+      - name: Copy Unix Artifact
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: cp target/${{ matrix.target }}/release/knope ${{ env.archive_name }}
+
+      - name: Copy Windows Artifact
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: cp target/${{ matrix.target }}/release/knope.exe ${{ env.archive_name }}
+
+      - name: Create Tar Archive
+        run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ env.archive_name }}.tgz
+          if-no-files-found: error
+
+  release:
+    needs: [build-artifacts, prepare-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.prepare-release.outputs.sha }}
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.archive_name }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release"
+      - run: cargo run -- release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+
+  publish-crate:
+    needs: [release, prepare-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.prepare-release.outputs.sha }}
+      - uses: Swatinem/rust-cache@v2
+      - uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_TOKEN }}

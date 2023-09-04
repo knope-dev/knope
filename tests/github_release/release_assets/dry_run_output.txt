@@ -1,0 +1,7 @@
+Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
+## Features
+
+### New feature
+Would upload assets to GitHub:
+- first_thing_alt_name from assets/first_thing
+- second_thing from assets/second_thing

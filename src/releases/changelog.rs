@@ -1,6 +1,7 @@
 use std::{fs::read_to_string, io::Write, path::PathBuf};
 
 use indexmap::IndexMap;
+use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
 
@@ -27,6 +28,90 @@ impl TryFrom<PathBuf> for Changelog {
             String::new()
         };
         Ok(Self { path, content })
+    }
+}
+
+impl Changelog {
+    pub(super) fn get_section(&self, version: &Version) -> Option<String> {
+        let expected_header_start = format!("## {version}");
+        let section = self
+            .content
+            .lines()
+            .skip_while(|line| !line.starts_with(&expected_header_start))
+            .skip(1) // Skip the header
+            .take_while(
+                |line| !line.starts_with("## "), // Next version
+            )
+            .join("\n");
+        if section.is_empty() {
+            None
+        } else {
+            Some(section.trim().to_string())
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_get_section {
+    use std::path::PathBuf;
+
+    use pretty_assertions::assert_eq;
+
+    use crate::releases::{changelog::Changelog, semver::Version};
+
+    const CONTENT: &str = r#"
+# Changelog
+
+Hey ya'll this is a changelog
+
+## 0.1.2 2023-05-02
+
+### Features
+#### Blah
+
+## 0.1.1 - 2023-03-02
+
+### Fixes
+
+#### it's fixex!
+
+## 0.0.1
+Initial release
+"#;
+
+    #[test]
+    fn first_section() {
+        let changelog = Changelog {
+            path: PathBuf::default(),
+            content: CONTENT.to_string(),
+        };
+
+        let section = changelog.get_section(&Version::new(0, 1, 2, None)).unwrap();
+        let expected = "### Features\n#### Blah";
+        assert_eq!(section, expected);
+    }
+
+    #[test]
+    fn middle_section() {
+        let changelog = Changelog {
+            path: PathBuf::default(),
+            content: CONTENT.to_string(),
+        };
+
+        let section = changelog.get_section(&Version::new(0, 1, 1, None)).unwrap();
+        let expected = "### Fixes\n\n#### it's fixex!";
+        assert_eq!(section, expected);
+    }
+
+    #[test]
+    fn no_section() {
+        let changelog = Changelog {
+            path: PathBuf::default(),
+            content: CONTENT.to_string(),
+        };
+
+        let section = changelog.get_section(&Version::new(0, 1, 0, None));
+        assert!(section.is_none());
     }
 }
 
@@ -71,18 +156,18 @@ impl Package {
         }
 
         let new_changelog_body = new_changelog(fixes, features, breaking_changes, extra_sections);
-        let release = Release::new(new_changelog_body, version);
+        let release = Release::new(Some(new_changelog_body), version);
         let new_changelog = release.changelog_entry()?;
 
-        if let Some(changelog) = self.changelog.as_mut() {
-            changelog.content = add_version_to_changelog(&changelog.content, &new_changelog);
+        if let (Some(changelog), Some(new_changes)) = (self.changelog.as_mut(), new_changelog) {
+            changelog.content = add_version_to_changelog(&changelog.content, &new_changes);
             if let Some(stdout) = dry_run {
                 writeln!(
                     stdout,
                     "Would add the following to {}:",
                     changelog.path.display()
                 )?;
-                writeln!(stdout, "{}", &new_changelog)?;
+                writeln!(stdout, "{}", &new_changes)?;
             } else {
                 std::fs::write(&changelog.path, &changelog.content)?;
             }

@@ -2,6 +2,7 @@ use std::{borrow::Borrow, fmt, fmt::Display, io::Write, ops::Deref, path::PathBu
 
 use indexmap::IndexMap;
 use itertools::Itertools;
+use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -29,6 +30,7 @@ pub(crate) struct Package {
     pub(crate) prepared_release: Option<Release>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
+    pub(crate) assets: Option<Vec<Asset>>,
 }
 
 impl Package {
@@ -170,6 +172,33 @@ impl Borrow<str> for PackageName {
     fn borrow(&self) -> &str {
         &self.0
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub(crate) struct Asset {
+    pub(crate) path: PathBuf,
+    name: Option<String>,
+}
+
+impl Asset {
+    pub(crate) fn name(&self) -> Result<String, AssetNameError> {
+        if let Some(name) = &self.name {
+            Ok(name.clone())
+        } else {
+            self.path
+                .file_name()
+                .ok_or(AssetNameError {
+                    path: self.path.clone(),
+                })
+                .map(|name| name.to_string_lossy().into_owned())
+        }
+    }
+}
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+#[error("No asset name set, and name could not be determined from path {path}")]
+pub(crate) struct AssetNameError {
+    path: PathBuf,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

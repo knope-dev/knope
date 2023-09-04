@@ -1,6 +1,8 @@
 use std::{collections::BTreeMap, fmt, fmt::Display};
 
 use ::changesets::PackageChange;
+use itertools::Itertools;
+use miette::Diagnostic;
 use time::{macros::format_description, OffsetDateTime};
 
 pub(crate) use self::{
@@ -22,9 +24,9 @@ pub(crate) mod changelog;
 mod changesets;
 mod conventional_commits;
 pub(crate) mod git;
-mod github;
+pub(crate) mod github;
 pub(crate) mod go;
-mod package;
+pub(crate) mod package;
 mod package_json;
 mod pyproject;
 pub(crate) mod semver;
@@ -34,7 +36,8 @@ use conventional_commits::ConventionalCommit;
 pub(crate) use non_empty_map::PrereleaseMap;
 
 use crate::{
-    releases::conventional_commits::add_releases_from_conventional_commits, step::PrepareRelease,
+    releases::{conventional_commits::add_releases_from_conventional_commits, package::Asset},
+    step::PrepareRelease,
     workflow::Verbose,
 };
 
@@ -79,13 +82,13 @@ pub(crate) fn prepare_release(
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Release {
-    pub(crate) new_changelog: String,
+    pub(crate) new_changelog: Option<String>,
     pub(crate) new_version: Version,
     date: OffsetDateTime,
 }
 
 impl Release {
-    pub(crate) fn new(changelog: String, version: Version) -> Release {
+    pub(crate) fn new(changelog: Option<String>, version: Version) -> Release {
         Release {
             new_changelog: changelog,
             new_version: version,
@@ -93,15 +96,29 @@ impl Release {
         }
     }
 
-    pub(crate) fn title(&self) -> Result<String, StepError> {
+    pub(crate) fn title(&self) -> Result<String, Error> {
         let format = format_description!("[year]-[month]-[day]");
         let date = self.date.format(&format)?;
         Ok(format!("{} ({})", self.new_version, date))
     }
 
-    pub(crate) fn changelog_entry(&self) -> Result<String, StepError> {
-        Ok(format!("## {}\n\n{}", self.title()?, self.new_changelog))
+    pub(crate) fn changelog_entry(&self) -> Result<Option<String>, Error> {
+        self.title().map(|title| {
+            self.new_changelog
+                .as_ref()
+                .map(|changelog| format!("## {title}\n\n{changelog}"))
+        })
     }
+}
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error("Failed to format current time")]
+    #[diagnostic(
+        code(releases::time_format),
+        help("This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope")
+    )]
+    TimeFormat(#[from] time::error::Format),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -255,36 +272,90 @@ impl From<Version> for CurrentVersions {
 pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
     let (mut state, mut dry_run_stdout) = run_type.decompose();
 
-    for package in &state.packages {
-        if let Some(release) = package.prepared_release.as_ref() {
-            let github_config = state.github_config.clone();
-            if let Some(github_config) = github_config {
-                state.github = github::release(
-                    &package.name,
+    let mut releases = state
+        .packages
+        .iter_mut()
+        .filter_map(|package| {
+            package
+                .prepared_release
+                .take()
+                .map(|release| PackageWithRelease {
+                    name: package.name.as_ref(),
                     release,
-                    state.github,
-                    &github_config,
-                    dry_run_stdout.as_mut(),
-                )?;
-            } else {
-                git::release(&mut dry_run_stdout, &release.new_version, &package.name)?;
-            }
+                    assets: package.assets.as_ref(),
+                })
+        })
+        .collect_vec();
+
+    if releases.is_empty() {
+        releases = state
+            .packages
+            .iter()
+            .map(|package| {
+                find_prepared_release(package).map(|release| {
+                    release.map(|release| PackageWithRelease {
+                        name: package.name.as_ref(),
+                        release,
+                        assets: package.assets.as_ref(),
+                    })
+                })
+            })
+            .filter_map_ok(|stuff| stuff)
+            .try_collect()?;
+    }
+
+    let github_config = state.github_config.clone();
+    for package_to_release in releases {
+        if let Some(github_config) = github_config.as_ref() {
+            state.github = github::release(
+                package_to_release.name,
+                &package_to_release.release,
+                state.github,
+                github_config,
+                dry_run_stdout.as_mut(),
+                package_to_release.assets,
+            )?;
+        } else {
+            git::release(
+                &mut dry_run_stdout,
+                &package_to_release.release.new_version,
+                package_to_release.name,
+            )?;
         }
     }
 
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { stdout, state })
     } else {
-        if state
-            .packages
-            .iter()
-            .filter(|p| p.prepared_release.is_some())
-            .count()
-            == 0
-        {
-            return Err(StepError::ReleaseNotPrepared);
-        }
-
         Ok(RunType::Real(state))
     }
+}
+
+struct PackageWithRelease<'a> {
+    name: Option<&'a PackageName>,
+    release: Release,
+    assets: Option<&'a Vec<Asset>>,
+}
+
+/// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
+/// if the package version is newer than the latest tag, there's a release to release!
+fn find_prepared_release(package: &Package) -> Result<Option<Release>, StepError> {
+    let Some(current_version) = package.version_from_files()? else {
+        return Ok(None);
+    };
+    let last_tag =
+        get_current_versions_from_tag(package.name.as_deref()).map(CurrentVersions::into_latest)?;
+    let version_of_new_release = match last_tag {
+        Some(last_tag) if last_tag != current_version => current_version,
+        None => current_version,
+        _ => return Ok(None),
+    };
+    Ok(Some(Release {
+        new_changelog: package
+            .changelog
+            .as_ref()
+            .and_then(|changelog| changelog.get_section(&version_of_new_release)),
+        new_version: version_of_new_release,
+        date: OffsetDateTime::now_utc(),
+    }))
 }

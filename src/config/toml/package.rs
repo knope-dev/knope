@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::releases::{
-    changelog, changelog::Changelog, versioned_file, versioned_file::VersionedFile,
+    changelog, changelog::Changelog, package::Asset, versioned_file, versioned_file::VersionedFile,
     ChangelogSectionSource, PackageName,
 };
 
@@ -29,6 +29,7 @@ pub struct Package {
     /// Extra sections that should be added to the changelog from custom footers in commit messages.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) extra_changelog_sections: Vec<ChangelogSection>,
+    assets: Option<Vec<Asset>>,
 }
 
 impl TryFrom<(Option<PackageName>, Package)> for crate::releases::Package {
@@ -50,6 +51,7 @@ impl TryFrom<(Option<PackageName>, Package)> for crate::releases::Package {
             pending_changes: vec![],
             prepared_release: None,
             override_version: None,
+            assets: package.assets,
         })
     }
 }
@@ -83,6 +85,7 @@ impl From<crate::releases::Package> for Package {
             extra_changelog_sections: changelog_sections_config_to_toml(
                 package.extra_changelog_sections,
             ),
+            assets: package.assets,
         }
     }
 }
