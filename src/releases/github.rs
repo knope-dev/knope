@@ -126,7 +126,7 @@ fn ureq_err_to_string(err: ureq::Error) -> String {
         ureq::Error::Status(code, response) => {
             format!("{}: {}", code, response.into_string().unwrap_or_default())
         }
-        ureq::Error::Transport(err) => format!("Transport error: {}", err),
+        ureq::Error::Transport(err) => format!("Transport error: {err}"),
     }
 }
 
