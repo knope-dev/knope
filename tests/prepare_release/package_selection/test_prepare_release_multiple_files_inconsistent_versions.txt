@@ -3,6 +3,6 @@ Error:   × Problem with workflow release
 Error: step::inconsistent_versions (https://knope-dev.github.io/knope/config/step/BumpVersion.html)
 
   × Versioned files within the same package must have the same version. Found
-  │ 2.0.0 which does not match 1.0.0
+  │ 1.0.0 in pyproject.toml which does not match 2.0.0 in Cargo.toml
   help: Manually update all versioned_files to have the correct version
 

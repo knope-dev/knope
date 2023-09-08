@@ -5,7 +5,10 @@ use thiserror::Error;
 
 use crate::{
     fs,
-    releases::{get_current_versions_from_tag, git, semver::Version},
+    releases::{
+        get_current_versions_from_tag, git, semver::Version, tag_name,
+        versioned_file::VersionFromSource, PackageName,
+    },
 };
 
 #[derive(Debug, Diagnostic, Error)]
@@ -263,23 +266,46 @@ pub(crate) fn create_version_tag(
 
 /// Gets the version from the comment in the `go.mod` file, if any, or defers to the latest tag
 /// for the module.
-pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, Error> {
-    let prefix = path.parent().map(Path::to_string_lossy);
+pub(crate) fn get_version(content: &str, path: &Path) -> Result<VersionFromSource, Error> {
+    let prefix = path.parent().map(Path::to_string_lossy).and_then(|prefix| {
+        if prefix.is_empty() {
+            None
+        } else {
+            Some(prefix)
+        }
+    });
     let module_line = content
         .lines()
         .find(|line| line.starts_with("module "))
         .map(ModuleLine::from_str)
         .ok_or(Error::MissingModuleLine)??;
     if let Some(version) = module_line.version {
-        return Ok(version.to_string());
+        return Ok(VersionFromSource {
+            version,
+            source: path.display().to_string(),
+        });
     }
 
-    get_current_versions_from_tag(prefix.as_deref())
+    if let Some(version_from_tag) = get_current_versions_from_tag(prefix.as_deref())
         .map(|current_versions| {
             current_versions
                 .into_latest()
-                .unwrap_or_default()
-                .to_string()
+                .map(|version| VersionFromSource {
+                    source: format!(
+                        "Git tag {tag}",
+                        tag = tag_name(&version, prefix.map(PackageName::from).as_ref())
+                    ),
+                    version,
+                })
         })
         .map_err(Error::from)
+        .transpose()
+    {
+        return version_from_tag;
+    }
+
+    Ok(VersionFromSource {
+        version: Version::default(),
+        source: "Default—no matching tags detected".to_string(),
+    })
 }

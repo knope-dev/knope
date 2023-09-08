@@ -1,19 +1,23 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use miette::Diagnostic;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use thiserror::Error;
 
-use crate::fs;
+use crate::{fs, releases, releases::semver::Version};
 
-pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, Error> {
+pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     serde_json::from_str::<Package>(content)
         .map(|package| package.version)
         .map_err(|source| Error::Deserialize {
             path: path.into(),
             source,
         })
+        .and_then(|version| Version::from_str(&version).map_err(Error::from))
 }
 
 pub(crate) fn set_version(
@@ -65,6 +69,8 @@ pub(crate) enum Error {
         #[source]
         source: serde_json::Error,
     },
+    #[error(transparent)]
+    Version(#[from] releases::semver::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -74,56 +80,58 @@ struct Package {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     #[test]
     fn test_get_version() {
-        let content = r###"{
+        let content = r#"{
         "name": "tester",
         "version": "0.1.0-rc.0"
-        }"###;
+        }"#;
 
         assert_eq!(
             get_version(content, Path::new("")).unwrap(),
-            "0.1.0-rc.0".to_string()
+            Version::from_str("0.1.0-rc.0").unwrap()
         );
     }
 
     #[test]
     fn test_set_version() {
-        let content = r###"{
+        let content = r#"{
         "name": "tester",
         "version": "0.1.0-rc.0"
-        }"###;
+        }"#;
 
         let stdout = Box::<Vec<u8>>::default();
         let new = set_version(&mut Some(stdout), content, "1.2.3-rc.4", Path::new("")).unwrap();
 
-        let expected = r###"{
+        let expected = r#"{
   "name": "tester",
   "version": "1.2.3-rc.4"
-}"###
-            .to_string();
+}"#
+        .to_string();
         assert_eq!(new, expected);
     }
 
     #[test]
     fn retain_property_order() {
-        let content = r###"{
+        let content = r#"{
         "name": "tester",
         "version": "0.1.0-rc.0",
         "dependencies": {}
-        }"###;
+        }"#;
 
         let stdout = Box::<Vec<u8>>::default();
         let new = set_version(&mut Some(stdout), content, "1.2.3-rc.4", Path::new("")).unwrap();
 
-        let expected = r###"{
+        let expected = r#"{
   "name": "tester",
   "version": "1.2.3-rc.4",
   "dependencies": {}
-}"###
-            .to_string();
+}"#
+        .to_string();
         assert_eq!(new, expected);
     }
 }

@@ -1,19 +1,23 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use miette::Diagnostic;
 use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::fs;
+use crate::{fs, releases::semver::Version};
 
-pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, Error> {
+pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     toml::from_str::<Cargo>(content)
         .map(|cargo| cargo.package.version.into_inner())
         .map_err(|source| Error::Deserialize {
             path: path.into(),
             source,
         })
+        .and_then(|version| Version::from_str(&version).map_err(Error::from))
 }
 
 pub(crate) fn set_version(
@@ -52,6 +56,8 @@ pub(crate) enum Error {
     },
     #[error(transparent)]
     Fs(#[from] fs::Error),
+    #[error(transparent)]
+    Semver(#[from] crate::releases::semver::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,25 +78,25 @@ mod tests {
 
     #[test]
     fn test_get_version() {
-        let content = r###"
+        let content = r#"
         [package]
         name = "tester"
         version = "0.1.0-rc.0"
-        "###;
+        "#;
 
         assert_eq!(
             get_version(content, Path::new("")).unwrap(),
-            "0.1.0-rc.0".to_string()
+            Version::from_str("0.1.0-rc.0").unwrap()
         );
     }
 
     #[test]
     fn test_set_version() {
-        let content = r###"
+        let content = r#"
         [package]
         name = "tester"
         version = "0.1.0-rc.0"
-        "###;
+        "#;
 
         let stdout = Box::<Vec<u8>>::default();
         let new = set_version(

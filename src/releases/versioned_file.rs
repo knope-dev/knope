@@ -71,7 +71,7 @@ pub(crate) enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 impl VersionedFile {
-    pub(crate) fn get_version(&self) -> Result<String> {
+    pub(crate) fn get_version(&self) -> Result<VersionFromSource> {
         self.format.get_version(&self.content, &self.path)
     }
 
@@ -114,15 +114,28 @@ impl TryFrom<&PathBuf> for PackageFormat {
 impl PackageFormat {
     /// Get the version from `content` for package named `name` (if any name).
     /// `path` is used for error reporting.
-    pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<String> {
+    pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<VersionFromSource> {
         match self {
-            PackageFormat::Cargo => cargo::get_version(content, path).map_err(Error::Cargo),
-            PackageFormat::Poetry => {
-                pyproject::get_version(content, path).map_err(Error::PyProject)
+            PackageFormat::Cargo => {
+                cargo::get_version(content, path)
+                    .map_err(Error::Cargo)
+                    .map(|version| VersionFromSource {
+                        version,
+                        source: path.display().to_string(),
+                    })
             }
-            PackageFormat::JavaScript => {
-                package_json::get_version(content, path).map_err(Error::PackageJson)
-            }
+            PackageFormat::Poetry => pyproject::get_version(content, path)
+                .map_err(Error::PyProject)
+                .map(|version| VersionFromSource {
+                    version,
+                    source: path.display().to_string(),
+                }),
+            PackageFormat::JavaScript => package_json::get_version(content, path)
+                .map_err(Error::PackageJson)
+                .map(|version| VersionFromSource {
+                    version,
+                    source: path.display().to_string(),
+                }),
             PackageFormat::Go => go::get_version(content, path).map_err(Error::Go),
         }
     }
@@ -155,6 +168,12 @@ impl PackageFormat {
             }
         }
     }
+}
+
+/// A version and where it came from.
+pub(crate) struct VersionFromSource {
+    pub(crate) version: Version,
+    pub(crate) source: String,
 }
 
 const ALL_PACKAGE_FORMATS: [PackageFormat; 4] = [

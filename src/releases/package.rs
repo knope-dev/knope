@@ -1,4 +1,11 @@
-use std::{borrow::Borrow, fmt, fmt::Display, io::Write, ops::Deref, path::PathBuf};
+use std::{
+    borrow::{Borrow, Cow},
+    fmt,
+    fmt::Display,
+    io::Write,
+    ops::Deref,
+    path::PathBuf,
+};
 
 use indexmap::IndexMap;
 use itertools::Itertools;
@@ -165,6 +172,12 @@ impl From<&str> for PackageName {
 impl From<String> for PackageName {
     fn from(name: String) -> Self {
         Self(name)
+    }
+}
+
+impl From<Cow<'_, str>> for PackageName {
+    fn from(name: Cow<str>) -> Self {
+        Self(name.into_owned())
     }
 }
 

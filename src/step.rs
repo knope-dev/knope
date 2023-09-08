@@ -162,13 +162,6 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html"),
     )]
     NoRelease,
-    #[error("Found invalid semantic version {0}")]
-    #[diagnostic(
-        code(step::invalid_semantic_version),
-        help("The version must be a valid Semantic Version"),
-        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
-    )]
-    InvalidSemanticVersion(String),
     #[error("Could not determine the current version of the package")]
     #[diagnostic(
         code(step::no_current_version),
@@ -176,13 +169,18 @@ pub(super) enum StepError {
         url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
     )]
     NoCurrentVersion,
-    #[error("Versioned files within the same package must have the same version. Found {0} which does not match {1}")]
+    #[error("Versioned files within the same package must have the same version. Found {first_version} in {first_source} which does not match {second_version} in {second_source}")]
     #[diagnostic(
         code(step::inconsistent_versions),
         help("Manually update all versioned_files to have the correct version"),
         url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
     )]
-    InconsistentVersions(String, String),
+    InconsistentVersions {
+        first_version: String,
+        first_source: String,
+        second_version: String,
+        second_source: String,
+    },
     #[error(transparent)]
     Go(#[from] releases::go::Error),
     #[error(transparent)]

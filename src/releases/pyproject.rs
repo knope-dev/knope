@@ -1,19 +1,26 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use miette::Diagnostic;
 use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::fs;
+use crate::{
+    fs,
+    releases::{semver, semver::Version},
+};
 
 /// Extract the consistent version from a `pyproject.toml` file's content or return an error.
 ///
 /// `path` is used for error reporting.
-pub(crate) fn get_version(content: &str, path: &Path) -> Result<String, Error> {
+pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     toml::from_str::<PyProject>(content)
         .map_err(|source| Error::Deserialization(path.into(), source))
         .and_then(|pyproject| pyproject.version(path))
+        .and_then(|version| Version::from_str(&version).map_err(Error::from))
 }
 
 /// Replace the version(s) in a `pyproject.toml` file's content with `new_version` or return an error.
@@ -65,6 +72,8 @@ pub(crate) enum Error {
         url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
     )]
     NoVersions(PathBuf),
+    #[error(transparent)]
+    Semver(#[from] semver::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -140,35 +149,35 @@ mod tests {
 
     #[test]
     fn test_get_version_poetry() {
-        let content = r###"
+        let content = r#"
         [tool.poetry]
         name = "tester"
         version = "0.1.0-rc.0"
-        "###;
+        "#;
 
         assert_eq!(
             get_version(content, PathBuf::new().as_path()).unwrap(),
-            "0.1.0-rc.0".to_string()
+            Version::from_str("0.1.0-rc.0").unwrap()
         );
     }
 
     #[test]
     fn test_get_version_pep621() {
-        let content = r###"
+        let content = r#"
         [project]
         name = "tester"
         version = "0.1.0-rc.0"
-        "###;
+        "#;
 
         assert_eq!(
             get_version(content, PathBuf::new().as_path()).unwrap(),
-            "0.1.0-rc.0".to_string()
+            Version::from_str("0.1.0-rc.0").unwrap()
         );
     }
 
     #[test]
     fn test_get_version_mixed() {
-        let content = r###"
+        let content = r#"
         [tool.poetry]
         name = "tester"
         version = "0.1.0-rc.0"
@@ -176,17 +185,17 @@ mod tests {
         [project]
         name = "tester"
         version = "0.1.0-rc.0"
-        "###;
+        "#;
 
         assert_eq!(
             get_version(content, PathBuf::new().as_path()).unwrap(),
-            "0.1.0-rc.0".to_string()
+            Version::from_str("0.1.0-rc.0").unwrap()
         );
     }
 
     #[test]
     fn test_get_version_mismatch() {
-        let content = r###"
+        let content = r#"
         [tool.poetry]
         name = "tester"
         version = "1.0.0"
@@ -194,7 +203,7 @@ mod tests {
         [project]
         name = "tester"
         version = "2.3.4"
-        "###;
+        "#;
 
         match get_version(content, PathBuf::new().as_path()) {
             Err(Error::InconsistentVersions {
@@ -209,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_set_version() {
-        let content = r###"
+        let content = r#"
         [tool.poetry]
         name = "tester"
         version = "0.1.0-rc.0"
@@ -217,7 +226,7 @@ mod tests {
         [project]
         name = "tester"
         version = "0.1.0-rc.0"
-        "###;
+        "#;
 
         let stdout = Box::<Vec<u8>>::default();
         let new = set_version(
@@ -228,7 +237,7 @@ mod tests {
         )
         .unwrap();
 
-        let expected = r###"
+        let expected = r#"
         [tool.poetry]
         name = "tester"
         version = "1.2.3-rc.4"
@@ -236,7 +245,7 @@ mod tests {
         [project]
         name = "tester"
         version = "1.2.3-rc.4"
-        "###
+        "#
         .to_string();
         assert_eq!(new, expected);
     }
