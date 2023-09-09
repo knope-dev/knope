@@ -1,8 +1,7 @@
 use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
+use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
-
-use crate::step::StepError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Version {
@@ -141,7 +140,7 @@ impl PartialOrd for Version {
 }
 
 impl FromStr for Version {
-    type Err = StepError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (version, pre) = s
@@ -149,15 +148,10 @@ impl FromStr for Version {
             .map_or((s, None), |(version, pre)| (version, Some(pre)));
         let version_parts: [u64; 3] = version
             .split('.')
-            .map(|part| {
-                part.parse::<u64>()
-                    .map_err(|err| StepError::InvalidSemanticVersion(err.to_string()))
-            })
+            .map(|part| part.parse::<u64>().map_err(|err| Error(err.to_string())))
             .collect::<Result<Vec<_>, _>>()?
             .try_into()
-            .map_err(|_| {
-                StepError::InvalidSemanticVersion("Version must have exactly 3 parts".to_string())
-            })?;
+            .map_err(|_| Error("Version must have exactly 3 parts".to_string()))?;
         let stable = StableVersion {
             major: version_parts[0],
             minor: version_parts[1],
@@ -173,6 +167,15 @@ impl FromStr for Version {
         }
     }
 }
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+#[error("Found invalid semantic version {0}")]
+#[diagnostic(
+    code(version),
+    help("The version must be a valid Semantic Version"),
+    url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
+)]
+pub(crate) struct Error(String);
 
 impl Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -208,17 +211,17 @@ impl Display for Prerelease {
 }
 
 impl FromStr for Prerelease {
-    type Err = StepError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (label, version) = s
             .split_once('.')
-            .ok_or_else(|| StepError::InvalidSemanticVersion("Invalid prerelease".to_string()))?;
+            .ok_or_else(|| Error("Invalid prerelease".to_string()))?;
         Ok(Self {
             label: Label(String::from(label)),
             version: version
                 .parse::<u64>()
-                .map_err(|err| StepError::InvalidSemanticVersion(err.to_string()))?,
+                .map_err(|err| Error(err.to_string()))?,
         })
     }
 }

@@ -1,10 +1,13 @@
 use std::{
-    fs::{copy, create_dir, write},
+    fs::{copy, create_dir, read_to_string, write},
     path::Path,
 };
 
 use helpers::*;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod helpers;
 
@@ -196,6 +199,47 @@ fn no_previous_tag() {
     for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
+
+    // Run the actual release (but dry-run because don't test GitHub)
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+}
+
+#[test]
+fn version_go_mod() {
+    // Arrange a package that is ready to release, but hasn't been released yet
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/github_release/version_go_mod");
+    init(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    tag(temp_path, "go/v1.0.0");
+    commit(temp_path, "feat: New feature");
+    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+    create_dir(temp_path.join("go")).unwrap();
+    write(temp_path.join("go/go.mod"), "module github.com/owner/repo").unwrap();
+    Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .current_dir(temp_dir.path())
+        .assert()
+        .success();
+    commit(temp_path, "chore: Prepare release");
+    assert_eq_path(
+        source_path.join("expected_go.mod"),
+        read_to_string(temp_path.join("go/go.mod")).unwrap(),
+    );
 
     // Run the actual release (but dry-run because don't test GitHub)
     let dry_run_assert = Command::new(cargo_bin!("knope"))

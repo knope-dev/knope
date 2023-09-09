@@ -1,7 +1,7 @@
-use std::{fmt::Display, io::Write, str::FromStr};
+use std::{fmt::Display, io::Write};
 
 use serde::{Deserialize, Serialize};
-pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
+pub(crate) use version::{Error, Label, PreVersion, Prerelease, StableVersion, Version};
 
 use crate::{
     releases::{
@@ -163,20 +163,22 @@ impl Package {
         self.versioned_files
             .iter()
             .map(|versioned_file| versioned_file.get_version().map_err(StepError::from))
-            .map(|result| result.and_then(|version_string| Version::from_str(&version_string)))
             .reduce(|accumulator, version| match (version, accumulator) {
                 (Ok(version), Ok(accumulator)) => {
-                    if version == accumulator {
+                    if version.version == accumulator.version {
                         Ok(accumulator)
                     } else {
-                        Err(StepError::InconsistentVersions(
-                            version.to_string(),
-                            accumulator.to_string(),
-                        ))
+                        Err(StepError::InconsistentVersions {
+                            first_version: accumulator.version.to_string(),
+                            first_source: accumulator.source,
+                            second_version: version.version.to_string(),
+                            second_source: version.source,
+                        })
                     }
                 }
                 (_, Err(err)) | (Err(err), _) => Err(err),
             })
+            .map(|res| res.map(|version| version.version))
             .transpose()
     }
 
@@ -267,6 +269,8 @@ pub(crate) fn bump(
 
 #[cfg(test)]
 mod test_bump {
+    use std::str::FromStr;
+
     use rstest::rstest;
 
     use super::*;

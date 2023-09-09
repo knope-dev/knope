@@ -1,0 +1,9 @@
+Would write 1.3.0 to Cargo.toml
+Would write 1.3.0 to go.mod
+Would write 1.3.0 to with_comment/go.mod
+Would write 1.3.0 to without_comment/go.mod
+Would add files to git:
+  Cargo.toml
+  go.mod
+  with_comment/go.mod
+  without_comment/go.mod

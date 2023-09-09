@@ -1,4 +1,3 @@
-Would create Git tag sub_dir/v2.0.0
 Would write 2.0.0 to sub_dir/go.mod
 Would add the following to CHANGELOG.md:
 ## 2.0.0 ([DATE])
@@ -11,3 +10,4 @@ Would add files to git:
   sub_dir/go.mod
   CHANGELOG.md
 Would create Git tag v2.0.0
+Would create Git tag sub_dir/v2.0.0

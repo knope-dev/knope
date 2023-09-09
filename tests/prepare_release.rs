@@ -1853,3 +1853,54 @@ fn verbose() {
         .stderr_eq("")
         .stdout_matches_path(src_path.join("output.txt"));
 }
+
+#[test]
+fn go_mod_version_determination() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.2.3");
+    let source_path = Path::new("tests/prepare_release/go_mod_version_determination");
+    create_dir(temp_path.join("with_comment")).unwrap();
+    tag(temp_path, "with_comment/v0.1.0"); // Comment should override tag
+    create_dir(temp_path.join("without_comment")).unwrap();
+    tag(temp_path, "without_comment/v1.2.3");
+    commit(temp_path, "feat: A feature");
+
+    let versioned_files = [
+        "knope.toml",
+        "Cargo.toml", // Mix in another type of file for good measure
+        "go.mod",
+        "with_comment/go.mod",
+        "without_comment/go.mod",
+    ];
+
+    for file in versioned_files {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    for file in versioned_files {
+        assert().matches_path(
+            source_path.join(format!("EXPECTED_{file}")),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}

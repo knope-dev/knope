@@ -1,4 +1,4 @@
-module github.com/knope-dev/knope
+module github.com/knope-dev/knope // v1.1.0
 
 go 1.19
 
