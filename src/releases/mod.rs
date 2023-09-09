@@ -7,21 +7,18 @@ use time::{macros::format_description, OffsetDateTime};
 
 pub(crate) use self::{
     changesets::{create_change_file, ChangeType},
-    git::{get_current_versions_from_tag, tag_name},
-    package::{
-        find_packages, suggested_package_toml, ChangelogSectionSource, Package, PackageName,
-    },
-    semver::{bump_version_and_update_state as bump_version, Rule},
+    git::tag_name,
+    package::{find_packages, ChangelogSectionSource, Package, PackageName},
+    semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
     releases::semver::{PreVersion, StableVersion, Version},
-    step::StepError,
     RunType,
 };
 
 mod cargo;
 pub(crate) mod changelog;
-mod changesets;
+pub(crate) mod changesets;
 mod conventional_commits;
 pub(crate) mod git;
 pub(crate) mod github;
@@ -36,6 +33,8 @@ use conventional_commits::ConventionalCommit;
 pub(crate) use non_empty_map::PrereleaseMap;
 
 use crate::{
+    dry_run::DryRun,
+    git::get_current_versions_from_tags,
     releases::{
         conventional_commits::add_releases_from_conventional_commits, versioned_file::PackageFormat,
     },
@@ -47,22 +46,28 @@ pub(crate) fn prepare_release(
     run_type: RunType,
     prepare_release: &PrepareRelease,
     verbose: Verbose,
-) -> Result<RunType, StepError> {
+) -> Result<RunType, Error> {
     let (mut state, mut dry_run_stdout) = match run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
     };
     if state.packages.is_empty() {
-        return Err(StepError::no_defined_packages_with_help());
+        return Err(package::Error::no_defined_packages_with_help().into());
     }
     let PrepareRelease { prerelease_label } = prepare_release;
     state.packages = add_releases_from_conventional_commits(state.packages)
-        .and_then(|packages| changesets::add_releases_from_changeset(packages, &mut dry_run_stdout))
+        .map_err(Error::from)
+        .and_then(|packages| {
+            changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
+                .map_err(Error::from)
+        })
         .and_then(|packages| {
             packages
                 .into_iter()
                 .map(|package| {
-                    package.write_release(prerelease_label, &mut dry_run_stdout, verbose)
+                    package
+                        .write_release(prerelease_label, &mut dry_run_stdout, verbose)
+                        .map_err(Error::from)
                 })
                 .collect()
         })?;
@@ -76,10 +81,18 @@ pub(crate) fn prepare_release(
         .count()
         == 0
     {
-        Err(StepError::NoRelease)
+        Err(Error::NoRelease)
     } else {
         Ok(RunType::Real(state))
     }
+}
+
+pub(crate) fn bump_version(
+    run_type: RunType,
+    rule: &Rule,
+    verbose: Verbose,
+) -> Result<RunType, Error> {
+    bump_version_and_update_state(run_type, rule, verbose).map_err(Error::from)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -98,13 +111,13 @@ impl Release {
         }
     }
 
-    pub(crate) fn title(&self) -> Result<String, Error> {
+    pub(crate) fn title(&self) -> Result<String, TimeError> {
         let format = format_description!("[year]-[month]-[day]");
         let date = self.date.format(&format)?;
         Ok(format!("{} ({})", self.new_version, date))
     }
 
-    pub(crate) fn changelog_entry(&self) -> Result<Option<String>, Error> {
+    pub(crate) fn changelog_entry(&self) -> Result<Option<String>, TimeError> {
         self.title().map(|title| {
             self.new_changelog
                 .as_ref()
@@ -114,13 +127,43 @@ impl Release {
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
+#[error("Failed to format current time")]
+#[diagnostic(
+    code(releases::time_format),
+    help("This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope")
+)]
+pub(crate) struct TimeError(#[from] time::error::Format);
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
-    #[error("Failed to format current time")]
+    #[error("No packages are ready to release")]
     #[diagnostic(
-        code(releases::time_format),
-        help("This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope")
+        code(releases::no_release),
+        help("The `PrepareRelease` step will not complete if no changes cause a package's version to be increased."),
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html"),
     )]
-    TimeFormat(#[from] time::error::Format),
+    NoRelease,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Semver(#[from] semver::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    GitRelease(#[from] self::git::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Git(#[from] crate::git::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ChangeSet(#[from] changesets::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Package(#[from] package::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    GitHub(#[from] github::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ConventionalCommits(#[from] conventional_commits::Error),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -271,7 +314,7 @@ impl From<Version> for CurrentVersions {
 /// Create a release for the package.
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
-pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
+pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
     let (mut state, mut dry_run_stdout) = run_type.decompose();
 
     let mut releases = state
@@ -312,7 +355,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, StepError> {
                 &package_to_release.release,
                 state.github,
                 github_config,
-                dry_run_stdout.as_mut(),
+                &mut dry_run_stdout,
                 package_to_release.package.assets.as_ref(),
             )?;
         } else {
@@ -339,12 +382,12 @@ struct PackageWithRelease {
 
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
-fn find_prepared_release(package: &Package) -> Result<Option<Release>, StepError> {
+fn find_prepared_release(package: &Package) -> Result<Option<Release>, Error> {
     let Some(current_version) = package.version_from_files()? else {
         return Ok(None);
     };
-    let last_tag =
-        get_current_versions_from_tag(package.name.as_deref()).map(CurrentVersions::into_latest)?;
+    let last_tag = get_current_versions_from_tags(package.name.as_deref())
+        .map(CurrentVersions::into_latest)?;
     let version_of_new_release = match last_tag {
         Some(last_tag) if last_tag != current_version => current_version,
         None => current_version,
@@ -367,7 +410,7 @@ fn find_prepared_release(package: &Package) -> Result<Option<Release>, StepError
 /// it's in the wrong place. So the `Release` step needs to write the _right_ version.
 fn add_go_mod_tags(
     package_with_release: &PackageWithRelease,
-    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    dry_run: DryRun,
 ) -> Result<(), git::Error> {
     let PackageWithRelease { package, release } = package_with_release;
     let go_mods = package

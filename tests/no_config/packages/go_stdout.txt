@@ -1,5 +1,5 @@
-Would write 2.0.0 to go.mod
-Would add the following to CHANGELOG.md:
+Would add the following to go.mod: 2.0.0
+Would add the following to CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
 ### Breaking Changes

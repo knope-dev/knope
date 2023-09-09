@@ -1,4 +1,4 @@
-Would add the following to CHANGELOG.md:
+Would add the following to CHANGELOG.md: 
 ## 1.1.0 ([DATE])
 
 ### Features

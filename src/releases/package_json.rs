@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use thiserror::Error;
 
-use crate::{fs, releases, releases::semver::Version};
+use crate::{dry_run::DryRun, fs, releases, releases::semver::Version};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     serde_json::from_str::<Package>(content)
@@ -21,7 +21,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> 
 }
 
 pub(crate) fn set_version(
-    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    dry_run: DryRun,
     package_json: &str,
     new_version: &str,
     path: &Path,
@@ -58,6 +58,7 @@ pub(crate) enum Error {
         source: serde_json::Error,
     },
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Fs(#[from] fs::Error),
     #[error("Failed to serialize {path} with new version")]
     #[diagnostic(
@@ -70,7 +71,8 @@ pub(crate) enum Error {
         source: serde_json::Error,
     },
     #[error(transparent)]
-    Version(#[from] releases::semver::Error),
+    #[diagnostic(transparent)]
+    Version(#[from] releases::semver::version::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +85,7 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
+    use crate::dry_run::fake_dry_run;
 
     #[test]
     fn test_get_version() {
@@ -104,8 +107,7 @@ mod tests {
         "version": "0.1.0-rc.0"
         }"#;
 
-        let stdout = Box::<Vec<u8>>::default();
-        let new = set_version(&mut Some(stdout), content, "1.2.3-rc.4", Path::new("")).unwrap();
+        let new = set_version(&mut fake_dry_run(), content, "1.2.3-rc.4", Path::new("")).unwrap();
 
         let expected = r#"{
   "name": "tester",
@@ -123,8 +125,7 @@ mod tests {
         "dependencies": {}
         }"#;
 
-        let stdout = Box::<Vec<u8>>::default();
-        let new = set_version(&mut Some(stdout), content, "1.2.3-rc.4", Path::new("")).unwrap();
+        let new = set_version(&mut fake_dry_run(), content, "1.2.3-rc.4", Path::new("")).unwrap();
 
         let expected = r#"{
   "name": "tester",

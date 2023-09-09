@@ -1,7 +1,7 @@
 Would delete: .changeset/breaking_change.md
-Would write 2.0.0 to Cargo.toml
-Would write 2.0.0 to pyproject.toml
-Would add the following to FIRST_CHANGELOG.md:
+Would add the following to Cargo.toml: 2.0.0
+Would add the following to pyproject.toml: 2.0.0
+Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
 ### Breaking Changes
@@ -19,8 +19,8 @@ Would add files to git:
   pyproject.toml
   FIRST_CHANGELOG.md
   .changeset/breaking_change.md
-Would write 0.4.7 to package.json
-Would add the following to SECOND_CHANGELOG.md:
+Would add the following to package.json: 0.4.7
+Would add the following to SECOND_CHANGELOG.md: 
 ## 0.4.7 ([DATE])
 
 ### Features

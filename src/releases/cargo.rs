@@ -8,7 +8,7 @@ use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::{fs, releases::semver::Version};
+use crate::{dry_run::DryRun, fs, releases::semver::Version};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     toml::from_str::<Cargo>(content)
@@ -21,7 +21,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> 
 }
 
 pub(crate) fn set_version(
-    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    dry_run: DryRun,
     mut cargo_toml: String,
     new_version: &str,
     path: &Path,
@@ -55,9 +55,11 @@ pub(crate) enum Error {
         source: toml::de::Error,
     },
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Fs(#[from] fs::Error),
     #[error(transparent)]
-    Semver(#[from] crate::releases::semver::Error),
+    #[diagnostic(transparent)]
+    Semver(#[from] crate::releases::semver::version::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,6 +77,7 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::dry_run::fake_dry_run;
 
     #[test]
     fn test_get_version() {
@@ -98,9 +101,8 @@ mod tests {
         version = "0.1.0-rc.0"
         "#;
 
-        let stdout = Box::<Vec<u8>>::default();
         let new = set_version(
-            &mut Some(stdout),
+            &mut fake_dry_run(),
             String::from(content),
             "1.2.3-rc.4",
             Path::new(""),

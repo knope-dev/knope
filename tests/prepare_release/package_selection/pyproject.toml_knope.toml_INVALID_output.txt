@@ -1,4 +1,7 @@
 Error:   × Problem with workflow release
 
-Error:   × No versions were found in pyproject.toml
+Error: pyproject::no_versions (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
+
+  × No versions were found in pyproject.toml
+  help: Make sure [project.version] or [tool.poetry.version] is set.
 

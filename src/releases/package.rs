@@ -14,15 +14,19 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{ChangeLogSectionName, CommitFooter, CustomChangeType},
+    dry_run::DryRun,
+    fs, git,
     git::add_files,
     releases::{
+        changelog,
         changelog::Changelog,
         changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
+        semver,
         semver::{bump, ConventionalRule, Label, Version},
+        versioned_file,
         versioned_file::{VersionedFile, PACKAGE_FORMAT_FILE_NAMES},
         Change, Release, Rule,
     },
-    step::StepError,
     workflow::Verbose,
 };
 
@@ -62,9 +66,9 @@ impl Package {
     pub(crate) fn write_release(
         mut self,
         prerelease_label: &Option<Label>,
-        dry_run: &mut Option<Box<dyn Write>>,
+        dry_run: DryRun,
         verbose: Verbose,
-    ) -> Result<Self, StepError> {
+    ) -> Result<Self, Error> {
         if self.pending_changes.is_empty() {
             return Ok(self);
         }
@@ -100,7 +104,7 @@ impl Package {
 
         Ok(self)
     }
-    fn stage_changes_to_git(&self, dry_run: &mut Option<Box<dyn Write>>) -> Result<(), StepError> {
+    fn stage_changes_to_git(&self, dry_run: DryRun) -> Result<(), Error> {
         let changeset_path = PathBuf::from(".changeset");
         let paths = self
             .versioned_files
@@ -121,14 +125,14 @@ impl Package {
             .collect_vec();
         if paths.is_empty() {
             Ok(())
-        } else if let Some(stdio) = dry_run.as_deref_mut() {
-            writeln!(stdio, "Would add files to git:")?;
+        } else if let Some(stdio) = dry_run {
+            writeln!(stdio, "Would add files to git:").map_err(fs::Error::Stdout)?;
             for path in &paths {
-                writeln!(stdio, "  {}", path.display())?;
+                writeln!(stdio, "  {}", path.display()).map_err(fs::Error::Stdout)?;
             }
             Ok(())
         } else {
-            add_files(&paths)
+            add_files(&paths).map_err(Error::from)
         }
     }
 }
@@ -242,7 +246,7 @@ impl Display for ChangelogSectionSource {
 }
 
 /// Find all supported package formats in the current directory.
-pub(crate) fn find_packages() -> Result<Package, StepError> {
+pub(crate) fn find_packages() -> Result<Package, Error> {
     let default = PathBuf::from("CHANGELOG.md");
     let changelog = default
         .exists()
@@ -267,8 +271,54 @@ pub(crate) fn find_packages() -> Result<Package, StepError> {
     })
 }
 
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    VersionedFile(#[from] versioned_file::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Changelog(#[from] changelog::Error),
+    #[error("Could not serialize generated TOML")]
+    #[diagnostic(
+        code(releases::package::could_not_serialize_toml),
+        help("This is a bug, please report it to https://github.com/knope-dev/knope")
+    )]
+    GeneratedTOML(#[from] toml::ser::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Semver(#[from] semver::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    InvalidPreReleaseVersion(#[from] semver::InvalidPreReleaseVersion),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Git(#[from] git::Error),
+    #[error("No packages are defined")]
+    #[diagnostic(
+        code(package::no_defined_packages),
+        help("You must define at least one [package] in knope.toml. {package_suggestion}"),
+        url("https://knope-dev.github.io/knope/config/packages.html")
+    )]
+    NoDefinedPackages { package_suggestion: String },
+}
+
+impl Error {
+    pub fn no_defined_packages_with_help() -> Self {
+        match suggested_package_toml() {
+            Ok(help) => Self::NoDefinedPackages {
+                package_suggestion: help,
+            },
+            Err(err) => err,
+        }
+    }
+}
+
 /// Includes some helper text for the user to understand how to use the config to define packages.
-pub(crate) fn suggested_package_toml() -> Result<String, StepError> {
+pub(crate) fn suggested_package_toml() -> Result<String, Error> {
     let package = find_packages()?;
     if package.versioned_files.is_empty() {
         Ok(format!(

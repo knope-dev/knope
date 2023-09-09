@@ -1,1 +1,1 @@
-Would write 2.0.0 to Cargo.toml
+Would add the following to Cargo.toml: 2.0.0

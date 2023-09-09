@@ -148,8 +148,10 @@ fn changelog_sections_config_to_toml(
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Changelog(#[from] changelog::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     VersionedFile(#[from] versioned_file::Error),
 }
 

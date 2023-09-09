@@ -1,6 +1,10 @@
 Error:   × Problem with workflow release
 
-Error:   × Error deserializing package.json: EOF while parsing a value at line 1
+Error: package_json::deserialize (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
+
+  × Error deserializing package.json: EOF while parsing a value at line 1
   │ column 0
   ╰─▶ EOF while parsing a value at line 1 column 0
+  help: knope expects the package.json file to be an object with a top level
+        `version` property
 

@@ -5,11 +5,7 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{
-    state::RunType,
-    step::{Step, StepError},
-    State,
-};
+use crate::{state::RunType, step, step::Step, State};
 
 /// A workflow is basically the state machine to run for a single execution of knope.
 #[derive(Debug, Deserialize, Serialize)]
@@ -59,7 +55,7 @@ pub struct ValidationErrorCollection {
 pub struct Error {
     name: String,
     #[related]
-    inner: [StepError; 1],
+    inner: Box<[step::Error; 1]>,
 }
 
 /// Run a series of [`Step`], each of which updates `state`.
@@ -70,7 +66,7 @@ pub(crate) fn run(workflow: Workflow, mut state: RunType, verbose: Verbose) -> R
             Err(err) => {
                 return Err(Error {
                     name: workflow.name,
-                    inner: [err],
+                    inner: Box::new([err]),
                 });
             }
         };

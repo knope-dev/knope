@@ -25,9 +25,9 @@ changeset breaking_change.md
 changeset feature.md
 	implies rule MINOR
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
-Would write 2.0.0 to Cargo.toml
-Would write 2.0.0 to pyproject.toml
-Would add the following to FIRST_CHANGELOG.md:
+Would add the following to Cargo.toml: 2.0.0
+Would add the following to pyproject.toml: 2.0.0
+Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
 ### Breaking Changes
@@ -86,8 +86,8 @@ commit feat: A feature with a separate breaking change
 changeset feature.md
 	implies rule PATCH
 Rule is MAJOR, but major component is 0. Bumping minor component from 0.4.6 to 0.5.0
-Would write 0.5.0 to package.json
-Would add the following to SECOND_CHANGELOG.md:
+Would add the following to package.json: 0.5.0
+Would add the following to SECOND_CHANGELOG.md: 
 ## 0.5.0 ([DATE])
 
 ### Breaking Changes
