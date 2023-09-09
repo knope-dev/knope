@@ -4,11 +4,10 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use crate::{
-    fs,
-    releases::{
-        get_current_versions_from_tag, git, semver::Version, tag_name,
-        versioned_file::VersionFromSource, PackageName,
-    },
+    dry_run::DryRun,
+    fs, git,
+    git::get_current_versions_from_tags,
+    releases::{semver::Version, tag_name, versioned_file::VersionFromSource, PackageName},
 };
 
 #[derive(Debug, Diagnostic, Error)]
@@ -20,17 +19,20 @@ pub(crate) enum Error {
     )]
     MissingModuleLine,
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Git(#[from] git::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Fs(#[from] fs::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     ModuleLine(#[from] ModuleLineError),
 }
 
 /// Sets the version in go.mod, but does not create the Git tag which _actually_ is the source
 /// of truth for Go versions. That will be set by [`create_version_tag`] in the [`crate::Step::Release`].
 pub(crate) fn set_version_in_file(
-    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    dry_run: DryRun,
     content: &str,
     new_version: &Version,
     path: &Path,
@@ -251,7 +253,7 @@ mod test_module_line {
 pub(crate) fn create_version_tag(
     path: &Path,
     version: &Version,
-    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    dry_run: DryRun,
 ) -> Result<(), git::Error> {
     let parent_dir = path.parent().map(Path::to_string_lossy);
     if let Some(parent_dir) = parent_dir {
@@ -286,7 +288,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<VersionFromSourc
         });
     }
 
-    if let Some(version_from_tag) = get_current_versions_from_tag(prefix.as_deref())
+    if let Some(version_from_tag) = get_current_versions_from_tags(prefix.as_deref())
         .map(|current_versions| {
             current_versions
                 .into_latest()

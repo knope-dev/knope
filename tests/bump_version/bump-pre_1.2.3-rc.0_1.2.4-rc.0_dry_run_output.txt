@@ -1,1 +1,1 @@
-Would write 1.2.4-rc.0 to Cargo.toml
+Would add the following to Cargo.toml: 1.2.4-rc.0

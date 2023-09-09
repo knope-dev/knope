@@ -8,11 +8,11 @@ use crate::{
     app_config,
     app_config::get_or_prompt_for_github_token,
     config::GitHub,
-    releases,
+    dry_run::DryRun,
     releases::{
         git::tag_name,
         package::{Asset, AssetNameError},
-        PackageName, Release,
+        PackageName, Release, TimeError,
     },
     state,
     state::GitHub::{Initialized, New},
@@ -23,7 +23,7 @@ pub(crate) fn release(
     release: &Release,
     github_state: state::GitHub,
     github_config: &GitHub,
-    dry_run_stdout: Option<&mut Box<dyn Write>>,
+    dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
 ) -> Result<state::GitHub, Error> {
     let version = &release.new_version;
@@ -185,6 +185,7 @@ pub(crate) enum Error {
         source: std::io::Error,
     },
     #[error(transparent)]
+    #[diagnostic(transparent)]
     AppConfig(#[from] app_config::Error),
     #[error("Trouble communicating with GitHub while {activity}: {err}")]
     #[diagnostic(
@@ -207,8 +208,6 @@ pub(crate) enum Error {
     },
     #[error("Could not write to stdout")]
     Stdout(std::io::Error),
-    #[error(transparent)]
-    Release(#[from] releases::Error),
     #[error("Asset was not uploaded to GitHub, a release was created but is still a draft! {0}")]
     #[diagnostic(
         code(github::asset_name_error),
@@ -216,6 +215,9 @@ pub(crate) enum Error {
         url("https://knope-dev.github.io/knope/config/packages.html#assets")
     )]
     AssetNameError(#[from] AssetNameError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TimeError(#[from] TimeError),
 }
 
 #[derive(Serialize)]

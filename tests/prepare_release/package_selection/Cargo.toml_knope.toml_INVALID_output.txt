@@ -1,6 +1,8 @@
 Error:   × Problem with workflow release
 
-Error:   × Error deserializing Cargo.toml: TOML parse error at line 1, column 1
+Error: cargo::deserialize (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
+
+  × Error deserializing Cargo.toml: TOML parse error at line 1, column 1
   │   |
   │ 1 |
   │   | ^
@@ -12,4 +14,6 @@ Error:   × Error deserializing Cargo.toml: TOML parse error at line 1, column 1
         | ^
       missing field `package`
       
+  help: knope expects the Cargo.toml file to have a `package.version`
+        property. Workspace support is coming soon!
 

@@ -1,4 +1,4 @@
-use std::{fs::read_to_string, io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 use indexmap::IndexMap;
 use itertools::Itertools;
@@ -8,8 +8,9 @@ use thiserror::Error;
 use super::Package;
 use crate::{
     config::ChangeLogSectionName,
-    releases::{semver::Version, ChangeType, Release},
-    step::StepError,
+    dry_run::DryRun,
+    fs,
+    releases::{semver::Version, ChangeType, Release, TimeError},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -23,7 +24,7 @@ impl TryFrom<PathBuf> for Changelog {
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         let content = if path.exists() {
-            read_to_string(&path).map_err(|e| Error::File(path.clone(), e))?
+            fs::read_to_string(&path)?
         } else {
             String::new()
         };
@@ -117,14 +118,12 @@ Initial release
 
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
-    #[error("Error reading file {0}: {1}")]
-    #[diagnostic(
-        code(changelog::io),
-        help("Please check that the file exists and is readable.")
-    )]
-    File(PathBuf, #[source] std::io::Error),
     #[error(transparent)]
-    Io(#[from] std::io::Error),
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TimeError(#[from] TimeError),
 }
 
 impl Package {
@@ -132,8 +131,8 @@ impl Package {
     pub(crate) fn write_changelog(
         &mut self,
         version: Version,
-        dry_run: &mut Option<Box<dyn Write>>,
-    ) -> Result<Release, StepError> {
+        dry_run: DryRun,
+    ) -> Result<Release, Error> {
         let mut fixes = Vec::new();
         let mut features = Vec::new();
         let mut breaking_changes = Vec::new();
@@ -161,16 +160,12 @@ impl Package {
 
         if let (Some(changelog), Some(new_changes)) = (self.changelog.as_mut(), new_changelog) {
             changelog.content = add_version_to_changelog(&changelog.content, &new_changes);
-            if let Some(stdout) = dry_run {
-                writeln!(
-                    stdout,
-                    "Would add the following to {}:",
-                    changelog.path.display()
-                )?;
-                writeln!(stdout, "{}", &new_changes)?;
-            } else {
-                std::fs::write(&changelog.path, &changelog.content)?;
-            }
+            fs::write(
+                dry_run,
+                &format!("\n{new_changes}"),
+                &changelog.path,
+                &changelog.content,
+            )?;
         };
 
         Ok(release)

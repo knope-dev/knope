@@ -2,42 +2,41 @@ Error:   × There are problems with the defined workflows
 
 Error:   × Problem with workflow Cannot SelectJiraIssue without Jira config
 
-Error: step::jira_not_configured (https://knope-dev.github.io/knope/config/jira.html)
+Error: issues::jira::not_configured (https://knope-dev.github.io/knope/config/jira.html)
 
   × Jira is not configured
-  help: Jira must be configured in order to call this step
+  help: Jira must be configured in order to select a Jira issue
 Error:   × Problem with workflow Cannot TransitionJiraIssue without SelectJiraIssue
 
-Error: step::no_issue_selected
+Error: issues::jira::no_issue_selected
 
   × No issue selected
-  help: You must call SelectJiraIssue or SelectGitHubIssue before calling
-        this step
+  help: You must use the SelectJiraIssue step before TransitionJiraIssue in
+        the same workflow
 Error:   × Problem with workflow Cannot SelectGitHubIssue without GitHub config
 
-Error: step::github_not_configured (https://knope-dev.github.io/knope/config/github.html)
+Error: issues::github::not_configured (https://knope-dev.github.io/knope/config/github.html)
 
   × GitHub is not configured
-  help: GitHub must be configured in order to call this step
+  help: GitHub must be configured in order to use the SelectGitHubIssue step
 Error:   × Problem with workflow Cannot SwitchBranches without first selecting an
   │ issue
 
-Error: step::no_issue_selected
+Error: git::no_issue_selected
 
   × No issue selected
-  help: You must call SelectJiraIssue or SelectGitHubIssue before calling
-        this step
+  help: Switching branches requires selecting an issue first with
+        SelectGitHubIssue or SelectJiraIssue
 Error:   × Problem with workflow Cannot use Version variable when no metadata file
   │ is found
 
-Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: package::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 
   × No packages are defined
-  help: You must define at least one package in the [[packages]]
-        section of knope.toml. No supported package managers found in
-        current directory. The supported formats are Cargo.toml, go.mod,
-        package.json, pyproject.toml. Here's how you might define a package
-        for `Cargo.toml`:
+  help: You must define at least one [package] in knope.toml. No supported
+        package managers found in current directory. The supported formats
+        are Cargo.toml, go.mod, package.json, pyproject.toml. Here's how you
+        might define a package for `Cargo.toml`:
         
         ```
         [package]
@@ -46,14 +45,13 @@ Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packa
         ```
 Error:   × Problem with workflow Cannot PrepareRelease with no configured packages
 
-Error: step::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: package::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
 
   × No packages are defined
-  help: You must define at least one package in the [[packages]]
-        section of knope.toml. No supported package managers found in
-        current directory. The supported formats are Cargo.toml, go.mod,
-        package.json, pyproject.toml. Here's how you might define a package
-        for `Cargo.toml`:
+  help: You must define at least one [package] in knope.toml. No supported
+        package managers found in current directory. The supported formats
+        are Cargo.toml, go.mod, package.json, pyproject.toml. Here's how you
+        might define a package for `Cargo.toml`:
         
         ```
         [package]

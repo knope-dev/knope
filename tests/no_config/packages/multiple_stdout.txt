@@ -1,7 +1,7 @@
-Would write 2.0.0 to Cargo.toml
-Would write 2.0.0 to package.json
-Would write 2.0.0 to pyproject.toml
-Would add the following to CHANGELOG.md:
+Would add the following to Cargo.toml: 2.0.0
+Would add the following to package.json: 2.0.0
+Would add the following to pyproject.toml: 2.0.0
+Would add the following to CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
 ### Breaking Changes

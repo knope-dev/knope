@@ -1,20 +1,12 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
-use gix::{
-    objs::decode,
-    reference::{head_commit, peel},
-    revision::walk,
-    traverse::commit::ancestors,
-};
 use log::error;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    app_config, command, git, issues, prompt, releases,
-    releases::{changelog, semver::Label, suggested_package_toml},
-    state::RunType,
+    command, git, issues, prompt, releases, releases::semver::Label, state::RunType,
     workflow::Verbose,
 };
 
@@ -84,28 +76,28 @@ pub(crate) enum Step {
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType, verbose: Verbose) -> Result<RunType, StepError> {
-        match self {
-            Step::SelectJiraIssue { status } => issues::select_jira_issue(&status, run_type),
+    pub(crate) fn run(self, run_type: RunType, verbose: Verbose) -> Result<RunType, Error> {
+        Ok(match self {
+            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
             Step::TransitionJiraIssue { status } => {
-                issues::transition_jira_issue(&status, run_type)
+                issues::jira::transition_issue(&status, run_type)?
             }
             Step::SelectGitHubIssue { labels } => {
-                issues::select_github_issue(labels.as_deref(), run_type)
+                issues::github::select_issue(labels.as_deref(), run_type)?
             }
-            Step::SwitchBranches => git::switch_branches(run_type),
-            Step::RebaseBranch { to } => git::rebase_branch(&to, run_type),
-            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule, verbose),
+            Step::SwitchBranches => git::switch_branches(run_type)?,
+            Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
+            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule, verbose)?,
             Step::Command { command, variables } => {
-                command::run_command(run_type, command, variables)
+                command::run_command(run_type, command, variables)?
             }
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(run_type, &prepare_release, verbose)
+                releases::prepare_release(run_type, &prepare_release, verbose)?
             }
-            Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type),
-            Step::Release => releases::release(run_type),
-            Step::CreateChangeFile => releases::create_change_file(run_type),
-        }
+            Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type)?,
+            Step::Release => releases::release(run_type)?,
+            Step::CreateChangeFile => releases::create_change_file(run_type)?,
+        })
     }
 
     /// Set `prerelease_label` if `self` is `PrepareRelease`.
@@ -117,244 +109,28 @@ impl Step {
 }
 
 #[derive(Debug, Error, Diagnostic)]
-pub(super) enum StepError {
-    #[error("No issue selected")]
-    #[diagnostic(
-        code(step::no_issue_selected),
-        help("You must call SelectJiraIssue or SelectGitHubIssue before calling this step")
-    )]
-    NoIssueSelected,
-    #[error("Jira is not configured")]
-    #[diagnostic(
-        code(step::jira_not_configured),
-        help("Jira must be configured in order to call this step"),
-        url("https://knope-dev.github.io/knope/config/jira.html")
-    )]
-    JiraNotConfigured,
-    #[error("The specified transition name was not found in the Jira project")]
-    #[diagnostic(
-    code(step::invalid_jira_transition),
-    help("The `transition` field in TransitionJiraIssue must correspond to a valid transition in the Jira project"),
-    url("https://knope-dev.github.io/knope/config/jira.html")
-    )]
-    InvalidJiraTransition,
-    #[error("GitHub is not configured")]
-    #[diagnostic(
-        code(step::github_not_configured),
-        help("GitHub must be configured in order to call this step"),
-        url("https://knope-dev.github.io/knope/config/github.html")
-    )]
-    GitHubNotConfigured,
-    #[error("Could not increment pre-release version {0}")]
-    #[diagnostic(
-        code(step::invalid_pre_release_version),
-        help(
-            "The pre-release component of a version must be in the format of `-<label>.N` \
-            where <label> is a string and `N` is an integer"
-        ),
-        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
-    )]
-    InvalidPreReleaseVersion(String),
-    #[error("No packages are ready to release")]
-    #[diagnostic(
-        code(step::no_release),
-        help("The `PrepareRelease` step will not complete if no commits cause a package's version to be increased."),
-        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html"),
-    )]
-    NoRelease,
-    #[error("Could not determine the current version of the package")]
-    #[diagnostic(
-        code(step::no_current_version),
-        help("The current version of the package could not be determined"),
-        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
-    )]
-    NoCurrentVersion,
-    #[error("Versioned files within the same package must have the same version. Found {first_version} in {first_source} which does not match {second_version} in {second_source}")]
-    #[diagnostic(
-        code(step::inconsistent_versions),
-        help("Manually update all versioned_files to have the correct version"),
-        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
-    )]
-    InconsistentVersions {
-        first_version: String,
-        first_source: String,
-        second_version: String,
-        second_source: String,
-    },
+pub(super) enum Error {
     #[error(transparent)]
-    Go(#[from] releases::go::Error),
-    #[error(transparent)]
-    VersionedFile(#[from] releases::versioned_file::Error),
-    #[error("Trouble communicating with a remote API")]
-    #[diagnostic(
-        code(step::api_request_error),
-        help(
-            "This occurred during a step that requires communicating with a remote API \
-             (e.g., GitHub or Jira). The problem could be an invalid authentication token or a \
-             network issue."
-        )
-    )]
-    ApiRequestError,
-    #[error("Trouble decoding the response from a remote API")]
-    #[diagnostic(
-        code(step::api_response_error),
-        help(
-        "This occurred during a step that requires communicating with a remote API \
-                 (e.g., GitHub or Jira). If we were unable to decode the response, it's probably a bug."
-        )
-    )]
-    ApiResponseError(#[source] Option<serde_json::Error>),
-    #[error(transparent)]
-    #[diagnostic(code(step::io))]
-    Io(#[from] std::io::Error),
-    #[error(transparent)]
-    Git(#[from] releases::git::Error),
-    #[error("Not a Git repo.")]
-    #[diagnostic(
-        code(step::not_a_git_repo),
-        help(
-            "We couldn't find a Git repo in the current directory. Maybe you're not running from the project root?"
-        )
-    )]
-    NotAGitRepo,
-    #[error("Not on the tip of a Git branch.")]
-    #[diagnostic(
-        code(step::not_on_a_git_branch),
-        help("In order to run this step, you need to be on the very tip of a Git branch.")
-    )]
-    NotOnAGitBranch,
-    #[error("Bad branch name")]
-    #[diagnostic(
-        code(step::bad_branch_name),
-        help("The branch name was not formatted correctly."),
-        url("https://knope-dev.github.io/knope/config/step/SelectIssueFromBranch.html")
-    )]
-    BadGitBranchName,
-    #[error("Uncommitted changes")]
-    #[diagnostic(
-        code(step::uncommitted_changes),
-        help("You need to commit your changes before running this step."),
-        url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
-    )]
-    UncommittedChanges,
-    #[error("Could not complete checkout")]
-    #[diagnostic(
-        code(step::incomplete_checkout),
-        help("Switching branches failed, but HEAD was changed. You probably want to git switch back \
-            to the branch you were on."),
-    )]
-    IncompleteCheckout(#[source] git2::Error),
-    #[error("Unknown Git error.")]
-    #[diagnostic(
-        code(step::git_error),
-        help(
-        "Something went wrong when interacting with Git that we don't have an explanation for. \
-                Maybe try performing the operation manually?"
-        )
-    )]
-    GitError(#[from] Option<git2::Error>),
-    #[error("Could not get head commit")]
-    #[diagnostic(
-        code(step::head_commit_error),
-        help("This step requires HEAD to point to a commit—it was not.")
-    )]
-    HeadCommitError(#[from] head_commit::Error),
-    #[error("Something went wrong with Git")]
-    #[diagnostic(
-        code(step::unknown_git_error),
-        help("Something funky happened with Git, please open a GitHub issue so we can diagnose")
-    )]
-    UnknownGitError,
-    #[error("Command returned non-zero exit code")]
-    #[diagnostic(
-        code(step::command_failed),
-        help("The command failed to execute. Try running it manually to get more information.")
-    )]
-    CommandError(std::process::ExitStatus),
-    #[error("Failed to peel tag, could not proceed with processing commits.")]
-    #[diagnostic(
-        code(step::peel_tag_error),
-        help("In order to process commits for a release, we need to peel the tag. If this fails, it may be a bug."),
-    )]
-    PeelTagError(#[from] peel::Error),
-    #[error("Could not walk backwards from HEAD commit")]
-    #[diagnostic(
-        code(step::walk_backwards_error),
-        help("This step requires walking backwards from HEAD to find the previous release commit. If this fails, make sure HEAD is on a branch."),
-    )]
-    AncestorsError(#[from] ancestors::Error),
-    #[error("Could not walk backwards from HEAD commit")]
-    #[diagnostic(
-        code(step::walk_error),
-        help("This step requires walking backwards from HEAD to find the previous release commit. If this fails, make sure HEAD is on a branch without shallow commits."),
-    )]
-    WalkError(#[from] walk::Error),
-    #[error("Could not decode commit")]
-    #[diagnostic(
-        code(step::decode_commit_error),
-        help("This step requires decoding a commit message. If this fails, it may be a bug.")
-    )]
-    DecodeError(#[from] decode::Error),
-    #[error("No packages are defined")]
-    #[diagnostic(
-        code(step::no_defined_packages),
-        help("You must define at least one package in the [[packages]] section of knope.toml. {package_suggestion}"),
-        url("https://knope-dev.github.io/knope/config/packages.html")
-    )]
-    NoDefinedPackages { package_suggestion: String },
-    #[error("Too many packages defined")]
-    #[diagnostic(
-        code(step::too_many_packages),
-        help("Only one package in [package] is currently supported for this step.")
-    )]
-    TooManyPackages,
-    #[error("Failed to create the file {0}")]
-    #[diagnostic(
-        code(step::could_not_create_file),
-        help("This could be a permissions issue or a file conflict (the file already exists).")
-    )]
-    CouldNotCreateFile(PathBuf),
-    #[error(transparent)]
-    #[diagnostic(
-        code(step::could_not_read_changeset),
-        help(
-            "This could be a file-system issue or a problem with the formatting of a change file."
-        )
-    )]
-    CouldNotReadChangeSet(#[from] changesets::LoadingError),
-    #[error("Failed to format a date: {0}")]
-    #[diagnostic(
-        code(step::could_not_format_date),
-        help("This is likely a bug, please report it to https://github.com/knope-dev/knope")
-    )]
-    CouldNotFormatDate(#[from] time::error::Format),
-    #[error(transparent)]
-    Changelog(#[from] changelog::Error),
-    #[error("Could not serialize generated TOML")]
-    #[diagnostic(
-        code(step::could_not_serialize_toml),
-        help("This is a bug, please report it to https://github.com/knope-dev/knope")
-    )]
-    GeneratedTOML(#[from] toml::ser::Error),
-    #[error(transparent)]
-    GitHub(#[from] releases::github::Error),
-    #[error(transparent)]
+    #[diagnostic(transparent)]
     Release(#[from] releases::Error),
     #[error(transparent)]
-    AppConfig(#[from] app_config::Error),
-    #[error(transparent)]
+    #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),
-}
-
-impl StepError {
-    pub fn no_defined_packages_with_help() -> Self {
-        match suggested_package_toml() {
-            Ok(suggested_toml) => Self::NoDefinedPackages {
-                package_suggestion: suggested_toml,
-            },
-            Err(e) => e,
-        }
-    }
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    JiraIssue(#[from] issues::jira::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    GitHubIssue(#[from] issues::github::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Git(#[from] git::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ChangeSet(#[from] releases::changesets::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Command(#[from] command::Error),
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.

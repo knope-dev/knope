@@ -65,5 +65,6 @@ pub(crate) enum Error {
     )]
     CouldNotCreateDirectory(PathBuf, std::io::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),
 }

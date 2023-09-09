@@ -1,9 +1,14 @@
 use std::collections::HashMap;
 
 use execute::shell;
+use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
-use crate::{git::branch_name_from_issue, state, step::StepError, RunType, State};
+use crate::{
+    git::branch_name_from_issue,
+    releases::{package, semver},
+    state, RunType, State,
+};
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
 #[derive(Debug, Deserialize, Serialize)]
@@ -21,7 +26,7 @@ pub(crate) fn run_command(
     mut run_type: RunType,
     mut command: String,
     variables: Option<HashMap<String, Variable>>,
-) -> Result<RunType, StepError> {
+) -> Result<RunType, Error> {
     let (state, dry_run_stdout) = match &mut run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
@@ -37,7 +42,44 @@ pub(crate) fn run_command(
     if status.success() {
         return Ok(run_type);
     }
-    Err(StepError::CommandError(status))
+    Err(Error::Command(status))
+}
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error("Command returned non-zero exit code")]
+    #[diagnostic(
+        code(command::failed),
+        help("The command failed to execute. Try running it manually to get more information.")
+    )]
+    Command(std::process::ExitStatus),
+    #[error("I/O error: {0}")]
+    #[diagnostic(code(command::io))]
+    Io(#[from] std::io::Error),
+    #[error("Too many packages defined")]
+    #[diagnostic(
+        code(command::too_many_packages),
+        help("The Version variable in a Command step can only be used with a single [package].")
+    )]
+    TooManyPackages,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Package(#[from] package::Error),
+    #[error("Could not determine the current version of the package")]
+    #[diagnostic(
+        code(command::no_current_version),
+        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
+    )]
+    NoCurrentVersion,
+    #[error("No issue selected")]
+    #[diagnostic(
+        code(git::no_issue_selected),
+        help("The IssueBranch command variable requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue")
+    )]
+    NoIssueSelected,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SemVer(#[from] semver::Error),
 }
 
 /// Replace declared variables in the command string and return command.
@@ -45,16 +87,16 @@ fn replace_variables(
     mut command: String,
     variables: HashMap<String, Variable>,
     state: &State,
-) -> Result<String, StepError> {
+) -> Result<String, Error> {
     for (var_name, var_type) in variables {
         match var_type {
             Variable::Version => {
                 let package = if state.packages.len() > 1 {
-                    return Err(StepError::TooManyPackages);
+                    return Err(Error::TooManyPackages);
                 } else if let Some(package) = state.packages.first() {
                     package
                 } else {
-                    return Err(StepError::no_defined_packages_with_help());
+                    return Err(package::Error::no_defined_packages_with_help().into());
                 };
                 let version = if let Some(release) = package.prepared_release.as_ref() {
                     release.new_version.to_string()
@@ -62,13 +104,13 @@ fn replace_variables(
                     package
                         .get_version()?
                         .into_latest()
-                        .ok_or(StepError::NoCurrentVersion)?
+                        .ok_or(Error::NoCurrentVersion)?
                         .to_string()
                 };
                 command = command.replace(&var_name, &version);
             }
             Variable::IssueBranch => match &state.issue {
-                state::Issue::Initial => return Err(StepError::NoIssueSelected),
+                state::Issue::Initial => return Err(Error::NoIssueSelected),
                 state::Issue::Selected(issue) => {
                     command = command.replace(&var_name, &branch_name_from_issue(issue));
                 }

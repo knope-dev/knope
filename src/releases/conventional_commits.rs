@@ -2,12 +2,13 @@ use std::fmt::Display;
 
 use git_conventional::{Commit, Footer, Type};
 use log::debug;
+use miette::Diagnostic;
 
 use crate::{
     config::CommitFooter,
-    git::get_commit_messages_after_last_stable_version,
-    releases::{package::ChangelogSectionSource, Change, ChangeType, Package},
-    step::StepError,
+    git,
+    git::{get_commit_messages_after_tag, get_current_versions_from_tags},
+    releases::{self, package::ChangelogSectionSource, tag_name, Change, ChangeType, Package},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -342,8 +343,10 @@ mod test_conventional_commits {
 fn get_conventional_commits_after_last_stable_version(
     package: &Package,
     consider_scopes: bool,
-) -> Result<Vec<ConventionalCommit>, StepError> {
-    let commit_messages = get_commit_messages_after_last_stable_version(package.name.as_ref())?;
+) -> Result<Vec<ConventionalCommit>, Error> {
+    let target_version = get_current_versions_from_tags(package.name.as_deref())?.stable;
+    let tag = target_version.map(|version| tag_name(&version.into(), package.name.as_ref()));
+    let commit_messages = get_commit_messages_after_tag(tag).map_err(git::Error::from)?;
     Ok(ConventionalCommit::from_commit_messages(
         &commit_messages,
         consider_scopes,
@@ -351,9 +354,19 @@ fn get_conventional_commits_after_last_stable_version(
     ))
 }
 
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Git(#[from] git::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    GitRelease(#[from] releases::git::Error),
+}
+
 pub(crate) fn add_releases_from_conventional_commits(
     packages: Vec<Package>,
-) -> Result<Vec<Package>, StepError> {
+) -> Result<Vec<Package>, Error> {
     let consider_scopes = packages.iter().any(|package| package.scopes.is_some());
     packages
         .into_iter()
@@ -361,10 +374,7 @@ pub(crate) fn add_releases_from_conventional_commits(
         .collect()
 }
 
-fn add_release_for_package(
-    mut package: Package,
-    consider_scopes: bool,
-) -> Result<Package, StepError> {
+fn add_release_for_package(mut package: Package, consider_scopes: bool) -> Result<Package, Error> {
     get_conventional_commits_after_last_stable_version(&package, consider_scopes).map(|commits| {
         if commits.is_empty() {
             package

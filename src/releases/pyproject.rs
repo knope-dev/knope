@@ -9,6 +9,7 @@ use thiserror::Error;
 use toml::Spanned;
 
 use crate::{
+    dry_run::DryRun,
     fs,
     releases::{semver, semver::Version},
 };
@@ -27,7 +28,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> 
 ///
 /// `path` is used for error reporting.
 pub(crate) fn set_version(
-    dry_run: &mut Option<Box<dyn std::io::Write>>,
+    dry_run: DryRun,
     pyproject_toml: String,
     new_version: &str,
     path: &Path,
@@ -42,6 +43,7 @@ pub(crate) fn set_version(
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Fs(#[from] fs::Error),
     #[error("Could not deserialize {0} as a pyproject.toml: {1}")]
     #[diagnostic(
@@ -73,7 +75,8 @@ pub(crate) enum Error {
     )]
     NoVersions(PathBuf),
     #[error(transparent)]
-    Semver(#[from] semver::Error),
+    #[diagnostic(transparent)]
+    Semver(#[from] semver::version::Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -146,6 +149,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::dry_run::fake_dry_run;
 
     #[test]
     fn test_get_version_poetry() {
@@ -228,9 +232,8 @@ mod tests {
         version = "0.1.0-rc.0"
         "#;
 
-        let stdout = Box::<Vec<u8>>::default();
         let new = set_version(
-            &mut Some(stdout),
+            &mut fake_dry_run(),
             String::from(content),
             "1.2.3-rc.4",
             &PathBuf::new(),

@@ -1,7 +1,6 @@
 use std::{
     ffi::OsStr,
     fs::read_to_string,
-    io::Write,
     path::{Path, PathBuf},
 };
 
@@ -9,7 +8,10 @@ use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::releases::{cargo, git, go, package_json, pyproject, semver::Version};
+use crate::{
+    dry_run::DryRun,
+    releases::{cargo, git, go, package_json, pyproject, semver::Version},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct VersionedFile {
@@ -26,7 +28,7 @@ impl TryFrom<PathBuf> for VersionedFile {
 
     fn try_from(path: PathBuf) -> Result<Self> {
         let format = PackageFormat::try_from(&path)?;
-        let content = read_to_string(&path).map_err(|e| Error::Io(path.clone(), e))?;
+        let content = read_to_string(&path).map_err(|e| ErrorKind::Io(path.clone(), e))?;
         Ok(Self {
             format,
             path,
@@ -36,7 +38,18 @@ impl TryFrom<PathBuf> for VersionedFile {
 }
 
 #[derive(Debug, Diagnostic, Error)]
-pub(crate) enum Error {
+#[error(transparent)]
+#[diagnostic(transparent)]
+pub(crate) struct Error(Box<ErrorKind>);
+
+impl<T: Into<ErrorKind>> From<T> for Error {
+    fn from(kind: T) -> Self {
+        Self(Box::new(kind.into()))
+    }
+}
+
+#[derive(Debug, Diagnostic, Error)]
+enum ErrorKind {
     #[error("Error reading file {0}: {1}")]
     #[diagnostic(
         code(versioned_file::io),
@@ -57,14 +70,19 @@ pub(crate) enum Error {
     )]
     VersionedFileFormat(PathBuf),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Git(#[from] git::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Go(#[from] go::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Cargo(#[from] cargo::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     PyProject(#[from] pyproject::Error),
     #[error(transparent)]
+    #[diagnostic(transparent)]
     PackageJson(#[from] package_json::Error),
 }
 
@@ -75,11 +93,7 @@ impl VersionedFile {
         self.format.get_version(&self.content, &self.path)
     }
 
-    pub(crate) fn set_version(
-        &mut self,
-        dry_run: &mut Option<Box<dyn Write>>,
-        version_str: &Version,
-    ) -> Result<()> {
+    pub(crate) fn set_version(&mut self, dry_run: DryRun, version_str: &Version) -> Result<()> {
         self.content =
             self.format
                 .set_version(dry_run, self.content.clone(), version_str, &self.path)?;
@@ -102,12 +116,12 @@ impl TryFrom<&PathBuf> for PackageFormat {
         let file_name = path
             .file_name()
             .and_then(OsStr::to_str)
-            .ok_or_else(|| Error::NotAFile(path.clone()))?;
+            .ok_or_else(|| ErrorKind::NotAFile(path.clone()))?;
         PACKAGE_FORMAT_FILE_NAMES
             .iter()
             .find_position(|&name| *name == file_name)
             .and_then(|(pos, _)| ALL_PACKAGE_FORMATS.get(pos).copied())
-            .ok_or_else(|| Error::VersionedFileFormat(path.clone()))
+            .ok_or_else(|| Error::from(ErrorKind::VersionedFileFormat(path.clone())))
     }
 }
 
@@ -116,28 +130,27 @@ impl PackageFormat {
     /// `path` is used for error reporting.
     pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<VersionFromSource> {
         match self {
-            PackageFormat::Cargo => {
-                cargo::get_version(content, path)
-                    .map_err(Error::Cargo)
-                    .map(|version| VersionFromSource {
-                        version,
-                        source: path.display().to_string(),
-                    })
-            }
+            PackageFormat::Cargo => cargo::get_version(content, path)
+                .map_err(ErrorKind::Cargo)
+                .map(|version| VersionFromSource {
+                    version,
+                    source: path.display().to_string(),
+                }),
             PackageFormat::Poetry => pyproject::get_version(content, path)
-                .map_err(Error::PyProject)
+                .map_err(ErrorKind::PyProject)
                 .map(|version| VersionFromSource {
                     version,
                     source: path.display().to_string(),
                 }),
             PackageFormat::JavaScript => package_json::get_version(content, path)
-                .map_err(Error::PackageJson)
+                .map_err(ErrorKind::PackageJson)
                 .map(|version| VersionFromSource {
                     version,
                     source: path.display().to_string(),
                 }),
-            PackageFormat::Go => go::get_version(content, path).map_err(Error::Go),
+            PackageFormat::Go => go::get_version(content, path).map_err(ErrorKind::Go),
         }
+        .map_err(Error::from)
     }
 
     /// Consume the `content` and return a version of it which contains `new_version`.
@@ -145,7 +158,7 @@ impl PackageFormat {
     /// `path` is only used for error reporting.
     pub(crate) fn set_version(
         self,
-        dry_run: &mut Option<Box<dyn Write>>,
+        dry_run: DryRun,
         content: String,
         new_version: &Version,
         path: &Path,
@@ -161,7 +174,7 @@ impl PackageFormat {
             }
             PackageFormat::JavaScript => {
                 package_json::set_version(dry_run, &content, &new_version.to_string(), path)
-                    .map_err(Error::PackageJson)
+                    .map_err(Error::from)
             }
             PackageFormat::Go => {
                 go::set_version_in_file(dry_run, &content, new_version, path).map_err(Error::from)

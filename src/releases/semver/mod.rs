@@ -1,19 +1,21 @@
-use std::{fmt::Display, io::Write};
+use std::fmt::Display;
 
+use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
-pub(crate) use version::{Error, Label, PreVersion, Prerelease, StableVersion, Version};
+pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 
 use crate::{
+    dry_run::DryRun,
+    git,
+    git::get_current_versions_from_tags,
     releases::{
-        git::get_current_versions_from_tag, package::Package, ChangeType, CurrentVersions,
-        Prereleases, Release,
+        package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release,
     },
-    step::StepError,
     workflow::Verbose,
     RunType,
 };
 
-mod version;
+pub(crate) mod version;
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].
@@ -113,7 +115,7 @@ pub(crate) fn bump_version_and_update_state(
     run_type: RunType,
     rule: &Rule,
     verbose: Verbose,
-) -> Result<RunType, StepError> {
+) -> Result<RunType, Error> {
     let (mut dry_run_stdout, mut state) = match run_type {
         RunType::DryRun { state, stdout } => (Some(stdout), state),
         RunType::Real(state) => (None, state),
@@ -132,7 +134,7 @@ pub(crate) fn bump_version_and_update_state(
             package.prepared_release = Some(Release::new(None, version));
             Ok(package)
         })
-        .collect::<Result<Vec<Package>, StepError>>()?;
+        .collect::<Result<Vec<Package>, Error>>()?;
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
     } else {
@@ -143,8 +145,8 @@ pub(crate) fn bump_version_and_update_state(
 impl Package {
     /// Get the current version of a package determined by the last tag for the package _and_ the
     /// version in versioned files. The version from files takes precedent over version from tag.
-    pub(crate) fn get_version(&self) -> Result<CurrentVersions, StepError> {
-        let mut current_versions = get_current_versions_from_tag(self.name.as_deref())?;
+    pub(crate) fn get_version(&self) -> Result<CurrentVersions, Error> {
+        let mut current_versions = get_current_versions_from_tags(self.name.as_deref())?;
 
         if let Some(version_from_files) = self.version_from_files()? {
             current_versions.update_version(version_from_files);
@@ -159,16 +161,16 @@ impl Package {
     ///
     /// 1. If the versions of all versioned files are not consistent
     /// 2. If the file cannot be parsed into a [`Version`]
-    pub(crate) fn version_from_files(&self) -> Result<Option<Version>, StepError> {
+    pub(crate) fn version_from_files(&self) -> Result<Option<Version>, Error> {
         self.versioned_files
             .iter()
-            .map(|versioned_file| versioned_file.get_version().map_err(StepError::from))
+            .map(|versioned_file| versioned_file.get_version().map_err(Error::from))
             .reduce(|accumulator, version| match (version, accumulator) {
                 (Ok(version), Ok(accumulator)) => {
                     if version.version == accumulator.version {
                         Ok(accumulator)
                     } else {
-                        Err(StepError::InconsistentVersions {
+                        Err(Error::InconsistentVersions {
                             first_version: accumulator.version.to_string(),
                             first_source: accumulator.source,
                             second_version: version.version.to_string(),
@@ -189,14 +191,51 @@ impl Package {
     pub(crate) fn write_version(
         mut self,
         version: &Version,
-        dry_run: &mut Option<Box<dyn Write>>,
-    ) -> Result<Self, StepError> {
+        dry_run: DryRun,
+    ) -> Result<Self, versioned_file::Error> {
         for versioned_file in &mut self.versioned_files {
             versioned_file.set_version(dry_run, version)?;
         }
         Ok(self)
     }
 }
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error("Versioned files within the same package must have the same version. Found {first_version} in {first_source} which does not match {second_version} in {second_source}")]
+    #[diagnostic(
+        code(semver::inconsistent_versions),
+        help("Manually update all versioned_files to have the correct version"),
+        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
+    )]
+    InconsistentVersions {
+        first_version: String,
+        first_source: String,
+        second_version: String,
+        second_source: String,
+    },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    InvalidPreReleaseVersion(#[from] InvalidPreReleaseVersion),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    VersionedFile(#[from] versioned_file::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Git(#[from] git::Error),
+}
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+#[error("Could not increment pre-release version {0}")]
+#[diagnostic(
+    code(semver::invalid_pre_release_version),
+    help(
+        "The pre-release component of a version must be in the format of `-<label>.N` \
+                    where <label> is a string and `N` is an integer"
+    ),
+    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
+)]
+pub(crate) struct InvalidPreReleaseVersion(String);
 
 /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.
 ///
@@ -210,7 +249,7 @@ pub(crate) fn bump(
     mut versions: CurrentVersions,
     rule: &Rule,
     verbose: Verbose,
-) -> Result<Version, StepError> {
+) -> Result<Version, InvalidPreReleaseVersion> {
     let stable = versions.stable.unwrap_or_default();
     let is_0 = stable.major == 0;
     match (rule, is_0) {
@@ -255,7 +294,7 @@ pub(crate) fn bump(
                 .pop_last()
                 .map(|(version, _pre)| version)
                 .ok_or_else(|| {
-                    StepError::InvalidPreReleaseVersion(
+                    InvalidPreReleaseVersion(
                         "No prerelease version found, but a Release rule was requested".to_string(),
                     )
                 })?;
@@ -474,7 +513,7 @@ fn bump_pre(
     label: &Label,
     stable_rule: ConventionalRule,
     verbose: Verbose,
-) -> Result<Version, StepError> {
+) -> Result<Version, InvalidPreReleaseVersion> {
     if let Verbose::Yes = verbose {
         println!("Pre-release label {label} selected. Determining next stable version...");
     }

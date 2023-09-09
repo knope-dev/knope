@@ -3,18 +3,19 @@ use std::{fmt, io::Write, path::PathBuf};
 use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
+use miette::Diagnostic;
 
 use crate::{
-    prompt,
+    dry_run::DryRun,
+    fs, prompt,
     releases::{package::ChangelogSectionSource, Change, Package},
     state::RunType,
-    step::StepError,
 };
 
-pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError> {
+pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     let state = match run_type {
         RunType::DryRun { state, mut stdout } => {
-            write!(&mut stdout, "Would create a new change file")?;
+            write!(&mut stdout, "Would create a new change file").map_err(fs::Error::Stdout)?;
             return Ok(RunType::DryRun { state, stdout });
         }
         RunType::Real(state) => state,
@@ -53,10 +54,10 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
             Select::new("What type of change is this?", change_types)
                 .prompt()
                 .map_err(prompt::Error::from)
-                .map_err(StepError::from)
+                .map_err(Error::from)
                 .map(|change_type| (package_name, change_type.into()))
         })
-        .collect::<Result<Versioning, StepError>>()?;
+        .collect::<Result<Versioning, Error>>()?;
     let summary = inquire::Text::new("What is a short summary of this change?")
         .with_help_message("This will be used as a header in the changelog")
         .prompt()
@@ -71,13 +72,17 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, StepError
 
     let changeset_path = PathBuf::from(".changeset");
     if !changeset_path.exists() {
-        std::fs::create_dir(&changeset_path)
-            .map_err(|_| StepError::CouldNotCreateFile(changeset_path.clone()))?;
+        fs::create_dir(&mut None, &changeset_path)?;
     }
-    change.write_to_directory(&changeset_path).map_err(|_| {
-        let file_name = change.unique_id.to_file_name();
-        StepError::CouldNotCreateFile(changeset_path.join(file_name))
-    })?;
+    change
+        .write_to_directory(&changeset_path)
+        .map_err(|source| {
+            let file_name = change.unique_id.to_file_name();
+            fs::Error::Write {
+                path: changeset_path.join(file_name),
+                source,
+            }
+        })?;
     Ok(RunType::Real(state))
 }
 
@@ -134,8 +139,8 @@ pub(crate) const DEFAULT_CHANGESET_PACKAGE_NAME: &str = "default";
 
 pub(crate) fn add_releases_from_changeset(
     packages: Vec<Package>,
-    dry_run: &mut Option<Box<dyn Write>>,
-) -> Result<Vec<Package>, StepError> {
+    dry_run: DryRun,
+) -> Result<Vec<Package>, Error> {
     let changeset_path = PathBuf::from(".changeset");
     if !changeset_path.exists() {
         return Ok(packages);
@@ -175,4 +180,22 @@ pub(crate) fn add_releases_from_changeset(
             package
         })
         .collect())
+}
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error(transparent)]
+    #[diagnostic(
+        code(changesets::could_not_read_changeset),
+        help(
+            "This could be a file-system issue or a problem with the formatting of a change file."
+        )
+    )]
+    CouldNotReadChangeSet(#[from] changesets::LoadingError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Prompt(#[from] prompt::Error),
 }
