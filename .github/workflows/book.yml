@@ -1,8 +1,6 @@
 name: Deploy Book to GitHub Pages
 
 on:
-  release:
-    types: [released, prereleased]
   workflow_dispatch:
 
 permissions:

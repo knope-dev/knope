@@ -106,6 +106,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
+      - run: gh workflow run "Deploy Book to GitHub Pages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+
   publish-crate:
     needs: [release, prepare-release]
     runs-on: ubuntu-latest
