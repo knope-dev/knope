@@ -4,6 +4,75 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.10.0 (2023-09-09)
+
+### Breaking Changes
+
+#### Reworked Go versioning
+
+In order to support running `Release` in a separate workflow from `PrepareRelease` and to fix a bug relating to Go module tags (when in a subdirectory), Knope will now store the full package version in a comment in the `go.mod` file and use that version as the source of truth for the package version. This has a couple of implications:
+
+1. If you already have a comment on the `module` line in `go.mod` which matches the correct format, Knope may not be able to determine the version correctly.
+2. If you have a comment on that line which does _not_ match the format, it will be erased the next time Knope bumps the version.
+
+In either case, the solution is to erase or move that comment. Here is the syntax that Knope is looking for:
+
+`module {ModulePath} // v{Version}`
+
+If that comment does not exist, Knope will revert to looking for the latest relevant Git tag instead to _determine_ the version, but will still write the comment to the `go.mod` file when bumping the version.
+
+### Features
+
+#### `--verbose` flag
+
+PR #545 closed issue #534 by @BatmanAoD.
+
+There is now a global `--verbose` flag that will spit out _lots_ of extra info to stdout to assist with debugging. Right now, only the process for determining and bumping new package versions is instrumented, open issues if you need more info!
+
+#### Allow `Release` step to be in separate workflow than `PrepareRelease`
+
+Previously, you needed to have a `PrepareRelease` step earlier in the same workflow if you wanted to use the `Release` step. Now, if you run a `Release` step _without_ a `PrepareRelease` step, Knope will check Git tags and versioned files to figure out if there's something new to release. This is especially useful if you want to build release assets using the new version (determined by `PrepareRelease`) before actually releasing them (using `Release`).
+
+#### Upload assets to GitHub Releases
+
+You can now add assets to a package like this:
+
+```toml
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[package.assets]]
+path = "artifact/knope-x86_64-unknown-linux-musl.tgz"
+name = "knope-x86_64-unknown-linux-musl.tgz"  # Optional, defaults to file name (so this `name` is doing nothing)
+
+[[package.assets]]
+path = "artifact/knope-x86_64-pc-windows-msvc.tgz"
+```
+
+When running the `Release` step with a valid `[github]` config, instead of immediately creating the release, Knope will:
+
+1. Create a draft release
+2. Upload all listed assets (erroring if any don't exist)
+3. Publish the release
+
+### Fixes
+
+#### Use the correct tags for `go.mod` files in subdirectories
+
+PR #544 fixed issue #502 by @BatmanAoD.
+
+Previously, the version for a `go.mod` file was determined by the package tag, named `v{Version}` for single packages or `{PackageName}/v{Version}` for named packages. This worked when the `go.mod` file was in the root of the repository or a directory named `{PackageName}` (respectively), but not when it was in a different directory. Now, the version tag, both for determining the current version and creating a new release, will correctly be determined by the name of the directory the `go.mod` file is in (relative to the working directory). The existing package tagging strategy remains unchanged.
+
+For example, consider this `knope.toml` file:
+
+```toml
+[package]
+versioned_files = ["some_dir/go.mod"]
+```
+
+Previous to this release, creating the version `1.2.3` would only create a tag `v1.2.3`. Now, it will _additionally_ create the tag `some_dir/v1.2.3`.
+
 ## 0.9.0 (2023-08-10)
 
 ### Breaking Changes
