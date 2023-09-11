@@ -1,3 +1,5 @@
+Finding all commits behind refs/tags/first/v1.2.3
+Finding all commits behind refs/tags/second/v0.4.6
 Determining new version for first
 commit feat: A feature
 	implies rule MINOR

@@ -130,6 +130,7 @@ pub fn merge_branch(path: &Path, name: &str) {
     let output = Command::new("git")
         .arg("merge")
         .arg("--no-ff")
+        .arg("--no-edit")
         .arg(name)
         .current_dir(path)
         .output()

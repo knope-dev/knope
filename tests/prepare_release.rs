@@ -1904,3 +1904,60 @@ fn go_mod_version_determination() {
         );
     }
 }
+
+/// Specifically designed to catch https://github.com/knope-dev/knope/issues/505
+#[test]
+fn pick_correct_commits_from_branching_history() {
+    // Arrange a Git repo with branching history
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
+    create_branch(temp_path, "patch");
+    commit(temp_path, "fix: A bug");
+    switch_branch(temp_path, "main");
+    merge_branch(temp_path, "patch");
+    tag(temp_path, "v1.0.1");
+    create_branch(temp_path, "breaking");
+    commit(temp_path, "feat!: A breaking feature");
+    switch_branch(temp_path, "main");
+    merge_branch(temp_path, "breaking");
+    tag(temp_path, "v2.0.0");
+    switch_branch(temp_path, "breaking");
+    merge_branch(temp_path, "main");
+    commit(temp_path, "fix: Another bug");
+    switch_branch(temp_path, "main");
+    merge_branch(temp_path, "breaking");
+
+    let source_path =
+        Path::new("tests/prepare_release/pick_correct_commits_from_branching_history");
+    for file in ["knope.toml", "Cargo.toml", "CHANGELOG.md"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    for file in ["CHANGELOG.md", "Cargo.toml"] {
+        assert().matches_path(
+            source_path.join(format!("EXPECTED_{file}")),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}

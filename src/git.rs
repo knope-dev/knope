@@ -1,7 +1,12 @@
-use std::{collections::VecDeque, env::current_dir, path::PathBuf, str::FromStr};
+use std::{
+    collections::{HashSet, VecDeque},
+    env::current_dir,
+    path::PathBuf,
+    str::FromStr,
+};
 
 use git2::{build::CheckoutBuilder, Branch, BranchType, IndexAddOption, Repository};
-use gix::{object::Kind, refs::transaction::PreviousValue, trace::trace};
+use gix::{object::Kind, refs::transaction::PreviousValue, ObjectId};
 use itertools::Itertools;
 use log::error;
 use miette::Diagnostic;
@@ -13,7 +18,9 @@ use crate::{
     prompt,
     prompt::select,
     releases::{semver::Version, CurrentVersions},
-    state, RunType,
+    state,
+    workflow::Verbose,
+    RunType,
 };
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
@@ -162,9 +169,8 @@ enum ErrorKind {
         help("Please check that the reference exists.")
     )]
     PeelOid(#[from] gix::reference::peel::Error),
-    #[error("Could not decode Git object: {0}")]
-    #[diagnostic(code(releases::git::decode))]
-    Decode(String),
+    #[error("Could not walk commits back from HEAD: {0}")]
+    RevisionWalk(#[from] gix::revision::walk::Error),
 }
 
 /// Rebase the current branch onto the selected one.
@@ -386,68 +392,58 @@ pub(crate) fn add_files(file_names: &[PathBuf]) -> Result<(), Error> {
     index.write().map_err(Error::from)
 }
 
-pub(crate) fn get_commit_messages_after_tag(tag: Option<String>) -> Result<Vec<String>, Error> {
-    let reference = tag.map(|tag| format!("refs/tags/{tag}"));
+/// Find every commit that appears only _after_ a specific tag.
+///
+/// This builds a complete set of every commit in the repository, because branching and merging
+/// means that there could be paths which jump _behind_ the target tag... and we want to exclude
+/// those as well. There's probably a way to optimize performance with some cool graph magic
+/// eventually, but this is good enough for now.
+pub(crate) fn get_commit_messages_after_tag(
+    tag: Option<String>,
+    verbose: Verbose,
+) -> Result<Vec<String>, Error> {
     let repo = gix::open(".")?;
-    let tag_ref = reference
+    let commits_to_exclude = tag
+        .map(|tag| format!("refs/tags/{tag}"))
         .as_ref()
         .map(|reference| {
+            if let Verbose::Yes = verbose {
+                println!("Finding all commits behind {reference}");
+            }
             repo.find_reference(reference)
                 .map_err(|err| ErrorKind::FindReference {
                     reference: reference.clone(),
                     source: err,
                 })
         })
-        .transpose()?;
-    let tag_oid = tag_ref
+        .transpose()?
         .map(gix::Reference::into_fully_peeled_id)
-        .transpose()?;
-    if tag_oid.is_none() {
-        if let Some(reference) = reference {
-            error!(
-                "Found tagged version {}, but could not parse it within Git",
-                reference
-            );
-        }
-    }
+        .transpose()?
+        .and_then(|tag_oid| repo.find_object(tag_oid).ok().map(gix::Object::into_commit))
+        .and_then(|commit| {
+            commit.ancestors().all().ok().map(|ancestors| {
+                ancestors
+                    .into_iter()
+                    .filter_map(Result::ok)
+                    .map(|info| info.id)
+                    .collect::<HashSet<ObjectId>>()
+            })
+        })
+        .unwrap_or_default();
     let head_commit = repo.head_commit()?;
-    let head_commit_message = head_commit
-        .decode()
-        .map_err(|err| ErrorKind::Decode(err.to_string()))?
-        .message
-        .to_string();
-    trace!("Checking commit message: {}", &head_commit_message);
-    let mut reverse_commits = [head_commit_message]
-        .into_iter()
-        .chain(
-            head_commit
-                .parent_ids()
-                .filter_map(|id| {
-                    repo.find_object(id)
-                        .ok()
-                        .and_then(|object| object.try_into_commit().ok())
-                        .and_then(|commit| commit.ancestors().all().ok())
-                        .map(|ancestors| {
-                            ancestors
-                                .into_iter()
-                                .filter_map(Result::ok)
-                                .take_while(|info| {
-                                    if let Some(tag_id) = tag_oid {
-                                        info.id != tag_id
-                                    } else {
-                                        true
-                                    }
-                                })
-                                .filter_map(|info| info.object().ok())
-                        })
-                })
-                .flatten()
-                .filter_map(|commit| {
-                    let message = commit.decode().ok()?.message.to_string();
-                    trace!("Checking commit message: {}", &message);
-                    Some(message)
-                }),
-        )
+    let mut reverse_commits = head_commit
+        .ancestors()
+        .all()?
+        .filter_map(Result::ok)
+        .filter(|info| !commits_to_exclude.contains(&info.id))
+        .filter_map(|info| {
+            info.object().ok().and_then(|commit| {
+                commit
+                    .decode()
+                    .ok()
+                    .map(|commit| commit.message.to_string())
+            })
+        })
         .collect_vec();
     reverse_commits.reverse();
     Ok(reverse_commits)

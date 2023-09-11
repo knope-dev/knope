@@ -55,7 +55,7 @@ pub(crate) fn prepare_release(
         return Err(package::Error::no_defined_packages_with_help().into());
     }
     let PrepareRelease { prerelease_label } = prepare_release;
-    state.packages = add_releases_from_conventional_commits(state.packages)
+    state.packages = add_releases_from_conventional_commits(state.packages, verbose)
         .map_err(Error::from)
         .and_then(|packages| {
             changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
