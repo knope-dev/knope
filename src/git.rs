@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashSet, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     env::current_dir,
     path::PathBuf,
     str::FromStr,
@@ -475,49 +475,57 @@ pub(crate) fn get_current_versions_from_tags(
     verbose: Verbose,
 ) -> Result<CurrentVersions, Error> {
     let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
-    let commits = repo
+    let pattern = prefix
+        .as_ref()
+        .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
+    let mut all_tags: HashMap<ObjectId, Vec<String>> = HashMap::new();
+    for (id, tag) in repo
+        .references()?
+        .tags()?
+        .filter_map(Result::ok)
+        .filter_map(|mut reference| {
+            reference.peel_to_id_in_place().ok().map(|id| {
+                (
+                    id.detach(),
+                    reference
+                        .name()
+                        .as_bstr()
+                        .to_string()
+                        .replace("refs/tags/", ""),
+                )
+            })
+        })
+        .filter(|(_id, tag_name)| tag_name.starts_with(&pattern))
+    {
+        all_tags.entry(id).or_default().push(tag);
+    }
+
+    let mut tags: Vec<String> = Vec::with_capacity(all_tags.len());
+    for commit_id in repo
         .head_commit()?
         .ancestors()
         .all()?
         .filter_map(|info| info.ok().map(|info| info.id))
-        .collect::<HashSet<_>>();
-    let references = repo.references()?;
-    let tags = references.tags()?.filter_map(|tag| {
-        tag.ok()
-            .and_then(|mut reference| {
-                reference
-                    .peel_to_id_in_place()
-                    .ok()
-                    .map(|id| (id, reference))
-            })
-            .and_then(|(id, reference)| {
-                if commits.contains(&id.detach()) {
-                    Some(
-                        reference
-                            .name()
-                            .as_bstr()
-                            .to_string()
-                            .replace("refs/tags/", ""),
-                    )
-                } else {
-                    if let Verbose::Yes = verbose {
-                        println!(
-                            "Excluding tag {reference} as it is not reachable from HEAD",
-                            reference = reference.name().as_bstr()
-                        );
-                    }
-                    None
-                }
-            })
-    });
-    let mut current_versions = CurrentVersions::default();
-    let pattern = prefix
-        .as_ref()
-        .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
-    for tag in tags {
-        if !tag.starts_with(&pattern) {
-            continue;
+    {
+        if let Some(tag) = all_tags.remove(&commit_id) {
+            tags.extend(tag);
         }
+    }
+
+    if let Verbose::Yes = verbose {
+        if !all_tags.is_empty() {
+            println!(
+                "Skipping relevant tags that are not on the current branch: {tags}",
+                tags = all_tags.values().flatten().join(", ")
+            );
+        }
+        if tags.is_empty() {
+            println!("No tags found matching pattern {pattern}");
+        }
+    }
+
+    let mut current_versions = CurrentVersions::default();
+    for tag in tags {
         let version_string = tag.replace(&pattern, "");
         if let Ok(version) = Version::from_str(version_string.as_str()) {
             current_versions.update_version(version);
