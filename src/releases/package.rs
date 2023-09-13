@@ -85,7 +85,7 @@ impl Package {
             }
             override_version
         } else {
-            let versions = self.get_version()?;
+            let versions = self.get_version(verbose)?;
             let bump_rule = self.bump_rule(verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {

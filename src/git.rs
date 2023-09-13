@@ -472,17 +472,43 @@ pub(crate) fn create_tag(dry_run: DryRun, name: String) -> Result<(), Error> {
 
 pub(crate) fn get_current_versions_from_tags(
     prefix: Option<&str>,
+    verbose: Verbose,
 ) -> Result<CurrentVersions, Error> {
     let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
+    let commits = repo
+        .head_commit()?
+        .ancestors()
+        .all()?
+        .filter_map(|info| info.ok().map(|info| info.id))
+        .collect::<HashSet<_>>();
     let references = repo.references()?;
-    let tags = references.tags()?.flat_map(|tag| {
-        tag.map(|reference| {
-            reference
-                .name()
-                .as_bstr()
-                .to_string()
-                .replace("refs/tags/", "")
-        })
+    let tags = references.tags()?.filter_map(|tag| {
+        tag.ok()
+            .and_then(|mut reference| {
+                reference
+                    .peel_to_id_in_place()
+                    .ok()
+                    .map(|id| (id, reference))
+            })
+            .and_then(|(id, reference)| {
+                if commits.contains(&id.detach()) {
+                    Some(
+                        reference
+                            .name()
+                            .as_bstr()
+                            .to_string()
+                            .replace("refs/tags/", ""),
+                    )
+                } else {
+                    if let Verbose::Yes = verbose {
+                        println!(
+                            "Excluding tag {reference} as it is not reachable from HEAD",
+                            reference = reference.name().as_bstr()
+                        );
+                    }
+                    None
+                }
+            })
     });
     let mut current_versions = CurrentVersions::default();
     let pattern = prefix

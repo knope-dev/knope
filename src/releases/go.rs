@@ -8,6 +8,7 @@ use crate::{
     fs, git,
     git::get_current_versions_from_tags,
     releases::{semver::Version, tag_name, versioned_file::VersionFromSource, PackageName},
+    workflow::Verbose,
 };
 
 #[derive(Debug, Diagnostic, Error)]
@@ -268,7 +269,11 @@ pub(crate) fn create_version_tag(
 
 /// Gets the version from the comment in the `go.mod` file, if any, or defers to the latest tag
 /// for the module.
-pub(crate) fn get_version(content: &str, path: &Path) -> Result<VersionFromSource, Error> {
+pub(crate) fn get_version(
+    content: &str,
+    path: &Path,
+    verbose: Verbose,
+) -> Result<VersionFromSource, Error> {
     let prefix = path.parent().map(Path::to_string_lossy).and_then(|prefix| {
         if prefix.is_empty() {
             None
@@ -288,7 +293,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<VersionFromSourc
         });
     }
 
-    if let Some(version_from_tag) = get_current_versions_from_tags(prefix.as_deref())
+    if let Some(version_from_tag) = get_current_versions_from_tags(prefix.as_deref(), verbose)
         .map(|current_versions| {
             current_versions
                 .into_latest()
