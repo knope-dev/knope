@@ -11,6 +11,7 @@ use thiserror::Error;
 use crate::{
     dry_run::DryRun,
     releases::{cargo, git, go, package_json, pyproject, semver::Version},
+    workflow::Verbose,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -89,8 +90,8 @@ enum ErrorKind {
 type Result<T> = std::result::Result<T, Error>;
 
 impl VersionedFile {
-    pub(crate) fn get_version(&self) -> Result<VersionFromSource> {
-        self.format.get_version(&self.content, &self.path)
+    pub(crate) fn get_version(&self, verbose: Verbose) -> Result<VersionFromSource> {
+        self.format.get_version(&self.content, &self.path, verbose)
     }
 
     pub(crate) fn set_version(&mut self, dry_run: DryRun, version_str: &Version) -> Result<()> {
@@ -128,7 +129,12 @@ impl TryFrom<&PathBuf> for PackageFormat {
 impl PackageFormat {
     /// Get the version from `content` for package named `name` (if any name).
     /// `path` is used for error reporting.
-    pub(crate) fn get_version(self, content: &str, path: &Path) -> Result<VersionFromSource> {
+    pub(crate) fn get_version(
+        self,
+        content: &str,
+        path: &Path,
+        verbose: Verbose,
+    ) -> Result<VersionFromSource> {
         match self {
             PackageFormat::Cargo => cargo::get_version(content, path)
                 .map_err(ErrorKind::Cargo)
@@ -148,7 +154,7 @@ impl PackageFormat {
                     version,
                     source: path.display().to_string(),
                 }),
-            PackageFormat::Go => go::get_version(content, path).map_err(ErrorKind::Go),
+            PackageFormat::Go => go::get_version(content, path, verbose).map_err(ErrorKind::Go),
         }
         .map_err(Error::from)
     }

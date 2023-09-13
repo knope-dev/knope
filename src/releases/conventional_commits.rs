@@ -9,6 +9,7 @@ use crate::{
     git,
     git::{get_commit_messages_after_tag, get_current_versions_from_tags},
     releases::{self, package::ChangelogSectionSource, tag_name, Change, ChangeType, Package},
+    workflow::Verbose,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -343,10 +344,11 @@ mod test_conventional_commits {
 fn get_conventional_commits_after_last_stable_version(
     package: &Package,
     consider_scopes: bool,
+    verbose: Verbose,
 ) -> Result<Vec<ConventionalCommit>, Error> {
-    let target_version = get_current_versions_from_tags(package.name.as_deref())?.stable;
+    let target_version = get_current_versions_from_tags(package.name.as_deref(), verbose)?.stable;
     let tag = target_version.map(|version| tag_name(&version.into(), package.name.as_ref()));
-    let commit_messages = get_commit_messages_after_tag(tag).map_err(git::Error::from)?;
+    let commit_messages = get_commit_messages_after_tag(tag, verbose).map_err(git::Error::from)?;
     Ok(ConventionalCommit::from_commit_messages(
         &commit_messages,
         consider_scopes,
@@ -366,24 +368,31 @@ pub(crate) enum Error {
 
 pub(crate) fn add_releases_from_conventional_commits(
     packages: Vec<Package>,
+    verbose: Verbose,
 ) -> Result<Vec<Package>, Error> {
     let consider_scopes = packages.iter().any(|package| package.scopes.is_some());
     packages
         .into_iter()
-        .map(|package| add_release_for_package(package, consider_scopes))
+        .map(|package| add_release_for_package(package, consider_scopes, verbose))
         .collect()
 }
 
-fn add_release_for_package(mut package: Package, consider_scopes: bool) -> Result<Package, Error> {
-    get_conventional_commits_after_last_stable_version(&package, consider_scopes).map(|commits| {
-        if commits.is_empty() {
-            package
-        } else {
-            package.pending_changes = commits
-                .into_iter()
-                .map(Change::ConventionalCommit)
-                .collect();
-            package
-        }
-    })
+fn add_release_for_package(
+    mut package: Package,
+    consider_scopes: bool,
+    verbose: Verbose,
+) -> Result<Package, Error> {
+    get_conventional_commits_after_last_stable_version(&package, consider_scopes, verbose).map(
+        |commits| {
+            if commits.is_empty() {
+                package
+            } else {
+                package.pending_changes = commits
+                    .into_iter()
+                    .map(Change::ConventionalCommit)
+                    .collect();
+                package
+            }
+        },
+    )
 }

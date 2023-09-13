@@ -89,13 +89,13 @@ impl Step {
             Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
             Step::BumpVersion(rule) => releases::bump_version(run_type, &rule, verbose)?,
             Step::Command { command, variables } => {
-                command::run_command(run_type, command, variables)?
+                command::run_command(run_type, command, variables, verbose)?
             }
             Step::PrepareRelease(prepare_release) => {
                 releases::prepare_release(run_type, &prepare_release, verbose)?
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type)?,
-            Step::Release => releases::release(run_type)?,
+            Step::Release => releases::release(run_type, verbose)?,
             Step::CreateChangeFile => releases::create_change_file(run_type)?,
         })
     }

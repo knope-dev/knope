@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     git::branch_name_from_issue,
     releases::{package, semver},
-    state, RunType, State,
+    state,
+    workflow::Verbose,
+    RunType, State,
 };
 
 /// Describes a value that you can replace an arbitrary string with when running a command.
@@ -26,13 +28,14 @@ pub(crate) fn run_command(
     mut run_type: RunType,
     mut command: String,
     variables: Option<HashMap<String, Variable>>,
+    verbose: Verbose,
 ) -> Result<RunType, Error> {
     let (state, dry_run_stdout) = match &mut run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
     };
     if let Some(variables) = variables {
-        command = replace_variables(command, variables, state)?;
+        command = replace_variables(command, variables, state, verbose)?;
     }
     if let Some(stdout) = dry_run_stdout {
         writeln!(stdout, "Would run {command}")?;
@@ -87,6 +90,7 @@ fn replace_variables(
     mut command: String,
     variables: HashMap<String, Variable>,
     state: &State,
+    verbose: Verbose,
 ) -> Result<String, Error> {
     for (var_name, var_type) in variables {
         match var_type {
@@ -102,7 +106,7 @@ fn replace_variables(
                     release.new_version.to_string()
                 } else {
                     package
-                        .get_version()?
+                        .get_version(verbose)?
                         .into_latest()
                         .ok_or(Error::NoCurrentVersion)?
                         .to_string()
@@ -135,6 +139,7 @@ mod test_run_command {
             RunType::Real(State::new(None, None, Vec::new())),
             command.clone(),
             None,
+            Verbose::No,
         );
 
         assert!(result.is_ok());
@@ -145,6 +150,7 @@ mod test_run_command {
             RunType::Real(State::new(None, None, Vec::new())),
             command,
             None,
+            Verbose::No,
         );
         assert!(result.is_err());
     }
@@ -159,6 +165,7 @@ mod test_replace_variables {
         issues::Issue,
         releases::{semver::Version, Package, Release},
         state,
+        workflow::Verbose,
     };
 
     fn packages() -> Vec<Package> {
@@ -188,14 +195,14 @@ mod test_replace_variables {
             packages: packages(),
         };
 
-        let command = replace_variables(command, variables, &state).unwrap();
+        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
 
         assert_eq!(
             command,
             format!(
                 "blah {} {}",
                 &state.packages[0]
-                    .get_version()
+                    .get_version(Verbose::No)
                     .unwrap()
                     .into_latest()
                     .unwrap(),
@@ -211,14 +218,14 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::Version);
         let state = State::new(None, None, packages());
 
-        let command = replace_variables(command, variables, &state).unwrap();
+        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
 
         assert_eq!(
             command,
             format!(
                 "blah {} other blah",
                 &state.packages[0]
-                    .get_version()
+                    .get_version(Verbose::No)
                     .unwrap()
                     .into_latest()
                     .unwrap(),
@@ -235,7 +242,7 @@ mod test_replace_variables {
         let version = Version::new(1, 2, 3, None);
         state.packages[0].prepared_release = Some(Release::new(None, version.clone()));
 
-        let command = replace_variables(command, variables, &state).unwrap();
+        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
 
         assert_eq!(command, format!("blah {version} other blah"));
     }
@@ -258,7 +265,7 @@ mod test_replace_variables {
             packages: Vec::new(),
         };
 
-        let command = replace_variables(command, variables, &state).unwrap();
+        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
 
         assert_eq!(command, format!("blah {expected_branch_name} other blah"));
     }

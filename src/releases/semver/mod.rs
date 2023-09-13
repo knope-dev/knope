@@ -128,7 +128,7 @@ pub(crate) fn bump_version_and_update_state(
             let version = if let Some(override_version) = package.override_version.clone() {
                 override_version
             } else {
-                bump(package.get_version()?, rule, verbose)?
+                bump(package.get_version(verbose)?, rule, verbose)?
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
             package.prepared_release = Some(Release::new(None, version));
@@ -145,10 +145,10 @@ pub(crate) fn bump_version_and_update_state(
 impl Package {
     /// Get the current version of a package determined by the last tag for the package _and_ the
     /// version in versioned files. The version from files takes precedent over version from tag.
-    pub(crate) fn get_version(&self) -> Result<CurrentVersions, Error> {
-        let mut current_versions = get_current_versions_from_tags(self.name.as_deref())?;
+    pub(crate) fn get_version(&self, verbose: Verbose) -> Result<CurrentVersions, Error> {
+        let mut current_versions = get_current_versions_from_tags(self.name.as_deref(), verbose)?;
 
-        if let Some(version_from_files) = self.version_from_files()? {
+        if let Some(version_from_files) = self.version_from_files(verbose)? {
             current_versions.update_version(version_from_files);
         }
 
@@ -161,10 +161,10 @@ impl Package {
     ///
     /// 1. If the versions of all versioned files are not consistent
     /// 2. If the file cannot be parsed into a [`Version`]
-    pub(crate) fn version_from_files(&self) -> Result<Option<Version>, Error> {
+    pub(crate) fn version_from_files(&self, verbose: Verbose) -> Result<Option<Version>, Error> {
         self.versioned_files
             .iter()
-            .map(|versioned_file| versioned_file.get_version().map_err(Error::from))
+            .map(|versioned_file| versioned_file.get_version(verbose).map_err(Error::from))
             .reduce(|accumulator, version| match (version, accumulator) {
                 (Ok(version), Ok(accumulator)) => {
                     if version.version == accumulator.version {

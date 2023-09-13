@@ -55,7 +55,7 @@ pub(crate) fn prepare_release(
         return Err(package::Error::no_defined_packages_with_help().into());
     }
     let PrepareRelease { prerelease_label } = prepare_release;
-    state.packages = add_releases_from_conventional_commits(state.packages)
+    state.packages = add_releases_from_conventional_commits(state.packages, verbose)
         .map_err(Error::from)
         .and_then(|packages| {
             changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
@@ -314,7 +314,7 @@ impl From<Version> for CurrentVersions {
 /// Create a release for the package.
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
-pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
+pub(crate) fn release(run_type: RunType, verbose: Verbose) -> Result<RunType, Error> {
     let (mut state, mut dry_run_stdout) = run_type.decompose();
 
     let mut releases = state
@@ -336,7 +336,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
             .packages
             .iter()
             .map(|package| {
-                find_prepared_release(package).map(|release| {
+                find_prepared_release(package, verbose).map(|release| {
                     release.map(|release| PackageWithRelease {
                         package: package.clone(),
                         release,
@@ -382,11 +382,11 @@ struct PackageWithRelease {
 
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
-fn find_prepared_release(package: &Package) -> Result<Option<Release>, Error> {
-    let Some(current_version) = package.version_from_files()? else {
+fn find_prepared_release(package: &Package, verbose: Verbose) -> Result<Option<Release>, Error> {
+    let Some(current_version) = package.version_from_files(verbose)? else {
         return Ok(None);
     };
-    let last_tag = get_current_versions_from_tags(package.name.as_deref())
+    let last_tag = get_current_versions_from_tags(package.name.as_deref(), verbose)
         .map(CurrentVersions::into_latest)?;
     let version_of_new_release = match last_tag {
         Some(last_tag) if last_tag != current_version => current_version,
