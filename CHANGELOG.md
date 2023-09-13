@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.11.0 (2023-09-13)
+
+### Breaking Changes
+
+#### Ignore unreachable tags when determining version
+
+PR #574 fixes issue #505 from @BatmanAoD.
+
+Previously, the latests tags were always used to determine the current version, **even if those tags were not reachable from `HEAD`**. Now, only reachable tags will be considered. Use the `--verbose` flag to see tags which are being ignored.
+
+### Fixes
+
+#### Consistent commit selection in branching histories
+
+PR #574 fixes issue #505 from @BatmanAoD.
+
+Previous versions of Knope did not handle branching histories correctly. In some cases, this could result in commits from previous stable releases being included in a new release. It could _also_ result in missing some commits that _should_ have been included. This has been fixed—Knope should provide you the same commit list that `git rev-list {previous_stable_tag}..HEAD` would.
+
 ## 0.10.0 (2023-09-09)
 
 ### Breaking Changes
