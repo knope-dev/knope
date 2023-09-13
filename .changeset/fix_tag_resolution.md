@@ -2,7 +2,7 @@
 default: major
 ---
 
-### Ignore unreachable tags when determining version
+#### Ignore unreachable tags when determining version
 
 PR #574 fixes issue #505 from @BatmanAoD.
 
