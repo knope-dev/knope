@@ -336,6 +336,8 @@ fn second_prerelease() {
     let source_path = Path::new("tests/prepare_release/second_prerelease");
 
     init(temp_path);
+    commit(temp_path, "An old prerelease which should not be checked");
+    tag(temp_path, "v1.1.0-rc.2");
     commit(temp_path, "feat: New feature in first RC");
     tag(temp_path, "v1.0.0");
     tag(temp_path, "v1.1.0-rc.1");

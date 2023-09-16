@@ -529,7 +529,11 @@ pub(crate) fn get_current_versions_from_tags(
     for tag in tags {
         let version_string = tag.replace(&pattern, "");
         if let Ok(version) = Version::from_str(version_string.as_str()) {
+            let is_stable = !version.is_prerelease();
             current_versions.update_version(version);
+            if is_stable {
+                break; // Only prereleases newer than the last stable version are relevant
+            }
         }
     }
 
