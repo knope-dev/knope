@@ -4,15 +4,9 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 
+use super::{package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release};
 use crate::{
-    dry_run::DryRun,
-    git,
-    git::get_current_versions_from_tags,
-    releases::{
-        package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release,
-    },
-    workflow::Verbose,
-    RunType,
+    dry_run::DryRun, git, git::get_current_versions_from_tags, workflow::Verbose, RunType,
 };
 
 pub(crate) mod version;

@@ -2,12 +2,8 @@ use log::error;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::{
-    dry_run::DryRun,
-    fs, git,
-    git::create_tag,
-    releases::{semver::Version, PackageName},
-};
+use super::{semver::Version, PackageName};
+use crate::{dry_run::DryRun, fs, git, git::create_tag};
 
 pub(crate) fn tag_name(version: &Version, package_name: Option<&PackageName>) -> String {
     let prefix = package_name

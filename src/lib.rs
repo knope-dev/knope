@@ -25,27 +25,26 @@ use std::{io::stdout, str::FromStr};
 use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
 use itertools::Itertools;
 use miette::{miette, Result};
-use releases::semver::Version;
 
 use crate::{
     config::{Config, ConfigSource},
-    releases::PackageName,
     state::{RunType, State},
-    step::Step,
+    step::{
+        releases::{semver::Version, PackageName},
+        Step,
+    },
     workflow::Workflow,
 };
 
 mod app_config;
-mod command;
 mod config;
 mod dry_run;
 mod fs;
 mod git;
-mod issues;
 mod prompt;
-mod releases;
 mod state;
 mod step;
+mod variables;
 mod workflow;
 
 /// The main entry point for the application.

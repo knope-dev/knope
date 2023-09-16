@@ -1,94 +1,31 @@
-use std::collections::HashMap;
-
-use execute::shell;
+use indexmap::IndexMap;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     git::branch_name_from_issue,
-    releases::{package, semver},
     state,
+    state::State,
+    step::releases::{package, semver},
     workflow::Verbose,
-    RunType, State,
 };
 
-/// Describes a value that you can replace an arbitrary string with when running a command.
+/// Describes a value that can replace an arbitrary string in certain steps.
+///
+/// <https://knope-dev.github.io/knope/config/variables.html/>
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) enum Variable {
-    /// Uses the first supported version found in your project.
+    /// The version of the package, if only a single package is configured (error if multiple).
     Version,
     /// The generated branch name for the selected issue. Note that this means the workflow must
     /// already be in [`State::IssueSelected`] when this variable is used.
     IssueBranch,
 }
 
-/// Run the command string `command` in the current shell after replacing the keys of `variables`
-/// with the values that the [`Variable`]s represent.
-pub(crate) fn run_command(
-    mut run_type: RunType,
+/// Replace declared variables in the string and return the new string.
+pub(crate) fn replace_variables(
     mut command: String,
-    variables: Option<HashMap<String, Variable>>,
-    verbose: Verbose,
-) -> Result<RunType, Error> {
-    let (state, dry_run_stdout) = match &mut run_type {
-        RunType::DryRun { state, stdout } => (state, Some(stdout)),
-        RunType::Real(state) => (state, None),
-    };
-    if let Some(variables) = variables {
-        command = replace_variables(command, variables, state, verbose)?;
-    }
-    if let Some(stdout) = dry_run_stdout {
-        writeln!(stdout, "Would run {command}")?;
-        return Ok(run_type);
-    }
-    let status = shell(command).status()?;
-    if status.success() {
-        return Ok(run_type);
-    }
-    Err(Error::Command(status))
-}
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
-pub(crate) enum Error {
-    #[error("Command returned non-zero exit code")]
-    #[diagnostic(
-        code(command::failed),
-        help("The command failed to execute. Try running it manually to get more information.")
-    )]
-    Command(std::process::ExitStatus),
-    #[error("I/O error: {0}")]
-    #[diagnostic(code(command::io))]
-    Io(#[from] std::io::Error),
-    #[error("Too many packages defined")]
-    #[diagnostic(
-        code(command::too_many_packages),
-        help("The Version variable in a Command step can only be used with a single [package].")
-    )]
-    TooManyPackages,
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Package(#[from] package::Error),
-    #[error("Could not determine the current version of the package")]
-    #[diagnostic(
-        code(command::no_current_version),
-        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
-    )]
-    NoCurrentVersion,
-    #[error("No issue selected")]
-    #[diagnostic(
-        code(git::no_issue_selected),
-        help("The IssueBranch command variable requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue")
-    )]
-    NoIssueSelected,
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    SemVer(#[from] semver::Error),
-}
-
-/// Replace declared variables in the command string and return command.
-fn replace_variables(
-    mut command: String,
-    variables: HashMap<String, Variable>,
+    variables: IndexMap<String, Variable>,
     state: &State,
     verbose: Verbose,
 ) -> Result<String, Error> {
@@ -124,36 +61,32 @@ fn replace_variables(
     Ok(command)
 }
 
-#[cfg(test)]
-mod test_run_command {
-    use tempfile::NamedTempFile;
-
-    use super::*;
-    use crate::State;
-
-    #[test]
-    fn test() {
-        let file = NamedTempFile::new().unwrap();
-        let command = format!("cat {}", file.path().to_str().unwrap());
-        let result = run_command(
-            RunType::Real(State::new(None, None, Vec::new())),
-            command.clone(),
-            None,
-            Verbose::No,
-        );
-
-        assert!(result.is_ok());
-
-        file.close().unwrap();
-
-        let result = run_command(
-            RunType::Real(State::new(None, None, Vec::new())),
-            command,
-            None,
-            Verbose::No,
-        );
-        assert!(result.is_err());
-    }
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum Error {
+    #[error("Too many packages defined")]
+    #[diagnostic(
+        code(command::too_many_packages),
+        help("The Version variable in a Command step can only be used with a single [package].")
+    )]
+    TooManyPackages,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Package(#[from] package::Error),
+    #[error("Could not determine the current version of the package")]
+    #[diagnostic(
+        code(command::no_current_version),
+        url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
+    )]
+    NoCurrentVersion,
+    #[error("No issue selected")]
+    #[diagnostic(
+        code(git::no_issue_selected),
+        help("The IssueBranch command variable requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue")
+    )]
+    NoIssueSelected,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    SemVer(#[from] semver::Error),
 }
 
 #[cfg(test)]
@@ -162,9 +95,11 @@ mod test_replace_variables {
 
     use super::*;
     use crate::{
-        issues::Issue,
-        releases::{semver::Version, Package, Release},
         state,
+        step::{
+            issues::Issue,
+            releases::{semver::Version, Package, Release},
+        },
         workflow::Verbose,
     };
 
@@ -179,7 +114,7 @@ mod test_replace_variables {
     #[test]
     fn multiple_variables() {
         let command = "blah $$ branch_name".to_string();
-        let mut variables = HashMap::new();
+        let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         variables.insert("branch_name".to_string(), Variable::IssueBranch);
         let issue = Issue {
@@ -214,7 +149,7 @@ mod test_replace_variables {
     #[test]
     fn replace_version() {
         let command = "blah $$ other blah".to_string();
-        let mut variables = HashMap::new();
+        let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         let state = State::new(None, None, packages());
 
@@ -236,7 +171,7 @@ mod test_replace_variables {
     #[test]
     fn replace_prepared_version() {
         let command = "blah $$ other blah".to_string();
-        let mut variables = HashMap::new();
+        let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, packages());
         let version = Version::new(1, 2, 3, None);
@@ -250,7 +185,7 @@ mod test_replace_variables {
     #[test]
     fn replace_issue_branch() {
         let command = "blah $$ other blah".to_string();
-        let mut variables = HashMap::new();
+        let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::IssueBranch);
         let issue = Issue {
             key: "13".to_string(),

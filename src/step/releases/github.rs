@@ -4,16 +4,16 @@ use datta::UriTemplate;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
+use super::{
+    git::tag_name,
+    package::{Asset, AssetNameError},
+    PackageName, Release, TimeError,
+};
 use crate::{
     app_config,
     app_config::get_or_prompt_for_github_token,
     config::GitHub,
     dry_run::DryRun,
-    releases::{
-        git::tag_name,
-        package::{Asset, AssetNameError},
-        PackageName, Release, TimeError,
-    },
     state,
     state::GitHub::{Initialized, New},
 };

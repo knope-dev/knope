@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use toml::Spanned;
 
 use super::package::Package;
-use crate::{releases::PackageName, workflow::Workflow};
+use crate::{step::releases::package::PackageName, workflow::Workflow};
 
 /// Loads a `crate::Config` from a TOML file with as much span information as possible for better
 /// error messages.

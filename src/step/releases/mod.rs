@@ -1,9 +1,13 @@
 use std::{collections::BTreeMap, fmt, fmt::Display};
 
 use ::changesets::PackageChange;
+use conventional_commits::{add_releases_from_conventional_commits, ConventionalCommit};
 use itertools::Itertools;
 use miette::Diagnostic;
+pub(crate) use non_empty_map::PrereleaseMap;
+use semver::{PreVersion, StableVersion, Version};
 use time::{macros::format_description, OffsetDateTime};
+use versioned_file::PackageFormat;
 
 pub(crate) use self::{
     changesets::{create_change_file, ChangeType},
@@ -12,7 +16,7 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
-    releases::semver::{PreVersion, StableVersion, Version},
+    dry_run::DryRun, git::get_current_versions_from_tags, step::PrepareRelease, workflow::Verbose,
     RunType,
 };
 
@@ -28,19 +32,6 @@ mod package_json;
 mod pyproject;
 pub(crate) mod semver;
 pub(crate) mod versioned_file;
-
-use conventional_commits::ConventionalCommit;
-pub(crate) use non_empty_map::PrereleaseMap;
-
-use crate::{
-    dry_run::DryRun,
-    git::get_current_versions_from_tags,
-    releases::{
-        conventional_commits::add_releases_from_conventional_commits, versioned_file::PackageFormat,
-    },
-    step::PrepareRelease,
-    workflow::Verbose,
-};
 
 pub(crate) fn prepare_release(
     run_type: RunType,
@@ -210,7 +201,7 @@ type Prereleases = BTreeMap<StableVersion, PrereleaseMap>;
 mod non_empty_map {
     use std::collections::BTreeMap;
 
-    use crate::releases::semver::{Label, Prerelease};
+    use super::semver::{Label, Prerelease};
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     /// Used to track the various pre-releases of a version, can never be empty

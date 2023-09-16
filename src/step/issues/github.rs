@@ -1,11 +1,10 @@
 use miette::Diagnostic;
 
+use super::Issue;
 use crate::{
     app_config,
     app_config::get_or_prompt_for_github_token,
-    config,
-    issues::Issue,
-    prompt,
+    config, prompt,
     prompt::select,
     state,
     state::{RunType, State},

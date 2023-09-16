@@ -1,16 +1,19 @@
-use std::{collections::HashMap, fs};
+use std::fs;
 
 use ::toml::{from_str, to_string, Spanned};
+use indexmap::IndexMap;
 use miette::{Diagnostic, IntoDiagnostic, Result, SourceSpan};
 use serde::Serialize;
 use thiserror::Error;
 
 use crate::{
-    command,
     config::toml::ConfigLoader,
     git,
-    releases::{find_packages, Package},
-    step::{PrepareRelease, Step},
+    step::{
+        releases::{find_packages, Package},
+        PrepareRelease, Step,
+    },
+    variables::Variable,
     workflow::Workflow,
 };
 
@@ -218,8 +221,8 @@ mod test_package_configs {
 
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Config {
-    let mut variables = HashMap::new();
-    variables.insert(String::from("$version"), command::Variable::Version);
+    let mut variables = IndexMap::new();
+    variables.insert(String::from("$version"), Variable::Version);
 
     let github = match git::get_first_remote() {
         Some(remote) if remote.contains("github.com") => {

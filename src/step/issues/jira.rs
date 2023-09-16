@@ -2,11 +2,11 @@ use base64::{prelude::BASE64_STANDARD as base64, Engine};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
+use super::Issue;
 use crate::{
     app_config,
     app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token},
     config::Jira,
-    issues::Issue,
     prompt,
     prompt::select,
     state,

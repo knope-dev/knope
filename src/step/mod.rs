@@ -1,14 +1,17 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use log::error;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    command, git, issues, prompt, releases, releases::semver::Label, state::RunType,
+    git, prompt, state::RunType, step::releases::semver::Label, variables::Variable,
     workflow::Verbose,
 };
+
+pub mod command;
+pub mod issues;
+pub mod releases;
 
 /// Each variant describes an action you can take using knope, they are used when defining your
 /// [`crate::Workflow`] via whatever config format is being utilized.
@@ -56,7 +59,7 @@ pub(crate) enum Step {
         command: String,
         /// A map of value-to-replace to [Variable][`crate::command::Variable`] to replace
         /// it with.
-        variables: Option<HashMap<String, command::Variable>>,
+        variables: Option<IndexMap<String, Variable>>,
     },
     /// This will look through all commits since the last tag and parse any
     /// [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will

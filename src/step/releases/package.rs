@@ -12,21 +12,21 @@ use itertools::Itertools;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
+use super::{
+    changelog,
+    changelog::Changelog,
+    changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
+    semver,
+    semver::{bump, ConventionalRule, Label, Version},
+    versioned_file,
+    versioned_file::{VersionedFile, PACKAGE_FORMAT_FILE_NAMES},
+    Change, Release, Rule,
+};
 use crate::{
     config::{ChangeLogSectionName, CommitFooter, CustomChangeType},
     dry_run::DryRun,
     fs, git,
     git::add_files,
-    releases::{
-        changelog,
-        changelog::Changelog,
-        changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
-        semver,
-        semver::{bump, ConventionalRule, Label, Version},
-        versioned_file,
-        versioned_file::{VersionedFile, PACKAGE_FORMAT_FILE_NAMES},
-        Change, Release, Rule,
-    },
     workflow::Verbose,
 };
 

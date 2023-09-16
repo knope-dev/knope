@@ -13,12 +13,13 @@ use miette::Diagnostic;
 
 use crate::{
     dry_run::DryRun,
-    fs,
-    issues::Issue,
-    prompt,
+    fs, prompt,
     prompt::select,
-    releases::{semver::Version, CurrentVersions},
     state,
+    step::{
+        issues::Issue,
+        releases::{semver::Version, CurrentVersions},
+    },
     workflow::Verbose,
     RunType,
 };
