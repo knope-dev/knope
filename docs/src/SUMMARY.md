@@ -17,6 +17,7 @@
     - [SelectIssueFromBranch](config/step/SelectIssueFromBranch.md)
     - [SwitchBranches](config/step/SwitchBranches.md)
     - [RebaseBranch](config/step/RebaseBranch.md)
+  - [Variables](config/variables.md)
   - [Packages](config/packages.md)
   - [Jira](config/jira.md)
   - [GitHub](config/github.md)
