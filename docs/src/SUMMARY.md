@@ -7,6 +7,7 @@
   - [Workflows](config/workflow.md)
   - [Steps](config/step/step.md)
     - [CreateChangeFile](config/step/CreateChangeFile.md)
+    - [CreatePullRequest](config/step/CreatePullRequest.md)
     - [PrepareRelease](config/step/PrepareRelease.md)
     - [Release](config/step/Release.md)
     - [BumpVersion](config/step/BumpVersion.md)
