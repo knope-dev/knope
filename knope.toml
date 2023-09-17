@@ -37,11 +37,11 @@ base = "main"
 
 [workflows.steps.title]
 template = "chore: prepare release $version"
-variables = {"$version" = "Version"}
+variables = { "$version" = "Version" }
 
 [workflows.steps.body]
 template = "This PR was created by Knope. Merging it will create a new release\n\n$changelog"
-variables = {"$changelog" = "ChangelogEntry"}
+variables = { "$changelog" = "ChangelogEntry" }
 
 [[workflows]]
 name = "release"
