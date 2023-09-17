@@ -38,7 +38,7 @@ indexmap = { version = "2.0.0", features = ["serde"] }
 inquire = { version = "0.6.2", default-features = false, features = [
   "crossterm",
 ] }
-changesets = "0.2.1"
+changesets = "0.2.2"
 time = { version = "0.3.28" }
 datta = "0.1.0"
 
