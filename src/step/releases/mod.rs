@@ -1,9 +1,13 @@
 use std::{collections::BTreeMap, fmt, fmt::Display};
 
 use ::changesets::PackageChange;
+use conventional_commits::{add_releases_from_conventional_commits, ConventionalCommit};
 use itertools::Itertools;
 use miette::Diagnostic;
+pub(crate) use non_empty_map::PrereleaseMap;
+use semver::{PreVersion, StableVersion, Version};
 use time::{macros::format_description, OffsetDateTime};
+use versioned_file::PackageFormat;
 
 pub(crate) use self::{
     changesets::{create_change_file, ChangeType},
@@ -12,8 +16,8 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
-    releases::semver::{PreVersion, StableVersion, Version},
-    RunType,
+    dry_run::DryRun, integrations::git::get_current_versions_from_tags, step::PrepareRelease,
+    workflow::Verbose, RunType,
 };
 
 mod cargo;
@@ -29,23 +33,9 @@ mod pyproject;
 pub(crate) mod semver;
 pub(crate) mod versioned_file;
 
-use conventional_commits::ConventionalCommit;
-pub(crate) use non_empty_map::PrereleaseMap;
-
-use crate::{
-    dry_run::DryRun,
-    git::get_current_versions_from_tags,
-    releases::{
-        conventional_commits::add_releases_from_conventional_commits, versioned_file::PackageFormat,
-    },
-    step::PrepareRelease,
-    workflow::Verbose,
-};
-
 pub(crate) fn prepare_release(
     run_type: RunType,
     prepare_release: &PrepareRelease,
-    verbose: Verbose,
 ) -> Result<RunType, Error> {
     let (mut state, mut dry_run_stdout) = match run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
@@ -55,7 +45,7 @@ pub(crate) fn prepare_release(
         return Err(package::Error::no_defined_packages_with_help().into());
     }
     let PrepareRelease { prerelease_label } = prepare_release;
-    state.packages = add_releases_from_conventional_commits(state.packages, verbose)
+    state.packages = add_releases_from_conventional_commits(state.packages, state.verbose)
         .map_err(Error::from)
         .and_then(|packages| {
             changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
@@ -66,7 +56,7 @@ pub(crate) fn prepare_release(
                 .into_iter()
                 .map(|package| {
                     package
-                        .write_release(prerelease_label, &mut dry_run_stdout, verbose)
+                        .write_release(prerelease_label, &mut dry_run_stdout, state.verbose)
                         .map_err(Error::from)
                 })
                 .collect()
@@ -87,12 +77,8 @@ pub(crate) fn prepare_release(
     }
 }
 
-pub(crate) fn bump_version(
-    run_type: RunType,
-    rule: &Rule,
-    verbose: Verbose,
-) -> Result<RunType, Error> {
-    bump_version_and_update_state(run_type, rule, verbose).map_err(Error::from)
+pub(crate) fn bump_version(run_type: RunType, rule: &Rule) -> Result<RunType, Error> {
+    bump_version_and_update_state(run_type, rule).map_err(Error::from)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -151,7 +137,7 @@ pub(crate) enum Error {
     GitRelease(#[from] self::git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Git(#[from] crate::git::Error),
+    Git(#[from] crate::integrations::git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     ChangeSet(#[from] changesets::Error),
@@ -210,7 +196,7 @@ type Prereleases = BTreeMap<StableVersion, PrereleaseMap>;
 mod non_empty_map {
     use std::collections::BTreeMap;
 
-    use crate::releases::semver::{Label, Prerelease};
+    use super::semver::{Label, Prerelease};
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     /// Used to track the various pre-releases of a version, can never be empty
@@ -314,7 +300,7 @@ impl From<Version> for CurrentVersions {
 /// Create a release for the package.
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
-pub(crate) fn release(run_type: RunType, verbose: Verbose) -> Result<RunType, Error> {
+pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
     let (mut state, mut dry_run_stdout) = run_type.decompose();
 
     let mut releases = state
@@ -336,7 +322,7 @@ pub(crate) fn release(run_type: RunType, verbose: Verbose) -> Result<RunType, Er
             .packages
             .iter()
             .map(|package| {
-                find_prepared_release(package, verbose).map(|release| {
+                find_prepared_release(package, state.verbose).map(|release| {
                     release.map(|release| PackageWithRelease {
                         package: package.clone(),
                         release,

@@ -8,11 +8,8 @@ use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::{
-    dry_run::DryRun,
-    fs,
-    releases::{semver, semver::Version},
-};
+use super::{semver, semver::Version};
+use crate::{dry_run::DryRun, fs};
 
 /// Extract the consistent version from a `pyproject.toml` file's content or return an error.
 ///

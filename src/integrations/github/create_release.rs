@@ -4,70 +4,35 @@ use datta::UriTemplate;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
+use super::ureq_err_to_string;
 use crate::{
-    app_config,
-    app_config::get_or_prompt_for_github_token,
-    config::GitHub,
+    app_config, config,
     dry_run::DryRun,
-    releases::{
-        git::tag_name,
-        package::{Asset, AssetNameError},
-        PackageName, Release, TimeError,
-    },
+    integrations::github::initialize_state,
     state,
-    state::GitHub::{Initialized, New},
+    step::releases::package::{Asset, AssetNameError},
 };
 
-pub(crate) fn release(
-    package_name: Option<&PackageName>,
-    release: &Release,
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn create_release(
+    name: &str,
+    tag_name: &str,
+    body: Option<&str>,
+    prerelease: bool,
     github_state: state::GitHub,
-    github_config: &GitHub,
+    github_config: &config::GitHub,
     dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
 ) -> Result<state::GitHub, Error> {
-    let version = &release.new_version;
-    let release_title = release.title()?;
-
-    let tag_name = tag_name(version, package_name);
-    let name = if let Some(package_name) = package_name {
-        format!("{package_name} {release_title}")
-    } else {
-        release_title
-    };
-
-    let body = release.new_changelog.as_ref().map(|new_changelog| {
-        new_changelog
-            .lines()
-            .map(|line| {
-                if line.starts_with("##") {
-                    #[allow(clippy::indexing_slicing)] // Just checked len above
-                    &line[1..] // Reduce header level by one
-                } else {
-                    line
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    });
-
-    let github_release = GitHubRelease::new(
-        &tag_name,
-        &name,
-        body,
-        version.is_prerelease(),
-        assets.is_some(),
-    );
+    let github_release =
+        CreateReleaseInput::new(tag_name, name, body, prerelease, assets.is_some());
 
     if let Some(stdout) = dry_run_stdout {
-        github_release_dry_run(&name, assets, &github_release, stdout)?;
+        github_release_dry_run(name, assets, &github_release, stdout)?;
         return Ok(github_state);
     }
 
-    let token = match github_state {
-        Initialized { token } => token,
-        New => get_or_prompt_for_github_token()?,
-    };
+    let (token, agent) = initialize_state(github_state)?;
 
     let url = format!(
         "https://api.github.com/repos/{owner}/{repo}/releases",
@@ -76,7 +41,8 @@ pub(crate) fn release(
     );
     let token_header = format!("token {}", &token);
 
-    let response: CreateReleaseResponse = ureq::post(&url)
+    let response: CreateReleaseResponse = agent
+        .post(&url)
         .set("Authorization", &token_header)
         .send_json(github_release)
         .map_err(|source| Error::ApiRequest {
@@ -99,7 +65,8 @@ pub(crate) fn release(
                 })?;
             let asset_name = asset.name()?;
             let upload_url = upload_template.set("name", asset_name.as_str()).build();
-            ureq::post(&upload_url)
+            agent
+                .post(&upload_url)
                 .set("Authorization", &token_header)
                 .set("Content-Type", "application/octet-stream")
                 .set("Content-Length", &file.len().to_string())
@@ -111,7 +78,8 @@ pub(crate) fn release(
                     ),
                 })?;
         }
-        ureq::patch(&response.url)
+        agent
+            .patch(&response.url)
             .set("Authorization", &token_header)
             .send_json(ureq::json!({
                 "draft": false
@@ -122,22 +90,52 @@ pub(crate) fn release(
             })?;
     }
 
-    Ok(Initialized { token })
+    Ok(state::GitHub::Initialized { token, agent })
 }
 
-fn ureq_err_to_string(err: ureq::Error) -> String {
-    match err {
-        ureq::Error::Status(code, response) => {
-            format!("{}: {}", code, response.into_string().unwrap_or_default())
+#[derive(Serialize)]
+struct CreateReleaseInput<'a> {
+    tag_name: &'a str,
+    name: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    body: Option<&'a str>,
+    prerelease: bool,
+    /// Whether to automatically generate the body for this release.
+    /// If body is specified, the body will be pre-pended to the automatically generated notes.
+    generate_release_notes: bool,
+    /// true to create a draft (unpublished) release, false to create a published one.
+    draft: bool,
+}
+
+impl<'a> CreateReleaseInput<'a> {
+    fn new(
+        tag_name: &'a str,
+        name: &'a str,
+        body: Option<&'a str>,
+        prerelease: bool,
+        draft: bool,
+    ) -> Self {
+        Self {
+            generate_release_notes: body.is_none(),
+            tag_name,
+            name,
+            body,
+            prerelease,
+            draft,
         }
-        ureq::Error::Transport(err) => format!("Transport error: {err}"),
     }
+}
+
+#[derive(Deserialize)]
+struct CreateReleaseResponse {
+    url: String,
+    upload_url: String,
 }
 
 fn github_release_dry_run(
     name: &str,
     assets: Option<&Vec<Asset>>,
-    github_release: &GitHubRelease,
+    github_release: &CreateReleaseInput,
     stdout: &mut Box<dyn Write>,
 ) -> Result<(), Error> {
     let release_type = if github_release.prerelease {
@@ -177,8 +175,8 @@ pub(crate) enum Error {
         "Could not read asset file {path}: {source} Release has been created but not published!"
     )]
     #[diagnostic(
-        code(step::could_not_read_asset_file),
-        help("This could be a permissions issue or the file may not exist relative to the current working directory.")
+    code(step::could_not_read_asset_file),
+    help("This could be a permissions issue or the file may not exist relative to the current working directory.")
     )]
     CouldNotReadAssetFile {
         path: PathBuf,
@@ -215,46 +213,4 @@ pub(crate) enum Error {
         url("https://knope-dev.github.io/knope/config/packages.html#assets")
     )]
     AssetNameError(#[from] AssetNameError),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    TimeError(#[from] TimeError),
-}
-
-#[derive(Serialize)]
-struct GitHubRelease<'a> {
-    tag_name: &'a str,
-    name: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    body: Option<String>,
-    prerelease: bool,
-    /// Whether to automatically generate the body for this release.
-    /// If body is specified, the body will be pre-pended to the automatically generated notes.
-    generate_release_notes: bool,
-    /// true to create a draft (unpublished) release, false to create a published one.
-    draft: bool,
-}
-
-impl<'a> GitHubRelease<'a> {
-    fn new(
-        tag_name: &'a str,
-        name: &'a str,
-        body: Option<String>,
-        prerelease: bool,
-        draft: bool,
-    ) -> Self {
-        Self {
-            generate_release_notes: body.is_none(),
-            tag_name,
-            name,
-            body,
-            prerelease,
-            draft,
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct CreateReleaseResponse {
-    url: String,
-    upload_url: String,
 }

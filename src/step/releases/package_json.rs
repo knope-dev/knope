@@ -8,7 +8,11 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use thiserror::Error;
 
-use crate::{dry_run::DryRun, fs, releases, releases::semver::Version};
+use crate::{
+    dry_run::DryRun,
+    fs,
+    step::{releases, releases::semver::Version},
+};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     serde_json::from_str::<Package>(content)

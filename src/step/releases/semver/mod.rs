@@ -4,13 +4,10 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 
+use super::{package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release};
 use crate::{
     dry_run::DryRun,
-    git,
-    git::get_current_versions_from_tags,
-    releases::{
-        package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release,
-    },
+    integrations::{git, git::get_current_versions_from_tags},
     workflow::Verbose,
     RunType,
 };
@@ -114,7 +111,6 @@ pub(crate) struct PackageVersion {
 pub(crate) fn bump_version_and_update_state(
     run_type: RunType,
     rule: &Rule,
-    verbose: Verbose,
 ) -> Result<RunType, Error> {
     let (mut dry_run_stdout, mut state) = match run_type {
         RunType::DryRun { state, stdout } => (Some(stdout), state),
@@ -128,7 +124,7 @@ pub(crate) fn bump_version_and_update_state(
             let version = if let Some(override_version) = package.override_version.clone() {
                 override_version
             } else {
-                bump(package.get_version(verbose)?, rule, verbose)?
+                bump(package.get_version(state.verbose)?, rule, state.verbose)?
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
             package.prepared_release = Some(Release::new(None, version));

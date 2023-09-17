@@ -5,13 +5,8 @@ use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use super::Package;
-use crate::{
-    config::ChangeLogSectionName,
-    dry_run::DryRun,
-    fs,
-    releases::{semver::Version, ChangeType, Release, TimeError},
-};
+use super::{semver::Version, ChangeType, Package, Release, TimeError};
+use crate::{config::ChangeLogSectionName, dry_run::DryRun, fs};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Changelog {
@@ -33,7 +28,7 @@ impl TryFrom<PathBuf> for Changelog {
 }
 
 impl Changelog {
-    pub(super) fn get_section(&self, version: &Version) -> Option<String> {
+    pub(crate) fn get_section(&self, version: &Version) -> Option<String> {
         let expected_header_start = format!("## {version}");
         let section = self
             .content
@@ -58,7 +53,7 @@ mod test_get_section {
 
     use pretty_assertions::assert_eq;
 
-    use crate::releases::{changelog::Changelog, semver::Version};
+    use crate::step::releases::{changelog::Changelog, semver::Version};
 
     const CONTENT: &str = r#"
 # Changelog
@@ -174,7 +169,7 @@ impl Package {
 
 /// Take in some existing markdown in the expected changelog format, find the top entry, and
 /// put the new version above it.
-pub(super) fn add_version_to_changelog(existing: &str, new_changes: &str) -> String {
+pub(crate) fn add_version_to_changelog(existing: &str, new_changes: &str) -> String {
     let mut changelog = String::new();
     let mut not_written = true;
 
@@ -200,7 +195,7 @@ pub(super) fn add_version_to_changelog(existing: &str, new_changes: &str) -> Str
     changelog
 }
 
-pub(super) fn new_changelog(
+pub(crate) fn new_changelog(
     fixes: Vec<String>,
     features: Vec<String>,
     breaking_changes: Vec<String>,

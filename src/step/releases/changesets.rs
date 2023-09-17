@@ -5,12 +5,8 @@ use inquire::{MultiSelect, Select};
 use itertools::Itertools;
 use miette::Diagnostic;
 
-use crate::{
-    dry_run::DryRun,
-    fs, prompt,
-    releases::{package::ChangelogSectionSource, Change, Package},
-    state::RunType,
-};
+use super::{package::ChangelogSectionSource, Change, Package};
+use crate::{dry_run::DryRun, fs, prompt, state::RunType};
 
 pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     let state = match run_type {

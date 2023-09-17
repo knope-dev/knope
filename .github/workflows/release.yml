@@ -1,35 +1,13 @@
 name: Release
 
 on:
-  workflow_dispatch
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
 
 jobs:
-  prepare-release:
-    runs-on: ubuntu-latest
-    outputs:
-      sha: ${{ steps.commit.outputs.sha }}
-    steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.PAT }}
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "release"
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_push_gpgsign: false
-      - run: cargo run -- prepare-release
-      - name: Store commit
-        id: commit
-        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
   build-artifacts:
-    needs: prepare-release
+    if:  github.head_ref == 'release' && github.event.pull_request.merged == true
     strategy:
       fail-fast: false
       matrix:
@@ -90,7 +68,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [build-artifacts, prepare-release]
+    needs: [build-artifacts]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
@@ -111,7 +89,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
   publish-crate:
-    needs: [release, prepare-release]
+    needs: [release]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4

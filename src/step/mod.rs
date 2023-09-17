@@ -1,14 +1,21 @@
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 use log::error;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    command, git, issues, prompt, releases, releases::semver::Label, state::RunType,
-    workflow::Verbose,
+    integrations::git,
+    prompt,
+    state::RunType,
+    step::releases::semver::Label,
+    variables::{Template, Variable},
 };
+
+pub mod command;
+mod create_pull_request;
+pub mod issues;
+pub mod releases;
 
 /// Each variant describes an action you can take using knope, they are used when defining your
 /// [`crate::Workflow`] via whatever config format is being utilized.
@@ -56,7 +63,7 @@ pub(crate) enum Step {
         command: String,
         /// A map of value-to-replace to [Variable][`crate::command::Variable`] to replace
         /// it with.
-        variables: Option<HashMap<String, command::Variable>>,
+        variables: Option<IndexMap<String, Variable>>,
     },
     /// This will look through all commits since the last tag and parse any
     /// [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will
@@ -73,10 +80,15 @@ pub(crate) enum Step {
     /// This step is interactive and will prompt the user for the information needed to create the
     /// change file. Do not try to run in a non-interactive environment.
     CreateChangeFile,
+    CreatePullRequest {
+        base: String,
+        title: Template,
+        body: Template,
+    },
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType, verbose: Verbose) -> Result<RunType, Error> {
+    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, Error> {
         Ok(match self {
             Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
             Step::TransitionJiraIssue { status } => {
@@ -87,16 +99,19 @@ impl Step {
             }
             Step::SwitchBranches => git::switch_branches(run_type)?,
             Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
-            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule, verbose)?,
+            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule)?,
             Step::Command { command, variables } => {
-                command::run_command(run_type, command, variables, verbose)?
+                command::run_command(run_type, command, variables)?
             }
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(run_type, &prepare_release, verbose)?
+                releases::prepare_release(run_type, &prepare_release)?
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type)?,
-            Step::Release => releases::release(run_type, verbose)?,
+            Step::Release => releases::release(run_type)?,
             Step::CreateChangeFile => releases::create_change_file(run_type)?,
+            Step::CreatePullRequest { base, title, body } => {
+                create_pull_request::run(&base, title, body, run_type)?
+            }
         })
     }
 
@@ -131,6 +146,9 @@ pub(super) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Command(#[from] command::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    CreatePullRequest(#[from] create_pull_request::Error),
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.

@@ -8,11 +8,8 @@ use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::{
-    dry_run::DryRun,
-    releases::{cargo, git, go, package_json, pyproject, semver::Version},
-    workflow::Verbose,
-};
+use super::{cargo, git, go, package_json, pyproject, semver::Version};
+use crate::{dry_run::DryRun, workflow::Verbose};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct VersionedFile {

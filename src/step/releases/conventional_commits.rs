@@ -4,11 +4,11 @@ use git_conventional::{Commit, Footer, Type};
 use log::debug;
 use miette::Diagnostic;
 
+use super::{package::ChangelogSectionSource, Change, ChangeType, Package};
 use crate::{
     config::CommitFooter,
-    git,
-    git::{get_commit_messages_after_tag, get_current_versions_from_tags},
-    releases::{self, package::ChangelogSectionSource, tag_name, Change, ChangeType, Package},
+    integrations::git::{self, get_commit_messages_after_tag, get_current_versions_from_tags},
+    step::{releases, releases::git::tag_name},
     workflow::Verbose,
 };
 
@@ -140,7 +140,6 @@ mod test_conventional_commits {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::releases::package::ChangelogSectionSource;
 
     #[test]
     fn commit_types() {

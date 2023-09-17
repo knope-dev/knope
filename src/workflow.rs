@@ -59,9 +59,9 @@ pub struct Error {
 }
 
 /// Run a series of [`Step`], each of which updates `state`.
-pub(crate) fn run(workflow: Workflow, mut state: RunType, verbose: Verbose) -> Result<(), Error> {
+pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
     for step in workflow.steps {
-        state = match step.run(state, verbose) {
+        state = match step.run(state) {
             Ok(state) => state,
             Err(err) => {
                 return Err(Error {
@@ -78,7 +78,6 @@ pub(crate) fn run(workflow: Workflow, mut state: RunType, verbose: Verbose) -> R
 pub(crate) fn validate(
     workflows: Vec<Workflow>,
     state: State,
-    verbose: Verbose,
 ) -> Result<(), ValidationErrorCollection> {
     let errors = workflows
         .into_iter()
@@ -89,7 +88,6 @@ pub(crate) fn validate(
                     state: state.clone(),
                     stdout: Box::new(sink()),
                 },
-                verbose,
             )
             .err()
         })

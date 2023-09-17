@@ -11,7 +11,7 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::releases::{
+use crate::step::releases::{
     changelog, changelog::Changelog, package::Asset, versioned_file, versioned_file::VersionedFile,
     ChangelogSectionSource, PackageName,
 };
@@ -32,7 +32,7 @@ pub struct Package {
     assets: Option<Vec<Asset>>,
 }
 
-impl TryFrom<(Option<PackageName>, Package)> for crate::releases::Package {
+impl TryFrom<(Option<PackageName>, Package)> for crate::step::releases::Package {
     type Error = Error;
 
     fn try_from((name, package): (Option<PackageName>, Package)) -> Result<Self> {
@@ -56,7 +56,7 @@ impl TryFrom<(Option<PackageName>, Package)> for crate::releases::Package {
     }
 }
 
-impl TryFrom<(PackageName, Package)> for crate::releases::Package {
+impl TryFrom<(PackageName, Package)> for crate::step::releases::Package {
     type Error = Error;
 
     fn try_from((name, package): (PackageName, Package)) -> Result<Self> {
@@ -64,7 +64,7 @@ impl TryFrom<(PackageName, Package)> for crate::releases::Package {
     }
 }
 
-impl TryFrom<Package> for crate::releases::Package {
+impl TryFrom<Package> for crate::step::releases::Package {
     type Error = Error;
 
     fn try_from(package: Package) -> Result<Self> {
@@ -72,8 +72,8 @@ impl TryFrom<Package> for crate::releases::Package {
     }
 }
 
-impl From<crate::releases::Package> for Package {
-    fn from(package: crate::releases::Package) -> Self {
+impl From<crate::step::releases::Package> for Package {
+    fn from(package: crate::step::releases::Package) -> Self {
         Self {
             versioned_files: package
                 .versioned_files

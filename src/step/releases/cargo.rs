@@ -8,7 +8,8 @@ use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::{dry_run::DryRun, fs, releases::semver::Version};
+use super::semver::Version;
+use crate::{dry_run::DryRun, fs};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     toml::from_str::<Cargo>(content)
@@ -59,7 +60,7 @@ pub(crate) enum Error {
     Fs(#[from] fs::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Semver(#[from] crate::releases::semver::version::Error),
+    Semver(#[from] super::semver::version::Error),
 }
 
 #[derive(Debug, Deserialize)]

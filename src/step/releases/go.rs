@@ -3,11 +3,11 @@ use std::{fmt::Display, path::Path, str::FromStr};
 use miette::Diagnostic;
 use thiserror::Error;
 
+use super::{semver::Version, tag_name, versioned_file::VersionFromSource, PackageName};
 use crate::{
     dry_run::DryRun,
-    fs, git,
-    git::get_current_versions_from_tags,
-    releases::{semver::Version, tag_name, versioned_file::VersionFromSource, PackageName},
+    fs,
+    integrations::git::{self, get_current_versions_from_tags},
     workflow::Verbose,
 };
 
@@ -137,7 +137,7 @@ mod test_module_line {
 
     use pretty_assertions::assert_eq;
 
-    use crate::releases::go::ModuleLine;
+    use super::ModuleLine;
 
     #[test]
     fn parse_basic() {
