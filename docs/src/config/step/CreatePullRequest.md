@@ -49,4 +49,5 @@ variables = { "$changelog" = "ChangelogEntry" }
 
 For a full example of how this might be used with GitHub Actions to help automate releases, check out [Knope's prepare-release workflow] and [Knope's release workflow].
 
-[//]: # "TODO: Update Knope's workflows and link to them here"
+[Knope's prepare-release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/prepare_release.yml
+[knope's release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/release.yml
