@@ -4,8 +4,7 @@ use miette::Diagnostic;
 
 use crate::{
     variables,
-    variables::{replace_variables, Variable},
-    workflow::Verbose,
+    variables::{replace_variables, Template, Variable},
     RunType,
 };
 
@@ -15,14 +14,19 @@ pub(crate) fn run_command(
     mut run_type: RunType,
     mut command: String,
     variables: Option<IndexMap<String, Variable>>,
-    verbose: Verbose,
 ) -> Result<RunType, Error> {
     let (state, dry_run_stdout) = match &mut run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
     };
     if let Some(variables) = variables {
-        command = replace_variables(command, variables, state, verbose)?;
+        command = replace_variables(
+            Template {
+                template: command,
+                variables,
+            },
+            state,
+        )?;
     }
     if let Some(stdout) = dry_run_stdout {
         writeln!(stdout, "Would run {command}")?;
@@ -56,17 +60,16 @@ mod test_run_command {
     use tempfile::NamedTempFile;
 
     use super::*;
-    use crate::State;
+    use crate::{workflow::Verbose, State};
 
     #[test]
     fn test() {
         let file = NamedTempFile::new().unwrap();
         let command = format!("cat {}", file.path().to_str().unwrap());
         let result = run_command(
-            RunType::Real(State::new(None, None, Vec::new())),
+            RunType::Real(State::new(None, None, Vec::new(), Verbose::No)),
             command.clone(),
             None,
-            Verbose::No,
         );
 
         assert!(result.is_ok());
@@ -74,10 +77,9 @@ mod test_run_command {
         file.close().unwrap();
 
         let result = run_command(
-            RunType::Real(State::new(None, None, Vec::new())),
+            RunType::Real(State::new(None, None, Vec::new(), Verbose::No)),
             command,
             None,
-            Verbose::No,
         );
         assert!(result.is_err());
     }

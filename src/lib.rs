@@ -33,14 +33,14 @@ use crate::{
         releases::{semver::Version, PackageName},
         Step,
     },
-    workflow::Workflow,
+    workflow::{Verbose, Workflow},
 };
 
 mod app_config;
 mod config;
 mod dry_run;
 mod fs;
-mod git;
+mod integrations;
 mod prompt;
 mod state;
 mod step;
@@ -92,10 +92,10 @@ pub fn run() -> Result<()> {
             })
     });
 
-    let (state, workflows) = create_state(config, sub_matches.as_mut())?;
+    let (state, workflows) = create_state(config, sub_matches.as_mut(), verbose)?;
 
     if let Ok(Some(true)) = matches.try_get_one("validate") {
-        workflow::validate(workflows, state, verbose)?;
+        workflow::validate(workflows, state)?;
         return Ok(());
     }
 
@@ -116,7 +116,7 @@ pub fn run() -> Result<()> {
         RunType::Real(state)
     };
 
-    workflow::run(workflow, state, verbose)?;
+    workflow::run(workflow, state)?;
     Ok(())
 }
 
@@ -199,6 +199,7 @@ fn build_cli(config: &ConfigSource) -> Command {
 fn create_state(
     config: Config,
     mut sub_matches: Option<&mut ArgMatches>,
+    verbose: Verbose,
 ) -> Result<(State, Vec<Workflow>)> {
     let Config {
         mut packages,
@@ -254,7 +255,7 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, packages);
+    let state = State::new(jira, github, packages, verbose);
     Ok((state, workflows))
 }
 

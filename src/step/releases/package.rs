@@ -25,8 +25,8 @@ use super::{
 use crate::{
     config::{ChangeLogSectionName, CommitFooter, CustomChangeType},
     dry_run::DryRun,
-    fs, git,
-    git::add_files,
+    fs,
+    integrations::git::{self, add_files},
     workflow::Verbose,
 };
 

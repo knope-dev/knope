@@ -214,14 +214,19 @@ pub(crate) fn select_issue_from_current_branch(run_type: RunType) -> Result<RunT
             Ok(RunType::DryRun { state, stdout })
         }
         RunType::Real(mut state) => {
-            let repo = Repository::open(".").map_err(ErrorKind::OpenRepo)?;
-            let head = repo.head()?;
-            let ref_name = head.name().ok_or(ErrorKind::NotOnAGitBranch)?;
-            let issue = select_issue_from_branch_name(ref_name)?;
+            let current_branch = current_branch()?;
+            let issue = select_issue_from_branch_name(&current_branch)?;
             state.issue = state::Issue::Selected(issue);
             Ok(RunType::Real(state))
         }
     }
+}
+
+pub(crate) fn current_branch() -> Result<String, Error> {
+    let repo = Repository::open(".").map_err(ErrorKind::OpenRepo)?;
+    let head = repo.head()?;
+    let ref_name = head.name().ok_or(ErrorKind::NotOnAGitBranch)?;
+    Ok(ref_name.to_owned())
 }
 
 /// Get the first remote of the Git repo, if any.

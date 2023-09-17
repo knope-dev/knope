@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     config::toml::ConfigLoader,
-    git,
+    integrations::git,
     step::{
         releases::{find_packages, Package},
         PrepareRelease, Step,

@@ -3,7 +3,7 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    git::branch_name_from_issue,
+    integrations::git::branch_name_from_issue,
     state,
     state::State,
     step::releases::{package, semver, semver::Version, Package},
@@ -13,7 +13,7 @@ use crate::{
 /// Describes a value that can replace an arbitrary string in certain steps.
 ///
 /// <https://knope-dev.github.io/knope/config/variables.html/>
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub(crate) enum Variable {
     /// The version of the package, if only a single package is configured (error if multiple).
     Version,
@@ -24,15 +24,21 @@ pub(crate) enum Variable {
     ChangelogEntry,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+/// A template string and the variables that should be replaced in it.
+pub(crate) struct Template {
+    pub(crate) template: String,
+    pub(crate) variables: IndexMap<String, Variable>,
+}
+
 /// Replace declared variables in the string and return the new string.
-pub(crate) fn replace_variables(
-    mut command: String,
-    variables: IndexMap<String, Variable>,
-    state: &State,
-    verbose: Verbose,
-) -> Result<String, Error> {
+pub(crate) fn replace_variables(template: Template, state: &State) -> Result<String, Error> {
     let mut version_cache = None;
     let mut package_cache = None;
+    let Template {
+        mut template,
+        variables,
+    } = template;
     for (var_name, var_type) in variables {
         match var_type {
             Variable::Version => {
@@ -45,9 +51,9 @@ pub(crate) fn replace_variables(
                         first_package(state)?
                     };
                     package_cache = Some(package);
-                    latest_version(verbose, package)?
+                    latest_version(state.verbose, package)?
                 };
-                command = command.replace(&var_name, &version.to_string());
+                template = template.replace(&var_name, &version.to_string());
                 version_cache = Some(version);
             }
             Variable::ChangelogEntry => {
@@ -59,7 +65,7 @@ pub(crate) fn replace_variables(
                 let version = if let Some(version) = version_cache.take() {
                     version
                 } else {
-                    latest_version(verbose, package)?
+                    latest_version(state.verbose, package)?
                 };
                 let changelog_entry = package
                     .prepared_release
@@ -75,18 +81,18 @@ pub(crate) fn replace_variables(
                         },
                         Ok,
                     )?;
-                command = command.replace(&var_name, &changelog_entry);
+                template = template.replace(&var_name, &changelog_entry);
                 version_cache = Some(version);
             }
             Variable::IssueBranch => match &state.issue {
                 state::Issue::Initial => return Err(Error::NoIssueSelected),
                 state::Issue::Selected(issue) => {
-                    command = command.replace(&var_name, &branch_name_from_issue(issue));
+                    template = template.replace(&var_name, &branch_name_from_issue(issue));
                 }
             },
         }
     }
-    Ok(command)
+    Ok(template)
 }
 
 fn latest_version(verbose: Verbose, package: &Package) -> Result<Version, Error> {
@@ -180,7 +186,7 @@ mod test_replace_variables {
 
     #[test]
     fn multiple_variables() {
-        let command = "blah $$ branch_name".to_string();
+        let template = "blah $$ branch_name".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
         variables.insert("branch_name".to_string(), Variable::IssueBranch);
@@ -195,12 +201,20 @@ mod test_replace_variables {
             github_config: None,
             issue: state::Issue::Selected(issue),
             packages: vec![package().0],
+            verbose: Verbose::No,
         };
 
-        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
+        let result = replace_variables(
+            Template {
+                template,
+                variables,
+            },
+            &state,
+        )
+        .unwrap();
 
         assert_eq!(
-            command,
+            result,
             format!(
                 "blah {} {}",
                 &state.packages[0]
@@ -215,15 +229,22 @@ mod test_replace_variables {
 
     #[test]
     fn replace_version() {
-        let command = "blah $$ other blah".to_string();
+        let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let state = State::new(None, None, vec![package().0]);
+        let state = State::new(None, None, vec![package().0], Verbose::No);
 
-        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
+        let result = replace_variables(
+            Template {
+                template,
+                variables,
+            },
+            &state,
+        )
+        .unwrap();
 
         assert_eq!(
-            command,
+            result,
             format!(
                 "blah {} other blah",
                 &state.packages[0]
@@ -237,21 +258,28 @@ mod test_replace_variables {
 
     #[test]
     fn replace_prepared_version() {
-        let command = "blah $$ other blah".to_string();
+        let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let mut state = State::new(None, None, vec![package().0]);
+        let mut state = State::new(None, None, vec![package().0], Verbose::No);
         let version = Version::new(1, 2, 3, None);
         state.packages[0].prepared_release = Some(Release::new(None, version.clone()));
 
-        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
+        let result = replace_variables(
+            Template {
+                template,
+                variables,
+            },
+            &state,
+        )
+        .unwrap();
 
-        assert_eq!(command, format!("blah {version} other blah"));
+        assert_eq!(result, format!("blah {version} other blah"));
     }
 
     #[test]
     fn replace_issue_branch() {
-        let command = "blah $$ other blah".to_string();
+        let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::IssueBranch);
         let issue = Issue {
@@ -265,25 +293,40 @@ mod test_replace_variables {
             github_config: None,
             issue: state::Issue::Selected(issue),
             packages: Vec::new(),
+            verbose: Verbose::No,
         };
 
-        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
+        let result = replace_variables(
+            Template {
+                template,
+                variables,
+            },
+            &state,
+        )
+        .unwrap();
 
-        assert_eq!(command, format!("blah {expected_branch_name} other blah"));
+        assert_eq!(result, format!("blah {expected_branch_name} other blah"));
     }
 
     #[test]
     fn replace_changelog_entry_prepared_release() {
-        let command = "blah $$ other blah".to_string();
+        let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
-        let mut state = State::new(None, None, vec![package().0]);
+        let mut state = State::new(None, None, vec![package().0], Verbose::No);
         let version = Version::new(1, 2, 3, None);
         let changelog_entry_body = "### Features\n#### Blah".to_string();
         state.packages[0].prepared_release =
             Some(Release::new(Some(changelog_entry_body), version.clone()));
 
-        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
+        let result = replace_variables(
+            Template {
+                template,
+                variables,
+            },
+            &state,
+        )
+        .unwrap();
 
         let changelog_entry = state.packages[0]
             .prepared_release
@@ -292,12 +335,12 @@ mod test_replace_variables {
             .new_changelog
             .clone()
             .unwrap();
-        assert_eq!(command, format!("blah {changelog_entry} other blah"));
+        assert_eq!(result, format!("blah {changelog_entry} other blah"));
     }
 
     #[test]
     fn replace_changelog_entry_previous_release() {
-        let command = "blah $$ other blah".to_string();
+        let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
         let (mut package, _temp_dir_guard) = package();
@@ -307,9 +350,16 @@ mod test_replace_variables {
         let changelog_path = package.changelog.take().unwrap().path;
         write(&changelog_path, &changelog_entry).unwrap();
         package.changelog = Some(changelog_path.try_into().unwrap()); // Have to reload content
-        let state = State::new(None, None, vec![package]);
+        let state = State::new(None, None, vec![package], Verbose::No);
 
-        let command = replace_variables(command, variables, &state, Verbose::No).unwrap();
-        assert_eq!(command, format!("blah {changelog_entry_body} other blah"));
+        let result = replace_variables(
+            Template {
+                template,
+                variables,
+            },
+            &state,
+        )
+        .unwrap();
+        assert_eq!(result, format!("blah {changelog_entry_body} other blah"));
     }
 }

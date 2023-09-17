@@ -1,4 +1,5 @@
 use miette::Diagnostic;
+use ureq::Agent;
 
 use super::Issue;
 use crate::{
@@ -122,11 +123,12 @@ fn list_issues(
     github_state: state::GitHub,
     labels: Option<&[String]>,
 ) -> Result<(state::GitHub, Vec<Issue>), Error> {
-    let token = match github_state {
-        state::GitHub::Initialized { token } => token,
-        state::GitHub::New => get_or_prompt_for_github_token()?,
+    let (token, agent) = match github_state {
+        state::GitHub::Initialized { token, agent } => (token, agent),
+        state::GitHub::New => (get_or_prompt_for_github_token()?, Agent::new()),
     };
-    let response = ureq::post("https://api.github.com/graphql")
+    let response = agent
+        .post("https://api.github.com/graphql")
         .set("Authorization", &format!("bearer {token}"))
         .send_json(ureq::json!({
             "query": ISSUES_QUERY,
@@ -151,7 +153,7 @@ fn list_issues(
         })
         .collect();
 
-    Ok((state::GitHub::Initialized { token }, issues))
+    Ok((state::GitHub::Initialized { token, agent }, issues))
 }
 
 fn decode_github_response(response: ureq::Response) -> Result<Vec<ResponseIssue>, Error> {

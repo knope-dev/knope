@@ -7,8 +7,7 @@ use miette::Diagnostic;
 use super::{package::ChangelogSectionSource, Change, ChangeType, Package};
 use crate::{
     config::CommitFooter,
-    git,
-    git::{get_commit_messages_after_tag, get_current_versions_from_tags},
+    integrations::git::{self, get_commit_messages_after_tag, get_current_versions_from_tags},
     step::{releases, releases::git::tag_name},
     workflow::Verbose,
 };

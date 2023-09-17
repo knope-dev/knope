@@ -3,6 +3,7 @@ use std::io::Write;
 use crate::{
     config,
     step::{issues, releases},
+    workflow::Verbose,
 };
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
@@ -13,6 +14,7 @@ pub(crate) struct State {
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
     pub(crate) packages: Vec<releases::Package>,
+    pub(crate) verbose: Verbose,
 }
 
 impl State {
@@ -21,6 +23,7 @@ impl State {
         jira_config: Option<config::Jira>,
         github_config: Option<config::GitHub>,
         packages: Vec<releases::Package>,
+        verbose: Verbose,
     ) -> Self {
         State {
             jira_config,
@@ -28,6 +31,7 @@ impl State {
             github_config,
             issue: Issue::Initial,
             packages,
+            verbose,
         }
     }
 }
@@ -51,6 +55,14 @@ impl RunType {
             RunType::Real(state) => (state, None),
         }
     }
+
+    pub(crate) fn recompose(state: State, dry_run: Option<Box<dyn Write>>) -> Self {
+        if let Some(stdout) = dry_run {
+            RunType::DryRun { state, stdout }
+        } else {
+            RunType::Real(state)
+        }
+    }
 }
 
 /// Tracks what's been done with respect to issues in this workflow.
@@ -67,5 +79,5 @@ pub(crate) enum Issue {
 #[derive(Clone, Debug)]
 pub(crate) enum GitHub {
     New,
-    Initialized { token: String },
+    Initialized { token: String, agent: ureq::Agent },
 }

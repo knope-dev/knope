@@ -4,7 +4,12 @@ use miette::Diagnostic;
 use thiserror::Error;
 
 use super::{semver::Version, tag_name, versioned_file::VersionFromSource, PackageName};
-use crate::{dry_run::DryRun, fs, git, git::get_current_versions_from_tags, workflow::Verbose};
+use crate::{
+    dry_run::DryRun,
+    fs,
+    integrations::git::{self, get_current_versions_from_tags},
+    workflow::Verbose,
+};
 
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
