@@ -348,7 +348,7 @@ mod test_replace_variables {
         let changelog_entry_body = "### Features\n#### Blah";
         let changelog_entry = format!("## {version} 2023-09-17\n\n{changelog_entry_body}");
         let changelog_path = package.changelog.take().unwrap().path;
-        write(&changelog_path, &changelog_entry).unwrap();
+        write(&changelog_path, changelog_entry).unwrap();
         package.changelog = Some(changelog_path.try_into().unwrap()); // Have to reload content
         let state = State::new(None, None, vec![package], Verbose::No);
 
