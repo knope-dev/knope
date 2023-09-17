@@ -1,0 +1,22 @@
+on:
+  push:
+    branches: [main]
+name: Create Release PR
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT }}
+      - name: Configure Git
+        run: |
+          git config --global user.name GitHub Actions
+          git config user.email github-actions@github.com
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "release"
+      - run: cargo run -- prepare-release --verbose
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
