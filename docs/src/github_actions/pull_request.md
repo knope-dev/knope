@@ -134,6 +134,7 @@ on:
 name: Create Release PR
 jobs:
   prepare-release:
+    if: "!contains(github.event.head_commit.message, 'chore: prepare release')" # Skip merges from releases
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -150,6 +151,10 @@ jobs:
       - run: knope prepare-release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+```
+
+```admonish note
+This workflow runs by default on _every_ push to main, that includes when the previous release PR merges! There is an `if:` clause here in the first job that skips it if the commits matches the commit message that we use in the [`prepare-release` workflow](#prepare-release-workflow). If you change that message, you'll need to update this `if:` clause as well.
 ```
 
 The steps here:
