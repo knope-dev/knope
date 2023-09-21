@@ -179,37 +179,37 @@ To start off, we only want to run this workflow when our release preview pull re
 ```yaml
 on:
   pull_request:
-    types: [ closed ]
-    branches: [ main ]
+    types: [closed]
+    branches: [main]
 ```
 
 Will cause GitHub Actions to only trigger anything at all when a pull request which targets `main` closes. Then, in our _first_ job, we can use this an `if` to narrow that down further to only our release preview pull requests, and only when they _merge_ (not close for other reasons):
 
 ```yaml
-if:  github.head_ref == 'release' && github.event.pull_request.merged == true
+if: github.head_ref == 'release' && github.event.pull_request.merged == true
 ```
 
 For Knope's own workflows, this first job is `build-artifacts`, which builds the [package assets](#packageassets) that will be uploaded when releasing. Skipping on past that job (since it probably will be different for you), we come to the `release` job:
 
 ```yaml
-  release:
-    needs: [build-artifacts]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.archive_name }}
-      - uses: knope-dev/action@v2.0.0
-        with:
-          version: 0.11.0
-      - run: knope release
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+release:
+  needs: [build-artifacts]
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v3
+      with:
+        name: ${{ env.archive_name }}
+    - uses: knope-dev/action@v2.0.0
+      with:
+        version: 0.11.0
+    - run: knope release
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}
 
-      - run: gh workflow run "Deploy Book to GitHub Pages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+    - run: gh workflow run "Deploy Book to GitHub Pages"
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}
 ```
 
 The `release` job follows these steps:
@@ -227,12 +227,12 @@ name: Release
 
 on:
   pull_request:
-    types: [ closed ]
-    branches: [ main ]
+    types: [closed]
+    branches: [main]
 
 jobs:
   build-artifacts:
-    if:  github.head_ref == 'release' && github.event.pull_request.merged == true
+    if: github.head_ref == 'release' && github.event.pull_request.merged == true
     strategy:
       fail-fast: false
       matrix:
@@ -316,7 +316,6 @@ jobs:
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}
-
 ```
 
 ## Conclusion

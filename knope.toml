@@ -1,9 +1,7 @@
 [package]
 versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
-extra_changelog_sections = [
-    { name = "Documentation", types = ["docs"] }
-]
+extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
 
 [[package.assets]]
 path = "artifact/knope-x86_64-unknown-linux-musl.tgz"

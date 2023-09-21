@@ -11,7 +11,7 @@ This recipe allows you to trigger the entire release process manually by either 
 You should also check out the [Pull Request Releases](./pull_request.md) recipe which is similar, but allows you to preview the release in a pull request before accepting it.
 ```
 
-``` admonish info
+```admonish info
 All of the examples in this recipe are for a project with a single Rust binary to release—you'll need to adapt some specifics to your use-case.
 ```
 
@@ -20,8 +20,7 @@ First, let's walk through the GitHub Actions workflow file:
 ```yaml
 name: Release
 
-on:
-  workflow_dispatch
+on: workflow_dispatch
 
 jobs:
   prepare-release:
