@@ -151,6 +151,7 @@ jobs:
       - run: knope prepare-release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+        continue-on-error: true
 ```
 
 ```admonish note
@@ -163,6 +164,10 @@ The steps here:
 2. Configure Git so that we can commit changes (within Knope's `prepare-release` workflow)
 3. Install Knope
 4. Run [the `prepare-release` workflow described above](#prepare-release-workflow). _This_ requires a [personal access token] with permission to **write** the **pull requests** of the repo.
+
+```admonish note
+We add the `continue-on-error` attribute so that even if this step fails, the workflow will be marked as passing. This is because we want to be able to run this workflow on every push to `main`, but we don't want it to fail when there's nothing to release. However, this doesn't differentiate between legitimate errors and "nothing to release". You may want to instead use the [`allow_empty` option](../config/step/PrepareRelease.md#options) in `knope.toml` and split the rest of the steps into a second workflow. Then, you can use some scripting in GitHub Actions to skip the rest of the workflow if there's nothing to release.
+```
 
 In the case of this action, we're using the same [personal access token] for both steps, but you could use different ones if you wanted to.
 

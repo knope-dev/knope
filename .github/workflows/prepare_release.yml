@@ -21,3 +21,4 @@ jobs:
       - run: cargo run -- prepare-release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+        continue-on-error: true
