@@ -1383,6 +1383,47 @@ fn no_version_change() {
 }
 
 #[test]
+fn allow_empty() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/allow_empty");
+
+    init(temp_path);
+    commit(temp_path, "docs: Update README");
+
+    for file in ["knope.toml", "Cargo.toml", "CHANGELOG.md"] {
+        copy(source_path.join(file), temp_path.join(file)).unwrap();
+    }
+
+    // Act.
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_output
+        .success()
+        .stderr_eq_path(source_path.join("dry_run_output.txt"));
+    actual_assert
+        .success()
+        .stderr_eq_path(source_path.join("output.txt"));
+
+    for file in ["Cargo.toml", "CHANGELOG.md"] {
+        assert().matches_path(
+            source_path.join(file),
+            read_to_string(temp_path.join(file)).unwrap(),
+        );
+    }
+}
+
+#[test]
 fn handle_pre_versions_that_are_too_new() {
     // Arrange a folder with a knope file configured to bump versions and a file knope knows how to bump.
     let temp_dir = tempfile::tempdir().unwrap();

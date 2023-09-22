@@ -152,8 +152,12 @@ pub(super) enum Error {
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct PrepareRelease {
     /// If set, the user wants to create a pre-release version using the selected label.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) prerelease_label: Option<Label>,
+    /// Should this step continue if there are no changes to release? If not, it causes an error.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) allow_empty: bool,
 }
