@@ -4,6 +4,86 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.11.1 (2023-09-22)
+
+### Features
+
+#### Add a `ChangelogEntry` variable for substitution
+
+Anywhere that the existing `Version` variable can be used (for example, in [the `Command` step]), you can now also use `ChangelogEntry` to get the section of the changelog that corresponds to the current version. For example, you could (almost) replicate Knope's GitHub Release creation _without_ Knope's GitHub integration with a workflow like this:
+
+```toml
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m \"chore: prepare release $version\" && git push"
+
+[workflows.steps.variables]
+"$version" = "Version"
+
+[[workflows.steps]]
+type = "Command"
+command = "gh release create --title '$version' --notes '$changelog'"
+
+[workflows.steps.variables]
+"$version" = "Version"
+"$changelog" = "ChangelogEntry"
+```
+
+[the `Command` step]: https://knope-dev.github.io/knope/config/step/Command.html
+
+#### Added an `allow_empty` option to the `PrepareRelease` step
+
+Closes #416
+
+If you want to run `PrepareRelease` on every push to a branch without it failing when there's nothing to release, you can now include the `allow_empty` option like this:
+
+```toml
+[[workflows.steps]]
+type = "PrepareRelease"
+allow_empty = true
+```
+
+Then, you can use some logic to gracefully skip the rest of your CI process if there is nothing to release. For example, in GitHub Actions, you could do something like this:
+
+```yaml
+- name: Prepare Release
+  run: knope prepare-release
+- name: Check for Release
+  id: status
+  run: echo ready=$(if [[ `git status --porcelain` ]]; then echo "true"; else echo "false"; fi;) >> $GITHUB_OUTPUT
+- name: Release
+  if: steps.status.outputs.ready == 'true'
+  run: knope release
+```
+
+This allows you to differentiate between there being nothing to release and the `PrepareRelease` step failing for other reasons.
+
+#### New `CreatePullRequest` step
+
+The new [`CreatePullRequest` step] allows you to create or update a pull request on GitHub. It's designed to be a nice way to preview and accept new releases via a pull request workflow, but could certainly work for more contexts as well! To see an example of the new PR-based release workflow, check out [Knope's prepare-release workflow] and [Knope's release workflow].
+
+[`CreatePullRequest` step]: https://knope-dev.github.io/knope/docs/config/step/CreatePullRequest
+[Knope's prepare-release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/prepare_release.yml
+[knope's release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/release.yml
+
+### Fixes
+
+#### Only consider prereleases newer than the last stable
+
+This fixes a regression in the previous version of Knope where _all_ prereleases would be considered, rather than just those tagged after the latest stable version.
+
+### Documentation
+
+#### GitHub Actions Recipes
+
+There's a [new section of the docs](https://knope-dev.github.io/knope/github_actions/github_actions.html) with some recipes for using Knope in GitHub Actions. If you have suggestions for additional recipes, please open a [discussion](https://github.com/knope-dev/knope/discussions)!
+
 ## 0.11.0 (2023-09-13)
 
 ### Breaking Changes
