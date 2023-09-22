@@ -267,12 +267,7 @@ pub(crate) fn generate() -> Config {
             },
         ]
     };
-    release_steps.insert(
-        0,
-        Step::PrepareRelease(PrepareRelease {
-            prerelease_label: None,
-        }),
-    );
+    release_steps.insert(0, Step::PrepareRelease(PrepareRelease::default()));
 
     Config {
         workflows: vec![

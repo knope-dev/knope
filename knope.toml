@@ -1,6 +1,7 @@
 [package]
 versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
+extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
 
 [[package.assets]]
 path = "artifact/knope-x86_64-unknown-linux-musl.tgz"
@@ -23,10 +24,11 @@ command = "git switch -c release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
+allow_empty = true
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release $version\" && git push --force --set-upstream origin release"
+command = "git commit --allow-empty -m \"chore: prepare release $version\" && git push --force --set-upstream origin release"
 
 [workflows.steps.variables]
 "$version" = "Version"

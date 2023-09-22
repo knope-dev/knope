@@ -22,3 +22,6 @@
   - [Packages](config/packages.md)
   - [Jira](config/jira.md)
   - [GitHub](config/github.md)
+- [GitHub Actions](github_actions/github_actions.md)
+  - [Workflow dispatch releases](github_actions/workflow_dispatch.md)
+  - [Pull request releases](github_actions/pull_request.md)

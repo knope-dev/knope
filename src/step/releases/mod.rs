@@ -44,7 +44,10 @@ pub(crate) fn prepare_release(
     if state.packages.is_empty() {
         return Err(package::Error::no_defined_packages_with_help().into());
     }
-    let PrepareRelease { prerelease_label } = prepare_release;
+    let PrepareRelease {
+        prerelease_label,
+        allow_empty,
+    } = prepare_release;
     state.packages = add_releases_from_conventional_commits(state.packages, state.verbose)
         .map_err(Error::from)
         .and_then(|packages| {
@@ -64,12 +67,13 @@ pub(crate) fn prepare_release(
 
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
-    } else if state
-        .packages
-        .iter()
-        .filter(|package| package.prepared_release.is_some())
-        .count()
-        == 0
+    } else if !*allow_empty
+        && state
+            .packages
+            .iter()
+            .filter(|package| package.prepared_release.is_some())
+            .count()
+            == 0
     {
         Err(Error::NoRelease)
     } else {

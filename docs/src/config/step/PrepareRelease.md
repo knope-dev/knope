@@ -16,8 +16,12 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Limitations
 
-- The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] and [Changesets] that meet certain requirements. See [Changelog sections](#changelog-sections) below.
+- The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] and [Changesets] that meet certain requirements. See [Changelog sections](#change-sections) below.
 - Knope uses a simpler subset of semantic versioning which you can read about in [`BumpVersion`]
+
+## Options
+
+- `allow_empty`: If set to `true`, this step will not fail if there are no changes to release. Defaults to `false`.
 
 ## Mono-repos and multiple packages
 
@@ -190,7 +194,7 @@ The reasons this can fail:
 
 1. The version could not be bumped for some reason.
 2. The [packages] section is not configured correctly.
-3. There was nothing to release. In this case it exits immediately so that there aren't problems with later steps.
+3. There was nothing to release _and_ `allow_empty` was not set to `true`. In this case it exits immediately so that there aren't problems with later steps.
 
 [semantic versioning]: https://semver.org
 [`bumpversion`]: ./BumpVersion.md
