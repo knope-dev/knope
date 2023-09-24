@@ -254,15 +254,25 @@ mod test_module_line {
 pub(crate) fn create_version_tag(
     path: &Path,
     version: &Version,
+    existing_tag: &str,
     dry_run: DryRun,
 ) -> Result<(), git::Error> {
-    let parent_dir = path.parent().map(Path::to_string_lossy);
-    if let Some(parent_dir) = parent_dir {
-        if !parent_dir.is_empty() {
-            let tag = format!("{parent_dir}/v{version}");
-            git::create_tag(dry_run, tag)?;
-        }
-        // If there's not a nested dir, the tag will equal the release tag, so creating it here would cause a conflict later.
+    let tag = path
+        .parent()
+        .and_then(|parent| {
+            let parent_str = parent.to_string_lossy();
+            if parent_str.is_empty() {
+                None
+            } else {
+                Some(parent_str)
+            }
+        })
+        .map_or_else(
+            || format!("v{version}"),
+            |parent_dir| format!("{parent_dir}/v{version}"),
+        );
+    if tag != existing_tag {
+        git::create_tag(dry_run, &tag)?; // Avoid recreating the top-level package tag
     }
     Ok(())
 }
@@ -300,7 +310,7 @@ pub(crate) fn get_version(
                 .map(|version| VersionFromSource {
                     source: format!(
                         "Git tag {tag}",
-                        tag = tag_name(&version, prefix.map(PackageName::from).as_ref())
+                        tag = tag_name(&version, &prefix.map(PackageName::from))
                     ),
                     version,
                 })

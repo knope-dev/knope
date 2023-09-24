@@ -8,7 +8,7 @@ use super::{package::ChangelogSectionSource, Change, ChangeType, Package};
 use crate::{
     config::CommitFooter,
     integrations::git::{self, get_commit_messages_after_tag, get_current_versions_from_tags},
-    step::{releases, releases::git::tag_name},
+    step::{releases, releases::tag_name},
     workflow::Verbose,
 };
 
@@ -346,7 +346,7 @@ fn get_conventional_commits_after_last_stable_version(
     verbose: Verbose,
 ) -> Result<Vec<ConventionalCommit>, Error> {
     let target_version = get_current_versions_from_tags(package.name.as_deref(), verbose)?.stable;
-    let tag = target_version.map(|version| tag_name(&version.into(), package.name.as_ref()));
+    let tag = target_version.map(|version| tag_name(&version.into(), &package.name));
     let commit_messages = get_commit_messages_after_tag(tag, verbose).map_err(git::Error::from)?;
     Ok(ConventionalCommit::from_commit_messages(
         &commit_messages,

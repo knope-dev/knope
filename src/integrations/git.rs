@@ -455,7 +455,7 @@ pub(crate) fn get_commit_messages_after_tag(
     Ok(reverse_commits)
 }
 
-pub(crate) fn create_tag(dry_run: DryRun, name: String) -> Result<(), Error> {
+pub(crate) fn create_tag(dry_run: DryRun, name: &str) -> Result<(), Error> {
     if let Some(stdout) = dry_run {
         return writeln!(stdout, "Would create Git tag {name}")
             .map_err(fs::Error::Stdout)

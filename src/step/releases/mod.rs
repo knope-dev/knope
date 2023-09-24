@@ -11,7 +11,6 @@ use versioned_file::PackageFormat;
 
 pub(crate) use self::{
     changesets::{create_change_file, ChangeType},
-    git::tag_name,
     package::{find_packages, ChangelogSectionSource, Package, PackageName},
     semver::{bump_version_and_update_state, Rule},
 };
@@ -339,6 +338,10 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
 
     let github_config = state.github_config.clone();
     for package_to_release in releases {
+        let tag = tag_name(
+            &package_to_release.release.new_version,
+            &package_to_release.package.name,
+        );
         if let Some(github_config) = github_config.as_ref() {
             state.github = github::release(
                 package_to_release.package.name.as_ref(),
@@ -347,15 +350,12 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
                 github_config,
                 &mut dry_run_stdout,
                 package_to_release.package.assets.as_ref(),
+                &tag,
             )?;
         } else {
-            git::release(
-                &mut dry_run_stdout,
-                &package_to_release.release.new_version,
-                package_to_release.package.name.as_ref(),
-            )?;
+            git::release(&mut dry_run_stdout, &tag)?;
         }
-        add_go_mod_tags(&package_to_release, &mut dry_run_stdout)?;
+        add_go_mod_tags(&package_to_release, &tag, &mut dry_run_stdout)?;
     }
 
     if let Some(stdout) = dry_run_stdout {
@@ -363,6 +363,14 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
     } else {
         Ok(RunType::Real(state))
     }
+}
+
+/// The tag that a particular version should have for a particular package
+pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) -> String {
+    let prefix = package_name
+        .as_ref()
+        .map_or_else(|| "v".to_string(), |name| format!("{name}/v"));
+    format!("{prefix}{version}")
 }
 
 struct PackageWithRelease {
@@ -400,6 +408,7 @@ fn find_prepared_release(package: &Package, verbose: Verbose) -> Result<Option<R
 /// it's in the wrong place. So the `Release` step needs to write the _right_ version.
 fn add_go_mod_tags(
     package_with_release: &PackageWithRelease,
+    existing_tag: &str,
     dry_run: DryRun,
 ) -> Result<(), git::Error> {
     let PackageWithRelease { package, release } = package_with_release;
@@ -409,7 +418,7 @@ fn add_go_mod_tags(
         .filter(|versioned_file| matches!(versioned_file.format, PackageFormat::Go))
         .collect_vec();
     for go_mod in go_mods {
-        go::create_version_tag(&go_mod.path, &release.new_version, dry_run)?;
+        go::create_version_tag(&go_mod.path, &release.new_version, existing_tag, dry_run)?;
     }
     Ok(())
 }
