@@ -27,13 +27,14 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> 
 pub(crate) fn set_version(
     dry_run: DryRun,
     pyproject_toml: String,
-    new_version: &str,
+    new_version: &Version,
     path: &Path,
 ) -> Result<String, Error> {
+    let version_str = new_version.to_string();
     let contents = toml::from_str(&pyproject_toml)
         .map_err(|source| Error::Deserialization(path.into(), source))
-        .map(|pyproject: PyProject| pyproject.set_version(pyproject_toml, new_version))?;
-    fs::write(dry_run, new_version, path, &contents)?;
+        .map(|pyproject: PyProject| pyproject.set_version(pyproject_toml, &version_str))?;
+    fs::write(dry_run, &version_str, path, &contents)?;
     Ok(contents)
 }
 
@@ -232,7 +233,7 @@ mod tests {
         let new = set_version(
             &mut fake_dry_run(),
             String::from(content),
-            "1.2.3-rc.4",
+            &Version::from_str("1.2.3-rc.4").unwrap(),
             &PathBuf::new(),
         )
         .unwrap();

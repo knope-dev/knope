@@ -24,7 +24,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> 
 pub(crate) fn set_version(
     dry_run: DryRun,
     mut cargo_toml: String,
-    new_version: &str,
+    new_version: &Version,
     path: &Path,
 ) -> Result<String, Error> {
     let doc: Cargo = toml::from_str(&cargo_toml).map_err(|source| Error::Deserialize {
@@ -36,8 +36,9 @@ pub(crate) fn set_version(
     let start = doc.package.version.span().start + 1;
     let end = doc.package.version.span().end - 1;
 
-    cargo_toml.replace_range(start..end, new_version);
-    fs::write(dry_run, new_version, path, &cargo_toml)?;
+    let version_str = new_version.to_string();
+    cargo_toml.replace_range(start..end, &version_str);
+    fs::write(dry_run, &version_str, path, &cargo_toml)?;
 
     Ok(cargo_toml)
 }
@@ -105,7 +106,7 @@ mod tests {
         let new = set_version(
             &mut fake_dry_run(),
             String::from(content),
-            "1.2.3-rc.4",
+            &Version::from_str("1.2.3-rc.4").unwrap(),
             Path::new(""),
         )
         .unwrap();

@@ -367,10 +367,15 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
 
 /// The tag that a particular version should have for a particular package
 pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) -> String {
-    let prefix = package_name
-        .as_ref()
-        .map_or_else(|| "v".to_string(), |name| format!("{name}/v"));
+    let prefix = tag_prefix(package_name);
     format!("{prefix}{version}")
+}
+
+/// The prefix for tags for a particular package
+fn tag_prefix(package_name: &Option<PackageName>) -> String {
+    package_name
+        .as_ref()
+        .map_or_else(|| "v".to_string(), |name| format!("{name}/v"))
 }
 
 struct PackageWithRelease {
@@ -384,7 +389,10 @@ fn find_prepared_release(package: &Package, verbose: Verbose) -> Result<Option<R
     let Some(current_version) = package.version_from_files(verbose)? else {
         return Ok(None);
     };
-    let last_tag = get_current_versions_from_tags(package.name.as_deref(), verbose)
+    if let Verbose::Yes = verbose {
+        println!("Searching for last package tag to determine if there's a release to release");
+    }
+    let last_tag = get_current_versions_from_tags(package.name.as_deref(), None, verbose)
         .map(CurrentVersions::into_latest)?;
     let version_of_new_release = match last_tag {
         Some(last_tag) if last_tag != current_version => current_version,
@@ -415,7 +423,7 @@ fn add_go_mod_tags(
     let go_mods = package
         .versioned_files
         .iter()
-        .filter(|versioned_file| matches!(versioned_file.format, PackageFormat::Go))
+        .filter(|versioned_file| matches!(versioned_file.format, PackageFormat::Go { .. }))
         .collect_vec();
     for go_mod in go_mods {
         go::create_version_tag(&go_mod.path, &release.new_version, existing_tag, dry_run)?;

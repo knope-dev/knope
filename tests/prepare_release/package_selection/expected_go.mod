@@ -1,1 +1,1 @@
-module github.com/knope/v2 // v2.0.0
+module github.com/knope // v1.1.0

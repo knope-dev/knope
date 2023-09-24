@@ -38,7 +38,7 @@ pub(crate) fn release(
 
     api::create_release(
         &name,
-        &tag,
+        tag,
         body.as_deref(),
         version.is_prerelease(),
         github_state,

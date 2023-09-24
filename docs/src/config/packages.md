@@ -168,6 +168,27 @@ When you have one `[package]`, the package name "default" will be used for chang
 See [`PrepareRelease`] and [`Release`] for details on what happens when those steps are run for multiple packages.
 ```
 
+### Multiple Major Versions of Go Modules
+
+The [recommended best practice](https://go.dev/blog/v2-go-modules) for maintaining multiple major versions of Go modules is to include every major version on your main branch (rather than separate branches). In order to support multiple go modules files in Knope, you have to define them as separate packages:
+
+```toml
+# knope.toml
+[packages.v1]
+versioned_files = ["go.mod"]
+scopes = ["v1"]
+
+[packages.v2]
+versioned_files = ["v2/go.mod"]
+scopes = ["v2"]
+```
+
+This allows you to add features or patches to just the major version that a commit affects and release new versions of each major version independently.
+
+```admonish warning
+If you use this multi-package syntax for go modules, you **cannot** use Knope to increment the major version. You'll have to create the new major version directory yourself and add a new package to `knope.toml` for it.
+```
+
 [`bumpversion`]: ./step/BumpVersion.md
 [`preparerelease`]: ./step/PrepareRelease.md
 [`release`]: ./step/Release.md

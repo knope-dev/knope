@@ -27,7 +27,7 @@ pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> 
 pub(crate) fn set_version(
     dry_run: DryRun,
     package_json: &str,
-    new_version: &str,
+    new_version: &Version,
     path: &Path,
 ) -> Result<String, Error> {
     let mut json = serde_json::from_str::<Map<String, Value>>(package_json).map_err(|source| {
@@ -44,7 +44,7 @@ pub(crate) fn set_version(
         path: path.into(),
         source,
     })?;
-    fs::write(dry_run, new_version, path, &contents)?;
+    fs::write(dry_run, &new_version.to_string(), path, &contents)?;
     Ok(contents)
 }
 
@@ -111,7 +111,13 @@ mod tests {
         "version": "0.1.0-rc.0"
         }"#;
 
-        let new = set_version(&mut fake_dry_run(), content, "1.2.3-rc.4", Path::new("")).unwrap();
+        let new = set_version(
+            &mut fake_dry_run(),
+            content,
+            &Version::from_str("1.2.3-rc.4").unwrap(),
+            Path::new(""),
+        )
+        .unwrap();
 
         let expected = r#"{
   "name": "tester",
@@ -129,7 +135,13 @@ mod tests {
         "dependencies": {}
         }"#;
 
-        let new = set_version(&mut fake_dry_run(), content, "1.2.3-rc.4", Path::new("")).unwrap();
+        let new = set_version(
+            &mut fake_dry_run(),
+            content,
+            &Version::from_str("1.2.3-rc.4").unwrap(),
+            Path::new(""),
+        )
+        .unwrap();
 
         let expected = r#"{
   "name": "tester",

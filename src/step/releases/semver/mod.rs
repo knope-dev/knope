@@ -8,6 +8,7 @@ use super::{package::Package, versioned_file, ChangeType, CurrentVersions, Prere
 use crate::{
     dry_run::DryRun,
     integrations::{git, git::get_current_versions_from_tags},
+    step::releases::versioned_file::{VersionFromSource, VersionSource},
     workflow::Verbose,
     RunType,
 };
@@ -121,13 +122,20 @@ pub(crate) fn bump_version_and_update_state(
         .packages
         .into_iter()
         .map(|package| {
-            let version = if let Some(override_version) = package.override_version.clone() {
-                override_version
+            let version = if let Some(version) = package.override_version.clone() {
+                VersionFromSource {
+                    version,
+                    source: VersionSource::OverrideVersion,
+                }
             } else {
-                bump(package.get_version(state.verbose)?, rule, state.verbose)?
+                let version = bump(package.get_version(state.verbose)?, rule, state.verbose)?;
+                VersionFromSource {
+                    version,
+                    source: VersionSource::Calculated,
+                }
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            package.prepared_release = Some(Release::new(None, version));
+            package.prepared_release = Some(Release::new(None, version.version));
             Ok(package)
         })
         .collect::<Result<Vec<Package>, Error>>()?;
@@ -142,7 +150,11 @@ impl Package {
     /// Get the current version of a package determined by the last tag for the package _and_ the
     /// version in versioned files. The version from files takes precedent over version from tag.
     pub(crate) fn get_version(&self, verbose: Verbose) -> Result<CurrentVersions, Error> {
-        let mut current_versions = get_current_versions_from_tags(self.name.as_deref(), verbose)?;
+        if let Verbose::Yes = verbose {
+            println!("Looking for Git tags matching package name.");
+        }
+        let mut current_versions =
+            get_current_versions_from_tags(self.name.as_deref(), None, verbose)?;
 
         if let Some(version_from_files) = self.version_from_files(verbose)? {
             current_versions.update_version(version_from_files);
@@ -160,7 +172,19 @@ impl Package {
     pub(crate) fn version_from_files(&self, verbose: Verbose) -> Result<Option<Version>, Error> {
         self.versioned_files
             .iter()
-            .map(|versioned_file| versioned_file.get_version(verbose).map_err(Error::from))
+            .map(|versioned_file| {
+                if let Verbose::Yes = verbose {
+                    println!(
+                        "Finding version for {path}",
+                        path = versioned_file.path.display()
+                    );
+                }
+                let version = versioned_file.get_version(verbose).map_err(Error::from)?;
+                if let Verbose::Yes = verbose {
+                    println!("Found {version}");
+                }
+                Ok(version)
+            })
             .reduce(|accumulator, version| match (version, accumulator) {
                 (Ok(version), Ok(accumulator)) => {
                     if version.version == accumulator.version {
@@ -168,9 +192,9 @@ impl Package {
                     } else {
                         Err(Error::InconsistentVersions {
                             first_version: accumulator.version.to_string(),
-                            first_source: accumulator.source,
+                            first_source: accumulator.source.to_string(),
                             second_version: version.version.to_string(),
-                            second_source: version.source,
+                            second_source: version.source.to_string(),
                         })
                     }
                 }
@@ -186,7 +210,7 @@ impl Package {
     /// If `dry_run` is `true`, the version will not be written to any files.
     pub(crate) fn write_version(
         mut self,
-        version: &Version,
+        version: &VersionFromSource,
         dry_run: DryRun,
     ) -> Result<Self, versioned_file::Error> {
         for versioned_file in &mut self.versioned_files {

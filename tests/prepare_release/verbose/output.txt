@@ -1,6 +1,14 @@
-Finding all commits behind refs/tags/first/v1.2.3
-Finding all commits behind refs/tags/second/v0.4.6
+Getting conventional commits since last release of package first
+Only checking commits with scopes: ["first"]
+Finding all commits behind tag first/v1.2.3
+Getting conventional commits since last release of package second
+Finding all commits behind tag second/v0.4.6
 Determining new version for first
+Looking for Git tags matching package name.
+Finding version for Cargo.toml
+Found 1.2.3 from file Cargo.toml
+Finding version for pyproject.toml
+Found 1.2.3 from file pyproject.toml
 commit feat: A feature
 	implies rule MINOR
 commit feat!: A breaking feature
@@ -25,6 +33,9 @@ changeset feature.md
 	implies rule MINOR
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
 Determining new version for second
+Looking for Git tags matching package name.
+Finding version for package.json
+Found 0.4.6 from file package.json
 commit feat: A feature
 	implies rule MINOR
 commit feat!: A breaking feature

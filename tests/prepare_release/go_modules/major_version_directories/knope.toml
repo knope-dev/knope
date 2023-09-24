@@ -1,0 +1,18 @@
+[packages.v1]
+versioned_files = ["go.mod", "sub_dir/go.mod"]
+scopes = ["v1"]
+changelog = "CHANGELOG.md"
+
+[packages.v2]
+versioned_files = ["v2/go.mod", "v2/sub_dir/go.mod"]
+scopes = ["v2"]
+changelog = "v2/CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Release"

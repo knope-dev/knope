@@ -1,5 +1,5 @@
-## 2.0.0 ([DATE])
+## 1.1.0 ([DATE])
 
-### Breaking Changes
+### Features
 
 #### New feature

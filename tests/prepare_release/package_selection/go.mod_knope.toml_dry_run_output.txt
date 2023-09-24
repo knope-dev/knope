@@ -1,8 +1,8 @@
-Would add the following to go.mod: 2.0.0
+Would add the following to go.mod: 1.1.0
 Would add the following to CHANGELOG.md: 
-## 2.0.0 ([DATE])
+## 1.1.0 ([DATE])
 
-### Breaking Changes
+### Features
 
 #### New feature
 

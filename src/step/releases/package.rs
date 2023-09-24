@@ -27,6 +27,7 @@ use crate::{
     dry_run::DryRun,
     fs,
     integrations::git::{self, add_files},
+    step::releases::versioned_file::{VersionFromSource, VersionSource},
     workflow::Verbose,
 };
 
@@ -79,11 +80,14 @@ impl Package {
             }
         }
 
-        let new_version = if let Some(override_version) = self.override_version.take() {
+        let new_version = if let Some(version) = self.override_version.take() {
             if let Verbose::Yes = verbose {
-                println!("Using overridden version {override_version}");
+                println!("Using overridden version {version}");
             }
-            override_version
+            VersionFromSource {
+                version,
+                source: VersionSource::OverrideVersion,
+            }
         } else {
             let versions = self.get_version(verbose)?;
             let bump_rule = self.bump_rule(verbose);
@@ -95,11 +99,15 @@ impl Package {
             } else {
                 bump_rule.into()
             };
-            bump(versions, &rule, verbose)?
+            let version = bump(versions, &rule, verbose)?;
+            VersionFromSource {
+                version,
+                source: VersionSource::Calculated,
+            }
         };
 
         self = self.write_version(&new_version, dry_run)?;
-        self.prepared_release = Some(self.write_changelog(new_version, dry_run)?);
+        self.prepared_release = Some(self.write_changelog(new_version.version, dry_run)?);
         self.stage_changes_to_git(dry_run)?;
 
         Ok(self)

@@ -1,5 +1,6 @@
 use std::{
     ffi::OsStr,
+    fmt::Display,
     fs::read_to_string,
     path::{Path, PathBuf},
 };
@@ -91,7 +92,11 @@ impl VersionedFile {
         self.format.get_version(&self.content, &self.path, verbose)
     }
 
-    pub(crate) fn set_version(&mut self, dry_run: DryRun, version_str: &Version) -> Result<()> {
+    pub(crate) fn set_version(
+        &mut self,
+        dry_run: DryRun,
+        version_str: &VersionFromSource,
+    ) -> Result<()> {
         self.content =
             self.format
                 .set_version(dry_run, self.content.clone(), version_str, &self.path)?;
@@ -137,19 +142,19 @@ impl PackageFormat {
                 .map_err(ErrorKind::Cargo)
                 .map(|version| VersionFromSource {
                     version,
-                    source: path.display().to_string(),
+                    source: path.into(),
                 }),
             PackageFormat::Poetry => pyproject::get_version(content, path)
                 .map_err(ErrorKind::PyProject)
                 .map(|version| VersionFromSource {
                     version,
-                    source: path.display().to_string(),
+                    source: path.into(),
                 }),
             PackageFormat::JavaScript => package_json::get_version(content, path)
                 .map_err(ErrorKind::PackageJson)
                 .map(|version| VersionFromSource {
                     version,
-                    source: path.display().to_string(),
+                    source: path.into(),
                 }),
             PackageFormat::Go => go::get_version(content, path, verbose).map_err(ErrorKind::Go),
         }
@@ -163,20 +168,20 @@ impl PackageFormat {
         self,
         dry_run: DryRun,
         content: String,
-        new_version: &Version,
+        new_version: &VersionFromSource,
         path: &Path,
     ) -> Result<String> {
         match self {
             PackageFormat::Cargo => {
-                cargo::set_version(dry_run, content, &new_version.to_string(), path)
+                cargo::set_version(dry_run, content, &new_version.version, path)
                     .map_err(Error::from)
             }
             PackageFormat::Poetry => {
-                pyproject::set_version(dry_run, content, &new_version.to_string(), path)
+                pyproject::set_version(dry_run, content, &new_version.version, path)
                     .map_err(Error::from)
             }
             PackageFormat::JavaScript => {
-                package_json::set_version(dry_run, &content, &new_version.to_string(), path)
+                package_json::set_version(dry_run, &content, &new_version.version, path)
                     .map_err(Error::from)
             }
             PackageFormat::Go => {
@@ -189,7 +194,40 @@ impl PackageFormat {
 /// A version and where it came from.
 pub(crate) struct VersionFromSource {
     pub(crate) version: Version,
-    pub(crate) source: String,
+    pub(crate) source: VersionSource,
+}
+
+impl Display for VersionFromSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} from {}", self.version, self.source)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum VersionSource {
+    OverrideVersion,
+    GitTag(String),
+    File(String),
+    Default,
+    Calculated,
+}
+
+impl Display for VersionSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VersionSource::OverrideVersion => write!(f, "--override-version option"),
+            VersionSource::GitTag(tag) => write!(f, "git tag {tag}"),
+            VersionSource::File(file) => write!(f, "file {file}"),
+            VersionSource::Default => write!(f, "default—no matching tags detected"),
+            VersionSource::Calculated => write!(f, "calculated by Knope"),
+        }
+    }
+}
+
+impl From<&Path> for VersionSource {
+    fn from(path: &Path) -> Self {
+        Self::File(path.display().to_string())
+    }
 }
 
 const ALL_PACKAGE_FORMATS: [PackageFormat; 4] = [
