@@ -29,7 +29,7 @@ clap = { version = "4.4.4", features = ["cargo", "string", "env"] }
 itertools = "0.11.0"
 miette = { version = "5.10.0", features = ["fancy"] }
 thiserror = "1.0.48"
-gix = { version = "0.54.0", default-features = false, features = [
+gix = { version = "0.54.1", default-features = false, features = [
   "max-performance-safe",
 ] }
 log = "0.4.20"
