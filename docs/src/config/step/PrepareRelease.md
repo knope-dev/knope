@@ -206,3 +206,4 @@ The reasons this can fail:
 [changesets]: https://github.com/changesets/changesets
 [`CreateChangeFile`]: ./CreateChangeFile.md
 [change type]: https://github.com/knope-dev/changesets#change-type
+[`--override-version`]: ../../introduction.md#--override-version
