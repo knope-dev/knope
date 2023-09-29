@@ -411,9 +411,9 @@ pub(crate) fn get_commit_messages_after_tag(
     let repo = gix::open(".")?;
     if let Verbose::Yes = verbose {
         if let Some(tag) = &tag {
-            println!("Finding all commits behind tag {tag}");
+            println!("Finding all commits since tag {tag}");
         } else {
-            println!("Finding all commits behind HEAD");
+            println!("Finding ALL commits");
         }
     }
     let commits_to_exclude = tag
