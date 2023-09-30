@@ -3,11 +3,12 @@ use std::{fmt::Display, path::Path, str::FromStr};
 use miette::Diagnostic;
 use thiserror::Error;
 
-use super::{semver::Version, tag_name, versioned_file::VersionFromSource, PackageName};
+use super::{semver::Version, versioned_file::VersionFromSource};
 use crate::{
     dry_run::DryRun,
     fs,
     integrations::git::{self, get_current_versions_from_tags},
+    step::releases::versioned_file::VersionSource,
     workflow::Verbose,
 };
 
@@ -19,6 +20,21 @@ pub(crate) enum Error {
         help("The go.mod file does not contain a module line. This is required for the step to work."),
     )]
     MissingModuleLine,
+    #[error("Will not bump Go modules to 2.0.0")]
+    #[diagnostic(
+        code(go::cannot_increase_major_version),
+        help("Go recommends a directory-based versioning strategy for major versions above v1. See the docs for more details."),
+        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html#limitations"),
+    )]
+    BumpingToV2,
+    #[error("Cannot bump major versions of directory-based go modules")]
+    #[diagnostic(
+        code(go::major_version_directory_based),
+        help("You are using directory-based major versions—Knope cannot create a new major version directory for you. \
+            Create the new directory manually and add it as a new package in knope.toml."),
+        url("https://knope-dev.github.io/knope/config/packages.html#multiple-major-versions-of-go-modules"),
+    )]
+    MajorVersionDirectoryBased,
     #[error(transparent)]
     #[diagnostic(transparent)]
     Git(#[from] git::Error),
@@ -35,7 +51,7 @@ pub(crate) enum Error {
 pub(crate) fn set_version_in_file(
     dry_run: DryRun,
     content: &str,
-    new_version: &Version,
+    new_version: &VersionFromSource,
     path: &Path,
 ) -> Result<String, Error> {
     let original_module_line = content
@@ -43,11 +59,25 @@ pub(crate) fn set_version_in_file(
         .find(|line| line.starts_with("module "))
         .ok_or(Error::MissingModuleLine)?;
     let mut module_line = ModuleLine::from_str(original_module_line)?;
-    module_line.major_version = Some(new_version.stable_component().major);
-    module_line.version = Some(new_version.clone());
+    match (module_line.major_version, path.parent(), new_version.version.stable_component().major, &new_version.source) {
+        (None, _, new_major, _) if new_major == 0 || new_major == 1 => {},  // No change
+        (None, _, _, VersionSource::OverrideVersion) => {},  // Override tells us that they're aware of the risks
+        (None, _, _, _) => return Err(Error::BumpingToV2),  // No major version in go.mod, but we're bumping to >1 without explicit override
+        (Some(module_major), _, new_major, _) if module_major == new_major => {},  // No change
+        (Some(_), None, _, _)  => {} | (Some(old_major), Some(ancestor), _, _) if ancestor.display().to_string() != format!("v{old_major}")  // Allowed to bump >1 to >1 if not using path-based directories
+         => {},
+        (Some(_), _, _, _) => return Err(Error::MajorVersionDirectoryBased),
+    }
+    module_line.major_version = Some(new_version.version.stable_component().major);
+    module_line.version = Some(new_version.version.clone());
 
     let new_content = content.replace(original_module_line, &module_line.to_string());
-    fs::write(dry_run, &new_version.to_string(), path, &new_content)?;
+    fs::write(
+        dry_run,
+        &new_version.version.to_string(),
+        path,
+        &new_content,
+    )?;
     Ok(new_content)
 }
 
@@ -254,15 +284,30 @@ mod test_module_line {
 pub(crate) fn create_version_tag(
     path: &Path,
     version: &Version,
+    existing_tag: &str,
     dry_run: DryRun,
 ) -> Result<(), git::Error> {
-    let parent_dir = path.parent().map(Path::to_string_lossy);
-    if let Some(parent_dir) = parent_dir {
-        if !parent_dir.is_empty() {
-            let tag = format!("{parent_dir}/v{version}");
-            git::create_tag(dry_run, tag)?;
-        }
-        // If there's not a nested dir, the tag will equal the release tag, so creating it here would cause a conflict later.
+    let tag = path
+        .parent()
+        .and_then(|parent| {
+            let parent_str = parent.to_string_lossy();
+            let major = version.stable_component().major;
+            let prefix = parent_str
+                .strip_suffix(&format!("v{major}"))
+                .unwrap_or(&parent_str);
+            let prefix = prefix.strip_suffix('/').unwrap_or(prefix);
+            if prefix.is_empty() {
+                None
+            } else {
+                Some(prefix.to_string())
+            }
+        })
+        .map_or_else(
+            || format!("v{version}"),
+            |prefix| format!("{prefix}/v{version}"),
+        );
+    if tag != existing_tag {
+        git::create_tag(dry_run, &tag)?; // Avoid recreating the top-level package tag
     }
     Ok(())
 }
@@ -274,13 +319,7 @@ pub(crate) fn get_version(
     path: &Path,
     verbose: Verbose,
 ) -> Result<VersionFromSource, Error> {
-    let prefix = path.parent().map(Path::to_string_lossy).and_then(|prefix| {
-        if prefix.is_empty() {
-            None
-        } else {
-            Some(prefix)
-        }
-    });
+    let mut parent = path.parent();
     let module_line = content
         .lines()
         .find(|line| line.starts_with("module "))
@@ -289,30 +328,69 @@ pub(crate) fn get_version(
     if let Some(version) = module_line.version {
         return Ok(VersionFromSource {
             version,
-            source: path.display().to_string(),
+            source: path.into(),
         });
     }
 
-    if let Some(version_from_tag) = get_current_versions_from_tags(prefix.as_deref(), verbose)
-        .map(|current_versions| {
-            current_versions
-                .into_latest()
-                .map(|version| VersionFromSource {
-                    source: format!(
-                        "Git tag {tag}",
-                        tag = tag_name(&version, prefix.map(PackageName::from).as_ref())
-                    ),
-                    version,
+    let major_filter = if let Some(major) = module_line.major_version {
+        let major_dir = format!("v{major}");
+        if parent.is_some_and(|parent| parent.ends_with(&major_dir)) {
+            // Major version directories are not tag prefixes!
+            parent = parent.and_then(Path::parent);
+            if let Verbose::Yes = verbose {
+                println!(
+                    "Major version directory {major_dir} detected, only tags matching that major version will be used.",
+                );
+            }
+        }
+        Some(vec![major])
+    } else {
+        Some(vec![0, 1])
+    };
+
+    let prefix = match parent.map(|parent| parent.display().to_string()) {
+        Some(submodule) if !submodule.is_empty() => {
+            if let Verbose::Yes = verbose {
+                println!(
+                    "{path} is in the subdirectory {submodule}, so it will be used to filter tags.",
+                    path = path.display()
+                );
+            }
+            Some(submodule)
+        }
+        _ => None,
+    };
+
+    if let Verbose::Yes = verbose {
+        println!(
+            "No version comment in {path}, searching for relevant Git tags instead.",
+            path = path.display()
+        );
+    }
+
+    if let Some(version_from_tag) =
+        get_current_versions_from_tags(prefix.as_deref(), major_filter.as_ref(), verbose)
+            .map(|current_versions| {
+                current_versions.into_latest().map(|version| {
+                    let tag = if let Some(prefix) = prefix {
+                        format!("{prefix}/v{version}")
+                    } else {
+                        format!("v{version}")
+                    };
+                    VersionFromSource {
+                        source: VersionSource::GitTag(tag),
+                        version,
+                    }
                 })
-        })
-        .map_err(Error::from)
-        .transpose()
+            })
+            .map_err(Error::from)
+            .transpose()
     {
         return version_from_tag;
     }
 
     Ok(VersionFromSource {
         version: Version::default(),
-        source: "Default—no matching tags detected".to_string(),
+        source: VersionSource::Default,
     })
 }

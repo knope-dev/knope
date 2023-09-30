@@ -1,6 +1,6 @@
 use miette::{diagnostic, Diagnostic};
 
-use super::{git::tag_name, package::Asset, PackageName, Release, TimeError};
+use super::{package::Asset, PackageName, Release, TimeError};
 use crate::{config::GitHub, dry_run::DryRun, integrations::github as api, state};
 
 pub(crate) fn release(
@@ -10,11 +10,11 @@ pub(crate) fn release(
     github_config: &GitHub,
     dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
+    tag: &str,
 ) -> Result<state::GitHub, Error> {
     let version = &release.new_version;
     let release_title = release.title()?;
 
-    let tag_name = tag_name(version, package_name);
     let name = if let Some(package_name) = package_name {
         format!("{package_name} {release_title}")
     } else {
@@ -38,7 +38,7 @@ pub(crate) fn release(
 
     api::create_release(
         &name,
-        &tag_name,
+        tag,
         body.as_deref(),
         version.is_prerelease(),
         github_state,

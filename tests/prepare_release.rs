@@ -406,7 +406,7 @@ fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_fil
     add_all(temp_path);
     commit(temp_path, "feat: Existing feature");
     tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat!: New feature");
+    commit(temp_path, "feat: New feature");
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -613,7 +613,7 @@ fn prepare_release_creates_missing_changelog() {
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
     tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat!: New feature");
+    commit(temp_path, "feat: New feature");
 
     copy(
         source_path.join("Cargo.toml_knope.toml"),
@@ -944,165 +944,6 @@ fn release_after_prerelease() {
         source_path.join("Expected_Cargo.toml"),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
-}
-
-/// Go modules have a peculiar way of versioning in that only the major version is recorded to the
-/// `go.mod` file and only for major versions >1. This tests that.
-#[test]
-fn go_modules() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/go_modules");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    for file in ["knope.toml", "CHANGELOG.md", "go.mod"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-
-    // Act 1—version stays at 1.x
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert 1—version stays at 1.x
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("1.1_dry_run_output.txt"));
-    actual_assert.success().stdout_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_1.1_CHANGELOG.md"),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches_path(
-        source_path.join("EXPECTED_1.1_go.mod"),
-        read_to_string(temp_path.join("go.mod")).unwrap(),
-    );
-    let tags = get_tags(temp_path);
-    assert_eq!(tags, vec!["v1.1.0"]);
-
-    // Arrange 2—version goes to 2.0
-    commit(temp_path, "feat!: Breaking change");
-
-    // Act 2—version goes to 2.0
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert 2—version goes to 2.0
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("2.0_dry_run_output.txt"));
-    actual_assert.success().stdout_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_2.0_CHANGELOG.md"),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches_path(
-        source_path.join("EXPECTED_2.0_go.mod"),
-        read_to_string(temp_path.join("go.mod")).unwrap(),
-    );
-    let tags = get_tags(temp_path);
-    assert_eq!(vec!["v2.0.0"], tags);
-}
-
-/// In addition to the >2.x rules above, there is also a tagging pattern that must be kept-to
-#[test]
-fn go_modules_in_subdirectory() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/go_modules_in_subdirectory");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    // This is the version of the Go package, but there is no project-wide tag, so _both_ commits should be included.
-    tag(temp_path, "sub_dir/v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    for file in ["knope.toml", "CHANGELOG.md"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-    let sub_dir = temp_path.join("sub_dir");
-    create_dir(&sub_dir).unwrap();
-    copy(source_path.join("go.mod"), sub_dir.join("go.mod")).unwrap();
-
-    // Act 1—version stays at 1.x
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert 1—version stays at 1.x
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("1.1_dry_run_output.txt"));
-    actual_assert.success().stdout_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_1.1_CHANGELOG.md"),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches_path(
-        source_path.join("EXPECTED_1.1_go.mod"),
-        read_to_string(sub_dir.join("go.mod")).unwrap(),
-    );
-    let tags = get_tags(temp_path);
-    assert_eq!(vec!["sub_dir/v1.1.0", "v1.1.0"], tags);
-
-    // Arrange 2—version goes to 2.0
-    commit(temp_path, "feat!: Breaking change");
-
-    // Act 2—version goes to 2.0
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert 2—version goes to 2.0
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("2.0_dry_run_output.txt"));
-    actual_assert.success().stdout_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_2.0_CHANGELOG.md"),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches_path(
-        source_path.join("EXPECTED_2.0_go.mod"),
-        read_to_string(sub_dir.join("go.mod")).unwrap(),
-    );
-    let tags = get_tags(temp_path);
-    assert_eq!(tags, vec!["sub_dir/v2.0.0", "v2.0.0"]);
 }
 
 /// Verify that PrepareRelease will operate on all defined packages independently
@@ -1895,57 +1736,6 @@ fn verbose() {
         .success()
         .stderr_eq("")
         .stdout_matches_path(src_path.join("output.txt"));
-}
-
-#[test]
-fn go_mod_version_determination() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.2.3");
-    let source_path = Path::new("tests/prepare_release/go_mod_version_determination");
-    create_dir(temp_path.join("with_comment")).unwrap();
-    tag(temp_path, "with_comment/v0.1.0"); // Comment should override tag
-    create_dir(temp_path.join("without_comment")).unwrap();
-    tag(temp_path, "without_comment/v1.2.3");
-    commit(temp_path, "feat: A feature");
-
-    let versioned_files = [
-        "knope.toml",
-        "Cargo.toml", // Mix in another type of file for good measure
-        "go.mod",
-        "with_comment/go.mod",
-        "without_comment/go.mod",
-    ];
-
-    for file in versioned_files {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-
-    // Act.
-    let dry_run_output = Command::new(cargo_bin!("knope"))
-        .arg("prepare-release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("prepare-release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_output
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
-    actual_assert.success().stdout_eq("");
-    for file in versioned_files {
-        assert().matches_path(
-            source_path.join(format!("EXPECTED_{file}")),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
 }
 
 /// Specifically designed to catch https://github.com/knope-dev/knope/issues/505

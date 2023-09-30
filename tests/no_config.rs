@@ -100,5 +100,5 @@ fn setup_commits(path: &Path) {
     init(path);
     commit(path, "feat: Existing Feature");
     tag(path, "v1.0.0");
-    commit(path, "feat!: Breaking Change");
+    commit(path, "feat: Something");
 }

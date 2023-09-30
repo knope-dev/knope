@@ -409,13 +409,17 @@ pub(crate) fn get_commit_messages_after_tag(
     verbose: Verbose,
 ) -> Result<Vec<String>, Error> {
     let repo = gix::open(".")?;
+    if let Verbose::Yes = verbose {
+        if let Some(tag) = &tag {
+            println!("Finding all commits since tag {tag}");
+        } else {
+            println!("Finding ALL commits");
+        }
+    }
     let commits_to_exclude = tag
         .map(|tag| format!("refs/tags/{tag}"))
         .as_ref()
         .map(|reference| {
-            if let Verbose::Yes = verbose {
-                println!("Finding all commits behind {reference}");
-            }
             repo.find_reference(reference)
                 .map_err(|err| ErrorKind::FindReference {
                     reference: reference.clone(),
@@ -455,7 +459,7 @@ pub(crate) fn get_commit_messages_after_tag(
     Ok(reverse_commits)
 }
 
-pub(crate) fn create_tag(dry_run: DryRun, name: String) -> Result<(), Error> {
+pub(crate) fn create_tag(dry_run: DryRun, name: &str) -> Result<(), Error> {
     if let Some(stdout) = dry_run {
         return writeln!(stdout, "Would create Git tag {name}")
             .map_err(fs::Error::Stdout)
@@ -476,8 +480,14 @@ pub(crate) fn create_tag(dry_run: DryRun, name: String) -> Result<(), Error> {
     Ok(())
 }
 
+/// Get the (relevant) current versions from Git tags.
+///
+/// ## Parameters
+/// - `prefix`: Only tag names starting with this string will be considered.
+/// - `verbose`: Whether to print extra information.
 pub(crate) fn get_current_versions_from_tags(
     prefix: Option<&str>,
+    major_filter: Option<&Vec<u64>>,
     verbose: Verbose,
 ) -> Result<CurrentVersions, Error> {
     let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
@@ -534,6 +544,11 @@ pub(crate) fn get_current_versions_from_tags(
     for tag in tags {
         let version_string = tag.replace(&pattern, "");
         if let Ok(version) = Version::from_str(version_string.as_str()) {
+            if let Some(major_filter) = major_filter.as_ref() {
+                if !major_filter.contains(&version.stable_component().major) {
+                    continue;
+                }
+            }
             let is_stable = !version.is_prerelease();
             current_versions.update_version(version);
             if is_stable {

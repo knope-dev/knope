@@ -18,6 +18,7 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 - The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] and [Changesets] that meet certain requirements. See [Changelog sections](#change-sections) below.
 - Knope uses a simpler subset of semantic versioning which you can read about in [`BumpVersion`]
+- Knope will not allow you to update the major version of a `go.mod` file in most cases, as the [recommended practice](https://go.dev/blog/v2-go-modules) is to create a new `go.mod` file (in a new directory) for each major version. You can override this behavior using the [`--override-version`] option (to go from `v1` to `v2`) or use [multiple packages](../packages.md#multiple-major-versions-of-go-modules) to support multiple `go.mod` files on different major versions.
 
 ## Options
 
@@ -205,3 +206,4 @@ The reasons this can fail:
 [changesets]: https://github.com/changesets/changesets
 [`CreateChangeFile`]: ./CreateChangeFile.md
 [change type]: https://github.com/knope-dev/changesets#change-type
+[`--override-version`]: ../../introduction.md#--override-version
