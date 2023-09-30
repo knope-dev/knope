@@ -59,7 +59,7 @@ pub(crate) fn set_version_in_file(
         .find(|line| line.starts_with("module "))
         .ok_or(Error::MissingModuleLine)?;
     let mut module_line = ModuleLine::from_str(original_module_line)?;
-    match (module_line.major_version, path.ancestors().last(), new_version.version.stable_component().major, &new_version.source) {
+    match (module_line.major_version, path.parent(), new_version.version.stable_component().major, &new_version.source) {
         (None, _, new_major, _) if new_major == 0 || new_major == 1 => {},  // No change
         (None, _, _, VersionSource::OverrideVersion) => {},  // Override tells us that they're aware of the risks
         (None, _, _, _) => return Err(Error::BumpingToV2),  // No major version in go.mod, but we're bumping to >1 without explicit override
@@ -293,9 +293,9 @@ pub(crate) fn create_version_tag(
             let parent_str = parent.to_string_lossy();
             let major = version.stable_component().major;
             let prefix = parent_str
-                .strip_prefix(&format!("v{major}"))
+                .strip_suffix(&format!("v{major}"))
                 .unwrap_or(&parent_str);
-            let prefix = prefix.strip_prefix('/').unwrap_or(prefix);
+            let prefix = prefix.strip_suffix('/').unwrap_or(prefix);
             if prefix.is_empty() {
                 None
             } else {
@@ -319,10 +319,7 @@ pub(crate) fn get_version(
     path: &Path,
     verbose: Verbose,
 ) -> Result<VersionFromSource, Error> {
-    let mut parent = path
-        .parent()
-        .map(|path| path.display().to_string())
-        .unwrap_or_default();
+    let mut parent = path.parent();
     let module_line = content
         .lines()
         .find(|line| line.starts_with("module "))
@@ -337,10 +334,9 @@ pub(crate) fn get_version(
 
     let major_filter = if let Some(major) = module_line.major_version {
         let major_dir = format!("v{major}");
-        if let Some(new_path) = parent.strip_prefix(&major_dir) {
+        if parent.is_some_and(|parent| parent.ends_with(&major_dir)) {
             // Major version directories are not tag prefixes!
-            let new_path = new_path.strip_prefix('/').unwrap_or(new_path);
-            parent = new_path.to_string();
+            parent = parent.and_then(Path::parent);
             if let Verbose::Yes = verbose {
                 println!(
                     "Major version directory {major_dir} detected, only tags matching that major version will be used.",
@@ -352,16 +348,17 @@ pub(crate) fn get_version(
         Some(vec![0, 1])
     };
 
-    let prefix = if parent.is_empty() {
-        None
-    } else {
-        if let Verbose::Yes = verbose {
-            println!(
-                "{path} is in the subdirectory {parent}, so it will be used to filter tags.",
-                path = path.display()
-            );
+    let prefix = match parent.map(|parent| parent.display().to_string()) {
+        Some(submodule) if !submodule.is_empty() => {
+            if let Verbose::Yes = verbose {
+                println!(
+                    "{path} is in the subdirectory {submodule}, so it will be used to filter tags.",
+                    path = path.display()
+                );
+            }
+            Some(submodule)
         }
-        Some(parent)
+        _ => None,
     };
 
     if let Verbose::Yes = verbose {

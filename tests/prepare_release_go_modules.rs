@@ -224,15 +224,15 @@ fn major_version_directories() {
     commit(temp_path, "fix(v1): A fix");
     commit(temp_path, "feat(v2): New feature");
 
-    create_dir_all(temp_path.join("sub_dir")).unwrap();
-    create_dir_all(temp_path.join("v2/sub_dir")).unwrap();
+    create_dir_all(temp_path.join("sub_dir/v2")).unwrap();
+    create_dir_all(temp_path.join("v2")).unwrap();
 
     for file in [
         "knope.toml",
         "CHANGELOG.md",
         "go.mod",
         "sub_dir/go.mod",
-        "v2/sub_dir/go.mod",
+        "sub_dir/v2/go.mod",
         "v2/go.mod",
         "v2/CHANGELOG.md",
     ] {
@@ -263,7 +263,7 @@ fn major_version_directories() {
         "sub_dir/go.mod",
         "v2/CHANGELOG.md",
         "v2/go.mod",
-        "v2/sub_dir/go.mod",
+        "sub_dir/v2/go.mod",
     ] {
         assert().matches_path(
             source_path.join(format!("EXPECTED_{file}")),

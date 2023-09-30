@@ -1,8 +1,8 @@
 Getting conventional commits since last release of package first
 Only checking commits with scopes: ["first"]
-Finding all commits behind tag first/v1.2.3
+Finding all commits since tag first/v1.2.3
 Getting conventional commits since last release of package second
-Finding all commits behind tag second/v0.4.6
+Finding all commits since tag second/v0.4.6
 Would delete: .changeset/breaking_change.md
 Would delete: .changeset/feature.md
 Would delete: .changeset/feature.md

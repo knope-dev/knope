@@ -4,7 +4,7 @@ scopes = ["v1"]
 changelog = "CHANGELOG.md"
 
 [packages.v2]
-versioned_files = ["v2/go.mod", "v2/sub_dir/go.mod"]
+versioned_files = ["v2/go.mod", "sub_dir/v2/go.mod"]
 scopes = ["v2"]
 changelog = "v2/CHANGELOG.md"
 

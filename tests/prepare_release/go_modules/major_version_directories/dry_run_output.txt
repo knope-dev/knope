@@ -1,11 +1,11 @@
 Getting conventional commits since last release of package v1
 Only checking commits with scopes: ["v1"]
 No tags found matching pattern v1/v
-Finding all commits behind HEAD
+Finding ALL commits
 Getting conventional commits since last release of package v2
 Only checking commits with scopes: ["v2"]
 No tags found matching pattern v2/v
-Finding all commits behind HEAD
+Finding ALL commits
 Determining new version for v1
 Looking for Git tags matching package name.
 No tags found matching pattern v1/v
@@ -39,16 +39,16 @@ Finding version for v2/go.mod
 Major version directory v2 detected, only tags matching that major version will be used.
 No version comment in v2/go.mod, searching for relevant Git tags instead.
 Found 2.0.0 from git tag v2.0.0
-Finding version for v2/sub_dir/go.mod
+Finding version for sub_dir/v2/go.mod
 Major version directory v2 detected, only tags matching that major version will be used.
-v2/sub_dir/go.mod is in the subdirectory sub_dir, so it will be used to filter tags.
-No version comment in v2/sub_dir/go.mod, searching for relevant Git tags instead.
+sub_dir/v2/go.mod is in the subdirectory sub_dir, so it will be used to filter tags.
+No version comment in sub_dir/v2/go.mod, searching for relevant Git tags instead.
 Found 2.0.0 from git tag sub_dir/v2.0.0
 commit feat(v2): New feature
 	implies rule MINOR
 Using MINOR rule to bump from 2.0.0 to 2.1.0
 Would add the following to v2/go.mod: 2.1.0
-Would add the following to v2/sub_dir/go.mod: 2.1.0
+Would add the following to sub_dir/v2/go.mod: 2.1.0
 Would add the following to v2/CHANGELOG.md: 
 ## 2.1.0 ([DATE])
 
@@ -58,7 +58,7 @@ Would add the following to v2/CHANGELOG.md:
 
 Would add files to git:
   v2/go.mod
-  v2/sub_dir/go.mod
+  sub_dir/v2/go.mod
   v2/CHANGELOG.md
 Would create Git tag v1/v1.0.1
 Would create Git tag v1.0.1
