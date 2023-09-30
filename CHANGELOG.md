@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.12.0 (2023-09-30)
+
+### Breaking Changes
+
+#### Prevent bumping major version of a `go.mod` file
+
+According to [the docs](https://go.dev/blog/v2-go-modules), aside from the `v0` -> `v1` transition, `go.mod` files should not be updated for new major versions, but instead a new `v{major}` directory should be created with a new `go.mod` file. This is for compatibility with older versions of Go tools.
+
+In order to prevent someone from accidentally doing the wrong thing, Knope will no longer bump a `go.mod` file to `v2` unless `--override-version` is used to bypass this check. Additionally, if a `go.mod` file is in the matching versioned directory (e.g., the `go.mod` file ending in `/v2` is under a directory called `v2`), Knope will not allow the major version of _that_ file to be bumped, as it would break the package.
+
+### Fixes
+
+#### Handle version-specific go modules correctly
+
+Fixes #584 from @BatmanAoD.
+
+If you have a `go.mod` file representing a specific major version in a directory (as recommended in [the go docs](https://go.dev/blog/v2-go-modules)), Knope will now tag it correctly. Previously, a `v2/go.mod` file would generate a tag like `v2/v2.1.3`. Now, it will generate a tag like `v2.1.3`.
+
+Additionally, when determining the _current_ version for a `go.mod` file, only tags which match the major version of the `go.mod` file will be considered.
+
+#### Properly version named packages containing a root `go.mod` file
+
+Consider this package config in a `knope.toml`:
+
+```toml
+[packages.something]
+versioned_files = ["go.mod"]
+```
+
+The `Release` step previously (and will still) add a tag like `something/v1.2.3`, however the correct Go module tag is `v1.2.3` (without the package name prefix). Knope will now correctly add this second tag (previously, top-level tags were only added for single-package repos).
+
+### Documentation
+
+#### Document conflict between package names and go module names
+
+It is possible to write a `knope.toml` file which will cause conflicting tags during the `Release` step if you have `go.mod` files in nested directories. [This is now documented](https://knope-dev.github.io/knope/config/step/Release.html).
+
 ## 0.11.1 (2023-09-22)
 
 ### Features
