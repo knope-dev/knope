@@ -119,7 +119,7 @@ impl FromStr for ModuleLine {
         let version = parts
             .get(2)
             .and_then(|comment_start| (*comment_start == "//").then_some(()))
-            .and_then(|_| parts.get(3))
+            .and_then(|()| parts.get(3))
             .and_then(|v| v.strip_prefix('v'))
             .and_then(|v| {
                 if let Ok(version) = Version::from_str(v) {
