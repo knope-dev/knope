@@ -5,6 +5,7 @@ use std::io::Write;
 pub(crate) type DryRun<'a> = &'a mut Option<Box<dyn Write>>;
 
 #[cfg(test)]
+#[allow(clippy::unnecessary_wraps)]
 pub(crate) fn fake_dry_run() -> Option<Box<dyn Write>> {
-    Some(Box::new(Vec::new()))
+    Some(Box::<Vec<u8>>::default())
 }
