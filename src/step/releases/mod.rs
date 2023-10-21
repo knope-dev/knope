@@ -6,10 +6,10 @@ use itertools::Itertools;
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
 use semver::{PreVersion, StableVersion, Version};
-use time::{macros::format_description, OffsetDateTime};
 use versioned_file::PackageFormat;
 
 pub(crate) use self::{
+    changelog::Release,
     changesets::{create_change_file, ChangeType},
     package::{find_packages, ChangelogSectionSource, Package, PackageName},
     semver::{bump_version_and_update_state, Rule},
@@ -22,7 +22,7 @@ use crate::{
 mod cargo;
 pub(crate) mod changelog;
 pub(crate) mod changesets;
-mod conventional_commits;
+pub(crate) mod conventional_commits;
 pub(crate) mod git;
 pub(crate) mod github;
 pub(crate) mod go;
@@ -84,37 +84,6 @@ pub(crate) fn bump_version(run_type: RunType, rule: &Rule) -> Result<RunType, Er
     bump_version_and_update_state(run_type, rule).map_err(Error::from)
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct Release {
-    pub(crate) new_changelog: Option<String>,
-    pub(crate) new_version: Version,
-    date: OffsetDateTime,
-}
-
-impl Release {
-    pub(crate) fn new(changelog: Option<String>, version: Version) -> Release {
-        Release {
-            new_changelog: changelog,
-            new_version: version,
-            date: OffsetDateTime::now_utc(),
-        }
-    }
-
-    pub(crate) fn title(&self) -> Result<String, TimeError> {
-        let format = format_description!("[year]-[month]-[day]");
-        let date = self.date.format(&format)?;
-        Ok(format!("{} ({})", self.new_version, date))
-    }
-
-    pub(crate) fn changelog_entry(&self) -> Result<Option<String>, TimeError> {
-        self.title().map(|title| {
-            self.new_changelog
-                .as_ref()
-                .map(|changelog| format!("## {title}\n\n{changelog}"))
-        })
-    }
-}
-
 #[derive(Debug, Diagnostic, thiserror::Error)]
 #[error("Failed to format current time")]
 #[diagnostic(
@@ -153,6 +122,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     ConventionalCommits(#[from] conventional_commits::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ParseError(#[from] changelog::ParseError),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -339,7 +311,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
     let github_config = state.github_config.clone();
     for package_to_release in releases {
         let tag = tag_name(
-            &package_to_release.release.new_version,
+            &package_to_release.release.version,
             &package_to_release.package.name,
         );
         if let Some(github_config) = github_config.as_ref() {
@@ -399,14 +371,13 @@ fn find_prepared_release(package: &Package, verbose: Verbose) -> Result<Option<R
         None => current_version,
         _ => return Ok(None),
     };
-    Ok(Some(Release {
-        new_changelog: package
-            .changelog
-            .as_ref()
-            .and_then(|changelog| changelog.get_section(&version_of_new_release)),
-        new_version: version_of_new_release,
-        date: OffsetDateTime::now_utc(),
-    }))
+    package
+        .changelog
+        .as_ref()
+        .map(|changelog| changelog.get_release(&version_of_new_release))
+        .transpose()
+        .map(Option::flatten)
+        .map_err(Error::from)
 }
 
 /// Go modules have their versions determined by a Git tag. They _also_ have a _piece_ of their
@@ -426,7 +397,7 @@ fn add_go_mod_tags(
         .filter(|versioned_file| matches!(versioned_file.format, PackageFormat::Go { .. }))
         .collect_vec();
     for go_mod in go_mods {
-        go::create_version_tag(&go_mod.path, &release.new_version, existing_tag, dry_run)?;
+        go::create_version_tag(&go_mod.path, &release.version, existing_tag, dry_run)?;
     }
     Ok(())
 }

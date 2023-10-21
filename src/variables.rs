@@ -6,7 +6,7 @@ use crate::{
     integrations::git::branch_name_from_issue,
     state,
     state::State,
-    step::releases::{package, semver, semver::Version, Package},
+    step::releases::{package, semver, semver::Version, Package, Release},
     workflow::Verbose,
 };
 
@@ -70,13 +70,15 @@ pub(crate) fn replace_variables(template: Template, state: &State) -> Result<Str
                 let changelog_entry = package
                     .prepared_release
                     .as_ref()
-                    .and_then(|prepared_release| prepared_release.new_changelog.clone())
+                    .and_then(Release::body)
                     .map_or_else(
                         || {
                             package
                                 .changelog
                                 .as_ref()
-                                .and_then(|changelog| changelog.get_section(&version))
+                                .and_then(|changelog| changelog.get_release(&version).transpose())
+                                .transpose()?
+                                .and_then(|release| release.body())
                                 .ok_or_else(|| Error::NoChangelogEntry(version.clone()))
                         },
                         Ok,
@@ -97,7 +99,7 @@ pub(crate) fn replace_variables(template: Template, state: &State) -> Result<Str
 
 fn latest_version(verbose: Verbose, package: &Package) -> Result<Version, Error> {
     Ok(if let Some(release) = package.prepared_release.as_ref() {
-        release.new_version.clone()
+        release.version.clone()
     } else {
         package
             .get_version(verbose)?
@@ -148,6 +150,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     SemVer(#[from] semver::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ChangelogParse(#[from] crate::step::releases::changelog::ParseError),
 }
 
 #[cfg(test)]
@@ -162,7 +167,10 @@ mod test_replace_variables {
         state,
         step::{
             issues::Issue,
-            releases::{semver::Version, Package, Release},
+            releases::{
+                changelog::HeaderLevel, conventional_commits::ConventionalCommit, semver::Version,
+                Change, ChangeType, Package, Release,
+            },
         },
         workflow::Verbose,
     };
@@ -263,7 +271,7 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, vec![package().0], Verbose::No);
         let version = Version::new(1, 2, 3, None);
-        state.packages[0].prepared_release = Some(Release::new(None, version.clone()));
+        state.packages[0].prepared_release = Some(Release::empty(version.clone()));
 
         let result = replace_variables(
             Template {
@@ -315,9 +323,17 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
         let mut state = State::new(None, None, vec![package().0], Verbose::No);
         let version = Version::new(1, 2, 3, None);
-        let changelog_entry_body = "### Features\n#### Blah".to_string();
-        state.packages[0].prepared_release =
-            Some(Release::new(Some(changelog_entry_body), version.clone()));
+        let changes = [Change::ConventionalCommit(ConventionalCommit {
+            change_type: ChangeType::Feature,
+            message: "Blah".to_string(),
+            original_source: String::new(),
+        })];
+        state.packages[0].prepared_release = Some(Release::new(
+            version.clone(),
+            &changes,
+            &IndexMap::new(),
+            HeaderLevel::H2,
+        ));
 
         let result = replace_variables(
             Template {
@@ -332,8 +348,7 @@ mod test_replace_variables {
             .prepared_release
             .as_ref()
             .unwrap()
-            .new_changelog
-            .clone()
+            .body()
             .unwrap();
         assert_eq!(result, format!("blah {changelog_entry} other blah"));
     }
@@ -345,7 +360,7 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
         let (mut package, _temp_dir_guard) = package();
         let version = Version::new(1, 2, 3, None);
-        let changelog_entry_body = "### Features\n#### Blah";
+        let changelog_entry_body = "### Features\n\n#### Blah";
         let changelog_entry = format!("## {version} 2023-09-17\n\n{changelog_entry_body}");
         let changelog_path = package.changelog.take().unwrap().path;
         write(&changelog_path, changelog_entry).unwrap();

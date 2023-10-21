@@ -1,17 +1,42 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf, str::FromStr};
 
 use indexmap::IndexMap;
 use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
+use time::{macros::format_description, Date, OffsetDateTime};
 
-use super::{semver::Version, ChangeType, Package, Release, TimeError};
+use super::{semver::Version, Change, ChangeType, ChangelogSectionSource, Package, TimeError};
 use crate::{config::ChangeLogSectionName, dry_run::DryRun, fs};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Changelog {
+    /// The path to the CHANGELOG file
     pub(crate) path: PathBuf,
+    /// The content that has been written to `path`
     pub(crate) content: String,
+    section_header_level: HeaderLevel,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum HeaderLevel {
+    H1,
+    H2,
+}
+
+impl HeaderLevel {
+    const fn as_str(self) -> &'static str {
+        match self {
+            Self::H1 => "#",
+            Self::H2 => "##",
+        }
+    }
+}
+
+impl Display for HeaderLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 impl TryFrom<PathBuf> for Changelog {
@@ -23,37 +48,107 @@ impl TryFrom<PathBuf> for Changelog {
         } else {
             String::new()
         };
-        Ok(Self { path, content })
+        let section_header_level = content
+            .lines()
+            .filter(|line| line.starts_with('#'))
+            .nth(1)
+            .and_then(|header| {
+                if header.starts_with("##") {
+                    Some(HeaderLevel::H2)
+                } else if header.starts_with('#') {
+                    Some(HeaderLevel::H1)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(HeaderLevel::H2);
+        Ok(Self {
+            path,
+            content,
+            section_header_level,
+        })
     }
 }
 
 impl Changelog {
-    pub(crate) fn get_section(&self, version: &Version) -> Option<String> {
-        let expected_header_start = format!("## {version}");
-        let section = self
+    pub(crate) fn get_release(&self, version: &Version) -> Result<Option<Release>, ParseError> {
+        let section_header_level = self.section_header_level.as_str();
+        let expected_header_start = format!("{section_header_level} {version}");
+        let mut content_starting_with_first_release = self
             .content
             .lines()
-            .skip_while(|line| !line.starts_with(&expected_header_start))
-            .skip(1) // Skip the header
-            .take_while(
-                |line| !line.starts_with("## "), // Next version
-            )
-            .join("\n");
-        if section.is_empty() {
-            None
-        } else {
-            Some(section.trim().to_string())
+            .skip_while(|line| !line.starts_with(&expected_header_start));
+
+        let Some(title) = content_starting_with_first_release.next().map(String::from) else {
+            return Ok(None);
+        };
+        let (header_level, version, date) = Release::parse_title(&title)?;
+
+        let release_sections = content_starting_with_first_release.take_while(
+            |line| !line.starts_with(&format!("{section_header_level} ")), // Next version
+        );
+        let sections = Some(Section::from_lines(
+            release_sections,
+            &format!("{section_header_level}#"),
+        ));
+        Ok(Some(Release {
+            version,
+            date,
+            sections,
+            header_level,
+        }))
+    }
+
+    fn add_release(&mut self, release: &Release, dry_run: DryRun) -> Result<(), Error> {
+        let mut changelog = String::new();
+        let mut not_written = true;
+        let Some(new_changes) = release.body() else {
+            return Ok(());
+        };
+        let new_changes = format!(
+            "{title}\n\n{new_changes}",
+            title = release.title(true, true)?,
+        );
+
+        for line in self.content.lines() {
+            if line.starts_with(self.section_header_level.as_str()) && not_written {
+                changelog.push_str(&new_changes);
+                changelog.push_str("\n\n");
+                not_written = false;
+            }
+            changelog.push_str(line);
+            changelog.push('\n');
         }
+
+        if not_written {
+            changelog.push_str(&new_changes);
+        }
+
+        if (self.content.ends_with('\n') || self.content.is_empty()) && !changelog.ends_with('\n') {
+            // Preserve white space at end of file
+            changelog.push('\n');
+        }
+
+        self.content = changelog;
+        fs::write(
+            dry_run,
+            &format!("\n{new_changes}\n"),
+            &self.path,
+            &self.content,
+        )
+        .map_err(Error::Fs)
     }
 }
 
 #[cfg(test)]
-mod test_get_section {
+mod test_get_release {
     use std::path::PathBuf;
 
     use pretty_assertions::assert_eq;
+    use time::macros::date;
 
-    use crate::step::releases::{changelog::Changelog, semver::Version};
+    use super::*;
+    use crate::step::releases::{changelog::HeaderLevel, semver::Version};
 
     const CONTENT: &str = r#"
 # Changelog
@@ -63,13 +158,15 @@ Hey ya'll this is a changelog
 ## 0.1.2 2023-05-02
 
 ### Features
-#### Blah
+- Blah
 
-## 0.1.1 - 2023-03-02
+## 0.1.1
 
 ### Fixes
 
 #### it's fixex!
+
+Now with more detail!
 
 ## 0.0.1
 Initial release
@@ -80,10 +177,22 @@ Initial release
         let changelog = Changelog {
             path: PathBuf::default(),
             content: CONTENT.to_string(),
+            section_header_level: HeaderLevel::H2,
         };
 
-        let section = changelog.get_section(&Version::new(0, 1, 2, None)).unwrap();
-        let expected = "### Features\n#### Blah";
+        let section = changelog
+            .get_release(&Version::new(0, 1, 2, None))
+            .unwrap()
+            .unwrap();
+        let expected = Release {
+            version: Version::new(0, 1, 2, None),
+            date: Some(date!(2023 - 05 - 02)),
+            sections: Some(vec![Section {
+                title: "Features".to_string(),
+                body: "- Blah".to_string(),
+            }]),
+            header_level: HeaderLevel::H2,
+        };
         assert_eq!(section, expected);
     }
 
@@ -92,10 +201,22 @@ Initial release
         let changelog = Changelog {
             path: PathBuf::default(),
             content: CONTENT.to_string(),
+            section_header_level: HeaderLevel::H2,
         };
 
-        let section = changelog.get_section(&Version::new(0, 1, 1, None)).unwrap();
-        let expected = "### Fixes\n\n#### it's fixex!";
+        let section = changelog
+            .get_release(&Version::new(0, 1, 1, None))
+            .unwrap()
+            .unwrap();
+        let expected = Release {
+            version: Version::new(0, 1, 1, None),
+            date: None,
+            sections: Some(vec![Section {
+                title: "Fixes".to_string(),
+                body: "#### it's fixex!\n\nNow with more detail!".to_string(),
+            }]),
+            header_level: HeaderLevel::H2,
+        };
         assert_eq!(section, expected);
     }
 
@@ -104,10 +225,322 @@ Initial release
         let changelog = Changelog {
             path: PathBuf::default(),
             content: CONTENT.to_string(),
+            section_header_level: HeaderLevel::H2,
         };
 
-        let section = changelog.get_section(&Version::new(0, 1, 0, None));
+        let section = changelog.get_release(&Version::new(0, 1, 0, None)).unwrap();
         assert!(section.is_none());
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Release {
+    pub(crate) version: Version,
+    pub(crate) date: Option<Date>,
+    pub(crate) sections: Option<Vec<Section>>,
+    /// The expected header level of the release title (# or ##).
+    ///
+    /// Content within is written expecting that the release title will be written at this level
+    header_level: HeaderLevel,
+}
+impl Release {
+    pub(crate) fn new(
+        version: Version,
+        changes: &[Change],
+        extra_changelog_sections: &IndexMap<ChangelogSectionSource, ChangeLogSectionName>,
+        header_level: HeaderLevel,
+    ) -> Self {
+        const BREAKING_CHANGES: &str = "Breaking Changes";
+        const FEATURES: &str = "Features";
+        const FIXES: &str = "Fixes";
+
+        let mut sections = IndexMap::new();
+        sections.insert(BREAKING_CHANGES.to_string(), Section::new(BREAKING_CHANGES));
+        sections.insert(FEATURES.to_string(), Section::new(FEATURES));
+        sections.insert(FIXES.to_string(), Section::new(FIXES));
+        sections.extend(
+            extra_changelog_sections
+                .values()
+                .map(|name| (name.to_string(), Section::new(name.to_string()))),
+        );
+
+        for change in changes {
+            let section = match &change.change_type() {
+                ChangeType::Breaking => sections.get_mut(BREAKING_CHANGES),
+                ChangeType::Feature => sections.get_mut(FEATURES),
+                ChangeType::Fix => sections.get_mut(FIXES),
+                ChangeType::Custom(source) => extra_changelog_sections
+                    .get(source)
+                    .and_then(|name| sections.get_mut(name.as_ref())),
+            };
+            if let Some(section) = section {
+                let summary = change.summary();
+                let header_level = if summary.starts_with("##") {
+                    String::new()
+                } else {
+                    format!("{header_level}## ")
+                };
+                if !section.body.is_empty() {
+                    section.body.push_str("\n\n");
+                }
+                section.body.push_str(&format!(
+                    "{header_level}{summary}",
+                    summary = change.summary()
+                ));
+            }
+        }
+
+        let sections = sections
+            .into_values()
+            .filter(|section| !section.body.is_empty())
+            .collect_vec();
+        let sections = (!sections.is_empty()).then_some(sections);
+        let date = Some(OffsetDateTime::now_utc().date());
+        Self {
+            version,
+            date,
+            sections,
+            header_level,
+        }
+    }
+
+    pub(crate) fn empty(version: Version) -> Self {
+        Self {
+            version,
+            date: Some(OffsetDateTime::now_utc().date()),
+            sections: None,
+            header_level: HeaderLevel::H2,
+        }
+    }
+
+    fn parse_title(title: &str) -> Result<(HeaderLevel, Version, Option<Date>), ParseError> {
+        let mut parts = title.split_ascii_whitespace();
+        let header_level = match parts.next() {
+            Some("##") => HeaderLevel::H2,
+            Some("#") => HeaderLevel::H1,
+            _ => return Err(ParseError::HeaderLevel),
+        };
+        let version = parts.next().ok_or(ParseError::MissingVersion)?;
+        let version = Version::from_str(version).map_err(|_| ParseError::MissingVersion)?;
+        let mut date = None;
+        for part in parts {
+            let part = part.trim_start_matches('(').trim_end_matches(')');
+            date = Date::parse(part, format_description!("[year]-[month]-[day]")).ok();
+            if date.is_some() {
+                break;
+            }
+        }
+        Ok((header_level, version, date))
+    }
+
+    /// The Markdown body for this release.
+    ///
+    /// Since [`Self::header_level`] refers to the header level
+    /// of the title, each section in this body is one level lower. More concretely, if
+    /// [`Self::header_level`] is [`HeaderLevel::H1`], the body will look like this:
+    ///
+    /// ```markdown
+    /// ## Breaking changes
+    ///
+    /// ### a change
+    ///
+    /// ## Features
+    ///
+    /// ### a feature
+    ///
+    /// ### another feature
+    /// ```
+    ///
+    /// If [`Self::header_level`] is [`HeaderLevel::H2`], the body will look like this:
+    ///
+    /// ```markdown
+    /// ### Breaking changes
+    ///
+    /// #### a change
+    ///
+    /// ### Features
+    ///
+    /// #### a feature
+    ///
+    /// #### another feature
+    /// ```
+    ///
+    /// GitHub releases _always_ use the [`HeaderLevel::H1`] format, so they call [`Self::body_at_h1`]
+    /// which is like this function, but with optional conversion.
+    pub(crate) fn body(&self) -> Option<String> {
+        let Some(sections) = self.sections.as_ref() else {
+            return None;
+        };
+        let mut res = String::new();
+        for section in sections {
+            res.push_str(&format!(
+                "\n\n{header_level}# {title}\n\n{body}",
+                header_level = self.header_level,
+                title = section.title,
+                body = section.body
+            ));
+        }
+        let res = res.trim().to_string();
+        Some(res.trim().to_string())
+    }
+
+    /// Like [`Self::body`], but if this release is not [`HeaderValue::H1`], the body is modified
+    /// to be at that level (so sections are `##` and subsections are `###`).
+    pub(crate) fn body_at_h1(&self) -> Option<String> {
+        if self.header_level == HeaderLevel::H1 {
+            return self.body();
+        }
+        let mut adjusted = self.clone();
+        adjusted.header_level = HeaderLevel::H1;
+        adjusted.sections = adjusted.sections.map(|sections| {
+            sections
+                .into_iter()
+                .map(|mut section| {
+                    section.body = section
+                        .body
+                        .lines()
+                        .map(|line| {
+                            if line.starts_with("##") {
+                                #[allow(clippy::indexing_slicing)] // Just checked len above
+                                &line[1..] // Reduce header level by one
+                            } else {
+                                line
+                            }
+                        })
+                        .collect_vec()
+                        .join("\n");
+                    section
+                })
+                .collect()
+        });
+        adjusted.body()
+    }
+
+    /// The title of the release, which is either the version number or the version number and date.
+    ///
+    /// If `markdown` is true, the title will be formatted as a Markdown header using `self.header_level`
+    pub(crate) fn title(&self, markdown: bool, add_date: bool) -> Result<String, TimeError> {
+        let mut title = if markdown {
+            format!("{} ", self.header_level.as_str())
+        } else {
+            String::new()
+        };
+        title.push_str(&self.version.to_string());
+        let mut date = self.date;
+        if add_date {
+            date = date.or_else(|| Some(OffsetDateTime::now_utc().date()));
+        }
+        if let Some(date) = &date {
+            let format = format_description!("[year]-[month]-[day]");
+            let date_str = date.format(&format)?;
+            title.push_str(" (");
+            title.push_str(&date_str);
+            title.push(')');
+        };
+        Ok(title)
+    }
+}
+
+#[cfg(test)]
+mod test_parse_title {
+    use time::macros::date;
+
+    use super::Release;
+
+    #[test]
+    fn no_date() {
+        let title = "## 0.1.2";
+        let (header_level, version, date) = Release::parse_title(title).unwrap();
+        assert_eq!(header_level, super::HeaderLevel::H2);
+        assert_eq!(version, super::Version::new(0, 1, 2, None));
+        assert!(date.is_none());
+    }
+
+    #[test]
+    fn with_date() {
+        let title = "## 0.1.2 (2023-05-02)";
+        let (header_level, version, date) = Release::parse_title(title).unwrap();
+        assert_eq!(header_level, super::HeaderLevel::H2);
+        assert_eq!(version, super::Version::new(0, 1, 2, None));
+        assert_eq!(date, Some(date!(2023 - 05 - 02)));
+    }
+
+    #[test]
+    fn no_version() {
+        let title = "## 2023-05-02";
+        let result = Release::parse_title(title);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn bad_version() {
+        let title = "## sad";
+        let result = Release::parse_title(title);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn h1() {
+        let title = "# 0.1.2 (2023-05-02)";
+        let (header_level, version, date) = Release::parse_title(title).unwrap();
+        assert_eq!(header_level, super::HeaderLevel::H1);
+        assert_eq!(version, super::Version::new(0, 1, 2, None));
+        assert_eq!(date, Some(date!(2023 - 05 - 02)));
+    }
+}
+
+#[derive(Clone, Debug, Diagnostic, Eq, PartialEq, thiserror::Error)]
+pub(crate) enum ParseError {
+    #[error("Missing version")]
+    #[diagnostic(
+        code = "changelog::missing_version",
+        help = "The expected changelog format is very particular, a release title must start with the 
+            semantic version immediately after the header level. For example: `## 0.1.0 - 2020-12-25"
+    )]
+    MissingVersion,
+    #[error("Bad header level")]
+    #[diagnostic(
+        code = "changelog::header_level",
+        help = "The expected changelog format is very particular, a release title be header level 1 
+            (#) or 2 (##). For example: `## 0.1.0 - 2020-12-25"
+    )]
+    HeaderLevel,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Section {
+    /// The title of the section _without_ any header level (e.g., "Breaking changes" not "### Breaking changes")
+    title: String,
+    /// The Markdown body of the section including any headers.
+    body: String,
+}
+
+impl Section {
+    fn new<Title: Into<String>>(title: Title) -> Self {
+        Self {
+            title: title.into(),
+            body: String::new(),
+        }
+    }
+    fn from_lines<'a, 'b, I: Iterator<Item = &'a str>>(
+        lines: I,
+        header_level: &'b str,
+    ) -> Vec<Self> {
+        let mut sections = Vec::new();
+        let mut lines = lines.peekable();
+        let header_start = format!("{header_level} ");
+        while let Some(line) = lines.next() {
+            if line.starts_with(&header_start) {
+                let title = line.trim_start_matches(&header_start).trim().to_string();
+                let body = lines
+                    .peeking_take_while(|line| !line.starts_with(&header_start))
+                    .map(str::trim)
+                    .join("\n");
+                let body = body.trim().to_string();
+                sections.push(Self { title, body });
+            }
+        }
+        sections
     }
 }
 
@@ -128,220 +561,19 @@ impl Package {
         version: Version,
         dry_run: DryRun,
     ) -> Result<Release, Error> {
-        let mut fixes = Vec::new();
-        let mut features = Vec::new();
-        let mut breaking_changes = Vec::new();
-        let mut extra_sections: IndexMap<ChangeLogSectionName, Vec<String>> = IndexMap::new();
+        let release = Release::new(
+            version,
+            &self.pending_changes,
+            &self.extra_changelog_sections,
+            self.changelog
+                .as_ref()
+                .map_or(HeaderLevel::H2, |it| it.section_header_level),
+        );
 
-        for change in &self.pending_changes {
-            match change.change_type() {
-                ChangeType::Fix => fixes.push(change.summary()),
-                ChangeType::Feature => features.push(change.summary()),
-                ChangeType::Breaking => breaking_changes.push(change.summary()),
-                ChangeType::Custom(source) => {
-                    if let Some(section) = self.extra_changelog_sections.get(&source) {
-                        extra_sections
-                            .entry(section.clone())
-                            .or_default()
-                            .push(change.summary());
-                    }
-                }
-            }
+        if let Some(changelog) = self.changelog.as_mut() {
+            changelog.add_release(&release, dry_run)?;
         }
-
-        let new_changelog_body = new_changelog(fixes, features, breaking_changes, extra_sections);
-        let release = Release::new(Some(new_changelog_body), version);
-        let new_changelog = release.changelog_entry()?;
-
-        if let (Some(changelog), Some(new_changes)) = (self.changelog.as_mut(), new_changelog) {
-            changelog.content = add_version_to_changelog(&changelog.content, &new_changes);
-            fs::write(
-                dry_run,
-                &format!("\n{new_changes}"),
-                &changelog.path,
-                &changelog.content,
-            )?;
-        };
 
         Ok(release)
-    }
-}
-
-/// Take in some existing markdown in the expected changelog format, find the top entry, and
-/// put the new version above it.
-pub(crate) fn add_version_to_changelog(existing: &str, new_changes: &str) -> String {
-    let mut changelog = String::new();
-    let mut not_written = true;
-
-    for line in existing.lines() {
-        if line.starts_with("##") && not_written {
-            changelog.push_str(new_changes);
-            changelog.push('\n');
-            not_written = false;
-        }
-        changelog.push_str(line);
-        changelog.push('\n');
-    }
-
-    if not_written {
-        changelog.push_str(new_changes);
-    }
-
-    if existing.ends_with('\n') && !changelog.ends_with('\n') {
-        // Preserve white space at end of file
-        changelog.push('\n');
-    }
-
-    changelog
-}
-
-pub(crate) fn new_changelog(
-    fixes: Vec<String>,
-    features: Vec<String>,
-    breaking_changes: Vec<String>,
-    extra_sections: IndexMap<ChangeLogSectionName, Vec<String>>,
-) -> String {
-    let mut blocks = Vec::new();
-
-    if !breaking_changes.is_empty() {
-        blocks.extend(create_section("Breaking Changes", breaking_changes));
-    }
-    if !features.is_empty() {
-        blocks.extend(create_section("Features", features));
-    }
-    if !fixes.is_empty() {
-        blocks.extend(create_section("Fixes", fixes));
-    }
-    for (section_title, notes) in extra_sections {
-        blocks.extend(create_section(section_title.as_ref(), notes));
-    }
-    blocks.join("\n")
-}
-
-fn create_section(title: &str, items: Vec<String>) -> Vec<String> {
-    let mut blocks = Vec::with_capacity(items.len() + 2);
-    blocks.push(format!("### {title}"));
-    blocks.extend(items.into_iter().map(|summary| {
-        if summary.starts_with("#### ") {
-            // Sometimes the formatting is already done, like in changesets
-            format!("\n{summary}")
-        } else {
-            format!("\n#### {summary}")
-        }
-    }));
-    blocks.push(String::new());
-    blocks
-}
-
-#[cfg(test)]
-mod tests {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-
-    #[test]
-    fn changelog_add_version() {
-        const MARKDOWN: &str = r##"# Changelog
-
-Some details about the keepachangelog format
-
-Sometimes a second paragraph
-
-## 0.1.0 - 2020-12-25
-### Features
-- Initial version
-
-[link]: some footer details
-"##;
-        const EXPECTED: &str = r##"# Changelog
-
-Some details about the keepachangelog format
-
-Sometimes a second paragraph
-
-### Breaking Changes
-
-#### Breaking change
-
-### Features
-
-#### New Feature
-
-#### Another feature
-
-### Fixes
-
-#### Fixed something
-
-### Notes
-
-#### Something
-
-### More stuff
-
-#### stuff
-
-## 0.1.0 - 2020-12-25
-### Features
-- Initial version
-
-[link]: some footer details
-"##;
-
-        let mut extra_sections = IndexMap::new();
-        extra_sections.insert(
-            ChangeLogSectionName::from("Notes"),
-            vec![String::from("Something")],
-        );
-        extra_sections.insert(
-            ChangeLogSectionName::from("More stuff"),
-            vec![String::from("stuff")],
-        );
-        let new_changes = new_changelog(
-            vec!["Fixed something".to_string()],
-            vec![String::from("New Feature"), String::from("Another feature")],
-            vec![String::from("Breaking change")],
-            extra_sections,
-        );
-        let changelog = add_version_to_changelog(MARKDOWN, &new_changes);
-        assert_eq!(changelog, EXPECTED);
-    }
-
-    #[test]
-    fn changelog_no_existing_version() {
-        const MARKDOWN: &str = r##"# Changelog
-
-Some details about the keepachangelog format
-
-Sometimes a second paragraph
-
-"##;
-        const EXPECTED: &str = r##"# Changelog
-
-Some details about the keepachangelog format
-
-Sometimes a second paragraph
-
-### Breaking Changes
-
-#### Breaking change
-
-### Features
-
-#### New Feature
-
-### Fixes
-
-#### Fixed something
-"##;
-
-        let new_changes = new_changelog(
-            vec!["Fixed something".to_string()],
-            vec![String::from("New Feature")],
-            vec![String::from("Breaking change")],
-            IndexMap::new(),
-        );
-        let changelog = add_version_to_changelog(MARKDOWN, &new_changes);
-        assert_eq!(changelog, EXPECTED);
     }
 }
