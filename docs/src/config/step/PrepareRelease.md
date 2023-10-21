@@ -34,22 +34,28 @@ You can have [multiple packages in one repo](../packages.md#multiple-packages). 
 
 ## Changelog format
 
+```admonish note
+Need more changelog flexibility in order to adopt Knope? [Open an issue](https://github.com/knope-dev/knope/issues)!
+```
+
 ### Version titles
 
-The title of each version is a combination of its semantic version (e.g., `1.2.3`) and the UTC date of when it was released (e.g., `(2017-04-09)`). UTC is used for simplicity—in practice, the exact _day_ of a release is not usually as important as the general timing.
+The title of each version is a combination of its semantic version (e.g., `1.2.3`) and the UTC date of when it was released (e.g., `(2017-04-09)`). UTC is used for simplicity—in practice, the exact _day_ of a release is not usually as important as the general timing. By default the version will be a level two header (e.g., `## 1.2.3 (2017-04-09)`), however, if your _previous_ version was a level one header (e.g., `# 1.2.2 (2017-04-08)`), the new version will also be a level one header.
 
 ### Change sections
 
 Sections are only added to the changelog for each version as needed—if there are no commits that meet the requirements for a section, that section will not be added. The built-in sections are:
 
-1. `### Breaking Changes` for anything that triggers a major semantic version increase.
+1. `Breaking Changes` for anything that triggers a major semantic version increase.
    1. Any commit whose type/scope end in `!` will land in this section **instead** of their default section (if any). So `fix!: a breaking fix` will add the note "a breaking fix" to this section and **nothing** to the "Fixes" section.
    2. If the special `BREAKING CHANGE` footer is used in any commit, the message from that footer (not the main commit message) will be added here. The main commit message will be added as appropriate to the normal section. So a `fix: ` commit with a `BREAKING CHANGE` footer creates entries in both the `### Fixes` section and the `### Breaking Changes` section.
    3. Any changeset with a [change type] of `major` (selecting "Breaking" in [`CreateChangeFile`])
-2. `### Features` for any commit with type `feat` (no `!`) or change type `minor` (selecting "Feature" in [`CreateChangeFile`])
-3. `### Fixes` for any commit with type `fix` (no `!`) or change type `patch` (selecting "Fix" in [`CreateChangeFile`])
-4. `### Notes` for any footer in a conventional commit called `Changelog-Note`. This section name can be changed via [configuration](../packages.md#extra_changelog_sections).
+2. `Features` for any commit with type `feat` (no `!`) or change type `minor` (selecting "Feature" in [`CreateChangeFile`])
+3. `Fixes` for any commit with type `fix` (no `!`) or change type `patch` (selecting "Fix" in [`CreateChangeFile`])
+4. `Notes` for any footer in a conventional commit called `Changelog-Note`. This section name can be changed via [configuration](../packages.md#extra_changelog_sections).
 5. Custom sections as defined in the [configuration](../packages.md#extra_changelog_sections).
+
+Each section will be formatted as a header one level below the version header (see "Version titles" above). So if the version title is a level two header (e.g., `## 1.2.3`), each section will be a level three header (e.g., `### Features`).
 
 ## Versioning
 
