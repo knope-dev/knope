@@ -28,7 +28,7 @@ http = "0.2.9"
 clap = { version = "4.4.6", features = ["cargo", "string", "env"] }
 itertools = "0.11.0"
 miette = { version = "5.10.0", features = ["fancy"] }
-thiserror = "1.0.49"
+thiserror = "1.0.50"
 gix = { version = "0.55.2", default-features = false, features = [
   "max-performance-safe",
 ] }
