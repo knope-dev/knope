@@ -1,10 +1,10 @@
-# CHANGELOG
-
 # 1.1.0 ([DATE])
 
 ## Features
 
 ### We support custom header levels now 🎉
+
+# CHANGELOG
 
 # 1.0.0
 
