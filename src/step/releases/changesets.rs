@@ -59,7 +59,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
         .prompt()
         .map_err(prompt::Error::from)?;
     let unique_id = UniqueId::from(&summary);
-    let summary = format!("#### {summary}");
+    let summary = format!("# {summary}");
     let change = changesets::Change {
         unique_id,
         versioning,

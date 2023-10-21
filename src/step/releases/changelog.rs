@@ -275,18 +275,17 @@ impl Release {
             };
             if let Some(section) = section {
                 let summary = change.summary();
-                let header_level = if summary.starts_with("##") {
-                    String::new()
-                } else {
-                    format!("{header_level}## ")
-                };
+                // Changesets come with a baked in header, replace it with our own
+                let summary: String = summary
+                    .chars()
+                    .skip_while(|it| *it == '#' || *it == ' ')
+                    .collect();
                 if !section.body.is_empty() {
                     section.body.push_str("\n\n");
                 }
-                section.body.push_str(&format!(
-                    "{header_level}{summary}",
-                    summary = change.summary()
-                ));
+                section
+                    .body
+                    .push_str(&format!("{header_level}## {summary}"));
             }
         }
 

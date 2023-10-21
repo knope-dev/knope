@@ -1,5 +1,5 @@
 use std::{
-    fs::{copy, read_to_string},
+    fs::{copy, create_dir, read_to_string},
     path::Path,
 };
 
@@ -169,6 +169,12 @@ fn header_level_detection() {
     commit(temp_path, "Existing feature");
     tag(temp_path, "v1.0.0");
     commit(temp_path, "feat: We support custom header levels now 🎉");
+    create_dir(temp_path.join(".changeset")).unwrap();
+    copy(
+        source_path.join("changeset.md"),
+        temp_path.join(".changeset/changeset.md"),
+    )
+    .unwrap();
 
     copy(
         source_path.join("CHANGELOG.md"),
