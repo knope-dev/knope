@@ -135,7 +135,7 @@ pub(crate) fn bump_version_and_update_state(
                 }
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            package.prepared_release = Some(Release::new(None, version.version));
+            package.prepared_release = Some(Release::empty(version.version));
             Ok(package)
         })
         .collect::<Result<Vec<Package>, Error>>()?;

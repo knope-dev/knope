@@ -12,29 +12,15 @@ pub(crate) fn release(
     assets: Option<&Vec<Asset>>,
     tag: &str,
 ) -> Result<state::GitHub, Error> {
-    let version = &release.new_version;
-    let release_title = release.title()?;
-
-    let name = if let Some(package_name) = package_name {
-        format!("{package_name} {release_title}")
+    let version = &release.version;
+    let mut name = if let Some(package_name) = package_name {
+        format!("{package_name} ")
     } else {
-        release_title
+        String::new()
     };
+    name.push_str(&release.title(false, true)?);
 
-    let body = release.new_changelog.as_ref().map(|new_changelog| {
-        new_changelog
-            .lines()
-            .map(|line| {
-                if line.starts_with("##") {
-                    #[allow(clippy::indexing_slicing)] // Just checked len above
-                    &line[1..] // Reduce header level by one
-                } else {
-                    line
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    });
+    let body = release.body_at_h1().map(|body| body.trim().to_string());
 
     api::create_release(
         &name,

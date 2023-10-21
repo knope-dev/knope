@@ -102,10 +102,7 @@ fn multiple_packages() {
         .success()
         .with_assert(assert())
         .stdout_matches_path(source_path.join("dry_run_output.txt"));
-    actual_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("output.txt"));
+    let actual_assert = actual_assert.success().with_assert(assert());
 
     for file in [
         "FIRST_CHANGELOG.md",
@@ -120,4 +117,5 @@ fn multiple_packages() {
         );
     }
     assert_eq!(get_tags(temp_path), vec!["first/v2.0.0", "second/v0.5.0"]);
+    actual_assert.stdout_matches_path(source_path.join("output.txt"));
 }
