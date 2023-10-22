@@ -1,5 +1,6 @@
 use std::{
     borrow::{Borrow, Cow},
+    collections::{HashMap, HashSet},
     fmt,
     fmt::Display,
     io::Write,
@@ -23,7 +24,9 @@ use super::{
     Change, Release, Rule,
 };
 use crate::{
-    config::{ChangeLogSectionName, CommitFooter, CustomChangeType},
+    config::{
+        toml::package::ChangelogSection, ChangeLogSectionName, CommitFooter, CustomChangeType,
+    },
     dry_run::DryRun,
     fs,
     integrations::git::{self, add_files},
@@ -35,9 +38,9 @@ use crate::{
 pub(crate) struct Package {
     pub(crate) versioned_files: Vec<VersionedFile>,
     pub(crate) changelog: Option<Changelog>,
+    pub(crate) changelog_sections: ChangelogSections,
     pub(crate) name: Option<PackageName>,
     pub(crate) scopes: Option<Vec<String>>,
-    pub(crate) extra_changelog_sections: IndexMap<ChangelogSectionSource, ChangeLogSectionName>,
     pub(crate) pending_changes: Vec<Change>,
     pub(crate) prepared_release: Option<Release>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
@@ -196,6 +199,120 @@ impl From<Cow<'_, str>> for PackageName {
 impl Borrow<str> for PackageName {
     fn borrow(&self) -> &str {
         &self.0
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct ChangelogSections(IndexMap<ChangelogSectionSource, ChangeLogSectionName>);
+
+impl Default for ChangelogSections {
+    fn default() -> Self {
+        let mut changelog_sections = IndexMap::new();
+        changelog_sections.insert(
+            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("major")),
+            ChangeLogSectionName::from("Breaking Changes"),
+        );
+        changelog_sections.insert(
+            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("minor")),
+            ChangeLogSectionName::from("Features"),
+        );
+        changelog_sections.insert(
+            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("patch")),
+            ChangeLogSectionName::from("Fixes"),
+        );
+        changelog_sections.insert(CommitFooter::from("Changelog-Note").into(), "Notes".into());
+        Self(changelog_sections)
+    }
+}
+
+impl From<Vec<ChangelogSection>> for ChangelogSections {
+    fn from(sections_from_toml: Vec<ChangelogSection>) -> Self {
+        let mut changelog_sections = Self::default();
+
+        for section in sections_from_toml {
+            for footer in section.footers {
+                changelog_sections.remove(&ChangelogSectionSource::from(footer.clone()));
+                changelog_sections.insert(
+                    ChangelogSectionSource::CommitFooter(footer),
+                    section.name.clone(),
+                );
+            }
+            for change_type in section.types {
+                changelog_sections.remove(&ChangelogSectionSource::from(change_type.clone()));
+                changelog_sections.insert(change_type.into(), section.name.clone());
+            }
+        }
+        changelog_sections
+    }
+}
+
+impl From<ChangelogSections> for Vec<ChangelogSection> {
+    fn from(mut sections: ChangelogSections) -> Self {
+        let defaults = ChangelogSections::default();
+        for (source, name) in defaults {
+            if sections.get(&source).is_some_and(|it| *it == name) {
+                sections.remove(&source);
+            }
+        }
+        let mut footers = HashMap::new();
+        let mut types = HashMap::new();
+        let mut section_names = HashSet::new();
+        for (source, name) in sections.0 {
+            section_names.insert(name.clone());
+            match source {
+                ChangelogSectionSource::CommitFooter(footer) => {
+                    footers.entry(name).or_insert_with(Vec::new).push(footer);
+                }
+                ChangelogSectionSource::CustomChangeType(change_type) => {
+                    types.entry(name).or_insert_with(Vec::new).push(change_type);
+                }
+            }
+        }
+        section_names
+            .into_iter()
+            .map(|name| ChangelogSection {
+                footers: footers.remove(&name).unwrap_or_default(),
+                types: types.remove(&name).unwrap_or_default(),
+                name,
+            })
+            .collect()
+    }
+}
+
+impl IntoIterator for ChangelogSections {
+    type Item = (ChangelogSectionSource, ChangeLogSectionName);
+    type IntoIter = indexmap::map::IntoIter<ChangelogSectionSource, ChangeLogSectionName>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl ChangelogSections {
+    fn remove(&mut self, source: &ChangelogSectionSource) {
+        self.0.shift_remove(source);
+    }
+
+    fn insert(&mut self, source: ChangelogSectionSource, name: ChangeLogSectionName) {
+        self.0.insert(source, name);
+    }
+
+    pub(crate) fn get(&self, source: &ChangelogSectionSource) -> Option<&ChangeLogSectionName> {
+        self.0.get(source)
+    }
+
+    pub(crate) fn contains_key(&self, source: &ChangelogSectionSource) -> bool {
+        self.0.contains_key(source)
+    }
+
+    pub(crate) fn values(&self) -> impl Iterator<Item = &ChangeLogSectionName> {
+        self.0.values()
+    }
+
+    pub(crate) fn into_keys(
+        self,
+    ) -> indexmap::map::IntoKeys<ChangelogSectionSource, ChangeLogSectionName> {
+        self.0.into_keys()
     }
 }
 

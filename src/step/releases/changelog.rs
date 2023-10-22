@@ -7,7 +7,7 @@ use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
 
 use super::{semver::Version, Change, ChangeType, ChangelogSectionSource, Package, TimeError};
-use crate::{config::ChangeLogSectionName, dry_run::DryRun, fs};
+use crate::{dry_run::DryRun, fs, step::releases::package::ChangelogSections};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Changelog {
@@ -111,7 +111,8 @@ impl Changelog {
         );
 
         for line in self.content.lines() {
-            if line.starts_with(self.section_header_level.as_str()) && not_written {
+            if not_written && Release::parse_title(line).is_ok() {
+                // Insert new changes before the next release in the changelog
                 changelog.push_str(&new_changes);
                 changelog.push_str("\n\n");
                 not_written = false;
@@ -247,32 +248,27 @@ impl Release {
     pub(crate) fn new(
         version: Version,
         changes: &[Change],
-        extra_changelog_sections: &IndexMap<ChangelogSectionSource, ChangeLogSectionName>,
+        changelog_sections: &ChangelogSections,
         header_level: HeaderLevel,
     ) -> Self {
-        const BREAKING_CHANGES: &str = "Breaking Changes";
-        const FEATURES: &str = "Features";
-        const FIXES: &str = "Fixes";
-
-        let mut sections = IndexMap::new();
-        sections.insert(BREAKING_CHANGES.to_string(), Section::new(BREAKING_CHANGES));
-        sections.insert(FEATURES.to_string(), Section::new(FEATURES));
-        sections.insert(FIXES.to_string(), Section::new(FIXES));
-        sections.extend(
-            extra_changelog_sections
-                .values()
-                .map(|name| (name.to_string(), Section::new(name.to_string()))),
-        );
+        let mut sections: IndexMap<String, Section> = changelog_sections
+            .values()
+            .map(|name| (name.to_string(), Section::new(name.to_string())))
+            .collect();
+        let breaking_source = ChangelogSectionSource::CustomChangeType("major".into());
+        let feature_source = ChangelogSectionSource::CustomChangeType("minor".into());
+        let fix_source = ChangelogSectionSource::CustomChangeType("patch".into());
 
         for change in changes {
-            let section = match &change.change_type() {
-                ChangeType::Breaking => sections.get_mut(BREAKING_CHANGES),
-                ChangeType::Feature => sections.get_mut(FEATURES),
-                ChangeType::Fix => sections.get_mut(FIXES),
-                ChangeType::Custom(source) => extra_changelog_sections
-                    .get(source)
-                    .and_then(|name| sections.get_mut(name.as_ref())),
+            let source = match &change.change_type() {
+                ChangeType::Breaking => breaking_source.clone(),
+                ChangeType::Feature => feature_source.clone(),
+                ChangeType::Fix => fix_source.clone(),
+                ChangeType::Custom(source) => source.clone(),
             };
+            let section = changelog_sections
+                .get(&source)
+                .and_then(|name| sections.get_mut(name.as_ref()));
             if let Some(section) = section {
                 let summary = change.summary();
                 // Changesets come with a baked in header, replace it with our own
@@ -563,7 +559,7 @@ impl Package {
         let release = Release::new(
             version,
             &self.pending_changes,
-            &self.extra_changelog_sections,
+            &self.changelog_sections,
             self.changelog
                 .as_ref()
                 .map_or(HeaderLevel::H2, |it| it.section_header_level),
