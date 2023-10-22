@@ -25,13 +25,13 @@ lint:
 # Reformat all files, requires `npx` and `install-lint-dependencies`
 reformat:
     cargo +nightly fmt
-    npx prettier **/*.md --write --prose-wrap=never
+    npx prettier **/*.md --write
     taplo format
 
 check-format:
     cargo +nightly fmt -- --check
     taplo format --check
-    npx prettier **/*.md --list-different --prose-wrap=never
+    npx prettier **/*.md --list-different
 
 # Install dependencies for `serve-book`, `build-book`, and some of `ci`. Requires `cargo-binstall`
 install-book-dependencies:

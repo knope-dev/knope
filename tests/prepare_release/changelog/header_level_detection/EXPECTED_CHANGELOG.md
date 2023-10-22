@@ -1,3 +1,5 @@
+# CHANGELOG
+
 # 1.1.0 ([DATE])
 
 ## Features
@@ -7,8 +9,6 @@
 ### A title from a changeset
 
 That title up there should be promoted to the correct header level
-
-# CHANGELOG
 
 # 1.0.0
 

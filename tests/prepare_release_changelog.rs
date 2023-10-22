@@ -205,3 +205,44 @@ fn header_level_detection() {
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 }
+
+#[test]
+fn override_default_sections() {
+    let source_path = Path::new("tests/prepare_release/changelog/override_default_sections");
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    init(temp_path);
+    commit(temp_path, "Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "fix!: Something you hopefully don't care about");
+    commit(temp_path, "fix: Something you do care about");
+    commit(temp_path, "feat: Something new");
+    copy(
+        source_path.join("CHANGELOG.md"),
+        temp_path.join("CHANGELOG.md"),
+    )
+    .unwrap();
+    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
+    copy(source_path.join("Cargo.toml"), temp_path.join("Cargo.toml")).unwrap();
+
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("prepare-release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stderr_eq("")
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stderr_eq("");
+    assert().matches_path(
+        source_path.join("EXPECTED_CHANGELOG.md"),
+        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
+    );
+}

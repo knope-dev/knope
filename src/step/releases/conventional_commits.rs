@@ -50,7 +50,7 @@ impl ConventionalCommit {
             let commit_summary = format_commit_summary(&commit);
             for footer in commit.footers() {
                 let source: ChangelogSectionSource = CommitFooter::from(footer.token()).into();
-                if package.extra_changelog_sections.contains_key(&source) {
+                if package.changelog_sections.contains_key(&source) {
                     conventional_commits.push(Self {
                         change_type: ChangeType::from(source),
                         message: footer.value().to_string(),
@@ -136,10 +136,12 @@ impl Display for ConventionalCommit {
 
 #[cfg(test)]
 mod test_conventional_commits {
-    use indexmap::IndexMap;
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::{
+        config::toml::package::ChangelogSection, step::releases::package::ChangelogSections,
+    };
 
     #[test]
     fn commit_types() {
@@ -312,16 +314,16 @@ mod test_conventional_commits {
         let commits = [String::from(
             "chore: ignored type\n\nignored-footer: ignored\ncustom-footer: hello",
         )];
-        let mut extra_changelog_sections = IndexMap::new();
-        extra_changelog_sections.insert(
-            CommitFooter::from("custom-footer").into(),
-            "custom section".into(),
-        );
+        let changelog_sections = ChangelogSections::from(vec![ChangelogSection {
+            name: "custom section".into(),
+            footers: vec!["custom-footer".into()],
+            types: vec![],
+        }]);
         let conventional_commits = ConventionalCommit::from_commit_messages(
             &commits,
             false,
             &Package {
-                extra_changelog_sections,
+                changelog_sections,
                 ..Package::default()
             },
         );

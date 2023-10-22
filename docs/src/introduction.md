@@ -1,4 +1,4 @@
-kno![A purple binder, stuffed to the brim with papers. The word "Knope" is written on the front](favicon.png)
+![A purple binder, stuffed to the brim with papers. The word "Knope" is written on the front](favicon.png)
 
 # Introduction
 

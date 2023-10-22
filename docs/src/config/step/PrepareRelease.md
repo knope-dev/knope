@@ -26,7 +26,13 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Mono-repos and multiple packages
 
-You can have [multiple packages in one repo](../packages.md#multiple-packages). By default, changesets work with multiple packages and conventional commits apply to _all_ packages. If you want to target specific conventional commits at individual packages, you need use a [conventional commit scope]. This is done by adding a `scopes` array to the [packages] config and adding a [conventional commit scope] to the commits that should not apply to all packages. The following rules apply, in order, with respect to conventional commit scopes:
+You can have [multiple packages in one repo](../packages.md#multiple-packages).
+By default, changesets work with multiple packages and conventional commits apply to _all_ packages.
+If you want to target specific conventional commits at individual packages,
+you need to use a [conventional commit scope].
+This is done by adding a `scopes` array to the [packages] config
+and adding a [conventional commit scope] to the commits that should not apply to all packages.
+The following rules apply, in order, with respect to conventional commit scopes:
 
 1. If no packages define `scopes` in their config, all commits apply to all packages. Scopes are not considered by `knope`.
 2. If a commit does not have a scope, it applies to all packages.
@@ -40,22 +46,52 @@ Need more changelog flexibility in order to adopt Knope? [Open an issue](https:/
 
 ### Version titles
 
-The title of each version is a combination of its semantic version (e.g., `1.2.3`) and the UTC date of when it was released (e.g., `(2017-04-09)`). UTC is used for simplicity—in practice, the exact _day_ of a release is not usually as important as the general timing. By default the version will be a level two header (e.g., `## 1.2.3 (2017-04-09)`), however, if your _previous_ version was a level one header (e.g., `# 1.2.2 (2017-04-08)`), the new version will also be a level one header.
+The title of each version is a combination of its semantic version (e.g., `1.2.3`) and the UTC date of when it was released (e.g., `(2017-04-09)`). UTC is used for simplicity—in practice, the exact _day_ of a release is not usually as important as the general timing. By default, the version will be a level two header (e.g., `## 1.2.3 (2017-04-09)`), however, if your _previous_ version was a level one header (e.g., `# 1.2.2 (2017-04-08)`), the new version will also be a level one header.
 
 ### Change sections
 
-Sections are only added to the changelog for each version as needed—if there are no commits that meet the requirements for a section, that section will not be added. The built-in sections are:
+Sections are only added to the changelog for each version as needed—if there are no commits
+that meet the requirements for a section,
+that section will not be added.
+The built-in sections will be added (when needed) in the following order:
 
 1. `Breaking Changes` for anything that triggers a major semantic version increase.
    1. Any commit whose type/scope end in `!` will land in this section **instead** of their default section (if any). So `fix!: a breaking fix` will add the note "a breaking fix" to this section and **nothing** to the "Fixes" section.
-   2. If the special `BREAKING CHANGE` footer is used in any commit, the message from that footer (not the main commit message) will be added here. The main commit message will be added as appropriate to the normal section. So a `fix: ` commit with a `BREAKING CHANGE` footer creates entries in both the `### Fixes` section and the `### Breaking Changes` section.
+   2. If the special `BREAKING CHANGE` footer is used in any commit, the message from that footer (not the main commit message) will be added here. The main commit message will be added as appropriate to the normal section. So a `fix: ` commit with a `BREAKING CHANGE` footer creates entries in both the `Fixes` section and the `Breaking Changes` section.
    3. Any changeset with a [change type] of `major` (selecting "Breaking" in [`CreateChangeFile`])
 2. `Features` for any commit with type `feat` (no `!`) or change type `minor` (selecting "Feature" in [`CreateChangeFile`])
 3. `Fixes` for any commit with type `fix` (no `!`) or change type `patch` (selecting "Fix" in [`CreateChangeFile`])
-4. `Notes` for any footer in a conventional commit called `Changelog-Note`. This section name can be changed via [configuration](../packages.md#extra_changelog_sections).
-5. Custom sections as defined in the [configuration](../packages.md#extra_changelog_sections).
+4. `Notes` for any footer in a conventional commit called `Changelog-Note`.
+
+After the built-in sections, any custom sections will be added in the order they are defined in the [configuration][extra-changelog-sections].
 
 Each section will be formatted as a header one level below the version header (see "Version titles" above). So if the version title is a level two header (e.g., `## 1.2.3`), each section will be a level three header (e.g., `### Features`).
+
+#### Overriding the default sections
+
+The default sections cannot be disabled, but their names can be changed via [configuration][extra-changelog-sections].
+Specifically:
+
+- `Breaking Changes` can be changed by setting a custom section for the "major" `type`
+- `Features` can be changed by setting a custom section for the "minor" `type`
+- `Fixes` can be changed by setting a custom section for the "patch" `type`
+- `Notes` can be changed by setting a custom section for the "Changelog-Note" `footer`
+
+A config which overrides all of these would look like this:
+
+```toml
+[package]
+extra_changelog_sections = [
+    { type = "major", name = "❗️Breaking ❗" },
+    { type = "minor", name = "🚀 Features" },
+    { type = "patch", name = "🐛 Fixes" },
+    { footer = "Changelog-Note", name = "📝 Notes" },
+]
+```
+
+```admonish warning
+By doing this, you are also overriding the built-in ordering of sections. Make sure to define any custom sections (whether overriding or not) in the order you want them to appear.
+```
 
 ## Versioning
 
@@ -64,7 +100,7 @@ Versioning is done with the same logic as the [`BumpVersion`] step, but the rule
 1. If there are any breaking changes (things in the `### Breaking Changes` section above), the `Major` rule is used.
 2. If no breaking changes, but there are any features (things in the `### Features` section above), the `Minor` rule is used.
 3. If no breaking changes or features, but there _are_ entries to add to the changelog (fixes, notes, or custom sections) the `Patch` rule is used.
-4. If there are no new entries to add to the changelog, version will not be increased, and this step will throw an error (unless the `--dry-run` option is set).
+4. If there are no new entries to add to the changelog, the version will not be increased, and this step will throw an error (unless the `--dry-run` option is set).
 
 ## Examples
 
@@ -213,3 +249,4 @@ The reasons this can fail:
 [`CreateChangeFile`]: ./CreateChangeFile.md
 [change type]: https://github.com/knope-dev/changesets#change-type
 [`--override-version`]: ../../introduction.md#--override-version
+[extra-changelog-sections]: ../packages.md#extra_changelog_sections

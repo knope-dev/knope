@@ -168,8 +168,8 @@ mod test_replace_variables {
         step::{
             issues::Issue,
             releases::{
-                changelog::HeaderLevel, conventional_commits::ConventionalCommit, semver::Version,
-                Change, ChangeType, Package, Release,
+                changelog::HeaderLevel, conventional_commits::ConventionalCommit,
+                package::ChangelogSections, semver::Version, Change, ChangeType, Package, Release,
             },
         },
         workflow::Verbose,
@@ -328,10 +328,11 @@ mod test_replace_variables {
             message: "Blah".to_string(),
             original_source: String::new(),
         })];
+        let changelog_sections = ChangelogSections::default();
         state.packages[0].prepared_release = Some(Release::new(
             version.clone(),
             &changes,
-            &IndexMap::new(),
+            &changelog_sections,
             HeaderLevel::H2,
         ));
 

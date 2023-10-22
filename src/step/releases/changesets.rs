@@ -32,20 +32,16 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
         .into_iter()
         .map(|package| {
             let package_name = package.to_string();
-            let change_types = [ChangeType::Breaking, ChangeType::Feature, ChangeType::Fix]
-                .into_iter()
-                .chain(
-                    package
-                        .extra_changelog_sections
-                        .into_keys()
-                        .filter_map(|key| {
-                            if let ChangelogSectionSource::CustomChangeType(_) = &key {
-                                Some(ChangeType::Custom(key))
-                            } else {
-                                None
-                            }
-                        }),
-                )
+            let change_types = package
+                .changelog_sections
+                .into_keys()
+                .filter_map(|key| {
+                    if let ChangelogSectionSource::CustomChangeType(_) = &key {
+                        Some(ChangeType::Custom(key))
+                    } else {
+                        None
+                    }
+                })
                 .collect_vec();
             Select::new("What type of change is this?", change_types)
                 .prompt()
