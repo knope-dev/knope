@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.13.0 (2023-10-22)
+
+### Breaking Changes
+
+#### Change changeset title level
+
+The level of the title of a changeset no longer impacts the level of the release header in the changelog. To make this more obvious, changeset title are now level one headers by default. This is a breaking change because older versions of Knope will no longer properly handle the changesets from newer versions of Knope.
+
+#### Change where new versions are inserted in changelog
+
+In practice, this will not impact most changelogs, however, previous versions of Knope looked for the first header at a certain level (e.g., starting with `## `) and inserted the new version right before that. Now, Knope looks for the first header that is parseable as a semver version (e.g., `## 1.2.3`) and inserts the new version right before that.
+
+This _will_ make it harder to adopt Knope in projects that have an existing changelog which is not of the same format,
+but it makes inserting the new version in the changelog more robust.
+
+### Features
+
+#### Allow overriding built-in changelog sections
+
+If you don't want to use the default changelog sections of "Breaking changes", "Features",
+and "Fixes", you can now override them by using the equivalent changeset types!
+Overriding them resets their position in the changelog, so you probably want to reset _all_ of them if you reset any.
+This looks like:
+
+```toml
+[package]
+extra_changelog_sections = [
+    { type = "major", name = "❗️Breaking ❗" },
+    { type = "minor", name = "🚀 Features" },
+    { type = "patch", name = "🐛 Fixes" },
+    { footer = "Changelog-Note", name = "📝 Notes" },
+]
+```
+
+#### Support level-one release headers in changelogs
+
+If the last release in a changelog file has a level-one header instead of Knope's default of level-two, new releases will be created with level-one headers as well. Sections will then be level two instead of level three.
+
 ## 0.12.0 (2023-09-30)
 
 ### Breaking Changes
