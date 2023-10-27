@@ -46,4 +46,4 @@ datta = "0.1.0"
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
 snapbox = "0.4.14"
-tempfile = "3.8.0"
+tempfile = "3.8.1"
