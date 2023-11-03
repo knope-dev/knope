@@ -14,6 +14,7 @@ const expressiveCodeOptions = {
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://knope.tech",
   integrations: [
     starlight({
       title: "Knope",
@@ -34,6 +35,12 @@ export default defineConfig({
           autogenerate: {
             directory: "reference",
           },
+        },
+        {
+          label: "FAQ",
+            autogenerate: {
+                directory: "faq",
+            },
         },
       ],
     }),
