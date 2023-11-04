@@ -1,0 +1,7 @@
+changeset
+config
+Jira
+[Kk]nope
+monorepo
+repo
+[Rr]ebase

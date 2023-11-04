@@ -126,7 +126,7 @@ If `PrepareRelease` set the new version to "1.2.3", then a Git tag would be crea
 ### Create GitHub Releases for Multiple Packages
 
 ```toml
-[packages.knope]
+[packages.Knope]
 versioned_files = ["knope/Cargo.toml"]
 changelog = "knope/CHANGELOG.md"
 

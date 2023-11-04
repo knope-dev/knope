@@ -31,7 +31,8 @@ rule = "Pre"
 label = "rc"
 ```
 
-With this particular example, running `knope pre-release` would bump the version in `Cargo.toml` using the "pre" rule and the "rc" label. So if the version _was_ `0.1.2-rc.0`, it would be bumped to `0.1.2-rc.1`.
+With this particular example, running `knope pre-release` would bump the version in `Cargo.toml` using the `pre` rule and the `rc` label. 
+So if the version _was_ `0.1.2-rc.0`, it would be bumped to `0.1.2-rc.1`.
 
 ### Multiple Packages
 
@@ -56,21 +57,21 @@ In this example, running `knope major` would bump the version in `knope/Cargo.to
 
 ## Rules
 
-### Major
+### `Major`
 
 Increment the Major component of the semantic version and reset all other components (e.g. 1.2.3-rc.4 -> 2.0.0).
 
-### Minor
+### `Minor`
 
 Increment the Minor component of the semantic version and reset all lesser components (e.g. 1.2.3-rc.4 -> 1.3.0 ).
 
-### Patch
+### `Patch`
 
 Increment the Patch component of the semantic version and reset all lesser components (e.g. 1.2.3-rc.4 -> 1.2.4).
 
-### Pre
+### `Pre`
 
-Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` "rc" would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.4-rc.0".
+Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` `rc` would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.4-rc.0".
 
 :::danger
 Only a very specific pre-release format is supported—that is `MAJOR.MINOR.PATCH-LABEL.NUMBER`. For example, `1.2.3-rc.4` is supported, but `1.2.3-rc4` is not. `LABEL` must be specified via config or the `--prerelease-label` option in the CLI. `NUMBER` starts at 0 and increments each time the rule is applied.

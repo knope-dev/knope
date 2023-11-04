@@ -1,5 +1,0 @@
-changeset
-config
-Jira
-Knope
-monorepo

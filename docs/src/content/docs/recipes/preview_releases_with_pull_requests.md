@@ -83,7 +83,14 @@ Next, we commit the changes that [`PrepareRelease`] made—things like:
 - Adding a new section to `CHANGELOG.md` with the latest release notes
 - Deleting any changesets that have been processed
 
-This commit is pushed to the `release` branch, using the `--force` flag in this case because we don't care about the history of that branch, only the very next release. The [`CreatePullRequest`] step then creates a pull request from the current branch (`release`) to the specified base branch (`main`). We can set the title and body of this pull request using templated strings containing [variables]. In this case, the title contains the new `Version` and the body contains the new `ChangelogEntry`.
+This commit is pushed to the `release` branch,
+using the `--force` flag in this case because we don't care about the history of that branch,
+only the very next release.
+The [`CreatePullRequest`] step then creates a pull request from the current branch
+(`release`) to the specified base branch
+(`main`).
+We can set the title and body of this pull request using string templates containing [variables].
+In this case, the title contains the new `Version` and the body contains the new `ChangelogEntry`.
 
 The pull request that this creates looks something like this:
 

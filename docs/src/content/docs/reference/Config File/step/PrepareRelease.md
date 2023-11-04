@@ -20,7 +20,7 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 - The Changelog format is pretty strict. Sections will only be added for [Conventional Commits] and [Changesets] that meet certain requirements. See [Changelog sections](#change-sections) below.
 - Knope uses a simpler subset of semantic versioning which you can read about in [`BumpVersion`]
-- Knope will not allow you to update the major version of a `go.mod` file in most cases, as the [recommended practice](https://go.dev/blog/v2-go-modules) is to create a new `go.mod` file (in a new directory) for each major version. You can override this behavior using the [`--override-version`] option (to go from `v1` to `v2`) or use [multiple packages](../packages.md#multiple-major-versions-of-go-modules) to support multiple `go.mod` files on different major versions.
+- Knope will not allow you to update the major version of a `go.mod` file in most cases, as the [recommended practice](https://go.dev/blog/v2-go-modules) is to create a new `go.mod` file (in a new directory) for each major version. You can override this behavior using the [`--override-version`] option (to go from `v1` to `v2`) or use [multiple packages](/reference/configfile/packages#multiple-major-versions-of-go-modules) to support multiple `go.mod` files on different major versions.
 
 ## Options
 
@@ -28,7 +28,7 @@ The last "version tag" is used as the starting point to read commits—that's th
 
 ## Mono-repos and multiple packages
 
-You can have [multiple packages in one repo](../packages.md#multiple-packages).
+You can have [multiple packages in one repository](../packages.md#multiple-packages).
 By default, changesets work with multiple packages and conventional commits apply to _all_ packages.
 If you want to target specific conventional commits at individual packages,
 you need to use a [conventional commit scope].
