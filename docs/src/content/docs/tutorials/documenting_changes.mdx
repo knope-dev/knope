@@ -47,7 +47,6 @@ Now open the directory in your text editor and create two files:
 # Changelog
 
 This is where the changes in each release are documented.
-
 ```
 
 ```json title="package.json"
@@ -111,10 +110,12 @@ package.json
 CHANGELOG.md
 Would run git commit -m "chore: prepare release 1.0.1" && git push
 Would create a release on GitHub with name 1.0.1 (2023-11-01) and tag v1.0.1 and body:
+
 ## Fixes
 
 ### No longer crashes when you add pineapple
-```
+
+````
 </details>
 
 :::tip
@@ -136,7 +137,7 @@ If we run the `release` workflow again without the `--dry-run` option, Knope wil
 
 ```sh
 knope release
-```
+````
 
 ```
 ? No GitHub token found, generate one from https://github.com/settings/tokens with `repo` permissions and input here
@@ -165,6 +166,7 @@ Our `CHANGELOG.md` contains the message from our commit:
 # Changelog
 
 This is where the changes in each release are documented.
+
 ## 1.0.1 (2023-11-01)
 
 ### Fixes
@@ -264,6 +266,7 @@ CHANGELOG.md
 .changeset/add_calzones.md
 Would run git commit -m "chore: prepare release 1.1.0" && git push
 Would create a release on GitHub with name 1.1.0 (2023-11-02) and tag v1.1.0 and body:
+
 ## Features
 
 ### Added the `olives` topping
@@ -277,7 +280,8 @@ In addition to building Pizzas, you can now build calzones! Just use the new `--
 ## Fixes
 
 ### No longer crashes when you add pineapple
-```
+
+````
 </details>
 
 Uh oh, our fix from the _last_ version is being included again!
@@ -287,7 +291,7 @@ The release was created on GitHub, but we don't have that tag locally! Let's fix
 ```sh
 git pull --tags
 knope release --dry-run
-```
+````
 
 <details>
     <summary>Example output from Knope</summary>
@@ -313,6 +317,7 @@ CHANGELOG.md
 .changeset/add_calzones.md
 Would run git commit -m "chore: prepare release 1.1.0" && git push
 Would create a release on GitHub with name 1.1.0 (2023-11-02) and tag v1.1.0 and body:
+
 ## Features
 
 ### Added the `olives` topping
@@ -322,7 +327,9 @@ Would create a release on GitHub with name 1.1.0 (2023-11-02) and tag v1.1.0 and
 In addition to building Pizzas, you can now build calzones! Just use the new `--calzone` option!
 
 > Pizza? Never heard of it. That's what people will be saying in 20 years, because pizza is old news. Pizza is your grandfather's calzone.
+
     ```
+
 </details>
 
 Much better!
@@ -357,6 +364,7 @@ Don't forget to clean up your GitHub repository when you're done:
 ```sh
 gh repo delete knope-tutorial
 ```
+
 :::
 
 [conventional commit]: ../reference/conventional-commits

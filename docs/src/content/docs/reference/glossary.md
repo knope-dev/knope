@@ -15,4 +15,4 @@ If not, only the [default workflows](/reference/default_workflows) are defined.
 
 ## Step
 
-An atomic piece of a workflow. Every possible step is defined in [the config reference](/reference/config/steps).
+An atomic piece of a workflow. Every possible step is defined in [the config reference](/reference/Config%20File/steps).

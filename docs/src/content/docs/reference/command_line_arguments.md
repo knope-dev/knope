@@ -65,8 +65,8 @@ If the [single-package syntax] is used, provide a single semantic version, like 
 If the [multi-package syntax] is used (even if only one package is configured with it),
 you must specify the name of each package that should be overridden.
 This option can also be provided more than once.
-For example, `--override-version first-package=1.0.0 --override-version second-package=2.0.0` 
-will set the version of `first-package` to 1.0.0 and `second-package` to 2.0.0, 
+For example, `--override-version first-package=1.0.0 --override-version second-package=2.0.0`
+will set the version of `first-package` to 1.0.0 and `second-package` to 2.0.0,
 producing an error if either of those packages is not configured.
 
 [`BumpVersion`]: /reference/workflows/bump-version

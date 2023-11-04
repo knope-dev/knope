@@ -31,16 +31,26 @@ export default defineConfig({
           },
         },
         {
+          label: "Recipes",
+          autogenerate: {
+            directory: "recipes",
+          },
+        },
+        {
           label: "Reference",
           autogenerate: {
             directory: "reference",
           },
+          // items: [
+          //   {label: "knope.toml", autogenerate: {directory: "reference/knope.toml"}, items: [{label: "Overview", link: "/reference/knope.toml/overview"}]},
+          // ],
+          collapsed: true,
         },
         {
           label: "FAQ",
-            autogenerate: {
-                directory: "faq",
-            },
+          autogenerate: {
+            directory: "faq",
+          },
         },
       ],
     }),
