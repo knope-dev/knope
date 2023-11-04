@@ -1,5 +1,5 @@
 ---
-title: "Automating Releases for Simple Projects"
+title: "Releasing basic projects"
 description: Learn how to document changes, update the changelog, and bump package versions
 ---
 
@@ -13,7 +13,7 @@ This tutorial will take you step by step through the process of:
 :::note
 
 This tutorial creates a new Git repository with a single package.
-The [monorepo tutorial](./monorepo) covers automating releases for multiple packages in a single Git repository.
+The [monorepo tutorial](/tutorials/releasing-monorepos) covers automating releases for multiple packages in a single Git repository.
 
 :::
 
@@ -21,7 +21,7 @@ The [monorepo tutorial](./monorepo) covers automating releases for multiple pack
 
 - [Git](https://git-scm.com/): The `git` CLI must be available in your terminal.
   It is helpful if you know the basics of commits and tags.
-- A text editor: We'll be editing Markdown, JSON, and TOML files. [Visual Studio Code](https://code.visualstudio.com/) is a good free choice.
+- A text editor: We'll be editing Markdown and JSON files. [Visual Studio Code](https://code.visualstudio.com/) is a good free choice.
 - Familiarity with a command line terminal, like "Terminal" on macOS or "PowerShell" Windows
 - A [GitHub](https://github.com) account (you can use an alternative, but the results will be different)
 - [Install Knope](/installation)
