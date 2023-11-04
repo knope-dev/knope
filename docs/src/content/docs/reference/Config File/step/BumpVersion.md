@@ -31,7 +31,7 @@ rule = "Pre"
 label = "rc"
 ```
 
-With this particular example, running `knope pre-release` would bump the version in `Cargo.toml` using the `pre` rule and the `rc` label. 
+With this particular example, running `knope pre-release` would bump the version in `Cargo.toml` using the `pre` rule and the `rc` label.
 So if the version _was_ `0.1.2-rc.0`, it would be bumped to `0.1.2-rc.1`.
 
 ### Multiple Packages
