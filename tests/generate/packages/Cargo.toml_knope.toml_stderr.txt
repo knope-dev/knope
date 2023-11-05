@@ -2,7 +2,7 @@ Error:   × There are problems with the defined workflows
 
 Error:   × Problem with workflow release
 
-Error: package::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
   × No packages are defined
   help: You must define at least one [package] in knope.toml. Found some

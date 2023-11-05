@@ -2,7 +2,7 @@ Error:   × There are problems with the defined workflows
 
 Error:   × Problem with workflow Cannot SelectJiraIssue without Jira config
 
-Error: issues::jira::not_configured (https://knope-dev.github.io/knope/config/jira.html)
+Error: issues::jira::not_configured (https://knope.tech/reference/config-file/jira/)
 
   × Jira is not configured
   help: Jira must be configured in order to select a Jira issue
@@ -15,7 +15,7 @@ Error: issues::jira::no_issue_selected
         the same workflow
 Error:   × Problem with workflow Cannot SelectGitHubIssue without GitHub config
 
-Error: issues::github::not_configured (https://knope-dev.github.io/knope/config/github.html)
+Error: issues::github::not_configured (https://knope.tech/reference/config-file/github/)
 
   × GitHub is not configured
   help: GitHub must be configured in order to use the SelectGitHubIssue step
@@ -30,7 +30,7 @@ Error: git::no_issue_selected
 Error:   × Problem with workflow Cannot use Version variable when no metadata file
   │ is found
 
-Error: package::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
   × No packages are defined
   help: You must define at least one [package] in knope.toml. No supported
@@ -45,7 +45,7 @@ Error: package::no_defined_packages (https://knope-dev.github.io/knope/config/pa
         ```
 Error:   × Problem with workflow Cannot PrepareRelease with no configured packages
 
-Error: package::no_defined_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
   × No packages are defined
   help: You must define at least one [package] in knope.toml. No supported

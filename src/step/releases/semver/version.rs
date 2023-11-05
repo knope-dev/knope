@@ -173,7 +173,7 @@ impl FromStr for Version {
 #[diagnostic(
     code(version),
     help("The version must be a valid Semantic Version"),
-    url("https://knope-dev.github.io/knope/config/packages.html#versioned_files")
+    url("https://knope.tech/reference/concepts/semantic-versioning")
 )]
 pub(crate) struct Error(String);
 

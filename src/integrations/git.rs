@@ -107,14 +107,14 @@ enum ErrorKind {
     #[diagnostic(
         code(git::bad_branch_name),
         help("The branch name was not formatted correctly."),
-        url("https://knope-dev.github.io/knope/config/step/SelectIssueFromBranch.html")
+        url("https://knope.tech/reference/config-file/steps/select-issue-from-branch/")
     )]
     BadGitBranchName,
     #[error("Uncommitted changes")]
     #[diagnostic(
         code(git::uncommitted_changes),
         help("You need to commit your changes before running this step."),
-        url("https://knope-dev.github.io/knope/config/step/SwitchBranches.html")
+        url("https://knope.tech/reference/config-file/steps/switch-branches/")
     )]
     UncommittedChanges,
     #[error("Could not complete checkout")]

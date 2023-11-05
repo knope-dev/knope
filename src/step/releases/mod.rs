@@ -98,7 +98,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(releases::no_release),
         help("The `PrepareRelease` step will not complete if no changes cause a package's version to be increased."),
-        url("https://knope-dev.github.io/knope/config/step/PrepareRelease.html"),
+        url("https://knope.tech/reference/config-file/steps/prepare-release/#errors"),
     )]
     NoRelease,
     #[error(transparent)]

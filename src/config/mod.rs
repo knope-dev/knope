@@ -157,14 +157,14 @@ pub(crate) enum Error {
     #[diagnostic(
         code(config::toml),
         help("Check the TOML is valid."),
-        url("https://knope-dev.github.io/knope/config/config.html")
+        url("https://knope.tech/reference/config-file/github/")
     )]
     Toml(#[from] ::toml::de::Error),
     #[error("You cannot define both `packages` and `package`")]
     #[diagnostic(
         code(config::conflicting_packages),
         help("Add the `package` as a key under `packages` instead."),
-        url("https://knope-dev.github.io/knope/config/packages.html")
+        url("https://knope.tech/reference/config-file/packages/")
     )]
     ConflictingPackages {
         #[source_code]
@@ -178,7 +178,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(config::package_format),
         help("Check the package definition is valid."),
-        url("https://knope-dev.github.io/knope/config/packages.html")
+        url("https://knope.tech/reference/config-file/packages/")
     )]
     PackageFormat {
         inner: toml::package::Error,
@@ -191,7 +191,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(config::empty_packages),
         help("Add at least one package to the `packages` key."),
-        url("https://knope-dev.github.io/knope/config/packages.html")
+        url("https://knope.tech/reference/config-file/packages/")
     )]
     EmptyPackages,
 }

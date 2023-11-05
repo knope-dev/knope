@@ -426,7 +426,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(package::no_defined_packages),
         help("You must define at least one [package] in knope.toml. {package_suggestion}"),
-        url("https://knope-dev.github.io/knope/config/packages.html")
+        url("https://knope.tech/reference/config-file/packages/")
     )]
     NoDefinedPackages { package_suggestion: String },
 }

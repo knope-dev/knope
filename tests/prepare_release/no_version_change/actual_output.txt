@@ -1,6 +1,6 @@
 Error:   × Problem with workflow release
 
-Error: releases::no_release (https://knope-dev.github.io/knope/config/step/PrepareRelease.html)
+Error: releases::no_release (https://knope.tech/reference/config-file/steps/prepare-release/#errors)
 
   × No packages are ready to release
   help: The `PrepareRelease` step will not complete if no changes cause a

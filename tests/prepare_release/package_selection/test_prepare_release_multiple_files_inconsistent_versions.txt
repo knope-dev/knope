@@ -1,6 +1,6 @@
 Error:   × Problem with workflow release
 
-Error: semver::inconsistent_versions (https://knope-dev.github.io/knope/config/step/BumpVersion.html)
+Error: semver::inconsistent_versions (https://knope.tech/reference/concepts/package/#version)
 
   × Versioned files within the same package must have the same version. Found
   │ 1.0.0 in file pyproject.toml which does not match 2.0.0 in file Cargo.toml

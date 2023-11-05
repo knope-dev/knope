@@ -68,7 +68,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(issues::jira::not_configured),
         help("Jira must be configured in order to select a Jira issue"),
-        url("https://knope-dev.github.io/knope/config/jira.html")
+        url("https://knope.tech/reference/config-file/jira/")
     )]
     NotConfigured,
     #[error("Unable to write to stdout: {0}")]
@@ -83,7 +83,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(issues::jira::transition),
         help("The `transition` field in TransitionJiraIssue must correspond to a valid transition in the Jira project"),
-        url("https://knope-dev.github.io/knope/config/jira.html")
+        url("https://knope.tech/reference/config-file/jira/")
     )]
     Transition,
     #[error("No issue selected")]

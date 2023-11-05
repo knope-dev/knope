@@ -41,7 +41,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(create_pull_request::github::not_configured),
         help("GitHub must be configured in order to use the CreatePullRequest step"),
-        url("https://knope-dev.github.io/knope/config/github.html")
+        url("https://knope.tech/reference/config-file/github/")
     )]
     NotConfigured,
     #[error(transparent)]

@@ -65,7 +65,7 @@ enum ErrorKind {
     #[diagnostic(
         code(step::versioned_file_format),
         help("All filed included in [[packages]] versioned_files must be a supported format"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+        url("https://knope.tech/reference/config-file/packages/#versioned_files")
     )]
     VersionedFileFormat(PathBuf),
     #[error(transparent)]

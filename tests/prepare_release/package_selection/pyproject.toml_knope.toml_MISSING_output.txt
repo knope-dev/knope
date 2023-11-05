@@ -1,4 +1,4 @@
-Error: config::package_format (https://knope-dev.github.io/knope/config/packages.html)
+Error: config::package_format (https://knope.tech/reference/config-file/packages/)
 
   × The package definition is invalid: Error reading file pyproject.toml: No
   │ such file or directory (os error 2)

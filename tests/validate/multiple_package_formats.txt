@@ -1,4 +1,4 @@
-Error: config::conflicting_packages (https://knope-dev.github.io/knope/config/packages.html)
+Error: config::conflicting_packages (https://knope.tech/reference/config-file/packages/)
 
   × You cannot define both `packages` and `package`
    ╭─[1:1]

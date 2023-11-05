@@ -210,7 +210,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(github::asset_name_error),
         help("Try setting the `name` property of the asset manually"),
-        url("https://knope-dev.github.io/knope/config/packages.html#assets")
+        url("https://knope.tech/reference/config-file/packages/#assets")
     )]
     AssetNameError(#[from] AssetNameError),
 }
