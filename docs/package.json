@@ -8,8 +8,8 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "reformat": "prettier --write **/*.{astro,json,md,mdx,mjs}",
-    "check-format": "prettier --list-different **/*.{astro,json,md,mdx,mjs}"
+    "reformat": "prettier --write **/*.{json,md,mdx,mjs}",
+    "check-format": "prettier --list-different **/*.{json,md,mdx,mjs}"
   },
   "dependencies": {
     "@astrojs/check": "^0.3.0",

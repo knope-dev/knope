@@ -66,7 +66,7 @@ You probably want to read this before upgrading 💜
 #### Some sauce
 ```
 
-Knope can do much more with some customization, [read the docs](https://knope-dev.github.io/knope/) for more info.
+Knope can do much more with some customization, [read the docs](https://knope.tech) for more info.
 
 [conventional commits]: https://www.conventionalcommits.org
 [semantic version]: https://semver.org

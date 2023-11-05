@@ -13,3 +13,12 @@ say `knope-changelogs`, _that_ crate would be a _separate_ package with its own 
 
 To determine whether two versioned files are part of _one_ package or if they should be treated as _separate_ packages,
 ask yourself whether _every_ change that affects one always affects both.
+
+## Version
+
+The current version of the package is defined by the version number in _all_ versioned files.
+If there is any inconsistency, that's an error.
+If there are no versioned files, the package's version is based on the last [release]'s Git tag.
+If there also is no valid Git tag, the package does not have a version (which could be an error in some cases).
+
+[release]: /reference/concepts/release

@@ -10,15 +10,6 @@ Whenever this step is run, it will tag the current commit with the new version f
 
 If multiple packages are defined, each package gets its own tag in the format {package_name}/v{version} (this is the syntax required for Go modules). See examples below for more illustration.
 
-:::caution
-**A note on Go modules**
-
-Knope does its best to place nicely with Go's requirements for tagging module releases, however there are cases where Knope's tagging requirements will conflict with Go's tagging requirements. In particular, if you have a package named `blah` which does _not_ contain the `blah/go.mod` file, and a package named `something_else` which contains the `blah/go.mod` file, then both packages are going to get the `blah/v{Version}` tags, causing runtime errors during this step. If you have named packages, it's important to ensure that _either_:
-
-1. No package names match the name of a go module
-2. All packages with the same name as a go module contain the `go.mod` file for that module
-   :::
-
 ## GitHub Release Notes
 
 There are several different possible release notes formats, depending on how this step is used:

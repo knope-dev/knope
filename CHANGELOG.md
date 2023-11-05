@@ -83,7 +83,7 @@ The `Release` step previously (and will still) add a tag like `something/v1.2.3`
 
 #### Document conflict between package names and go module names
 
-It is possible to write a `knope.toml` file which will cause conflicting tags during the `Release` step if you have `go.mod` files in nested directories. [This is now documented](https://knope-dev.github.io/knope/config/step/Release.html).
+It is possible to write a `knope.toml` file which will cause conflicting tags during the `Release` step if you have `go.mod` files in nested directories. [This is now documented](https://knope.tech/reference/config-file/steps/release/).
 
 ## 0.11.1 (2023-09-22)
 
@@ -116,7 +116,7 @@ command = "gh release create --title '$version' --notes '$changelog'"
 "$changelog" = "ChangelogEntry"
 ```
 
-[the `Command` step]: https://knope-dev.github.io/knope/config/step/Command.html
+[the `Command` step]: https://knope.tech/reference/config-file/steps/command/
 
 #### Added an `allow_empty` option to the `PrepareRelease` step
 
@@ -149,7 +149,7 @@ This allows you to differentiate between there being nothing to release and the 
 
 The new [`CreatePullRequest` step] allows you to create or update a pull request on GitHub. It's designed to be a nice way to preview and accept new releases via a pull request workflow, but could certainly work for more contexts as well! To see an example of the new PR-based release workflow, check out [Knope's prepare-release workflow] and [Knope's release workflow].
 
-[`CreatePullRequest` step]: https://knope-dev.github.io/knope/docs/config/step/CreatePullRequest
+[`CreatePullRequest` step]: https://knope.tech/reference/config-file/steps/create-pull-request/
 [Knope's prepare-release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/prepare_release.yml
 [knope's release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/release.yml
 
@@ -163,7 +163,7 @@ This fixes a regression in the previous version of Knope where _all_ prereleases
 
 #### GitHub Actions Recipes
 
-There's a [new section of the docs](https://knope-dev.github.io/knope/github_actions/github_actions.html) with some recipes for using Knope in GitHub Actions. If you have suggestions for additional recipes, please open a [discussion](https://github.com/knope-dev/knope/discussions)!
+There's a [new section of the docs](https://knope.tech/recipes/preview-releases-with-pull-requests/) with some recipes for using Knope in GitHub Actions. If you have suggestions for additional recipes, please open a [discussion](https://github.com/knope-dev/knope/discussions)!
 
 ## 0.11.0 (2023-09-13)
 
@@ -268,7 +268,7 @@ Previously, it was valid to invoke `knope` with no arguments, and the user would
 
 #### The `--prerelease-label` option can only be provided after a workflow
 
-Previously, the `--prerelease-label` CLI option was always available globally and would simply be ignored if it was not useful for the selected workflow. Now, it can only be provided _after_ the name of a workflow which can use the option (right now, only a workflow which contains a [`PrepareRelease`](https://knope-dev.github.io/knope/config/step/PrepareRelease.html) step). For example, with the default workflow, `knope release --prerelease-label="rc"` is valid, but **none of these are valid**:
+Previously, the `--prerelease-label` CLI option was always available globally and would simply be ignored if it was not useful for the selected workflow. Now, it can only be provided _after_ the name of a workflow which can use the option (right now, only a workflow which contains a [`PrepareRelease`](https://knope.tech/reference/config-file/steps/prepare-release/) step). For example, with the default workflow, `knope release --prerelease-label="rc"` is valid, but **none of these are valid**:
 
 - `knope --prerelease-label="rc" release`
 - `knope document-change --prerelease-label="rc"`
@@ -281,7 +281,7 @@ Previously, the `--prerelease-label` CLI option was always available globally an
 
 #### Added the `--override-version` option to manually set the next version
 
-Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is [one package](https://knope-dev.github.io/knope/config/packages.html#a-single-package-with-a-single-versioned-file) or [multiple packages](https://knope-dev.github.io/knope/config/packages.html#multiple-packages):
+Allows you to manually determine the next version for a [`BumpVersion`] or [`PrepareRelease`] instead of using a semantic versioning rule. This option can only be provided after a workflow which contains a relevant step. This has two formats, depending on whether there is one package or multiple packages:
 
 1. `--override-version 1.0.0` will set the version to `1.0.0` if there is only one package configured (error if multiple packages are configured).
 2. `--override-version first-package=1.0.0 --override-version second-package=2.0.0` will set the version of `first-package` to `1.0.0` and `second-package` to `2.0.0` if there are multiple packages configured (error if only one package is configured).
@@ -296,7 +296,7 @@ This closes [#497](https://github.com/knope-dev/knope/issues/497).
 
 #### Changelog entries now use 4th level headers instead of bullets
 
-In order to support more detailed changelogs via [changesets](https://knope-dev.github.io/knope/config/step/PrepareRelease.html) (like the extra text you're seeing right now!) instead of each change entry being a single bullet under the appropriate category (e.g., `### Breaking Changes` above), it will be a fourth-level header (`####`). So, where _this_ changelog entry would have currently looked like this:
+In order to support more detailed changelogs via [changesets](https://knope.tech/reference/concepts/changeset/) (like the extra text you're seeing right now!) instead of each change entry being a single bullet under the appropriate category (e.g., `### Breaking Changes` above), it will be a fourth-level header (`####`). So, where _this_ changelog entry would have currently looked like this:
 
 ```markdown
 ### Breaking Changes
@@ -338,7 +338,7 @@ And now it will look like this:
 
 #### Report files to be added to git in `--dry-run`
 
-The [`PrepareRelease`](https://knope-dev.github.io/knope/config/step/PrepareRelease.html) adds modified files to Git. Now, when running with the `--dry-run` option, it will report which files would be added to Git (for easier debugging).
+The [`PrepareRelease`](https://knope.tech/reference/config-file/steps/prepare-release/) step adds modified files to Git. Now, when running with the `--dry-run` option, it will report which files would be added to Git (for easier debugging).
 
 > Note: The default `knope release` workflow includes this [`PrepareRelease`] step.
 
@@ -362,9 +362,9 @@ Leveraging the new [changesets crate](https://github.com/knope-dev/changesets), 
 
 For additional details, see:
 
-- [`PrepareRelease` step](https://knope-dev.github.io/knope/config/step/PrepareRelease.html)
-- [`CreateChangeFile` step](https://knope-dev.github.io/knope/config/step/CreateChangeFile.html)
-- [Packages (for how you can customize changelog sections)](https://knope-dev.github.io/knope/config/packages.html)
+- [`PrepareRelease` step](https://knope.tech/reference/config-file/steps/prepare-release/)
+- [`CreateChangeFile` step](https://knope.tech/reference/config-file/steps/create-change-file/)
+- [Customizing changelogs](https://knope.tech/recipes/customizing-changelogs/)
 
 ## 0.7.4
 
