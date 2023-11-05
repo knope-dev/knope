@@ -4,7 +4,7 @@ title: Environment Variables
 
 ## `KNOPE_PRERELEASE_LABEL`
 
-Works just like the [`--prerelease-label` command line argument](/reference/command_line_arguments#--prerelease-label).
+Works just like the [`--prerelease-label` command line argument](/reference/command-line-arguments#--prerelease-label).
 That argument takes precedence over this environment variable.
 
 ## `GITHUB_TOKEN`

@@ -175,7 +175,7 @@ See [Knope's release workflow] and [knope.toml] where we:
 4. Create a GitHub release with the new version, changelog, and the binary assets
 
 [github config]: ../github.md
-[`preparerelease`]: PrepareRelease.md
+[`preparerelease`]: prepare-release
 [packages]: ../packages.md
 [package assets]: ../packages.md#assets
 [Knope's release workflow]: https://github.com/knope-dev/knope/blob/main/.github/workflows/release.yml

@@ -25,5 +25,5 @@ name = "Start some work"
     type = "SwitchBranches"
 ```
 
-[`selectjiraissue`]: ./SelectJiraIssue.md
-[`selectgithubissue`]: ./SelectGitHubIssue.md
+[`selectjiraissue`]: ./select-jira-issue
+[`selectgithubissue`]: ./select-gitHub-issue

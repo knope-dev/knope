@@ -19,8 +19,8 @@ variables = {"version" = "Version"}
 
 The `variables` attribute of this step is an object where the key is the string you wish to substitute and the value is one of the [available variables](../variables.md). **take care when selecting a key to replace** as _any_ matching string that is found will be replaced. Replacements occur in the order they are declared in the config, so earlier substitutions may be replaced by later ones.
 
-[bumpversion]: ./BumpVersion.md
-[switchbranches]: ./SwitchBranches.md
-[`selectjiraissue`]: ./SelectJiraIssue.md
-[`selectgithubissue`]: ./SelectGitHubIssue.md
-[`selectissuefrombranch`]: ./SelectIssueFromBranch.md
+[bumpversion]: ./bump-version
+[switchbranches]: ./switch-branches
+[`selectjiraissue`]: ./select-jira-issue
+[`selectgithubissue`]: ./select-gitHub-issue
+[`selectissuefrombranch`]: ./select-issue-from-branch

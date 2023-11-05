@@ -110,7 +110,7 @@ An array of objects defining additional sections to be added to the changelog (o
 Each object can optionally have an array of `footers` and/or an array of `types`.
 
 :::tip
-Check out the [custom changelogs recipe](/recipes/custom_changelogs) for a full example of how to use this feature.
+Check out the [custom changelogs recipe](/recipes/customizing-changelogs) for a full example of how to use this feature.
 :::
 
 ```toml

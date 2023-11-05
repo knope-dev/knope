@@ -13,7 +13,7 @@ This tutorial will take you step by step through the process of:
 :::note
 
 This tutorial creates a new Git repository with a single package.
-The [monorepo tutorial](/tutorials/releasing-monorepos) covers automating releases for multiple packages in a single Git repository.
+The [monorepo tutorial](/tutorials/releasing-multiple-packages) covers automating releases for multiple packages in a single Git repository.
 
 :::
 

@@ -2,7 +2,7 @@
 title: CreateChangeFile
 ---
 
-A "change file" is a specially formatted Markdown file that is used both to determine the next version of your project and to generate a changelog. This step will interactively create a new change file in the `.changeset` directory of your project (creating that directory if missing). When a [`PrepareRelease`] step runs, it will combine both change files and any [conventional commits] since the last release to generate changelogs and update versions for any configured [packages].
+Create a [change file](/reference/concepts/change-file) interactively. Creates the `.changeset` directory if missing.
 
 ## Example
 
@@ -132,8 +132,8 @@ i carry your heart(i carry it in my heart)
 </pre>
 ```
 
-[`PrepareRelease`]: ./PrepareRelease.md
+[`PrepareRelease`]: ./prepare-release
 [conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
 [packages]: ../packages.md
-[default workflows]: ../../default_workflows.md
+[default workflows]: ../../default-workflows
 [change types]: https://github.com/knope-dev/changesets#change-type

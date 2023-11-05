@@ -6,7 +6,7 @@ Bump the version of all packages using a [Semantic Versioning] rule. At least on
 
 :::hint
 It may be easier to select the appropriate version automatically based on recent changes.
-Check out the [automating releases tutorial](/tutorials/documenting_changes).
+Check out the [automating releases tutorial](/tutorials/releasing-basic-projects).
 :::
 
 ## Fields
@@ -81,16 +81,6 @@ Only a very specific pre-release format is supported—that is `MAJOR.MINOR.PATC
 
 Remove the pre-release component of the semantic version (e.g. 1.2.3-rc.4 -> 1.2.3).
 
-### A Note on 0.x Versions
-
-[Semantic versioning] dictates different handling of any version which has a major component of 0 (e.g. 0.1.2). This major version should not be incremented to 1 until the project has reached a stable state. As such, it would be irresponsible (and probably incorrect) for knope to increment to version 1.0.0 the first time there is a breaking change in a 0.x project. As such, any `Major` rule applied to a 0.x project will increment the `Minor` component, and any `Minor` rule will increment the `Patch` component. This effectively means that for the version `0.1.2`:
-
-1. The first component (`0`) is ignored
-2. The second component (`1`) serves as the `Major` component, and will be incremented whenever the `Major` rule is applied.
-3. The third component (`2`) serves as **both** `Minor` and `Patch` and will be incremented when either rule is applied.
-
-If you want to go from a 0.x version to a 1.x version, you must provide the `--override-version` [command line option](../../introduction.md#--override-version).
-
 ## Errors
 
 This step will fail if any of the following are true:
@@ -98,7 +88,7 @@ This step will fail if any of the following are true:
 1. A malformed version string is found while attempting to bump. Note that only a subset of [pre-release version formats](#pre) are supported.
 2. No [package] is defined missing or invalid.
 
-[semantic versioning]: https://semver.org
-[package]: ../packages.md
-[conventional commits]: https://conventionalcommits.org
-[`preparerelease`]: ./PrepareRelease.md
+[semantic versioning]: /reference/concepts/semantic-versioning
+[package]: /reference/config-file/packages
+[conventional commits]: /reference/concepts/conventional-commits
+[`preparerelease`]: /reference/config-file/steps/prepare-release

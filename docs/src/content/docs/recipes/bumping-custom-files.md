@@ -2,7 +2,7 @@
 title: Versioning unsupported files
 ---
 
-Want to bump the version of a file that isn't [natively supported](/reference/Config%20File/packages)?
+Want to bump the version of a file that isn't [natively supported](/reference/config-file/packages#versioned_files)?
 [Request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version
 produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
 

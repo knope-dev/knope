@@ -23,4 +23,4 @@ name = "Start some work"
 ```
 
 [github config]: ../github.md
-[`switchbranches`]: ./SwitchBranches.md
+[`switchbranches`]: ./switch-branches

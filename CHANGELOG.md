@@ -1,8 +1,14 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file, versioning follows [Knope's semantic versioning](https://knope.tech/reference/concepts/semantic-versioning).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+A breaking change is any change which would produce a different result for the same input.
+The inputs are documented [environment variables](https://knope.tech/reference/environment-variables) and [command line arguments](https://knope.tech/reference/command-line-arguments) as well as any files in the current directory.
+The results are changes to the current directory, calls to external commands, and interaction with any integrations
+(for example the GitHub API).
+
+Notably, anything written to standard output or standard error
+(what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
 ## 0.13.0 (2023-10-22)
 

@@ -2,6 +2,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
 import expressiveCode from "astro-expressive-code";
+import starlightLinksValidator from "starlight-links-validator";
 
 /** @type {import('astro-expressive-code').AstroExpressiveCodeOptions} */
 const expressiveCodeOptions = {
@@ -16,6 +17,7 @@ const expressiveCodeOptions = {
 export default defineConfig({
   site: "https://knope.tech",
   integrations: [
+    starlightLinksValidator(),
     starlight({
       title: "Knope",
       social: {

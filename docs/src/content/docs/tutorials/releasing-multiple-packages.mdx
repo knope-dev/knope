@@ -94,7 +94,6 @@ version = "3.14.15"
 # Pizza Changelog
 
 Documenting everything new in the world of Pizza.
-
 ```
 
 ```toml title="toppings/Cargo.toml"
@@ -106,7 +105,6 @@ version = "1.209.0"
 # Toppings Changelog
 
 New toppings are added here
-
 ```
 
 ```toml title="calzone/Cargo.toml"
@@ -198,21 +196,22 @@ name = "document-change"
 
 [[workflows.steps]]
 type = "CreateChangeFile"
-```
+
+````
 </details>
 
 ## Documenting changes
 
 As with a single package,
 we can document changes
-using either [changesets](/glossary/changeset) or [conventional commits](/glossary/conventional-commits).
+using either [changesets](/reference/concepts/changeset) or [conventional commits](/reference/concepts/conventional-commits).
 Let's start with changesets.
 
 ### Changesets
 
 ```shell
 knope document-change
-```
+````
 
 :::tip
 That `document-change` command comes from the workflow in `knope.toml` with the same name, go check it out!
@@ -260,7 +259,6 @@ pizza: patch
 ---
 
 # The cheese is now distributed more evenly
-
 ```
 
 It includes the name of each package that the change impacts,
@@ -401,10 +399,12 @@ We _could_ now recreate the change we did with changesets with _two_ commits:
 
 :::caution
 Don't do this, it's just for demonstration, there's a better way!
+
 ```shell
 git commit --allow-empty -m "fix(pizza): The cheese is now distributed more evenly"
 git commit --allow-empty -m "fix(calzone): The cheese is now distributed more evenly"
 ```
+
 :::
 
 But the _point_ of conventional commits is that we're documenting the changes made _within_ the commit,
@@ -555,6 +555,7 @@ Next up, you should consider [using GitHub Actions to automate releases](/recipe
 
 :::note
 Don't forget to clean up your GitHub repo!
+
 ```shell
 gh repo delete knope-tutorial
 ```

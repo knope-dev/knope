@@ -52,7 +52,7 @@ Instead, print out what _would_ be done without the `--dry-run` flag.
 Set or override a `prerelease_label` for any [`PrepareRelease`] step.
 Can only be used with workflows that contain the [`PrepareRelease`] step (like the default `release` workflow)
 
-You can also set this with the [`KNOPE_PRERELEASE_LABEL`](/reference/environment_variables#knope_prerelease_label) environment variable.
+You can also set this with the [`KNOPE_PRERELEASE_LABEL`](/reference/environment-variables#knope_prerelease_label) environment variable.
 This option takes precedence over that.
 
 ### `override-version`
@@ -69,5 +69,5 @@ For example, `--override-version first-package=1.0.0 --override-version second-p
 will set the version of `first-package` to 1.0.0 and `second-package` to 2.0.0,
 producing an error if either of those packages is not configured.
 
-[`BumpVersion`]: /reference/workflows/bump-version
-[`PrepareRelease`]: /reference/workflows/prepare-release
+[`BumpVersion`]: /reference/steps/bump-version
+[`PrepareRelease`]: /reference/steps/prepare-release

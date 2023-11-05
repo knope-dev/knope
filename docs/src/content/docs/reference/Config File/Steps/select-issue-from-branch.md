@@ -21,5 +21,5 @@ name = "Finish some work"
     status = "QA"
 ```
 
-[`command`]: ./Command.md
-[switchbranches]: ./SwitchBranches.md
+[`command`]: ./command
+[switchbranches]: ./switch-branches

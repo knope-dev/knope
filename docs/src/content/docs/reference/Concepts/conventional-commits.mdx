@@ -1,0 +1,106 @@
+---
+title: "Conventional commits"
+---
+
+import { TabItem, Tabs } from "@astrojs/starlight/components";
+
+Knope supports a subset of [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/),
+a way of encoding changelog & version information into commit messages.
+This document describes how conventional commits work _in Knope_, not the full scope of the larger project.
+
+## The first line
+
+Every conventional commit must start with a type,
+followed by an optional scope, then an optional exclamation point, then a colon, then a space, then a summary of the change.
+
+```text
+<type>[optional scope][!]: <summary>
+```
+
+Any commit without a first line structured like the above is not a conventional commit.
+
+### Examples of valid first lines
+
+<Tabs>
+  <TabItem label="Basic">
+    <code>feat: add a new feature</code>
+  </TabItem>
+  <TabItem label="With scope">
+    <code>feat(parser): add a new feature</code>
+  </TabItem>
+  <TabItem label="With exclamation point">
+    <code>feat!: add a new feature</code>
+  </TabItem>
+  <TabItem label="With scope and exclamation point">
+    <code>feat!(parser): add a new feature</code>
+  </TabItem>
+</Tabs>
+
+### Special types
+
+If the `type` of the conventional commit is `feat`, the change is a minor change
+(for the purposes of [semantic versioning](/reference/concepts/semantic-versioning)) and the summary will be added to the "Features"
+section of the changelog.
+If the type is `fix`, the change is a patch change and the summary will be added to the "Fixes" section of the changelog.
+
+Every other type is ignored, and will have no impact on the changelog or versioning.
+However, the commit will still be considered a conventional commit, so the footers will be checked.
+
+### Exclamation point
+
+If the first line of the commit has an exclamation point right before the colon,
+the commit is a major change and the summary will be added to the "Breaking changes"
+section of the changelog.
+This is **regardless of the type of the commit**.
+
+### Scopes
+
+A scope can be added immediately after the type within parentheses.
+The commit message `feat(parser): add a new feature` has a scope of `parser`.
+Scopes can be used to limit the impact of a change in multi-package repositories.
+See the [releasing multiple packages tutorial](/tutorials/releasing-multiple-packages) for more information.
+
+## The body
+
+After the first line, every line is considered part of the body _until_ the first footer is encountered. Knope ignores commit bodies.
+
+## Footers
+
+A footer has the format `<key>: <value>`.
+You can have as many footers as you want, one per line.
+By default, Knope only checks for these footers:
+
+`BREAKING CHANGE`: If this footer is present, the major component of the next semantic version should be incremented.
+The `<value>` will be added to the "Breaking Changes" section of the changelog.
+
+`Changelog-Note`: The `<value>` will be added to the "Notes" section of the changelog, for semantic versioning purposes
+this is considered a patch change.
+
+You can also use custom footers to add info to custom changelog sections,
+see the [recipes on customizing the changelog](/recipes/customizing-changelogs) for more info.
+
+## Full example
+
+```text
+feat(parser)!: Add a new feature
+
+This is the body
+
+and so it will be ignored
+
+BREAKING CHANGE: Another breaking change
+Changelog-Note: A note
+```
+
+Here we have a `feat` type, with a scope of `parser`, and an exclamation point. There are two footers: `BREAKING CHANGE`
+with the value of "Another breaking change" and `Changelog-Note` with the value of "A note".
+
+Because of the exclamantion point, "Add a new feature" will be put in the "Breaking Changes" section of the changelog.
+If that exclamation point was not there, it would be put in the "Features" section of the changelog.
+
+The `parser` scope will limit _all_ of these changes
+(including the footers) to packages which have a `parser` scope and packages which have _no_ scopes (equivalent to all).
+
+The "Another breaking change" footer will be added to the "Breaking Changes" section of the changelog,
+
+The "A note" footer will be added to the "Notes" section of the changelog.

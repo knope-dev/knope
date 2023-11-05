@@ -11,6 +11,10 @@ install-all-dependencies: install-lint-dependencies
 serve-docs:
     npm run --prefix docs start
 
+# Build the docs, checking for broken links
+build-docs:
+    npm run --prefix docs build
+
 test:
     cargo t
 

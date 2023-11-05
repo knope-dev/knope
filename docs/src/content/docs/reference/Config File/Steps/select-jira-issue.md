@@ -22,6 +22,6 @@ name = "Start some work"
     status = "Backlog"
 ```
 
-[`command`]: ./Command.md
-[`switchbranches`]: ./SwitchBranches.md
+[`command`]: ./command
+[`switchbranches`]: ./switch-branches
 [jira]: ../jira.md
