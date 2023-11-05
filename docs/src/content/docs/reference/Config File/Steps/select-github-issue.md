@@ -22,5 +22,5 @@ name = "Start some work"
     label = "selected"
 ```
 
-[github config]: ../github.md
-[`switchbranches`]: ./switch-branches
+[github config]: /reference/config-file/github
+[`switchbranches`]: /reference/config-file/steps/switch-branches

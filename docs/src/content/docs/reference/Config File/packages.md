@@ -3,7 +3,7 @@ title: Packages
 ---
 
 A package is a set of files that are released together with the same version.
-Knope can increase this version based on [changes] that affect the package.
+Knope can increase this version based on changes that affect the package.
 
 A project can either consist of a single package:
 
@@ -136,5 +136,3 @@ name = "linux-amd64.tgz"
 [[package.assets]]
 path = "artifact/my-binary-darwin-amd64.tgz"  # name will be "my-binary-darwin-amd64.tgz"
 ```
-
-[changes]: /reference/glossary#change

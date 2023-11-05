@@ -20,6 +20,7 @@ export default defineConfig({
     starlightLinksValidator(),
     starlight({
       title: "Knope",
+      favicon: "/favicon.png",
       social: {
         github: "https://github.com/knope-dev/knope",
       },
@@ -46,9 +47,6 @@ export default defineConfig({
           autogenerate: {
             directory: "reference",
           },
-          // items: [
-          //   {label: "knope.toml", autogenerate: {directory: "reference/knope.toml"}, items: [{label: "Overview", link: "/reference/knope.toml/overview"}]},
-          // ],
           collapsed: true,
         },
         {

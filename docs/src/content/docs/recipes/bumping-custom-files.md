@@ -29,7 +29,7 @@ This is a temporary limitation—if you have a specific use case for this, pleas
 :::
 
 [request it as a feature]: https://github.com/knope-dev/knope/issues
-[`bumpversion`]: /reference/Config%20File/step/BumpVersion
-[`preparerelease`]: /reference/Config%20File/step/PrepareRelease.md
-[`release`]: /reference/Config%20File/step/Release.md
-[`command`]: /reference/Config%20File/step/Command.md
+[`bumpversion`]: /reference/config-file/steps/bump-version
+[`preparerelease`]: /reference/config-file/steps/prepare-release
+[`release`]: /reference/config-file/steps/release
+[`command`]: /reference/config-file/steps/command

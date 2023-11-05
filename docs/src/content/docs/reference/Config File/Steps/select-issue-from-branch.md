@@ -21,5 +21,5 @@ name = "Finish some work"
     status = "QA"
 ```
 
-[`command`]: ./command
-[switchbranches]: ./switch-branches
+[`command`]: /reference/config-file/steps/command
+[switchbranches]: /reference/config-file/steps/switch-branches

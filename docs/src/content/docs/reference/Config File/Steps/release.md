@@ -165,9 +165,9 @@ See [Knope's release workflow] and [knope.toml] where we:
 3. Fan out into several jobs which each check out the changes and build a different binary
 4. Create a GitHub release with the new version, changelog, and the binary assets
 
-[github config]: ../github.md
-[`preparerelease`]: prepare-release
-[packages]: ../packages.md
-[package assets]: ../packages.md#assets
+[github config]: /reference/config-file/github
+[`preparerelease`]: /reference/config-file/steps/prepare-release
+[packages]: /reference/concepts/package
+[package assets]: /reference/config-file/packages#assets
 [Knope's release workflow]: https://github.com/knope-dev/knope/blob/main/.github/workflows/release.yml
 [knope.toml]: https://github.com/knope-dev/knope/blob/main/knope.toml

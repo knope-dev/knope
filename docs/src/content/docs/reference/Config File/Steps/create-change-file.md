@@ -132,8 +132,6 @@ i carry your heart(i carry it in my heart)
 </pre>
 ```
 
-[`PrepareRelease`]: ./prepare-release
-[conventional commits]: https://www.conventionalcommits.org/en/v1.0.0/
-[packages]: ../packages.md
-[default workflows]: ../../default-workflows
-[change types]: https://github.com/knope-dev/changesets#change-type
+[`PrepareRelease`]: /reference/config-file/steps/prepare-release
+[packages]: /reference/concepts/package
+[default workflows]: /reference/default-workflows

@@ -367,7 +367,7 @@ gh repo delete knope-tutorial
 
 :::
 
-[conventional commit]: ../reference/conventional-commits
-[conventional commits]: ../reference/conventional-commits
-[changesets]: ../reference/changesets
-[semantic versioning]: ../reference/semantic-versioning
+[conventional commit]: /reference/concepts/conventional-commits
+[conventional commits]: /reference/concepts/conventional-commits
+[changesets]: /reference/concepts/changesets
+[semantic versioning]: /reference/concepts/semantic-versioning

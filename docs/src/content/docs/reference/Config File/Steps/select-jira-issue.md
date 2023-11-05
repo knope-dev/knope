@@ -22,6 +22,6 @@ name = "Start some work"
     status = "Backlog"
 ```
 
-[`command`]: ./command
-[`switchbranches`]: ./switch-branches
-[jira]: ../jira.md
+[`command`]: /reference/config-file/steps/command
+[`switchbranches`]: /reference/config-file/steps/switch-branches
+[jira]: /reference/config-file/jira

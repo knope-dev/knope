@@ -32,7 +32,7 @@ This variable can only be used when a single `[package]` is configured, there is
 selected an issue in this workflow using [`SelectJiraIssue`], [`SelectGitHubIssue`], or [`SelectIssueFromBranch`] before
 using this variable.
 
-[`SwitchBranches`]: ../step/switchbranches
-[`SelectJiraIssue`]: ../step/selectjiraissue
-[`SelectGitHubIssue`]: ../step/selectgithubissue
-[`SelectIssueFromBranch`]: ../step/selectissuefrombranch
+[`SwitchBranches`]: /reference/config-file/steps/switch-branches
+[`SelectJiraIssue`]: /reference/config-file/steps/select-jira-issue
+[`SelectGitHubIssue`]: /reference/config-file/steps/select-github-issue
+[`SelectIssueFromBranch`]: /reference/config-file/steps/select-issue-from-branch

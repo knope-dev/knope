@@ -26,5 +26,5 @@ name = "Start some work"
     status = "In Progress"
 ```
 
-[`selectjiraissue`]: ./select-jira-issue
-[`selectissuefrombranch`]: ./select-issue-from-branch
+[`selectjiraissue`]: /reference/config-file/steps/select-jira-issue
+[`selectissuefrombranch`]: /reference/config-file/steps/select-issue-from-branch
