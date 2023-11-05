@@ -10,6 +10,18 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.13.1 (2023-11-05)
+
+### Documentation
+
+#### There is a new docs website
+
+Check out <https://knope.tech/> to see the new docs, and please report any errors or gaps!
+All error messages within Knope should be updated to point to the new docs.
+If any are still pointed at GitHub pages (as of this version), that's a bug!
+
+As part of this, you can also now install Knope through [Chocolatey and Homebrew](https://knope.tech/installation)!
+
 ## 0.13.0 (2023-10-22)
 
 ### Breaking Changes
