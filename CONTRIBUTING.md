@@ -2,6 +2,22 @@
 
 Knope is open to all kinds of contributions—if you want to contribute code there are a few helpful hints.
 
+## Docs
+
+The [docs website](https://knope.tech) is built using [starlight](https://starlight.astro.build).
+The source is contained in the `docs` directory.
+The easiest way to find a document to edit is to go to that doc on the website and click on "Edit page"
+at the bottom.
+
+### Running locally
+
+`npm --prefix docs install`, then `npm --prefix docs start` (or `just serve-docs`).
+
+### Docs linting
+
+CI will fail if the docs are not formatted correctly or there are broken relative links.
+Use `just reformat` to reformat the docs and `just build-docs` to check for broken links.
+
 ## `just` and `justfile`
 
 [`just`](https://just.systems/man/en/chapter_1.html) is a command runner (like `make`) which makes it easier to run common tasks the same way in multiple platforms. Specifically, you can run the same sorts of commands that CI does to replicate failures (or prevent them) locally! Start by installing via [your favorite method](https://just.systems/man/en/chapter_4.html) (personally, I use [`cargo binstall just`][cargo-binstall]). Then, run `just -l` to see all the available commands.

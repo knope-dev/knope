@@ -23,6 +23,9 @@ export default defineConfig({
       social: {
         github: "https://github.com/knope-dev/knope",
       },
+      editLink: {
+        baseUrl: "https://github.com/knope-dev/knope/edit/main/docs/",
+      },
       customCss: ["./src/custom.css"],
       sidebar: [
         { label: "Installation", link: "/installation" },
