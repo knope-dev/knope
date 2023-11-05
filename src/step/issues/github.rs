@@ -84,14 +84,14 @@ pub(crate) enum Error {
     #[diagnostic(
         code(issues::github::not_configured),
         help("GitHub must be configured in order to use the SelectGitHubIssue step"),
-        url("https://knope-dev.github.io/knope/config/github.html")
+        url("https://knope.tech/reference/config-file/github/")
     )]
     NotConfigured,
     #[error("Could not communicate with GitHub while {context}: {source}")]
     #[diagnostic(
         code(issues::github::api),
         help("Check your network connection and GitHub configuration"),
-        url("https://knope-dev.github.io/knope/config/github.html")
+        url("https://knope.tech/reference/config-file/github/")
     )]
     Api {
         source: Box<ureq::Error>,

@@ -1,0 +1,191 @@
+---
+title: "Installation"
+---
+
+import { TabItem, Tabs } from "@astrojs/starlight/components";
+
+:::note
+Wish you could install Knope from somewhere else? [Open a discussion](https://github.com/knope-dev/knope/discussions/new?category=ideas) and let us know!
+:::
+
+## Local
+
+### macOS
+
+<Tabs>
+
+<TabItem label="cargo-binstall">
+
+```sh
+cargo install binstall
+cargo binstall knope
+```
+
+</TabItem>
+
+<TabItem label="Homebrew">
+
+:::caution
+Apple Silicon Macs will build from source, which can take a while.
+:::
+
+```sh
+brew install knope-dev/tap/knope
+```
+
+</TabItem>
+
+<TabItem label="GitHub CLI">
+
+Download a pre-build binary:
+
+<Tabs>
+
+<TabItem label="Apple Silicon">
+
+```sh
+gh release download --repo knope-dev/knope --pattern "*aarch64-apple*"
+tar -xvf knope*.tgz
+```
+
+</TabItem>
+
+<TabItem label="Intel">
+
+```sh
+gh release download --repo knope-dev/knope --pattern "*x86_64-apple*"
+tar -xvf knope*.tgz
+```
+
+</TabItem>
+
+</Tabs>
+
+Then copy the `knope` binary from the created directory to somewhere in your PATH.
+
+</TabItem>
+
+<TabItem label="Cargo">
+
+:::caution
+This builds from source and will take a while.
+:::
+
+```sh
+cargo install knope
+```
+
+</TabItem>
+
+</Tabs>
+
+### Windows
+
+:::caution
+Knope uses fancy terminal features to make errors pretty, these are not supported by the built-in terminals.
+We recommend using [Windows Terminal](https://apps.microsoft.com/detail/9N0DX20HK701).
+:::
+
+<Tabs>
+
+<TabItem label="Chocolatey">
+
+```powershell
+choco install knope
+```
+
+</TabItem>
+<TabItem label="cargo-binstall">
+
+```sh
+cargo install binstall
+cargo binstall knope
+```
+
+</TabItem>
+
+<TabItem label="GitHub CLI">
+
+```powershell title="PowerShell"
+gh release download --repo knope-dev/knope --pattern "*windows*"
+tar -xvf knope*.tgz  # Press tab to expand to the correct name
+```
+
+Then copy the `knope.exe` binary from the created directory to somewhere in your PATH.
+
+</TabItem>
+
+<TabItem label="Cargo">
+
+:::caution
+This builds from source and will take a while.
+:::
+
+```sh
+cargo install knope
+```
+
+</TabItem>
+
+</Tabs>
+
+### Linux
+
+<Tabs>
+
+<TabItem label="cargo-binstall">
+
+```sh
+cargo install binstall
+cargo binstall knope
+```
+
+</TabItem>
+
+<TabItem label="Homebrew">
+
+```sh
+brew install knope-dev/tap/knope
+```
+
+</TabItem>
+
+<TabItem label="GitHub CLI">
+
+This will download a static musl binary, which should work on most Linux distributions.
+
+```sh
+gh release download --repo knope-dev/knope --pattern "*linux*"
+tar -xvf knope*.tgz
+```
+
+Then copy the `knope` binary from the created directory to somewhere in your PATH.
+
+</TabItem>
+
+<TabItem label="Cargo">
+
+:::caution
+This builds from source and will take a while.
+:::
+
+```sh
+cargo install knope
+```
+
+</TabItem>
+
+</Tabs>
+
+## Continuous Integration
+
+### GitHub Actions
+
+There is an official [GitHub action](https://github.com/marketplace/actions/install-knope) for installation, which looks like this:
+
+```yaml
+- name: Install Knope
+  uses: knope-dev/action@v2.0.0
+  with:
+    version: 0.13.0
+```

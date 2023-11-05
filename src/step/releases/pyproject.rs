@@ -51,14 +51,14 @@ pub(crate) enum Error {
                     `project.version` property. If you use a different location for your version, please \
                     open an issue to add support."
         ),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+        url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
     )]
     Deserialization(PathBuf, #[source] toml::de::Error),
     #[error("Found conflicting versions {project} and {poetry} in {path}")]
     #[diagnostic(
         code(pyproject::inconsistent),
         help("Make sure [project.version] and [tool.poetry.version] are the same."),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+        url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
     )]
     InconsistentVersions {
         project: String,
@@ -69,7 +69,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(pyproject::no_versions),
         help("Make sure [project.version] or [tool.poetry.version] is set."),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+        url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
     )]
     NoVersions(PathBuf),
     #[error(transparent)]

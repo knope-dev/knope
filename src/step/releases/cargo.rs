@@ -49,7 +49,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(cargo::deserialize),
         help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+        url("https://knope.tech/reference/config-file/packages/#cargotoml")
     )]
     Deserialize {
         path: PathBuf,

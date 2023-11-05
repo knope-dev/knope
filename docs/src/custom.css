@@ -1,0 +1,41 @@
+/* Dark mode colors. */
+:root {
+  --sl-color-accent-low: #321343;
+  --sl-color-accent: #9900d5;
+  --sl-color-accent-high: #dbb8f4;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #f2e9fd;
+  --sl-color-gray-2: #c7bdd5;
+  --sl-color-gray-3: #9581ae;
+  --sl-color-gray-4: #614e78;
+  --sl-color-gray-5: #412e55;
+  --sl-color-gray-6: #2f1c42;
+  --sl-color-black: #1c1425;
+  --light-codeblocks-display: none;
+  --dark-codeblocks-display: block;
+}
+/* Light mode colors. */
+:root[data-theme="light"] {
+  --sl-color-accent-low: #e5cbf8;
+  --sl-color-accent: #9b00d8;
+  --sl-color-accent-high: #481263;
+  --sl-color-white: #1c1425;
+  --sl-color-gray-1: #2f1c42;
+  --sl-color-gray-2: #412e55;
+  --sl-color-gray-3: #614e78;
+  --sl-color-gray-4: #9581ae;
+  --sl-color-gray-5: #c7bdd5;
+  --sl-color-gray-6: #f2e9fd;
+  --sl-color-gray-7: #f8f4fe;
+  --sl-color-black: #ffffff;
+  --light-codeblocks-display: block;
+  --dark-codeblocks-display: none;
+}
+
+.ec-theme-github-dark {
+  display: var(--dark-codeblocks-display) !important;
+}
+
+.ec-theme-github-light {
+  display: var(--light-codeblocks-display) !important;
+}

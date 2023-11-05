@@ -1,6 +1,6 @@
 Error:   × Problem with workflow release
 
-Error: cargo::deserialize (https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning)
+Error: cargo::deserialize (https://knope.tech/reference/config-file/packages/#cargotoml)
 
   × Error deserializing Cargo.toml: TOML parse error at line 1, column 1
   │   |

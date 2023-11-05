@@ -226,7 +226,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(semver::inconsistent_versions),
         help("Manually update all versioned_files to have the correct version"),
-        url("https://knope-dev.github.io/knope/config/step/BumpVersion.html")
+        url("https://knope.tech/reference/concepts/package/#version")
     )]
     InconsistentVersions {
         first_version: String,
@@ -253,7 +253,7 @@ pub(crate) enum Error {
         "The pre-release component of a version must be in the format of `-<label>.N` \
                     where <label> is a string and `N` is an integer"
     ),
-    url("https://knope-dev.github.io/knope/config/step/BumpVersion.html#pre")
+    url("https://knope.tech/reference/concepts/semantic-versioning/#types-of-releases")
 )]
 pub(crate) struct InvalidPreReleaseVersion(String);
 

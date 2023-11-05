@@ -12,7 +12,7 @@ use crate::{
 
 /// Describes a value that can replace an arbitrary string in certain steps.
 ///
-/// <https://knope-dev.github.io/knope/config/variables.html/>
+/// <https://knope.tech/reference/config-file/variables//>
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub(crate) enum Variable {
     /// The version of the package, if only a single package is configured (error if multiple).
@@ -132,13 +132,13 @@ pub(crate) enum Error {
     #[error("Could not determine the current version of the package")]
     #[diagnostic(
         code(variables::no_current_version),
-        url("https://knope-dev.github.io/knope/config/variables.html#version")
+        url("https://knope.tech/reference/concepts/package#version")
     )]
     NoCurrentVersion,
     #[error("Could not find a changelog entry for version {0}")]
     #[diagnostic(
         code(variables::no_changelog_entry),
-        url("https://knope-dev.github.io/knope/config/variables.html#changelogentry")
+        url("https://knope.tech/reference/concepts/changelog/#versions")
     )]
     NoChangelogEntry(Version),
     #[error("No issue selected")]

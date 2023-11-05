@@ -54,7 +54,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(package_json::deserialize),
         help("knope expects the package.json file to be an object with a top level `version` property"),
-        url("https://knope-dev.github.io/knope/config/packages.html#supported-formats-for-versioning")
+        url("https://knope.tech/reference/config-file/packages/#packagejson")
     )]
     Deserialize {
         path: PathBuf,

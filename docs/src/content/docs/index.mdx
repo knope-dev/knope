@@ -1,0 +1,37 @@
+---
+title: Knope
+description: Automate tedious developer tasks
+template: splash
+hero:
+  tagline: Automate tedious tasks, in CI or as a CLI
+  image:
+    file: ../../assets/favicon.webp
+  actions:
+    - text: Get started
+      link: /tutorials/releasing-basic-projects
+      icon: right-arrow
+      variant: primary
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Knope can...
+
+<CardGrid stagger>
+  <Card title="Write changelogs for you" icon="pen">
+    No more reading commit messages every time you release. Document important
+    changes as you make them and let Knope handle the rest.
+  </Card>
+  <Card title="Create GitHub PRs and Releases" icon="github">
+    Keep an update-to-date preview of the next version in a pull request. Merge
+    it to release.
+  </Card>
+  <Card title="Update your semantic version" icon="rocket">
+    Decribe what changed with changesets and conventional commits. Knope
+    organizes those changes and picks the correct version for you.
+  </Card>
+  <Card title="Fit your workflow" icon="puzzle">
+    You don't _need_ to customize or configure anything, but you _can_ tune
+    Knope to be perfect for your project.
+  </Card>
+</CardGrid>
