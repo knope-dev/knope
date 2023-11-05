@@ -8,6 +8,6 @@ used both to determine the next version of your project and to generate a change
 Change files are located in the `.changeset` directory, the complete collection of those files is called a [changeset](/reference/concepts/changeset).
 
 You can create a change file with the [`CreateChangeFile`] step.
-More info about the change file format can be found in the [changsets docs](https://github.com/knope-dev/changesets).
+More info about the change file format can be found in the [changesets docs](https://github.com/knope-dev/changesets).
 
 [`CreateChangeFile`]: /reference/config-file/steps/create-change-file
