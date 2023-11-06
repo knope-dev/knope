@@ -35,9 +35,9 @@ The reasons this can fail:
 [packages section]: /reference/config-file/packages
 [`release`]: /reference/config-file/steps/release
 [conventional commits]: /reference/concepts/conventional-commits
-[changesets]: /reference/concepts/changesets
+[changesets]: /reference/concepts/changeset
 [`CreateChangeFile`]: /reference/config-file/steps/create-change-file
-[pre-release version]: /reference/concepts/semantic-versioning#release-types
+[pre-release version]: /reference/concepts/semantic-versioning#types-of-releases
 [`--prerelease-label` command line argument]: /reference/command-line-arguments#--prerelease-label
 [`--override-version` command line argument]: /reference/command-line-arguments#--override-version
-[changelog files]: /reference/concepts/changelogs
+[changelog files]: /reference/concepts/changelog

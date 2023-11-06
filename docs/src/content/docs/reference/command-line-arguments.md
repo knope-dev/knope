@@ -55,7 +55,7 @@ Can only be used with workflows that contain the [`PrepareRelease`] step (like t
 You can also set this with the [`KNOPE_PRERELEASE_LABEL`](/reference/environment-variables#knope_prerelease_label) environment variable.
 This option takes precedence over that.
 
-### `override-version`
+### `--override-version`
 
 Manually set a version for all [`BumpVersion`] and [`PrepareRelease`] steps instead of using semantic rules.
 Can only be used with workflows that contain one of those steps, like the built in `release` workflow.
@@ -69,5 +69,5 @@ For example, `--override-version first-package=1.0.0 --override-version second-p
 will set the version of `first-package` to 1.0.0 and `second-package` to 2.0.0,
 producing an error if either of those packages is not configured.
 
-[`BumpVersion`]: /reference/steps/bump-version
-[`PrepareRelease`]: /reference/steps/prepare-release
+[`BumpVersion`]: /reference/config-file/steps/bump-version
+[`PrepareRelease`]: /reference/config-file/steps/prepare-release
