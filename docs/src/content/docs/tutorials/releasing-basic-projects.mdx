@@ -242,6 +242,7 @@ knope release --dry-run
 
 <details>
     <summary>Example output from Knope</summary>
+
 ```text {16-18,36-38}
 Would delete: .changeset/add_calzones.md
 Would add the following to package.json: 1.1.0
@@ -283,7 +284,8 @@ In addition to building Pizzas, you can now build calzones! Just use the new `--
 
 ### No longer crashes when you add pineapple
 
-````
+```
+
 </details>
 
 Uh oh, our fix from the _last_ version is being included again!
@@ -293,10 +295,11 @@ The release was created on GitHub, but we don't have that tag locally! Let's fix
 ```sh
 git pull --tags
 knope release --dry-run
-````
+```
 
 <details>
     <summary>Example output from Knope</summary>
+
 ```text
 Would delete: .changeset/add_calzones.md
 Would add the following to package.json: 1.1.0
@@ -329,8 +332,7 @@ Would create a release on GitHub with name 1.1.0 (2023-11-02) and tag v1.1.0 and
 In addition to building Pizzas, you can now build calzones! Just use the new `--calzone` option!
 
 > Pizza? Never heard of it. That's what people will be saying in 20 years, because pizza is old news. Pizza is your grandfather's calzone.
-
-    ```
+```
 
 </details>
 
