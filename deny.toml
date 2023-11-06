@@ -169,7 +169,7 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "redox_syscall", version = "0.2", depth = 10 }, # Needed for platform-dirs and everything I can find that replaces it. Also not included in any prebuilt bins so... 🤷🏻
+  { name = "bitflags", version = "1", depth = 1 }, # crossterm, inquire, redox_syscall, etc. all use this
 ]
 
 # This section is considered when running `cargo deny check sources`.
