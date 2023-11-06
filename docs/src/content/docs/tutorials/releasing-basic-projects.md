@@ -139,7 +139,7 @@ If we run the `release` workflow again without the `--dry-run` option, Knope wil
 
 ```sh
 knope release
-````
+```
 
 ```
 ? No GitHub token found, generate one from https://github.com/settings/tokens with `repo` permissions and input here
