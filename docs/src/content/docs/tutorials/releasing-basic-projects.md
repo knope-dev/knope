@@ -96,7 +96,8 @@ knope release --dry-run
 
 <details>
     <summary>Example output from Knope</summary>
-```
+
+```text
 Would add the following to package.json: 1.0.1
 Would add the following to CHANGELOG.md:
 ## 1.0.1 (2023-11-01)
@@ -115,7 +116,8 @@ Would create a release on GitHub with name 1.0.1 (2023-11-01) and tag v1.0.1 and
 
 ### No longer crashes when you add pineapple
 
-````
+```
+
 </details>
 
 :::tip
