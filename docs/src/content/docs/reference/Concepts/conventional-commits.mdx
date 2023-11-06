@@ -17,7 +17,7 @@ followed by an optional scope, then an optional exclamation point, then a colon,
 <type>[optional scope][!]: <summary>
 ```
 
-Any commit without a first line structured like the above is not a conventional commit.
+Any commit without a first line structured like that isn't a conventional commit.
 
 ### Examples of valid first lines
 
@@ -39,30 +39,31 @@ Any commit without a first line structured like the above is not a conventional 
 ### Special types
 
 If the `type` of the conventional commit is `feat`, the change is a minor change
-(for the purposes of [semantic versioning](/reference/concepts/semantic-versioning)) and the summary will be added to the "Features"
-section of the changelog.
-If the type is `fix`, the change is a patch change and the summary will be added to the "Fixes" section of the changelog.
+(for the purposes of [semantic versioning](/reference/concepts/semantic-versioning)).
+Knope will add the summary to the "Features" section of the changelog.
 
-Every other type is ignored, and will have no impact on the changelog or versioning.
-However, the commit will still be considered a conventional commit, so the footers will be checked.
+If the type is `fix`, the change is a patch change and Knope will add the summary to the "Fixes" section of the changelog.
+
+Knope ignores every other type, so they have no impact on the changelog or versioning.
+However, the commit is still a conventional commit, so the footers _could_ impact the changelog and version.
 
 ### Exclamation point
 
 If the first line of the commit has an exclamation point right before the colon,
-the commit is a major change and the summary will be added to the "Breaking changes"
-section of the changelog.
+the commit is a major change.
+Knope will add the summary to the "Breaking changes" section of the changelog.
 This is **regardless of the type of the commit**.
 
 ### Scopes
 
-A scope can be added immediately after the type within parentheses.
+A scope is any text immediately after the type within parentheses.
 The commit message `feat(parser): add a new feature` has a scope of `parser`.
-Scopes can be used to limit the impact of a change in multi-package repositories.
+Scopes limit the impact of a change in multi-package repositories.
 See the [releasing multiple packages tutorial](/tutorials/releasing-multiple-packages) for more information.
 
 ## The body
 
-After the first line, every line is considered part of the body _until_ the first footer is encountered. Knope ignores commit bodies.
+After the first line, every line is part of the body _until_ the first footer. Knope ignores commit bodies.
 
 ## Footers
 
@@ -70,11 +71,11 @@ A footer has the format `<key>: <value>`.
 You can have as many footers as you want, one per line.
 By default, Knope only checks for these footers:
 
-`BREAKING CHANGE`: If this footer is present, the major component of the next semantic version should be incremented.
-The `<value>` will be added to the "Breaking Changes" section of the changelog.
+`BREAKING CHANGE`: This footer represents a [major change].
+The `<value>` will be in the "Breaking Changes" section of the changelog.
 
-`Changelog-Note`: The `<value>` will be added to the "Notes" section of the changelog, for semantic versioning purposes
-this is considered a patch change.
+`Changelog-Note`: The `<value>` will be in the "Notes" section of the changelog, for semantic versioning purposes
+this is a patch change.
 
 You can also use custom footers to add info to custom changelog sections,
 see the [recipes on customizing the changelog](/recipes/customizing-changelogs) for more info.
@@ -92,15 +93,18 @@ BREAKING CHANGE: Another breaking change
 Changelog-Note: A note
 ```
 
-Here we have a `feat` type, with a scope of `parser`, and an exclamation point. There are two footers: `BREAKING CHANGE`
-with the value of "Another breaking change" and `Changelog-Note` with the value of "A note".
+This is a conventional commit with a type of `feat`, a scope of `parser`, and an exclamation point.
+There are two footers: `BREAKING CHANGE` with the value of "Another breaking change"
+and `Changelog-Note` with the value of "A note."
 
-Because of the exclamantion point, "Add a new feature" will be put in the "Breaking Changes" section of the changelog.
-If that exclamation point was not there, it would be put in the "Features" section of the changelog.
+Because of the exclamation point, "Add a new feature" will be in the "Breaking Changes" section of the changelog.
+If that exclamation point wasn't there, it would be in the "Features" section of the changelog.
 
 The `parser` scope will limit _all_ of these changes
-(including the footers) to packages which have a `parser` scope and packages which have _no_ scopes (equivalent to all).
+(including the footers) to packages which have a `parser` scope and packages which have _no_ scopes.
 
-The "Another breaking change" footer will be added to the "Breaking Changes" section of the changelog,
+The "Another breaking change" footer will be in the "Breaking Changes" section of the changelog,
 
 The "A note" footer will be added to the "Notes" section of the changelog.
+
+[major change]: /reference/concepts/semantic-versioning#major-changes

@@ -6,29 +6,30 @@ description: Automating releases for repositories with multiple packages
 Sometimes you have more than one package in a repository, commonly called a monorepo.
 This tutorial will show you how to:
 
-1. Create a Knope config file for multiple packages
+1. Create a Knope config file
 2. Document changes that only impact _some_ packages
 3. Document changes that impact _all_ packages
 
 :::tip
-A package is a collection of files with _one version_ that is released all at once.
-You can have multiple versioned files in a single package, for example,
-a `Cargo.toml` and a `pyproject.toml` for a package that is released to both crates.io and PyPI.
+A package is a collection of files with _one version_ that you will release together.
+You can have many versioned files in a single package,
+for example, you may release a package to both crates.io and PyPI using
+a `Cargo.toml` and a `pyproject.toml`.
 For this pattern, check out the [multiple versioned files recipe](/recipes/multiple-versioned-files).
 :::
 
 ## Prerequisites
 
 - [Git](https://git-scm.com/): The `git` CLI must be available in your terminal.
-  It is helpful if you know the basics of commits and tags.
-- A text editor: We'll be editing Markdown and TOML files. [Visual Studio Code](https://code.visualstudio.com/) is a good free choice.
+  It's helpful if you know the basics of commits and tags.
+- A text editor: You'll be editing Markdown and TOML files. [Visual Studio Code](https://code.visualstudio.com/) is a good free choice.
 - Familiarity with a command line terminal, like "Terminal" on macOS or "PowerShell" Windows
 - A [GitHub](https://github.com) account (you can use an alternative, but the results will be different)
 - [Install Knope](/installation)
 
 ## Create a new Git repo
 
-Let's start by creating a new directory, moving into it, and initializing a Git repository.
+Start by creating a new directory, moving into it, and initializing a Git repository.
 
 ```shell
 mkdir knope-tutorial
@@ -36,8 +37,8 @@ cd knope-tutorial
 git init
 ```
 
-We're also going to eventually need this repo on GitHub so we can see our releases,
-I'll do that with the [GitHub CLI](https://cli.github.com/):
+This repo will eventually need to be on GitHub so Knope can create releases for it.
+You can do that with the [GitHub CLI](https://cli.github.com/):
 
 ```shell
 gh repo create --private knope-tutorial --source .
@@ -45,13 +46,13 @@ gh repo create --private knope-tutorial --source .
 
 ## Create a Knope config file
 
-To have multiple packages, we need to create a [config file](/reference/Config File/packages):
+Knope requires a [config file](/reference/config-file/packages) to support multiple packages:
 
 ```shell
 knope --generate
 ```
 
-The default `knope.toml` file which was created is for a single package, but we want multiple packages.
+The default `knope.toml` file is for a single package, it has to be modified to support multiple packages.
 Open it up in your editor and remove the `[package]` section, then add three `[packages]` sections:
 
 ```toml title="knope.toml" del={1} ins={2-6}
@@ -65,9 +66,8 @@ Open it up in your editor and remove the `[package]` section, then add three `[p
 
 ## Set up the monorepo
 
-Each of our packages should have some versioned files, as well as a changelog.
-My favorite language is Rust, so I'm going to use `Cargo.toml` files,
-but Knope supports [many file formats](/reference/config-file/packages#versioned_files).
+Each package should have some versioned files and a changelog.
+ Knope supports [many file formats](/reference/config-file/packages#versioned_files), like `Cargo.toml` files:
 
 ```toml title="knope.toml" ins={2-3,6-7,10-11}
 [packages.pizza]
@@ -83,7 +83,7 @@ versioned_files = ["calzone/Cargo.toml"]
 changelog = "calzone/CHANGELOG.md"
 ```
 
-We need to actually create those files as well:
+Those files must exist as well:
 
 ```toml title="pizza/Cargo.toml"
 [package]
@@ -116,7 +116,7 @@ version = "0.14.2"
 # Calzone Changelog
 ```
 
-Let's commit this to give us a good starting point:
+Commit this to to serve as a baseline for the rest of the tutorial:
 
 ```shell
 git add .
@@ -125,7 +125,7 @@ git commit -m "Initial setup"
 
 ## Some monorepo limitations
 
-Let's see if we've done everything correctly, Knope will tell us if there are any problems with the config file:
+Knope will report any problems with the config file:
 
 ```shell
 knope --validate
@@ -144,9 +144,9 @@ Error: variables::too_many_packages
   help: The Version variable in a Command step can only be used with a single [package].
 ```
 
-It looks like we have a bit more work to do to convert this to a monorepo.
-Multi-package setups have some extra limitations at the time of writing, like you can't use the `Version` variable.
-Let's remove it:
+There's a bit more work to do to convert this to a monorepo.
+Multi-package setups have some extra limitations at the time of writing.
+For example, multi-package configs can't use the `Version` variable:
 
 ```toml title="knope.toml" del={4-6} del=" $version"
 [[workflows.steps]]
@@ -304,8 +304,8 @@ Would create Git tag pizza/v3.14.16
 Would create Git tag calzone/v0.14.3
 ```
 
-The packages are versioned independently, and their changelogs are updated independently.
-Because we didn't add any changes to `toppings`, nothing will happen to it.
+Knope updates the versions and changelogs of each package independently.
+Because there are no changes to `toppings`, nothing will happen to it.
 
 :::caution
 Note the Git tag format, it's `<package name>/v<version>`. This differs from the single-package format of `v<version>`.
@@ -313,16 +313,13 @@ Note the Git tag format, it's `<package name>/v<version>`. This differs from the
 
 ### Conventional commits
 
-While changesets are _designed_ for monorepos, conventional commits require a bit more care.
-Let's try to recreate the same change we did with changesets, but with conventional commits.
+Changesets work great for monorepos by default, but conventional commits require a bit more care.
+A basic conventional commit will apply to all packages:
 
 ```shell
-rm .changeset/the_cheese_is_now_distributed_more_evenly.md
-git commit --allow-empty -m "fix: The cheese is now distributed more evenly"
-```
-
-```shell
-knope release --dry-run
+rm .changeset/the_cheese_is_now_distributed_more_evenly.md  # Revert changeset
+git commit --allow-empty -m "fix: The cheese is now distributed more evenly"  # create basic conventional commit
+knope release --dry-run  # See what Knope would do with it
 ```
 
 ```text
@@ -365,8 +362,7 @@ Would create Git tag toppings/v1.209.1
 Would create Git tag calzone/v0.14.3
 ```
 
-By default, conventional commits are applied to _all_ packages.
-If we want to limit commits to specific packages, we can configure scopes in `knope.toml`:
+You can limit commits to _specific_ packages using scopes:
 
 ```toml title="knope.toml" ins={4,13}
 [packages.pizza]
@@ -384,18 +380,12 @@ changelog = "calzone/CHANGELOG.md"
 scopes = ["calzone"]
 ```
 
-Now, conventional commits which have the `pizza` scope will only be applied to the `pizza` package,
-and `calzone` commits will only be applied to the `calzone` package.
-Commits _without_ scopes (like the one we just committed) will still be applied to all packages,
+Now, conventional commits which have the `pizza` scope will only affect the `pizza` package,
+and `calzone` commits will only affect the `calzone` package.
+Commits _without_ scopes (like the one you just created) will still affect all packages,
 you can verify that with `knope release --dry-run` again.
 
-Let's undo that commit:
-
-```shell
-git reset HEAD~
-```
-
-We _could_ now recreate the change we did with changesets with _two_ commits:
+It's _possible_ to recreate the changeset results using _two_ commits:
 
 :::caution
 Don't do this, it's just for demonstration, there's a better way!
@@ -407,9 +397,9 @@ git commit --allow-empty -m "fix(calzone): The cheese is now distributed more ev
 
 :::
 
-But the _point_ of conventional commits is that we're documenting the changes made _within_ the commit,
-so it probably doesn't make sense to have two commits for the same change.
-Instead, we could create a new scope that impacts _both_ packages:
+But the _point_ of conventional commits is to document the changes made _within_ the commit,
+so one change should be in one commit, not two.
+It's better to have a new scope that impacts _both_ packages:
 
 ```toml title="knope.toml" ins={4,13}
 [packages.pizza]
@@ -427,9 +417,10 @@ changelog = "calzone/CHANGELOG.md"
 scopes = ["calzone", "pizza-and-calzone"]
 ```
 
-Now, we can create a single commit that impacts both `pizza` and `calzone`, but not `toppings`:
+Now a single commit can impact both `pizza` and `calzone`, without impacting `toppings`:
 
 ```shell
+git reset HEAD~  # undo the unscoped commit
 git commit --allow-empty -m "fix(pizza-and-calzone): The cheese is now distributed more evenly"
 ```
 
@@ -465,7 +456,7 @@ Would create Git tag pizza/v3.14.16
 Would create Git tag calzone/v0.14.3
 ```
 
-We get back exactly the same result as we did with changesets, but with a single commit.
+This is the same result as the changeset, but with a single commit message instead.
 
 :::tip
 Use conventional commits sparingly, for simple changes only.
@@ -474,9 +465,8 @@ Usually, a change that impacts multiple packages is worth documenting more thoro
 
 ## Adding GitHub releases
 
-We can see from the `--dry-run` that Knope will create Git tags for us,
-but we can go even further by integrating with GitHub.
-All we have to do is tell Knope about our GitHub repo:
+The `--dry-run` output shows that Knope will create Git tags,
+but Knope can also create GitHub releases with a little more config:
 
 ```toml title="knope.toml" ins={1-2}
 [github]
@@ -484,7 +474,7 @@ repo = "knope-tutorial"  # If you created the repo with a different name, use it
 owner = "dbanty"  # Replace this with your GitHub username
 ```
 
-Now, without changing the `release` workflow at all, we can see that Knope will create GitHub releases:
+Now, without changing the `release` workflow at all, Knope will create GitHub releases:
 
 ```text
 Would add the following to pizza/Cargo.toml: 3.14.16
@@ -525,15 +515,15 @@ The next step will save GitHub credentials to a file on your computer.
 If you don't want that, you can instead set the `GITHUB_TOKEN` environment variable to the token.
 :::
 
-Let's try it out for real:
+Time to try it out for real:
 
 ```shell
 knope release
 ```
 
-If you don't have a GitHub token set, you'll be prompted to create one and paste it into the terminal.
+If you don't have a GitHub token set, Knope will prompt you to create one and paste it into the terminal.
 Once you do, you'll see some output from Git.
-If there are no errors, your releases should be created!
+If there are no errors, your releases should exist!
 
 Open your repo in GitHub (you can use `gh repo view --web`), and click on "Releases" on the side.
 You should see something like this:

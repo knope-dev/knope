@@ -2,7 +2,10 @@ calzones
 changeset
 config
 Jira
-[Kk]nope
+Knope
 monorepo
 repo
 [Rr]ebase
+GitHub
+GitHub Actions
+musl
