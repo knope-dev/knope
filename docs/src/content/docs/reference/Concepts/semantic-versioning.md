@@ -54,7 +54,7 @@ You indicate a pre-release by appending two extra components to a semantic versi
 `<major>.<minor>.<patch>-<label>.<number>`.
 The `label` indicates which kind of pre-release this is,
 you might use `alpha` and `beta` to indicate different stages of testing (and level of stability).
-The `number` differentiates between multiple pre-releases with the same version and label.
+The `number` differentiates between pre-releases with the same version and label.
 
 Knope determines the version of a pre-release by looking at all changes since the last **final** release.
 So, if you have made a patch change since `1.2.3` and want to release an `alpha` pre-release,
