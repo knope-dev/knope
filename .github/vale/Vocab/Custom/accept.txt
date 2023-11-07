@@ -9,3 +9,4 @@ repo
 GitHub
 GitHub Actions
 musl
+TOML

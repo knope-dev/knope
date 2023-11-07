@@ -92,6 +92,7 @@ swap:
   methodology: method
   modify: change
   monitor: check|watch
+  multiple: many
   necessitate: cause
   notify: tell
   numerous: many

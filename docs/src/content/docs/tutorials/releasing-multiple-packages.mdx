@@ -52,7 +52,7 @@ Knope requires a [config file](/reference/config-file/packages) to support multi
 knope --generate
 ```
 
-The default `knope.toml` file is for a single package, it has to be modified to support multiple packages.
+The default `knope.toml` file is for a single package, it needs some tweaks to support multiple packages.
 Open it up in your editor and remove the `[package]` section, then add three `[packages]` sections:
 
 ```toml title="knope.toml" del={1} ins={2-6}
@@ -67,7 +67,7 @@ Open it up in your editor and remove the `[package]` section, then add three `[p
 ## Set up the monorepo
 
 Each package should have some versioned files and a changelog.
- Knope supports [many file formats](/reference/config-file/packages#versioned_files), like `Cargo.toml` files:
+Knope supports [many file formats](/reference/config-file/packages#versioned_files), like `Cargo.toml` files:
 
 ```toml title="knope.toml" ins={2-3,6-7,10-11}
 [packages.pizza]
@@ -116,7 +116,7 @@ version = "0.14.2"
 # Calzone Changelog
 ```
 
-Commit this to to serve as a baseline for the rest of the tutorial:
+Commit this to serve as a baseline for the rest of the tutorial:
 
 ```shell
 git add .
@@ -165,6 +165,7 @@ If everything is correct, you'll see no output.
 
 <details>
 <summary>Full `knope.toml` at this stage</summary>
+
 ```toml title="knope.toml"
 [packages.pizza]
 versioned_files = ["pizza/Cargo.toml"]
@@ -197,27 +198,27 @@ name = "document-change"
 [[workflows.steps]]
 type = "CreateChangeFile"
 
-````
+```
+
 </details>
 
 ## Documenting changes
 
 As with a single package,
-we can document changes
-using either [changesets](/reference/concepts/changeset) or [conventional commits](/reference/concepts/conventional-commits).
-Let's start with changesets.
+you can document changes
+with either [changesets](/reference/concepts/changeset) or [conventional commits](/reference/concepts/conventional-commits).
 
 ### Changesets
 
 ```shell
 knope document-change
-````
+```
 
 :::tip
 That `document-change` command comes from the workflow in `knope.toml` with the same name, go check it out!
 :::
 
-You'll be prompted to select which packages the change impacts:
+Knope will ask which packages the change impacts:
 
 ```text
 ? Which packages does this change affect?
@@ -227,7 +228,7 @@ You'll be prompted to select which packages the change impacts:
 [↑↓ to move, space to select one, → to all, ← to none, type to filter]
 ```
 
-Let's use the arrow keys and space bar to select `pizza` and `calzone`, then press enter.
+Use the arrow keys and space bar to select `pizza` and `calzone`, then press enter.
 Next, select `patch` as the change type for each (they're in order):
 
 ```text
@@ -240,7 +241,7 @@ Next, select `patch` as the change type for each (they're in order):
 [↑↓ to move, enter to select, type to filter]
 ```
 
-Finally, we summarize the change:
+Finally, summarize the change:
 
 ```text
 > Which packages does this change affect? pizza, calzone
@@ -262,9 +263,9 @@ pizza: patch
 ```
 
 It includes the name of each package that the change impacts,
-the type of change for each of those packages, and the summary we input.
+the type of change for each of those packages, and the summary.
 At this point,
-we could add as much Markdown as we want to the bottom of the file to describe the change more fully.
+you could add as much Markdown as you want to the bottom of the file to describe the change more fully.
 
 Let's take a look at what sort of releases this will create:
 
