@@ -6,7 +6,6 @@ import starlightLinksValidator from "starlight-links-validator";
 
 /** @type {import('astro-expressive-code').AstroExpressiveCodeOptions} */
 const expressiveCodeOptions = {
-  // Example: Change the theme to "dracula"
   theme: ["github-light", "github-dark"],
   frames: {
     removeCommentsWhenCopyingTerminalFrames: true,

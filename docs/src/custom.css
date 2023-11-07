@@ -11,8 +11,6 @@
   --sl-color-gray-5: #412e55;
   --sl-color-gray-6: #2f1c42;
   --sl-color-black: #1c1425;
-  --light-codeblocks-display: none;
-  --dark-codeblocks-display: block;
 }
 /* Light mode colors. */
 :root[data-theme="light"] {
@@ -28,14 +26,4 @@
   --sl-color-gray-6: #f2e9fd;
   --sl-color-gray-7: #f8f4fe;
   --sl-color-black: #ffffff;
-  --light-codeblocks-display: block;
-  --dark-codeblocks-display: none;
-}
-
-.ec-theme-github-dark {
-  display: var(--dark-codeblocks-display) !important;
-}
-
-.ec-theme-github-light {
-  display: var(--light-codeblocks-display) !important;
 }
