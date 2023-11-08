@@ -2,7 +2,7 @@
 title: Packages
 ---
 
-A package is a set of files that are released together with the same version.
+A package is a set of files that Knope releases together with the same version.
 Knope can increase this version based on changes that affect the package.
 
 A project can either consist of a single package:
@@ -25,12 +25,13 @@ Or multiple packages:
 ## `versioned_files`
 
 The files within a package that contain the current version.
-This is defined as an array of strings, each of which is a file relative to the `knope.toml` file.
+This is an array of strings, each of which is a file path relative to the `knope.toml` file.
 Each file must have the same version number as all the other files.
 
-The type of the file is determined by its name (independent of its path), so `blah/Cargo.toml` is a `Cargo.toml` file.
+Knope determines the type of the file using its name (independent of its path),
+so `blah/Cargo.toml` is a `Cargo.toml` file.
 
-The following file names are supported:
+Knope supports the following file names:
 
 ### `Cargo.toml`
 
@@ -45,7 +46,7 @@ version = "1.0.0"
 
 For Python projects using [PEP-621](https://peps.python.org/pep-0621/) or [Poetry](https://python-poetry.org).
 Must contain either a `[project.version]` or `[tool.poetry.version]` value, respectively.
-If it contains both values, they must be identical.
+If it has both values, they must be the same.
 
 ```toml title="pyproject.toml"
 [project]  # PEP-621
@@ -71,7 +72,7 @@ For Go projects using [modules](https://go.dev/ref/mod).
 Must contain a module line
 which must end in the major version for any greater than 1. Can optionally contain a comment
 containing the _full_ version.
-If this comment is not present, the latest matching Git tag is used to determine the version.
+If this comment isn't present, Knope uses the latest matching Git tag to find the version.
 
 ```text title="go.mod"
 module github.com/knope-dev/knope // v0.0.1
@@ -92,8 +93,8 @@ changelog = "CHANGELOG.md"
 
 ## `scopes`
 
-An array of string of conventional commit scopes that should be considered for the package.
-If not defined, _all_ scopes will be considered.
+An array of conventional commit scopes that Knope should consider for the package.
+If not defined, Knope will consider _all_ scopes.
 Commits with no scope are always considered.
 
 ```toml title="knope.toml"
@@ -106,8 +107,8 @@ scopes = ["changesets", "all"]
 
 ## `extra_changelog_sections`
 
-An array of objects defining additional sections to be added to the changelog (or overrides for the default sections).
-Each object can optionally have an array of `footers` and/or an array of `types`.
+An array of objects defining more sections for the changelog (or overrides for the default sections).
+Each object can optionally have an array of `footers` or an array of `types`.
 
 :::tip
 Check out the [custom changelogs recipe](/recipes/customizing-changelogs) for a full example of how to use this feature.
@@ -124,7 +125,7 @@ extra_changelog_sections = [
 
 Assets is a list of files to upload to a GitHub release. They do nothing without [GitHub configuration](../github).
 Assets are per-package. Each asset can optionally have a `name`, this is what it will appear as in GitHub releases.
-If `name` is omitted, the final component of the path will be used.
+The `name` defaults to the final part of the path.
 
 ```toml
 [package]

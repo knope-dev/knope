@@ -10,7 +10,7 @@ In Knope, releasing a package consists of:
 2. Update all versioned files with the new version
 3. Add the details of all changes since the last release to the [changelog]
 4. Create a [Git tag](#git-tags)
-5. Optionally create a GitHub release (this is combined with the previous step) if [GitHub is configured](/reference/config-file/github)
+5. Optionally create a GitHub release (as part of the previous step) if [GitHub is configured](/reference/config-file/github)
 
 :::tip
 
@@ -18,7 +18,7 @@ This is how the [built-in release workflow](/reference/default-workflows) works.
 
 :::
 
-## Git Tags
+## Git tags
 
 When there is a single package, each release gets a Git tag that looks like `v1.2.3`.
 When there are multiple packages, each release gets a Git tag that looks like `package_name/v1.2.3`.
@@ -27,7 +27,15 @@ When there are multiple packages, each release gets a Git tag that looks like `p
 
 **A note on Go modules**
 
-Knope does its best to place nicely with Go's requirements for tagging module releases, however there are cases where Knope's tagging requirements will conflict with Go's tagging requirements. In particular, if you have a package named `blah` which does _not_ contain the `blah/go.mod` file, and a package named `something_else` which contains the `blah/go.mod` file, then both packages are going to get the `blah/v{Version}` tags, causing runtime errors during this step. If you have named packages, it's important to ensure that _either_:
+Knope does its best to cooperate with Go's requirements for tagging module releases,
+however, there are cases where Knope's tagging requirements will conflict with Go's tagging requirements.
+
+For example, if you have a package named `blah` which does _not_ contain the `blah/go.mod` file,
+and a package named `something_else` which does contain the `blah/go.mod` file,
+then both packages are going to get the `blah/v{Version}` tags,
+causing runtime errors during this step.
+
+If you have named packages, it's important that _either_:
 
 1. No package names match the name of a go module
 2. All packages with the same name as a go module contain the `go.mod` file for that module
