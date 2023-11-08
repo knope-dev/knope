@@ -27,16 +27,16 @@ Some details about how versioning works, how to read the changelog, etc.
 You can [customize your changelogs in a number of ways](/recipes/customizing-changelogs).
 :::
 
-Changelogs are composed of a number of parts:
+Changelogs have a number of parts:
 
-## Title (Optional)
+## Title (optional)
 
 Most, but not all Markdown files start with a title. This should probably be `# Changelog` or `# My Package Changelog`.
 
-## Introduction (Optional)
+## Introduction (optional)
 
 It's a good idea to explain to your consumers how changes work for this package.
-At a minimum, describe what is considered a breaking change for _your_ package,
+At a minimum, describe what's considered a breaking change for _your_ package,
 as this looks different for different packages.
 
 ## Versions
@@ -48,7 +48,7 @@ Each version starts with a heading (default level 2, `##`) with the version numb
 ```
 
 Following the version heading, there is at least one section heading (one level below the version heading) grouping changes by type,
-for example "Breaking changes" or "Features".
+for example "Breaking changes" or "Features."
 
 ```markdown
 ### Breaking changes
@@ -78,7 +78,7 @@ This is a description of the breaking change.
 #### Another fix
 ```
 
-Versions are sorted from newest to oldest,
+Knope sorts versions from newest to oldest,
 so the most recent version is near the top of the changelog right after the optional title and introduction.
 
 [package]: /reference/concepts/package

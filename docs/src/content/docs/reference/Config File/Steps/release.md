@@ -2,47 +2,61 @@
 title: Release
 ---
 
-Release the configured [packages] which need to be released. If there is a [GitHub config] set, this creates a release on GitHub with the same release notes that were added to the changelog (if any). Otherwise, this tags the current commit as a release. In either case, a new Git tag will be created with the package's tag format. You should run [`PrepareRelease`] before this step, though not necessarily in the same workflow. [`PrepareRelease`] will update the package versions without creating a release tag. `Release` will create releases for any packages whose current versions do not match their latest release tag.
+Release the configured [packages] which have pending changes.
+If there is a [GitHub config] set,
+this creates a release on GitHub with the same release notes that it added to the changelog (if any).
+Otherwise, this tags the current commit as a release.
+In either case, this step adds a new Git tag with the package's tag format.
+You should run [`PrepareRelease`] before this step, though not necessarily in the same workflow.
+[`PrepareRelease`] will update the package versions without creating a release tag.
+`Release` will create releases for any packages whose current versions don't match their latest release tag.
 
-## Tagging Format
+## Tagging format
 
-Whenever this step is run, it will tag the current commit with the new version for each package. If only one package is defined (via the `[package]` section in `knope.toml`), this tag will be v{version} (e.g., v1.0.0 or v1.2.3-rc.4).
+This step tags the current commit with the new version for each package.
+If the config file is using the single `[package]` syntax,
+or there is no config file, this tag will be v{version} (for example v1.0.0 or v1.2.3-rc.4).
 
-If multiple packages are defined, each package gets its own tag in the format {package_name}/v{version} (this is the syntax required for Go modules). See examples below for more illustration.
+If the config file is using the `[packages.{name}]` syntax,
+each package gets its own tag in the format `{name}/v{version}` (this is the syntax required for Go modules).
+See examples below for more illustration.
 
-## GitHub Release Notes
+## GitHub release notes
 
-There are several different possible release notes formats, depending on how this step is used:
+There are several different possible release notes formats:
 
-1. If run after a [`PrepareRelease`] step in the same workflow, the release notes will be the same as the changelog section created by [`PrepareRelease`] even if there is no changelog file configured—with the exception that headers are reduced by one level (for example, `####` becomes `###`).
-2. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is a changelog file for the package, the release notes will be taken from the relevant changelog section. This section header must match exactly what [`PrepareRelease`] would have created. Headers will be reduced by one level (for example, `####` becomes `###`).
-3. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is no changelog file for the package, the release will be created using GitHub's automatic release notes generation.
+1. If run after a [`PrepareRelease`] step in the same workflow, the release notes will be the same as the changelog section created by [`PrepareRelease`] even if there is no changelog file configured—with the exception that headers are one level higher (for example, `####` becomes `###`).
+2. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is a changelog file for the package, the release notes will be taken from the relevant changelog section. This section header must match exactly what [`PrepareRelease`] would have created. Headers will one level higher (for example, `####` becomes `###`).
+3. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is no changelog file for the package, the step will use GitHub's automatic release notes generation.
 
-## GitHub Release Assets
+## GitHub release assets
 
-You can optionally include any number of assets which should be uploaded to a freshly-created release via [package assets]. If you do this, the following steps are taken:
+You can optionally include any number of assets to include in a release via [package assets].
+If you do this, this step will:
 
 1. Create the release in draft mode
 2. Upload the assets one at a time
 3. Update the release to no longer be a draft (published)
 
-If you have any follow-up workflows triggered by GitHub releases, you can use `on: release: created` to run as soon as the draft is created (without assets) or `on: release: published` to run only after the assets are done uploading.
+If you have any follow-up workflows triggered by GitHub releases,
+you can use `on: release: created` to run as soon as the step creates the draft
+(without assets) or `on: release: published` to run only after the assets are uploaded.
 
 ## Errors
 
 This step will fail if:
 
-1. [GitHub config] is set but Knope cannot create a release on GitHub. For example:
+1. [GitHub config] exists but Knope can't create a release on GitHub. For example:
    1. There is no GitHub token set.
-   2. The GitHub token does not have permission to create releases.
+   2. The GitHub token doesn't have permission to create releases.
    3. The release already exists on GitHub (causing a conflict).
-2. There is no [GitHub config] set and Knope cannot tag the current commit as a release.
+2. There is no [GitHub config] set and Knope can't tag the current commit as a release.
 3. Could not find the correct changelog section in the configured changelog file for loading release notes.
-4. One of the configured package assets does not exist.
+4. One of the configured package assets doesn't exist.
 
 ## Examples
 
-### Create a GitHub Release for One Package
+### Create a GitHub release for one package
 
 Here's a simplified version of the release workflow used for Knope.
 
@@ -78,11 +92,11 @@ owner = "knope-dev"
 repo = "knope"
 ```
 
-If `PrepareRelease` set the new version to "1.2.3", then a GitHub release would be created called "1.2.3" with the tag "v1.2.3".
+If `PrepareRelease` set the new version to "1.2.3" then a GitHub release would be created called "1.2.3" with the tag "v1.2.3".
 
-### Git-only Release for One Package
+### Git-only release for one package
 
-Here's what Knope's config might look like if it were not using GitHub releases:
+Here's what Knope's config might look like if it weren't using GitHub releases:
 
 ```toml
 [package]
@@ -114,7 +128,7 @@ command = "git push && git push --tags"
 
 If `PrepareRelease` set the new version to "1.2.3", then a Git tag would be created called "v1.2.3".
 
-### Create GitHub Releases for Multiple Packages
+### Create GitHub releases for multiple packages
 
 ```toml
 [packages.Knope]
@@ -156,7 +170,7 @@ If `PrepareRelease` set the new version of the `knope` package to "1.2.3" and `k
 1. "knope 1.2.3" with tag "knope/v1.2.3"
 2. "knope-utils 0.4.5" with tag "knope-utils/v0.4.5"
 
-### Create a GitHub Release with Assets
+### Create a GitHub release with assets
 
 See [Knope's release workflow] and [knope.toml] where we:
 
