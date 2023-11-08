@@ -2,14 +2,9 @@
   "extends": [
     "config:base",
     ":semanticCommitTypeAll(chore)",
-    "github>Turbo87/renovate-config//rust/updateToolchain"
+    "github>Turbo87/renovate-config//rust/updateToolchain",
+    ":automergeStableNonMajor"
   ],
   "platformAutomerge": true,
-  "lockFileMaintenance": { "enabled": true },
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true
-    }
-  ]
+  "lockFileMaintenance": { "enabled": true }
 }
