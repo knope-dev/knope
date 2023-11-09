@@ -9,4 +9,4 @@ That argument takes precedence over this environment variable.
 
 ## `GITHUB_TOKEN`
 
-Sets a token to be used for any GitHub API calls. If set, users will not be prompted for tokens.
+Sets a token for any GitHub API calls. If set, Knope won't prompt for tokens.
