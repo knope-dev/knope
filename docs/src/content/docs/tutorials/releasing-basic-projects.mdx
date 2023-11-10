@@ -20,8 +20,8 @@ The [monorepo tutorial](/tutorials/releasing-multiple-packages) covers automatin
 ## Prerequisites
 
 - [Git](https://git-scm.com/): The `git` CLI must be available in your terminal.
-  It is helpful if you know the basics of commits and tags.
-- A text editor: We'll be editing Markdown and JSON files. [Visual Studio Code](https://code.visualstudio.com/) is a good free choice.
+  It's helpful if you know the basics of commits and tags.
+- A text editor: for editing Markdown and JSON files. [Visual Studio Code](https://code.visualstudio.com/) is a good free choice.
 - Familiarity with a command line terminal, like "Terminal" on macOS or "PowerShell" Windows
 - A [GitHub](https://github.com) account (you can use an alternative, but the results will be different)
 - [Install Knope](/installation)
@@ -56,19 +56,16 @@ This is where the changes in each release are documented.
 }
 ```
 
-We're simulating a JavaScript package—in a real package you'd have a lot more info in your `package.json` file,
+This is simulating a JavaScript package—in a real package you'd have a lot more info in your `package.json` file,
 but `version` is all that Knope needs.
-Our package is starting at version `1.0.0`,
-as we make changes, the version will increase depending on the type of change.
+This package is starting at version `1.0.0`,
+as you make changes, the version will increase depending on the type of change.
 
 :::note
 Knope supports [many package formats for many languages](../reference/config/versioned_files).
 :::
 
-Before we start making changes, we need somewhere to keep our releases.
-Let's create a GitHub repository.
-We're going to use the [GitHub CLI](https://cli.github.com/),
-but if you have another method you prefer, feel free to use that instead.
+Knope needs a GitHub repository to publish releases. You can create one with the [GitHub CLI](https://cli.github.com/).
 
 ```sh
 gh repo create --private knope-tutorial --source .
@@ -76,13 +73,13 @@ gh repo create --private knope-tutorial --source .
 
 ## Little changes
 
-Let's start by documenting a small change using a [conventional commit].
+Start by documenting a small change using a [conventional commit].
 
 ```sh
 git commit --allow-empty -m "fix: No longer crashes when you add pineapple"
 ```
 
-We've just documented a bug fix using a commit message!
+You've just documented a bug fix using a commit message!
 
 :::note
 In the real world, this commit would also include the relevant code changes.

@@ -2,13 +2,13 @@
 title: "Preview releases with pull requests"
 ---
 
-This recipe keeps an open pull request at all times previewing the changes the Knope will include in the next release. This pull request will let you see the next version, the changes to versioned files, and the changelog. When you merge that pull request, Knope will create a new release with the changes from the pull request.
+This recipe always keeps an open pull request whic previews the changes the Knope will include in the next release. This pull request will let you see the next version, the changes to versioned files, and the changelog. When you merge that pull request, Knope will create a new release with the changes from the pull request.
 
-This is the recipe that Knope uses for its own releases (at the time of writing), so let's walk through the two GitHub Actions workflows and the `knope.toml` that make it work.
+This recipe requires a custom `knope.toml` file and two GitHub Actions workflows.
 
 ## `knope.toml`
 
-We're going to walk through this in pieces for easier explanation, but all of these TOML snippets exist in the same file.
+Each section below is separate for easier explanation, but all these TOML snippets exist in the same file.
 
 ### `[package]`
 
@@ -18,10 +18,14 @@ versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 ```
 
-This first piece defines the package, `Cargo.toml` is both the source of the current version of the package and a place we'd like to place new version numbers. You can add more `versioned_files` (for example, if you also released this as a Python package with `pyproject.toml`). `CHANGELOG.md` is where we want to document changes in the source code—this is in _addition_ to GitHub releases.
+This first piece defines the package.
+`Cargo.toml` is both the source of the package's current version and a place that Knope should put new version numbers. 
+You can add more `versioned_files` (for example, if you also released this as a Python package with `pyproject.toml`). 
+`CHANGELOG.md` is where Knope should describe changes in the source code—this is in _addition_ to GitHub releases.
 
 :::caution
-You cannot use this recipe right now with multiple packages due to limitations on [variables]. Instead, you can check out the [workflow dispatch recipe].
+You can't use this recipe as-is with multiple packages due to limitations on [variables].
+You'll either need to change any references to those variables or use the [workflow dispatch recipe].
 :::
 
 ### `[[package.assets]]`
@@ -40,7 +44,7 @@ path = "artifact/knope-x86_64-apple-darwin.tgz"
 path = "artifact/knope-aarch64-apple-darwin.tgz"
 ```
 
-`package.assets` let us define a list of files to upload to GitHub releases. You can also upload them under a different name if you don't want to use the file name by setting `name` in the asset definition.
+`package.assets` defines a list of files to upload to GitHub releases. You can also upload them under a different name if you don't want to use the file name by setting `name` in the asset definition.
 
 ### `prepare-release` workflow
 
@@ -75,28 +79,33 @@ template = "This PR was created by Knope. Merging it will create a new release\n
 variables = { "$changelog" = "ChangelogEntry" }
 ```
 
-The first workflow is called `prepare-release`, so it can be executed by running `knope prepare-release` (as we'll see later in the GitHub Actions workflow). First, it creates a new branch from the current one called `release`, then it runs the [`PrepareRelease`] step which updates our package based on the changes that have been made since the last release. It also stages all of those changes with Git (like `git add`).
+The first workflow has a `name` of `prepare-release`,
+so `knope prepare-release` will execute it (the GitHub Actions workflow will contain this command).
+First, it creates a new branch from the current one called `release`.
+Next, it runs the [`PrepareRelease`] step, which updates the package based on the changes made since the last release.
+It also stages all those changes with Git (like `git add`).
 
-Next, we commit the changes that [`PrepareRelease`] made—things like:
+Next, the workflow commits the changes that [`PrepareRelease`] made—things like:
 
 - Updating the version in `Cargo.toml`
 - Adding a new section to `CHANGELOG.md` with the latest release notes
-- Deleting any changesets that have been processed
+- Deleting any changesets
 
-This commit is pushed to the `release` branch,
-using the `--force` flag in this case because we don't care about the history of that branch,
-only the very next release.
+The workflow then pushes the commit to the `release` branch,
+using the `--force` flag in this case because the history of that branch isn't important.
+
+:::tip
+You could use a variable to name the branch based on the version instead of erasing earlier versions.
+:::
+
 The [`CreatePullRequest`] step then creates a pull request from the current branch
-(`release`) to the specified base branch
-(`main`).
-We can set the title and body of this pull request using string templates containing [variables].
-In this case, the title contains the new `Version` and the body contains the new `ChangelogEntry`.
+(`release`) to the specified base branch (`main`).
+It uses string templates containing [variables] to set the title and body,
+in this case, the title includes the new `Version` and the body includes the new `ChangelogEntry`.
 
 The pull request that this creates looks something like this:
 
 ![Pull Request Preview](./pull_request_preview.png)
-
-All we have to do now is run this `prepare-release` workflow in GitHub Actions whenever we want a new release preview—we'll take a look at that once we finish going through the `knope.toml` file.
 
 ### `release` workflow
 
@@ -108,23 +117,15 @@ name = "release"
 type = "Release"
 ```
 
-The `release` workflow is a single [`Release`] step—this creates a GitHub release for the latest version (if it hasn't already been released) and uploads any [assets](#packageassets). In this case, it'll create a release for whatever the `prepare-release` workflow made earlier. We'll end up running _this_ workflow whenever the pull request is merged.
-
-### `document-change` workflow
-
-This isn't super relevant to the recipe, but it's useful to have. Changesets are what let us have really descriptive, rich text in changelogs to describe _exactly_ how the latest changes impact our users. Running `knope document-change` executes the [`CreateChangeFile`] workflow to help us make changesets. A future iteration of this recipe may convert pull request comments into changesets 🤞.
-
-```toml
-[[workflows]]
-name = "document-change"
-
-[[workflows.steps]]
-type = "CreateChangeFile"
-```
+The `release` workflow is a single [`Release`] step—this creates a GitHub release for the latest version
+(if it doesn't already exist) and uploads any [assets](#packageassets).
+In this case, it'll create a release for whatever the `prepare-release` workflow prepared earlier.
+GitHub Actions will run this workflow whenever someone merges the pull request (created by `prepare-release`).
 
 ### `[github]`
 
-The last piece is to tell Knope which GitHub repo to use for creating pull requests and releases.
+The last piece is to tell Knope which GitHub repo to use for creating pull requests and releases. 
+You must substitute your own values here:
 
 ```toml
 [github]
@@ -134,9 +135,10 @@ repo = "knope"
 
 ## `prepare_release.yml`
 
-There are two GitHub Actions workflows that we're going to use for this recipe—the first one goes in `.github/workflows/prepare_release.yml` and it creates a fresh release preview pull request on every push to the `main` branch:
+There are two GitHub Actions workflows for this recipe—the first one goes in `.github/workflows/prepare_release.yml`
+and it creates a fresh release preview pull request on every push to the `main` branch:
 
-```yaml
+```yaml title=".github/workflows/prepare_release.yml"
 on:
   push:
     branches: [main]
@@ -156,54 +158,68 @@ jobs:
           git config user.email github-actions@github.com
       - uses: knope-dev/action@v2.0.0
         with:
-          version: 0.11.0
+          version: 0.13.0
       - run: knope prepare-release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
         continue-on-error: true
 ```
 
-:::note
-This workflow runs by default on _every_ push to main, that includes when the previous release PR merges! There is an `if:` clause here in the first job that skips it if the commits matches the commit message that we use in the [`prepare-release` workflow](#prepare-release-workflow). If you change that message, you'll need to update this `if:` clause as well.
+:::caution
+This workflow runs by default on _every_ push to main, that includes when a release PR merges!
+There is an `if:` clause here in the first job that skips it if the commit message looks like the ones create by the [`prepare-release` workflow](#prepare-release-workflow). If you change that message, you'll need to update this `if:` clause as well.
 :::
 
 The steps here:
 
-1. Check out the _entire_ history of the repo (so that [`PrepareRelease`] can use tags and conventional commits to determine the next version). This requires a [personal access token] with permission to **read** the **contents** of the repo.
-2. Configure Git so that we can commit changes (within Knope's `prepare-release` workflow)
+1. Check out the _entire_ history of the repo (so that [`PrepareRelease`] can use tags and conventional commits to pick the next version). This requires a [personal access token] with permission to **read** the **contents** of the repo.
+2. Configure Git so that the job can commit changes (within Knope's `prepare-release` workflow)
 3. Install Knope
-4. Run [the `prepare-release` workflow described above](#prepare-release-workflow). _This_ requires a [personal access token] with permission to **write** the **pull requests** of the repo.
+4. Run [the `prepare-release` workflow described earlier](#prepare-release-workflow). _This_ requires a [personal access token] with permission to **write** the **pull requests** of the repo.
 
 :::note
-We add the `continue-on-error` attribute so that even if this step fails, the workflow will be marked as passing. This is because we want to be able to run this workflow on every push to `main`, but we don't want it to fail when there's nothing to release. However, this doesn't differentiate between legitimate errors and "nothing to release". You may want to instead use the [`allow_empty` option](../config/step/PrepareRelease.md#options) in `knope.toml` and split the rest of the steps into a second workflow. Then, you can use some scripting in GitHub Actions to skip the rest of the workflow if there's nothing to release.
+The `continue-on-error` attribute means even if this step fails, the workflow will pass.
+This is because the workflow runs on every push to `main`, but shouldn't fail when there's nothing to release.
+However, the workflow also won't fail if there are real errors from Knope. 
+You may want to instead use the [`allow_empty` option](../config/step/PrepareRelease.md#options) in
+`knope.toml` and split the rest of the steps into a second workflow. 
+Then, you can use some scripting in GitHub Actions to skip the rest of the workflow if there's nothing to release.
 :::
 
-In the case of this action, we're using the same [personal access token] for both steps, but you could use different ones if you wanted to.
+In this example, the same [personal access token] is in both steps, but you could use separate ones if you wanted to.
 
 ## `release.yml`
 
-Now that we're set up to create pull requests previewing the next release on every push to `main`, we need to automatically release those changes when the pull request merges. This is the job of the `release` workflow, which goes in `.github/workflows/release.yml`.
+Now that Knope is creating pull requests every push to `main`,
+it needs to automatically release those changes when a pull request merges.
+This is the job of the `release` workflow, which goes in `.github/workflows/release.yml`.
 
 :::caution
-YAML is very sensitive to white space and very easy to mess up copy/pasting—so I recommend copying the whole file at _the end_, not the individual pieces I'm using to describe functionality.
+YAML is sensitive to space and easy to mess up copy/pasting—so you should copy the whole file at _the end_, not the individual pieces.
 :::
 
-To start off, we only want to run this workflow when our release preview pull requests merge—there are several pieces of config that handle this. First:
+To start off, this workflow must only run 
+when release preview pull requests merge—there are several pieces of config that handle this. 
+First:
 
-```yaml
+```yaml title="./github/workflows/release.yml"
 on:
   pull_request:
     types: [closed]
     branches: [main]
 ```
 
-Will cause GitHub Actions to only trigger anything at all when a pull request which targets `main` closes. Then, in our _first_ job, we can use this an `if` to narrow that down further to only our release preview pull requests, and only when they _merge_ (not close for other reasons):
+Will cause GitHub Actions to only trigger the workflow when a pull request which targets `main` closes.
+Then, in the _first_ job, an `if` narrows that down further to only release preview pull requests, 
+and only when they _merge_ (not close for other reasons):
 
 ```yaml
 if: github.head_ref == 'release' && github.event.pull_request.merged == true
 ```
 
-For Knope's own workflows, this first job is `build-artifacts`, which builds the [package assets](#packageassets) that will be uploaded when releasing. Skipping on past that job (since it probably will be different for you), we come to the `release` job:
+For Knope's own workflows, this first job is `build-artifacts`,
+which builds the [package assets](#packageassets) that Knope will upload when releasing.
+Skipping on past that job (since it probably will be different for you), the net one is the `release` job:
 
 ```yaml
 release:
@@ -216,12 +232,8 @@ release:
         name: ${{ env.archive_name }}
     - uses: knope-dev/action@v2.0.0
       with:
-        version: 0.11.0
+        version: 0.13.0
     - run: knope release
-      env:
-        GITHUB_TOKEN: ${{ secrets.PAT }}
-
-    - run: gh workflow run "Deploy Book to GitHub Pages"
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
 ```
@@ -229,10 +241,9 @@ release:
 The `release` job follows these steps:
 
 1. Check out the repo at the commit that the pull request merged
-2. Download the artifacts that were built in the `build-artifacts` job
+2. Download the artifacts from the `build-artifacts` job
 3. Install Knope
-4. Run [the `release` workflow described above](#release-workflow). This requires a [personal access token] with permission to **write** the **contents** of the repo.
-5. Kick off another workflow which updates these docs that you're reading 👋. That requires a [personal access token] with permission to **write** the **actions** of the repo.
+4. Run [the `release` workflow described earlier](#release-workflow). This requires a [personal access token] with permission to **write** the **contents** of the repo.
 
 Finally, Knope's workflow publishes to crates.io—meaning the whole workflow looks like this:
 
@@ -264,7 +275,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
@@ -312,12 +323,8 @@ jobs:
       - uses: actions/download-artifact@v3
       - uses: knope-dev/action@v2.0.0
         with:
-          version: 0.11.0
+          version: 0.13.0
       - run: knope release
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-
-      - run: gh workflow run "Deploy Book to GitHub Pages"
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
@@ -325,16 +332,20 @@ jobs:
     needs: [release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}
 ```
 
+:::tip
+[Use Renovate](https://github.com/knope-dev/action#updating-with-renovate) to keep those versions of Knope up to date.
+:::
+
 ## Conclusion
 
-Just to summarize, what we get with all of this is a process that:
+Just to summarize, this recipe describes a process that:
 
 1. Automatically creates a pull request in GitHub every time a new commit is pushed to `main`. That pull request contains a preview of the next release.
 2. Automatically releases the package every time a release preview's pull request is merged.

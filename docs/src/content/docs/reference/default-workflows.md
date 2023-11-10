@@ -48,7 +48,7 @@ repo = "knope"
 
 ## Potential differences
 
-1. `versioned_files` contains any [supported formats](/reference/config-file/packages#versioned_files) that are detected in the current directory
-2. `changelog` will not be populated if there is not a `CHANGELOG.md` file in the current directory
+1. `versioned_files` has any [supported formats](/reference/config-file/packages#versioned_files) that Knope detects in the current directory
+2. `changelog` is only set if there is a `CHANGELOG.md` file in the current directory
 3. A [GitHub config](/reference/config-file/github) will be set if the default Git remote is a GitHub repository.
-   Otherwise, an additional step will be added to the `release` workflow to push generated tags.
+   Otherwise, an extra step will be in the `release` workflow to push generated tags.
