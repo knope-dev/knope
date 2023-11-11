@@ -10,6 +10,16 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.13.2 (2023-11-11)
+
+### Fixes
+
+#### Add `[github]` section with `knope --generate` (#666)
+
+#### `--dry-run` will no longer report deleting the same changeset twice (#668)
+
+#### `CreateChangeFile` (like `knope document-change`) now prints package names. (#669)
+
 ## 0.13.1 (2023-11-05)
 
 ### Documentation
