@@ -19,8 +19,8 @@ changelog = "CHANGELOG.md"
 ```
 
 This first piece defines the package.
-`Cargo.toml` is both the source of the package's current version and a place that Knope should put new version numbers. 
-You can add more `versioned_files` (for example, if you also released this as a Python package with `pyproject.toml`). 
+`Cargo.toml` is both the source of the package's current version and a place that Knope should put new version numbers.
+You can add more `versioned_files` (for example, if you also released this as a Python package with `pyproject.toml`).
 `CHANGELOG.md` is where Knope should describe changes in the source code—this is in _addition_ to GitHub releases.
 
 :::caution
@@ -124,7 +124,7 @@ GitHub Actions will run this workflow whenever someone merges the pull request (
 
 ### `[github]`
 
-The last piece is to tell Knope which GitHub repo to use for creating pull requests and releases. 
+The last piece is to tell Knope which GitHub repo to use for creating pull requests and releases.
 You must substitute your own values here:
 
 ```toml
@@ -180,9 +180,9 @@ The steps here:
 :::note
 The `continue-on-error` attribute means even if this step fails, the workflow will pass.
 This is because the workflow runs on every push to `main`, but shouldn't fail when there's nothing to release.
-However, the workflow also won't fail if there are real errors from Knope. 
+However, the workflow also won't fail if there are real errors from Knope.
 You may want to instead use the [`allow_empty` option](../config/step/PrepareRelease.md#options) in
-`knope.toml` and split the rest of the steps into a second workflow. 
+`knope.toml` and split the rest of the steps into a second workflow.
 Then, you can use some scripting in GitHub Actions to skip the rest of the workflow if there's nothing to release.
 :::
 
@@ -198,8 +198,8 @@ This is the job of the `release` workflow, which goes in `.github/workflows/rele
 YAML is sensitive to space and easy to mess up copy/pasting—so you should copy the whole file at _the end_, not the individual pieces.
 :::
 
-To start off, this workflow must only run 
-when release preview pull requests merge—there are several pieces of config that handle this. 
+To start off, this workflow must only run
+when release preview pull requests merge—there are several pieces of config that handle this.
 First:
 
 ```yaml title="./github/workflows/release.yml"
@@ -210,7 +210,7 @@ on:
 ```
 
 Will cause GitHub Actions to only trigger the workflow when a pull request which targets `main` closes.
-Then, in the _first_ job, an `if` narrows that down further to only release preview pull requests, 
+Then, in the _first_ job, an `if` narrows that down further to only release preview pull requests,
 and only when they _merge_ (not close for other reasons):
 
 ```yaml
