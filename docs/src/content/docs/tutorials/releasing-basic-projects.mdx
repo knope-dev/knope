@@ -112,7 +112,6 @@ Would create a release on GitHub with name 1.0.1 (2023-11-01) and tag v1.0.1 and
 ## Fixes
 
 ### No longer crashes when you add pineapple
-
 ```
 
 </details>
@@ -133,6 +132,11 @@ Time to release it for real!
 ## Creating a release
 
 Running the `release` workflow again without the `--dry-run` causes Knope to do everything it promised to.
+
+:::caution
+The next step will save GitHub credentials to a file on your computer.
+If you don't want that, you can instead set the `GITHUB_TOKEN` environment variable to the token.
+:::
 
 ```sh
 knope release
