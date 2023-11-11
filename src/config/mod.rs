@@ -64,11 +64,13 @@ impl Config {
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<toml::Package>,
             workflows: Vec<Workflow>,
+            github: Option<GitHub>,
         }
 
         let config = SimpleConfig {
             package: self.packages.pop().map(toml::Package::from),
             workflows: self.workflows,
+            github: self.github,
         };
         #[allow(clippy::unwrap_used)] // because serde is annoying... I know it will serialize
         let serialized = to_string(&config).unwrap();

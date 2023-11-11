@@ -166,6 +166,8 @@ If everything is correct, you'll see no output.
 <details>
 <summary>Full `knope.toml` at this stage</summary>
 
+The only difference between this `knope.toml` and yours should be the `[github]` section at the bottom.
+
 ```toml title="knope.toml"
 [packages.pizza]
 versioned_files = ["pizza/Cargo.toml"]
@@ -198,6 +200,9 @@ name = "document-change"
 [[workflows.steps]]
 type = "CreateChangeFile"
 
+[github]
+owner = "dbanty"
+repo = "knope-tutorial"
 ```
 
 </details>
@@ -267,7 +272,7 @@ the type of change for each of those packages, and the summary.
 At this point,
 you could add as much Markdown as you want to the bottom of the file to describe the change more fully.
 
-Let's take a look at what sort of releases this will create:
+Knope can show you a preview of the upcoming release:
 
 ```shell
 knope release --dry-run
@@ -278,7 +283,7 @@ Would delete: .changeset/the_cheese_is_now_distributed_more_evenly.md
 Would delete: .changeset/the_cheese_is_now_distributed_more_evenly.md
 Would add the following to pizza/Cargo.toml: 3.14.16
 Would add the following to pizza/CHANGELOG.md:
-## 3.14.16 (2023-11-04)
+## 3.14.16 (2023-11-11)
 
 ### Fixes
 
@@ -290,7 +295,7 @@ Would add files to git:
   .changeset/the_cheese_is_now_distributed_more_evenly.md
 Would add the following to calzone/Cargo.toml: 0.14.3
 Would add the following to calzone/CHANGELOG.md:
-## 0.14.3 (2023-11-04)
+## 0.14.3 (2023-11-11)
 
 ### Fixes
 
@@ -301,8 +306,14 @@ Would add files to git:
   calzone/CHANGELOG.md
   .changeset/the_cheese_is_now_distributed_more_evenly.md
 Would run git commit -m "chore: prepare release" && git push
-Would create Git tag pizza/v3.14.16
-Would create Git tag calzone/v0.14.3
+Would create a release on GitHub with name pizza 3.14.16 (2023-11-11) and tag pizza/v3.14.16 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
+Would create a release on GitHub with name calzone 0.14.3 (2023-11-11) and tag calzone/v0.14.3 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
 ```
 
 Knope updates the versions and changelogs of each package independently.
@@ -326,7 +337,7 @@ knope release --dry-run  # See what Knope would do with it
 ```text
 Would add the following to pizza/Cargo.toml: 3.14.16
 Would add the following to pizza/CHANGELOG.md:
-## 3.14.16 (2023-11-04)
+## 3.14.16 (2023-11-11)
 
 ### Fixes
 
@@ -337,7 +348,7 @@ Would add files to git:
   pizza/CHANGELOG.md
 Would add the following to toppings/Cargo.toml: 1.209.1
 Would add the following to toppings/CHANGELOG.md:
-## 1.209.1 (2023-11-04)
+## 1.209.1 (2023-11-11)
 
 ### Fixes
 
@@ -348,7 +359,7 @@ Would add files to git:
   toppings/CHANGELOG.md
 Would add the following to calzone/Cargo.toml: 0.14.3
 Would add the following to calzone/CHANGELOG.md:
-## 0.14.3 (2023-11-04)
+## 0.14.3 (2023-11-11)
 
 ### Fixes
 
@@ -358,9 +369,18 @@ Would add files to git:
   calzone/Cargo.toml
   calzone/CHANGELOG.md
 Would run git commit -m "chore: prepare release" && git push
-Would create Git tag pizza/v3.14.16
-Would create Git tag toppings/v1.209.1
-Would create Git tag calzone/v0.14.3
+Would create a release on GitHub with name pizza 3.14.16 (2023-11-11) and tag pizza/v3.14.16 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
+Would create a release on GitHub with name toppings 1.209.1 (2023-11-11) and tag toppings/v1.209.1 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
+Would create a release on GitHub with name calzone 0.14.3 (2023-11-11) and tag calzone/v0.14.3 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
 ```
 
 You can limit commits to _specific_ packages using scopes:
@@ -432,7 +452,7 @@ knope release --dry-run
 ```text
 Would add the following to pizza/Cargo.toml: 3.14.16
 Would add the following to pizza/CHANGELOG.md:
-## 3.14.16 (2023-11-04)
+## 3.14.16 (2023-11-11)
 
 ### Fixes
 
@@ -443,7 +463,7 @@ Would add files to git:
   pizza/CHANGELOG.md
 Would add the following to calzone/Cargo.toml: 0.14.3
 Would add the following to calzone/CHANGELOG.md:
-## 0.14.3 (2023-11-04)
+## 0.14.3 (2023-11-11)
 
 ### Fixes
 
@@ -453,8 +473,14 @@ Would add files to git:
   calzone/Cargo.toml
   calzone/CHANGELOG.md
 Would run git commit -m "chore: prepare release" && git push
-Would create Git tag pizza/v3.14.16
-Would create Git tag calzone/v0.14.3
+Would create a release on GitHub with name pizza 3.14.16 (2023-11-11) and tag pizza/v3.14.16 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
+Would create a release on GitHub with name calzone 0.14.3 (2023-11-11) and tag calzone/v0.14.3 and body:
+## Fixes
+
+### The cheese is now distributed more evenly
 ```
 
 This is the same result as the changeset, but with a single commit message instead.
@@ -463,53 +489,6 @@ This is the same result as the changeset, but with a single commit message inste
 Use conventional commits sparingly, for simple changes only.
 Usually, a change that impacts multiple packages is worth documenting more thoroughly with a changeset.
 :::
-
-## Adding GitHub releases
-
-The `--dry-run` output shows that Knope will create Git tags,
-but Knope can also create GitHub releases with a little more config:
-
-```toml title="knope.toml" ins={1-2}
-[github]
-repo = "knope-tutorial"  # If you created the repo with a different name, use it here
-owner = "dbanty"  # Replace this with your GitHub username
-```
-
-Now, without changing the `release` workflow at all, Knope will create GitHub releases:
-
-```text
-Would add the following to pizza/Cargo.toml: 3.14.16
-Would add the following to pizza/CHANGELOG.md:
-## 3.14.16 (2023-11-04)
-
-### Fixes
-
-#### The cheese is now distributed more evenly
-
-Would add files to git:
-  pizza/Cargo.toml
-  pizza/CHANGELOG.md
-Would add the following to calzone/Cargo.toml: 0.14.3
-Would add the following to calzone/CHANGELOG.md:
-## 0.14.3 (2023-11-04)
-
-### Fixes
-
-#### The cheese is now distributed more evenly
-
-Would add files to git:
-  calzone/Cargo.toml
-  calzone/CHANGELOG.md
-Would run git commit -m "chore: prepare release" && git push
-Would create a release on GitHub with name pizza 3.14.16 (2023-11-04) and tag pizza/v3.14.16 and body:
-## Fixes
-
-### The cheese is now distributed more evenly
-Would create a release on GitHub with name calzone 0.14.3 (2023-11-04) and tag calzone/v0.14.3 and body:
-## Fixes
-
-### The cheese is now distributed more evenly
-```
 
 :::caution
 The next step will save GitHub credentials to a file on your computer.
