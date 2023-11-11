@@ -31,7 +31,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     let versioning = packages
         .into_iter()
         .map(|package| {
-            let package_name = package.to_string();
+            let package_name = package.name;
             let change_types = package
                 .changelog_sections
                 .into_keys()
@@ -43,11 +43,21 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
                     }
                 })
                 .collect_vec();
-            Select::new("What type of change is this?", change_types)
+            let prompt = if let Some(package_name) = package_name.as_ref() {
+                format!("What type of change is this for {package_name}?")
+            } else {
+                "What type of change is this?".to_string()
+            };
+            Select::new(&prompt, change_types)
                 .prompt()
                 .map_err(prompt::Error::from)
                 .map_err(Error::from)
-                .map(|change_type| (package_name, change_type.into()))
+                .map(|change_type| {
+                    (
+                        package_name.unwrap_or_default().to_string(),
+                        change_type.into(),
+                    )
+                })
         })
         .collect::<Result<Versioning, Error>>()?;
     let summary = inquire::Text::new("What is a short summary of this change?")

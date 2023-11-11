@@ -227,19 +227,19 @@ Knope will ask which packages the change impacts:
 
 ```text
 ? Which packages does this change affect?
-> [ ] pizza
+  [x] pizza
   [ ] toppings
-  [ ] calzone
+> [x] calzone
 [↑↓ to move, space to select one, → to all, ← to none, type to filter]
 ```
 
 Use the arrow keys and space bar to select `pizza` and `calzone`, then press enter.
-Next, select `patch` as the change type for each (they're in order):
+Next, select `patch` as the change type for each:
 
 ```text
 > Which packages does this change affect? pizza, calzone
-> What type of change is this? patch
-? What type of change is this?
+> What type of change is this for pizza? patch
+? What type of change is this for calzone?
   major
   minor
 > patch
@@ -250,8 +250,8 @@ Finally, summarize the change:
 
 ```text
 > Which packages does this change affect? pizza, calzone
-> What type of change is this? patch
-> What type of change is this? patch
+> What type of change is this for pizza? patch
+> What type of change is this for calzone? patch
 ? What is a short summary of this change? The cheese is now distributed more evenly
 [This will be used as a header in the changelog]
 ```
@@ -260,8 +260,8 @@ This will create a change file that looks like this:
 
 ```md title=".changeset/the_cheese_is_now_distributed_more_evenly.md"
 ---
-calzone: patch
 pizza: patch
+calzone: patch
 ---
 
 # The cheese is now distributed more evenly

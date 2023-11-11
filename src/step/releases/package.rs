@@ -164,6 +164,12 @@ impl Display for Package {
 #[serde(transparent)]
 pub(crate) struct PackageName(String);
 
+impl Default for PackageName {
+    fn default() -> Self {
+        Self(DEFAULT_CHANGESET_PACKAGE_NAME.to_string())
+    }
+}
+
 impl Display for PackageName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
