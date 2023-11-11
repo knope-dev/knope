@@ -24,7 +24,7 @@ variables = { "version" = "Version" }
 ```
 
 :::caution
-The `Version` variable in the [`Command`] step cannot be used when multiple packages are defined.
+The `Version` variable in the [`Command`] step can't be used when multiple packages are defined.
 This is a temporary limitation—if you have a specific use case for this, please [file an issue][request it as a feature].
 :::
 

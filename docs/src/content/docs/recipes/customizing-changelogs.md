@@ -4,9 +4,10 @@ title: Customizing changelogs
 
 You don't have to settle for the built-in changelog sections,
 there are a number of ways to customize generated changelogs.
-Each top-level heading on this page is a different way to customize; you can skip right to the most interesting one for you.
+Each top-level heading on this page is a different way to customize.
+You can skip right to the most interesting one for you.
 
-Before we get started, here is how a [version in a changelog](/reference/concepts/changelog#versions) looks by default:
+Before starting, here is how a [version in a changelog](/reference/concepts/changelog#versions) looks by default:
 
 ```markdown
 ## 2.0.0 (2023-10-31)
@@ -36,18 +37,18 @@ Some details about that fix
 Some details about that note
 ```
 
-The order of these sections is fixed, but any section without changes will be omitted.
+Knope will always include these sections in the same order, but it only includes sections which contain changes.
 
 ## Changing the header level
 
 By default, the heading of a version is `##`, each section is `###`, and each change is `####`.
-The _relative_ level of those sections is fixed,
+The _relative_ level of those sections is always the same,
 but you can change each version to be a top-level heading (`#`)
 by modifying the last version in the changelog to be that level.
-Knope looks for the previous version to determine the level of the next version.
+Knope looks for the previous version to decide the level of the next version.
 
 :::caution
-Knope expects versions in the changelog to look roughly how it would generate them,
+Knope expects versions in the changelog to look similar to how it would generate them,
 specifically it _must_ start with a valid [semantic version](/reference/concepts/semantic-versioning).
 If you have a different format for your pre-existing headers, you'll need to update the _latest_ version to Knope's format.
 :::
@@ -64,10 +65,10 @@ If you have a different format for your pre-existing headers, you'll need to upd
 This was edited to be a top-level heading
 ```
 
-## Adding additional sections
+## Adding more sections
 
-You can use the `extra_changelog_sections` config option to add additional sections to a changelog.
-This is per-package, so if you have multiple packages, you'll need to customize each changelog.
+You can use the `extra_changelog_sections` config option to add extra sections to a changelog.
+This is per-package, so if you have more than one package, you'll need to customize each changelog.
 
 ```toml title="knope.toml"
 [package]
@@ -86,7 +87,7 @@ The built-in sections, as described at the top of this page, can be overridden.
 
 :::caution
 The default order is recommended, as it organizes changes from most-important (for consumers) to least-important.
-Overridden sections always appear after non-overridden sections in the order they are defined.
+Overridden sections always appear after non-overridden sections in the order they're defined.
 So, if you're going to override any of the first three sections,
 it's recommended you also override any sections that should appear below them.
 :::
@@ -116,7 +117,7 @@ extra_changelog_sections = [
 ]
 ```
 
-Now, when running a [`CreateChangeFile`] step (e.g., with `knope document-change`), the `note` type will be available:
+Now, when running a [`CreateChangeFile`] step (for example, with `knope document-change`), the `note` type will be available:
 
 ```text
 ? What type of change is this?

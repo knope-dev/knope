@@ -2,7 +2,8 @@
 title: BumpVersion
 ---
 
-Bump the version of all packages using a [Semantic Versioning] rule. At least one [package] must be defined for this step to operate on.
+Bump the version of all packages using a [Semantic Versioning] rule.
+You must define at least one [package] (defined by default if not using a `knope.toml` file.
 
 :::hint
 It may be easier to select the appropriate version automatically based on recent changes.
@@ -16,7 +17,7 @@ Check out the [automating releases tutorial](/tutorials/releasing-basic-projects
 
 ## Examples
 
-### Single Package Pre-Release
+### Single package pre-release
 
 ```toml
 [package]
@@ -53,40 +54,47 @@ type = "BumpVersion"
 rule = "Major"
 ```
 
-In this example, running `knope major` would bump the version in `knope/Cargo.toml` and `knope-utils/Cargo.toml` using the "major" rule. If the versions in those files were `0.1.2` and `3.0.0` respectively, they would be bumped to `0.2.0` and `4.0.0` respectively.
+In this example,
+running `knope major` would bump the version in `knope/Cargo.toml` and `knope-utils/Cargo.toml` using the "major" rule.
+If the versions in those files were `0.1.2` and `3.0.0` respectively,
+Knope would bump them to `0.2.0` and `4.0.0` respectively.
 
 ## Rules
 
 ### `Major`
 
-Increment the Major component of the semantic version and reset all other components (e.g. 1.2.3-rc.4 -> 2.0.0).
+Increment the Major component of the semantic version and reset all other components (for example, 1.2.3-rc.4 -> 2.0.0).
 
 ### `Minor`
 
-Increment the Minor component of the semantic version and reset all lesser components (e.g. 1.2.3-rc.4 -> 1.3.0 ).
+Increment the Minor component of the semantic version and reset all lesser components (for example, 1.2.3-rc.4 -> 1.3.0 ).
 
 ### `Patch`
 
-Increment the Patch component of the semantic version and reset all lesser components (e.g. 1.2.3-rc.4 -> 1.2.4).
+Increment the Patch component of the semantic version and reset all lesser components (for example, 1.2.3-rc.4 -> 1.2.4).
 
 ### `Pre`
 
-Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` `rc` would change "1.2.3-rc.4" to "1.2.3-rc.5" or "1.2.3" to "1.2.4-rc.0".
+Increment the pre-release component of the semantic version or add it if missing. You must also provide a `label` parameter to this rule which will determine the pre-release string used. For example, running this rule with the `label` `rc` would change `1.2.3-rc.4` to `1.2.3-rc.5` or `1.2.3` to `1.2.4-rc.0`.
 
 :::danger
-Only a very specific pre-release format is supported—that is `MAJOR.MINOR.PATCH-LABEL.NUMBER`. For example, `1.2.3-rc.4` is supported, but `1.2.3-rc4` is not. `LABEL` must be specified via config or the `--prerelease-label` option in the CLI. `NUMBER` starts at 0 and increments each time the rule is applied.
+Knope only supports a specific pre-release format: `MAJOR.MINOR.PATCH-LABEL.NUMBER`.
+For example, Knope supports `1.2.3-rc.4` but not `1.2.3-rc4`.
+You must specify `LABEL` via config or the `--prerelease-label` option in the CLI
+. `NUMBER` starts at 0 and increments each time the rule is applied.
 :::
 
 ### Release
 
-Remove the pre-release component of the semantic version (e.g. 1.2.3-rc.4 -> 1.2.3).
+Remove the pre-release component of the semantic version (for example, 1.2.3-rc.4 -> 1.2.3).
 
 ## Errors
 
 This step will fail if any of the following are true:
 
-1. A malformed version string is found while attempting to bump. Note that only a subset of [pre-release version formats](#pre) are supported.
-2. No [package] is defined missing or invalid.
+1. The version string is malformed.
+   Note that Knope only supports a subset of [pre-release version formats](#pre).
+2. The [package config] is missing or invalid.
 
 [semantic versioning]: /reference/concepts/semantic-versioning
 [package]: /reference/config-file/packages

@@ -2,11 +2,13 @@
 title: SelectIssueFromBranch
 ---
 
-Attempt to parse issue info from the current branch for use in other steps (e.g., [`Command`]).
+Try to parse issue info from the current branch for use in other steps (for example [`Command`]).
 
 ## Errors
 
-This step will fail if the current git branch cannot be determined or the name of that branch does not match the expected format. This is only intended to be used on branches which were created using the [SwitchBranches] step.
+This step will fail if Knope can't determine the current git branch,
+or the name of that branch doesn't match the expected format.
+This is only intended to be used on branches which Knope created with the [SwitchBranches] step.
 
 ## Example
 

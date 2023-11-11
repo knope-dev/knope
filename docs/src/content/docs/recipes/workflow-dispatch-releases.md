@@ -2,22 +2,26 @@
 title: GitHub Actions workflow dispatch
 ---
 
-This recipe allows you to trigger the entire release process manually by either clicking a button in GitHub Actions or by using the GitHub CLI. Once that trigger occurs:
+With this recipe, you can trigger the entire release process manually
+by either clicking a button in GitHub Actions or by using the GitHub CLI.
+Once that trigger occurs:
 
-1. A new version of the project is calculated (using [`PrepareRelease`]) and versioned files and changelogs are updated.
-2. The changes are committed back to the branch and pushed.
-3. The new commit is used to build assets.
-4. A release is created on GitHub with the new version, changelog, and assets.
+1. Knope calculates the new version of the project (using [`PrepareRelease`]) and updates versioned files and changelogs.
+2. Knope commits the changes back to the branch and pushes.
+3. GitHub Actions builds assets from the new commit.
+4. Knope creates a release on GitHub with the new version, changelog, and assets.
 
 :::hint
-You should also check out the [Pull Request Releases](./pull_request.md) recipe which is similar, but allows you to preview the release in a pull request before accepting it.
+You should also check out the [Pull Request Releases](./pull_request.md) recipe,
+which is similar, but includes release previews via pull requests.
 :::
 
 :::note
-All of the examples in this recipe are for a project with a single Rust binary to release—you'll need to adapt some specifics to your use-case.
+All the examples in this recipe are for a project with a single Rust binary to release—
+you'll need to adapt some specifics to your use-case.
 :::
 
-First, let's walk through the GitHub Actions workflow file:
+Here's the GitHub Actions workflow file:
 
 ```yaml
 name: Release
@@ -139,7 +143,7 @@ There are three jobs here:
 
 Throughout, there is use of a `${{ secrets.PAT }}`, this is a GitHub Token with write permissions to "contents" which must be stored in GitHub Actions secrets. For the minimum-possible required privileges, you should [create a fine-grained access token] with read/write to "contents" for only this repo.
 
-Now let's look at the Knope config which enables this GitHub workflow to work. For the sake of example, here's Knope's actual config from when this recipe was used (Knope now uses the [Pull Request Releases](./pull_request.md) recipe):
+Here's a Knope config which enables this GitHub workflow to work:
 
 ```toml
 [package]
@@ -188,11 +192,19 @@ owner = "knope-dev"
 repo = "knope"
 ```
 
-There is a single `[package]`, but this pattern should also work for multi-package setups, just make sure all of your assets are ready at the same time. In this case, we have one versioned file `Cargo.toml` and one changelog `CHANGELOG.md`. We also have four assets, one for each platform we want to support. The name of each asset is omitted because we want to use the path as the name.
+There is a single `[package]`, but this pattern should also work for multi-package setups, just make sure all your assets are ready at the same time.
+In this case, there's one versioned file (`Cargo.toml`) and one changelog (`CHANGELOG.md`).
+There are also four assets, one for each supported platform.
+Because there aren't names for assets, Knope will use the path as the name.
 
-There are two relevant workflows here, the third (`document-change`) is used for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml` and `CHANGELOG.md` based on any conventional commits or changesets. We then run a command to commit the changes and push them back to the current branch (note that using the `Version` variable is not supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.
+There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml` and `CHANGELOG.md` based on any conventional commits or changesets.
+Knope then runs a command to commit the changes and push them back to the current branch (note that using the `Version` variable isn't supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.
 
-When ready, GitHub Actions calls into the `release` workflow which runs a single step: [`Release`]. This will compare the latest stable tagged release to the version in `Cargo.toml` (or any other `versioned_files`) and create releases as needed by parsing the contents of `CHANGELOG.md` for the release's body. The release is initially created as a draft, then assets are uploaded before the release is published (so your subscribers won't be notified until it's all ready).
+When ready, GitHub Actions calls into the `release` workflow which runs a single step: [`Release`].
+This will compare the latest stable tagged release to the version in `Cargo.toml` (or any other `versioned_files`)
+and create releases as needed by parsing the contents of `CHANGELOG.md` for the release's body.
+The release is initially created as a draft, then Knope uploads assets before publishing the release
+(so your subscribers won't be notified until it's all ready).
 
 [`PrepareRelease`]: ../config/step/PrepareRelease.md
 [create a fine-grained access token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
