@@ -9,8 +9,8 @@ However,
 you can always override the version that Knope selects for a [`PrepareRelease`] or [`BumpVersion`] step using the [`--override-version` command line argument].
 
 For example, using the [default workflows],
-the `knope release` command uses the [`PrepareRelease`] step to determine the next version of your package.
-If we run `knope release --override-version 1.0.0`,
+the `knope release` command uses the [`PrepareRelease`] step to pick the next version of your package.
+If you run `knope release --override-version 1.0.0`,
 the version selected will be `1.0.0` regardless of which changes were included in the release.
 
 [`PrepareRelease`]: /reference/config-file/steps/prepare-release

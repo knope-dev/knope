@@ -8,8 +8,8 @@ Transition a Jira issue to a new status.
 
 This step will fail when any of the following are true:
 
-1. An issue was not previously selected in this workflow using [`SelectJiraIssue`] or [`SelectIssueFromBranch`].
-2. Cannot communicate with Jira.
+1. An issue wasn't selected in this workflow using [`SelectJiraIssue`] or [`SelectIssueFromBranch`].
+2. Can't communicate with Jira.
 3. The configured status is invalid for the issue.
 
 ## Example

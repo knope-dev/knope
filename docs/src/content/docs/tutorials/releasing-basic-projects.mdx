@@ -85,7 +85,7 @@ You've just documented a bug fix using a commit message!
 In the real world, this commit would also include the relevant code changes.
 :::
 
-Let's see what Knope will do to our project when we next release it:
+Knope can give a preview of the next release:
 
 ```sh
 knope release --dry-run
@@ -118,21 +118,21 @@ Would create a release on GitHub with name 1.0.1 (2023-11-01) and tag v1.0.1 and
 </details>
 
 :::tip
-That `--dry-run` flag can be used anywhere in Knope to see what _would_ happen without actually doing it.
+You can use that `--dry-run` flag anywhere in Knope to see what _would_ happen without actually doing it.
 :::
 
-According to that output Knope will:
+According to that output, Knope will:
 
-1. Set the version of our package in `package.json` to `1.0.1`
-2. Add a new section to `CHANGELOG.md` with the changes we've made
-3. Commit those changes to Git and push to our remote repo
+1. Set the version of the package in `package.json` to `1.0.1`
+2. Add a new section to `CHANGELOG.md` with the documented changes
+3. Commit those changes to Git and push to the remote repo
 4. Create a new release on GitHub
 
-Let's try it for real!
+Time to release it for real!
 
 ## Creating a release
 
-If we run the `release` workflow again without the `--dry-run` option, Knope will do everything it promised to.
+Running the `release` workflow again without the `--dry-run` causes Knope to do everything it promised to.
 
 ```sh
 knope release
@@ -150,7 +150,7 @@ Knope will write this token to a file to store for later use (where depends on y
 If you don't want to store the token, you can set the `GITHUB_TOKEN` environment variable instead.
 :::
 
-Now that the workflow has complete, our `package.json` has the new version number:
+Now that the workflow has complete, the `package.json` has the new version number:
 
 ```json title="package.json" {3}
 {
@@ -159,7 +159,7 @@ Now that the workflow has complete, our `package.json` has the new version numbe
 }
 ```
 
-Our `CHANGELOG.md` contains the message from our commit:
+The `CHANGELOG.md` has the message from the commit:
 
 ```md title="CHANGELOG.md" {5-9}
 # Changelog
@@ -184,16 +184,14 @@ gh release view --web
 ## More complex changes
 
 [Conventional commits] are great for simple changes, you just start your commit with `fix: ` or `feat: `.
-For changes that take more than a few words to describe, though, we'll turn to [changesets].
-
-Let's document a new feature for our package:
+For changes that take more than a few words to describe, though, [changesets] are a better fit:
 
 ```sh
 knope document-change
 ```
 
 You'll get a choice of the _type_ of change.
-The terms are from [semantic versioning], so `minor` is what we want for a new feature:
+The terms are from [semantic versioning], so `minor` is what you'll want for a new feature:
 
 ```
 ? What type of change is this?
@@ -203,7 +201,7 @@ The terms are from [semantic versioning], so `minor` is what we want for a new f
 [↑↓ to move, enter to select, type to filter]
 ```
 
-After selecting `minor` with the enter key, we can summarize our new feature:
+After selecting `minor` with the enter key, you can summarize the new feature:
 
 ```
 > What type of change is this? minor
@@ -211,7 +209,7 @@ After selecting `minor` with the enter key, we can summarize our new feature:
 [This will be used as a header in the changelog]
 ```
 
-This created a new Markdown file for us which we can fill in with more details:
+This created a new Markdown file which you can fill in with more details:
 
 ```md title=".changeset/add_calzones.md" ins={6-9}
 ---
@@ -225,13 +223,13 @@ In addition to building Pizzas, you can now build calzones! Just use the new `--
 > Pizza? Never heard of it. That's what people will be saying in 20 years, because pizza is old news. Pizza is your grandfather's calzone.
 ```
 
-We can also add a conventional commit into the same release:
+You can also add a conventional commit into the same release:
 
 ```sh
 git commit --allow-empty -m 'feat: Added the `olives` topping'
 ```
 
-Let's do a dry run to see what Knope will do:
+A dry run will explain what Knope will do:
 
 ```sh
 knope release --dry-run
@@ -285,9 +283,9 @@ In addition to building Pizzas, you can now build calzones! Just use the new `--
 
 </details>
 
-Uh oh, our fix from the _last_ version is being included again!
+Uh oh, Knope is including the fix from the _last_ version!
 That's because Knope uses Git tags to figure out which conventional commits to include in a release.
-The release was created on GitHub, but we don't have that tag locally! Let's fix that, then try again:
+The release is on GitHub, but not in the local file system! You can fix that by pulling the tags:
 
 ```sh
 git pull --tags
@@ -334,8 +332,8 @@ In addition to building Pizzas, you can now build calzones! Just use the new `--
 </details>
 
 Much better!
-Now that Knope knows _when_ `1.0.1` was, it can properly ignore the changes from that release.
-Let's go ahead and create this release for real:
+Now that Knope knows _when_ `1.0.1` was, it can ignore the changes from that release.
+Time to create this release for real:
 
 ```sh
 knope release
@@ -344,9 +342,9 @@ gh release view --web
 
 ![GitHub release](./release_1.1.0.png)
 
-Now we can see one of the big advantages to changesets,
-we can have as much Markdown content as we need to describe a change.
-You can imagine sample code snippets, screenshots, even collapsible sections!
+This illustrates one of the big advantages to changesets,
+you can write as much Markdown content as you need to describe a change.
+There could be code snippets, screenshots, even collapsible sections!
 
 ## Finishing up
 
