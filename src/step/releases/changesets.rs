@@ -1,4 +1,4 @@
-use std::{fmt, io::Write, path::PathBuf};
+use std::{collections::HashSet, fmt, io::Write, path::PathBuf};
 
 use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
@@ -138,6 +138,7 @@ pub(crate) fn add_releases_from_changeset(
         return Ok(packages);
     }
     let mut changeset = ChangeSet::from_directory(&changeset_path)?;
+    let mut changesets_deleted = HashSet::new();
     Ok(packages
         .into_iter()
         .map(|mut package| {
@@ -150,21 +151,19 @@ pub(crate) fn add_releases_from_changeset(
                 package
                     .pending_changes
                     .extend(release_changes.changes.into_iter().map(|change| {
-                        if let Some(dry_run) = dry_run {
-                            writeln!(
-                                dry_run,
-                                "Would delete: {}",
-                                changeset_path
-                                    .join(change.unique_id.to_file_name())
-                                    .display()
-                            )
-                            .ok(); // Truly not the end of the world if stdio fails, and error handling is hard
-                        } else {
-                            // Error is ignored because we will attempt to double-delete some files.
-                            std::fs::remove_file(
-                                changeset_path.join(change.unique_id.to_file_name()),
-                            )
-                            .ok();
+                        let file_name = change.unique_id.to_file_name();
+                        if !changesets_deleted.contains(&file_name) {
+                            if let Some(dry_run) = dry_run {
+                                writeln!(
+                                    dry_run,
+                                    "Would delete: {}",
+                                    changeset_path.join(&file_name).display()
+                                )
+                                .ok(); // Truly not the end of the world if stdio fails, and error handling is hard
+                            } else {
+                                std::fs::remove_file(changeset_path.join(&file_name)).ok();
+                            }
+                            changesets_deleted.insert(file_name);
                         }
                         Change::ChangeSet(change)
                     }));
