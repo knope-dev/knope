@@ -11,7 +11,7 @@ use crate::{
     state::{RunType, State},
 };
 
-const ISSUES_QUERY: &str = r##"
+const ISSUES_QUERY: &str = r"
 query($repo: String!, $owner: String!, $labels: [String!]) { 
   repository(name:$repo, owner:$owner) { 
     issues(states:OPEN, first: 30, labels: $labels) {
@@ -22,7 +22,7 @@ query($repo: String!, $owner: String!, $labels: [String!]) {
     }
   }
 }
-"##;
+";
 
 #[derive(serde::Deserialize)]
 struct ResponseIssue {
