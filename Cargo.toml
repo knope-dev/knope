@@ -20,7 +20,7 @@ base64 = "0.21.5"
 toml = "0.8.8"
 serde_json = { version = "1.0.108", features = ["preserve_order"] }
 git2 = { version = "0.18.1", default-features = false }
-execute = "0.2.12"
+execute = "0.2.13"
 platform-dirs = "0.3.0"
 git-conventional = "0.12.4"
 ureq = { version = "2.9.0", features = ["json"] }
