@@ -19,7 +19,7 @@ export default defineConfig({
       },
       customCss: ["./src/custom.css"],
       expressiveCode: {
-        themes: ["starlight-dark", "github-light"]
+        themes: ["starlight-dark", "github-light"],
       },
       sidebar: [
         { label: "Installation", link: "/installation" },
