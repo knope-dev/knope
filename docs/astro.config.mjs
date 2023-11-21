@@ -18,6 +18,9 @@ export default defineConfig({
         baseUrl: "https://github.com/knope-dev/knope/edit/main/docs/",
       },
       customCss: ["./src/custom.css"],
+      expressiveCode: {
+        themes: ["starlight-dark", "github-light"]
+      },
       sidebar: [
         { label: "Installation", link: "/installation" },
         {
