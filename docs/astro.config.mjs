@@ -1,17 +1,7 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 
-import expressiveCode from "astro-expressive-code";
-import starlightLinksValidator from "starlight-links-validator";
-
-/** @type {import('astro-expressive-code').AstroExpressiveCodeOptions} */
-const expressiveCodeOptions = {
-  // Example: Change the theme to "dracula"
-  theme: ["github-light", "github-dark"],
-  frames: {
-    removeCommentsWhenCopyingTerminalFrames: true,
-  },
-};
+import starlightLinksValidator from "starlight-links-validator";e
 
 // https://astro.build/config
 export default defineConfig({
@@ -57,6 +47,5 @@ export default defineConfig({
         },
       ],
     }),
-    expressiveCode(expressiveCodeOptions),
   ],
 });
