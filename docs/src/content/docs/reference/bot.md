@@ -43,7 +43,7 @@ along with the path to that file](./passing-check-change-file.png)
 
 :::caution
 
-Knope Bot doesn’t yet support repositories which allow merge commits or rebasing. 
+Knope Bot doesn’t yet support repositories which allow merge commits or rebasing.
 It also doesn't support squash strategies that don't use the pull request title as the commit title.
 
 :::
@@ -61,7 +61,7 @@ project members will see buttons to create [change files][change file] directly 
 Clicking one of those buttons will cause the bot to commit the change file directly to the pull request branch.
 
 For anyone who can't see those buttons (or anyone who wants more control over the change documentation), there is a
-link to using Knope's CLI. 
+link to using Knope's CLI.
 There's also an example Markdown snippet that contributors can copy into a change file manually.
 
 [change file]: /reference/concepts/change-file
