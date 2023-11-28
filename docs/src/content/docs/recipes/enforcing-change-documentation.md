@@ -8,9 +8,9 @@ Knope has a GitHub App that enforces that changes are documented before allowing
 
 :::caution
 
-This bot is very new and doesn't yet support all the types of changes that Knope does.
+This bot is new and doesn't yet support all the types of changes that Knope does.
 Please [open an issue](https://knope-dev/knope/issues/new) if you find a bug or have a feature request.
-See [the bot's reference docs](/reference/bot) for more details.
+See [the reference docs](/reference/bot) for more details.
 
 :::
 
