@@ -51,4 +51,7 @@ export default defineConfig({
       ],
     }),
   ],
+  redirects: {
+    "/reference/bot": "/reference/bot/features",
+  },
 });

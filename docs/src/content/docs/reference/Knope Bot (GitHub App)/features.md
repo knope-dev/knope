@@ -1,5 +1,5 @@
 ---
-title: GitHub App (Knope Bot)
+title: Features
 ---
 
 Knope Bot is a GitHub App that performs common Knope tasks automatically without complex GitHub Actions workflows.
