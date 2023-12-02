@@ -10,7 +10,7 @@ Knope has a GitHub App that enforces that changes are documented before allowing
 
 This bot is new and doesn't yet support all the types of changes that Knope does.
 Please [open an issue](https://knope-dev/knope/issues/new) if you find a bug or have a feature request.
-See [the reference docs](/reference/bot/features) for more details.
+See [the reference docs](/reference/knope-bot-github-app/features) for more details.
 
 :::
 
