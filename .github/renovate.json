@@ -6,5 +6,15 @@
     ":automergeStableNonMajor"
   ],
   "platformAutomerge": true,
-  "lockFileMaintenance": { "enabled": true }
+  "lockFileMaintenance": { "enabled": true },
+  "packageRules": [
+    {
+      "groupName": "Starlight & Astro",
+      "groupSlug": "starlight",
+      "matchPackagePatterns": [
+        "astro",
+        "@astrojs/*"
+      ]
+    }
+  ]
 }
