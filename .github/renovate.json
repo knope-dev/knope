@@ -9,11 +9,10 @@
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
     {
-      "groupName": "Starlight & Astro",
-      "groupSlug": "starlight",
+      "groupName": "Astro",
       "matchPackagePatterns": [
-        "astro",
-        "@astrojs/*"
+        "^astro$",
+        "^@astrojs/*"
       ]
     }
   ]
