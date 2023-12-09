@@ -14,5 +14,5 @@ See [the reference docs](/reference/knope-bot-github-app/features) for more deta
 
 :::
 
-You can install the bot from [its public page](https://github.com/apps/knope-bot).
+You can install the bot from [GitHub Marketplace](https://github.com/marketplace/knope-bot).
 Only install it for the repositories you want to enforce documentation on (as it will do this by default).

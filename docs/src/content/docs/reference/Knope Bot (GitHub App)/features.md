@@ -3,7 +3,7 @@ title: Features
 ---
 
 Knope Bot is a GitHub App that performs common Knope tasks automatically without complex GitHub Actions workflows.
-You can install the bot from [its public page](https://github.com/apps/knope-bot).
+You can install the bot from [GitHub Marketplace](https://github.com/marketplace/knope-bot).
 Only install it for the repositories you want to enforce documentation on (as it will do this by default).
 
 ## Enforcing documentation
