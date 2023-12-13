@@ -8,13 +8,18 @@ Only install it for the repositories you want to enforce documentation on (as it
 
 ## Enforcing documentation
 
-The bot keeps an up-to-date check on all pull requests to verify that they're documented,
-either with at least one [change file] or with _only_
-[conventional][conventional commit] commits.
+The bot keeps an up-to-date check on all non-draft pull requests to verify that they're documented,
+with at least one [change file] or [conventional commit].
+
+:::tip
+
+Want more control? Open an issue in [the main Knope repo](https://github.com/knope-dev/knope/issues)!
+
+:::
 
 ### Double-checking documentation
 
-When a check from Knope Bot passes, the details will include an explanation of _why_ the check passed so that you can
+When a check from Knope Bot passes or fails, the details will include an explanation of _why_, so that you can
 double-check Knope's work.
 
 :::note
@@ -24,29 +29,36 @@ one way, only the first will appear in the check details.
 
 :::
 
-### Squash commits
-
-If a repository is configured to use _only_ squash commits,
-and is set to _always_ use the pull request title as the commit title, then a pull request title which looks like
-a [conventional commit] will pass the check:
-
-![Screenshot of the details of a passing check which state that the title of the pull request is a conventional commit](./passing-check-pr-title.png)
-
 ### Change files
 
-If a pull request has at least one [change file][change file], it will pass the check:
+If a pull request has at least one [change file], it will pass the check:
 
-![Screenshot of the details of a passing check which state that the pull request has a change file, 
+![Screenshot of the details of a passing check which state that the pull request has a change file,
 along with the path to that file](./passing-check-change-file.png)
 
-### Other conventional commits
+### Conventional commits
 
-:::caution
+There are three ways to merge a pull request: merge commits, rebasing, and squashing.
+_Every_ method which is enabled for a repository must result in at least one [conventional commit]
+for the pull request to be considered documented via conventional commits.
+In the details of the check,
+you will see an bullet point for each merge method explaining why that _method_ passed or failed
+(independent of the others).
 
-Knope Bot doesn’t yet support repositories which allow merge commits or rebasing.
-It also doesn't support squash strategies that don't use the pull request title as the commit title.
+#### Pull request title
 
-:::
+In two circumstances, the title of the pull request will become a commit message—in these cases, a check can pass
+by checking only the pull request title:
+
+1. Squash merging when _either_ there is more than one commit in the pull request _or_ the repository is configured to _always_ use the pull request title as the commit title. By default, if there is only one commit, GitHub will use that commit when squash merging (effectively rebasing).
+2. Merge commits when the repository is configured to use the pull request title as the commit title. By default, GitHub uses a generic merge commit message, not the pull request title.
+
+#### Commit messages
+
+For all the merge methods enabled on the repository and not covered by the pull request title,
+the bot will check the commit messages included in the pull request.
+If Knope Bot can parse _any_ of the commits in the pull request as a
+[conventional commit] (even if they wouldn't change the next version or changelog), the check will pass.
 
 ## Creating change files
 
