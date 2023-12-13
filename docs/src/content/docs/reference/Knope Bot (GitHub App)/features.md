@@ -13,7 +13,7 @@ with at least one [change file] or [conventional commit].
 
 :::tip
 
-Want additional control over how documentation is enforced? Open an issue in [the main Knope repo](https://github.com/knope-dev/knope/issues)!
+Want more control? Open an issue in [the main Knope repo](https://github.com/knope-dev/knope/issues)!
 
 :::
 
@@ -47,7 +47,7 @@ you will see an bullet point for each merge method explaining why that _method_ 
 
 #### Pull request title
 
-In two circumstances, the title of the pull request will be used as a commit message—in these cases, a check can pass 
+In two circumstances, the title of the pull request will become a commit message—in these cases, a check can pass
 by checking only the pull request title:
 
 1. Squash merging when _either_ there is more than one commit in the pull request _or_ the repository is configured to _always_ use the pull request title as the commit title. By default, if there is only one commit, GitHub will use that commit when squash merging (effectively rebasing).
@@ -57,8 +57,8 @@ by checking only the pull request title:
 
 For all the merge methods enabled on the repository and not covered by the pull request title,
 the bot will check the commit messages included in the pull request.
-If _any_ of the commits in the pull request can be parsed as a
-[conventional commit] (even if they won't change the next version or changelog), the check will pass.
+If Knope Bot can parse _any_ of the commits in the pull request as a
+[conventional commit] (even if they wouldn't change the next version or changelog), the check will pass.
 
 ## Creating change files
 
