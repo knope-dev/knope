@@ -7,7 +7,6 @@ import starlightLinksValidator from "starlight-links-validator";
 export default defineConfig({
   site: "https://knope.tech",
   integrations: [
-    starlightLinksValidator(),
     starlight({
       title: "Knope",
       favicon: "/favicon.png",
@@ -17,6 +16,7 @@ export default defineConfig({
       editLink: {
         baseUrl: "https://github.com/knope-dev/knope/edit/main/docs/",
       },
+      plugins: [starlightLinksValidator()],
       customCss: ["./src/custom.css"],
       expressiveCode: {
         themes: ["starlight-dark", "github-light"],

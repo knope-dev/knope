@@ -12,7 +12,7 @@ Once that trigger occurs:
 4. Knope creates a release on GitHub with the new version, changelog, and assets.
 
 :::hint
-You should also check out the [Pull Request Releases](./pull_request.md) recipe,
+You should also check out the [Pull Request Releases](/recipes/preview-releases-with-pull-requests) recipe,
 which is similar, but includes release previews via pull requests.
 :::
 
@@ -206,6 +206,6 @@ and create releases as needed by parsing the contents of `CHANGELOG.md` for the 
 The release is initially created as a draft, then Knope uploads assets before publishing the release
 (so your subscribers won't be notified until it's all ready).
 
-[`PrepareRelease`]: ../config/step/PrepareRelease.md
+[`PrepareRelease`]: /reference/Config File/Steps/prepare-release
 [create a fine-grained access token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
-[`Release`]: ../config/step/Release.md
+[`Release`]: /reference/Config File/Steps/release
