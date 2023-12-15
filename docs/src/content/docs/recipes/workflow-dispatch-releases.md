@@ -67,7 +67,8 @@ jobs:
             os: macos-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-
+    env:
+      archive_name: artifact
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
 
@@ -88,14 +89,6 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Set Archive Name (Non-Windows)
-        id: archive
-        run: echo "archive_name=test-${{ matrix.target }}" >> $GITHUB_ENV
-
-      - name: Set Archive Name (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: echo "archive_name=test-${{ matrix.target }}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-
       - name: Create Archive Folder
         run: mkdir ${{ env.archive_name }}
 
@@ -111,8 +104,9 @@ jobs:
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.0.0
         with:
+          name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
           if-no-files-found: error
 
@@ -123,9 +117,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.archive_name }}
+      - uses: actions/download-artifact@v4.0.0
       - name: Install the latest Knope
         uses: knope-dev/action@v2.0.0
         with:
@@ -151,16 +143,20 @@ versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 
 [[package.assets]]
-path = "artifact/knope-x86_64-unknown-linux-musl.tgz"
+name = "knope-x86_64-unknown-linux-musl.tgz"
+path = "x86_64-unknown-linux-musl/artifact.tgz"
 
 [[package.assets]]
-path = "artifact/knope-x86_64-pc-windows-msvc.tgz"
+name = "knope-x86_64-pc-windows-msvc.tgz"
+path = "x86_64-pc-windows-msvc/artifact.tgz"
 
 [[package.assets]]
-path = "artifact/knope-x86_64-apple-darwin.tgz"
+name = "knope-x86_64-apple-darwin.tgz"
+path = "x86_64-apple-darwin/artifact.tgz"
 
 [[package.assets]]
-path = "artifact/knope-aarch64-apple-darwin.tgz"
+name = "knope-aarch64-apple-darwin.tgz"
+path = "aarch64-apple-darwin/artifact.tgz"
 
 [[workflows]]
 name = "prepare-release"
@@ -195,7 +191,6 @@ repo = "knope"
 There is a single `[package]`, but this pattern should also work for multi-package setups, just make sure all your assets are ready at the same time.
 In this case, there's one versioned file (`Cargo.toml`) and one changelog (`CHANGELOG.md`).
 There are also four assets, one for each supported platform.
-Because there aren't names for assets, Knope will use the path as the name.
 
 There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml` and `CHANGELOG.md` based on any conventional commits or changesets.
 Knope then runs a command to commit the changes and push them back to the current branch (note that using the `Version` variable isn't supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.

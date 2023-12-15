@@ -32,19 +32,23 @@ You'll either need to change any references to those variables or use the [workf
 
 ```toml
 [[package.assets]]
-path = "artifact/knope-x86_64-unknown-linux-musl.tgz"
+name = "knope-x86_64-unknown-linux-musl.tgz"
+path = "x86_64-unknown-linux-musl/artifact.tgz"
 
 [[package.assets]]
-path = "artifact/knope-x86_64-pc-windows-msvc.tgz"
+name = "knope-x86_64-pc-windows-msvc.tgz"
+path = "x86_64-pc-windows-msvc/artifact.tgz"
 
 [[package.assets]]
-path = "artifact/knope-x86_64-apple-darwin.tgz"
+name = "knope-x86_64-apple-darwin.tgz"
+path = "x86_64-apple-darwin/artifact.tgz"
 
 [[package.assets]]
-path = "artifact/knope-aarch64-apple-darwin.tgz"
+name = "knope-aarch64-apple-darwin.tgz"
+path = "aarch64-apple-darwin/artifact.tgz"
 ```
 
-`package.assets` defines a list of files to upload to GitHub releases. You can also upload them under a different name if you don't want to use the file name by setting `name` in the asset definition.
+`package.assets` defines a list of files to upload to GitHub releases. You can also omit `name` to use the name of the file instead, this wouldn't work in this case because the files are all named `artifact.tgz`.
 
 ### `prepare-release` workflow
 
@@ -227,9 +231,7 @@ release:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
-      with:
-        name: ${{ env.archive_name }}
+    - uses: actions/download-artifact@v4.0.0
     - uses: knope-dev/action@v2.0.0
       with:
         version: 0.13.0
@@ -270,6 +272,8 @@ jobs:
             os: macos-latest
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+    env:
+      archive_name: artifact
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
@@ -302,16 +306,10 @@ jobs:
         if: ${{ matrix.os != 'windows-latest' }}
         run: cp target/${{ matrix.target }}/release/knope ${{ env.archive_name }}
 
-      - name: Copy Windows Artifact
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: cp target/${{ matrix.target }}/release/knope.exe ${{ env.archive_name }}
-
-      - name: Create Tar Archive
-        run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
-
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.0.0
         with:
+          name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
           if-no-files-found: error
 
@@ -320,7 +318,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4.0.0
       - uses: knope-dev/action@v2.0.0
         with:
           version: 0.13.0

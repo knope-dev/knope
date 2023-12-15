@@ -23,9 +23,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
+    env:
+      archive_name: artifact
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4.1.1
       - uses: Swatinem/rust-cache@v2
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
@@ -36,14 +38,6 @@ jobs:
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Set Archive Name (Non-Windows)
-        id: archive
-        run: echo "archive_name=knope-${{ matrix.target }}" >> $GITHUB_ENV
-
-      - name: Set Archive Name (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: echo "archive_name=knope-${{ matrix.target }}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Create Archive Folder
         run: mkdir ${{ env.archive_name }}
@@ -60,8 +54,9 @@ jobs:
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.0.0
         with:
+          name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
           if-no-files-found: error
 
@@ -69,8 +64,8 @@ jobs:
     needs: [build-artifacts]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4.1.1
+      - uses: actions/download-artifact@v4.0.0
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "release"
@@ -82,7 +77,7 @@ jobs:
     needs: [release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4.1.1
       - uses: Swatinem/rust-cache@v2
       - uses: katyo/publish-crates@v2
         with:
