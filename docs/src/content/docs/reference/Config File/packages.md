@@ -82,6 +82,14 @@ module github.com/knope-dev/knope // v0.0.1
 module github.com/knope-dev/knope/v2 // v2.0.0
 ```
 
+### `pubspec.yaml`
+
+For Dart projects, must contain a `version` field:
+
+```yaml title="pubspec.yaml"
+version: 1.0.0
+```
+
 ## `changelog`
 
 The relative path to a Markdown file you'd like to add release notes to.

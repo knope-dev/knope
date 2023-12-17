@@ -9,7 +9,7 @@ use itertools::Itertools;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use super::{cargo, git, go, package_json, pyproject, semver::Version};
+use super::{cargo, git, go, package_json, pubspec_yaml, pyproject, semver::Version};
 use crate::{dry_run::DryRun, workflow::Verbose};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -83,6 +83,9 @@ enum ErrorKind {
     #[error(transparent)]
     #[diagnostic(transparent)]
     PackageJson(#[from] package_json::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    PubSpecYaml(#[from] pubspec_yaml::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -107,6 +110,7 @@ impl VersionedFile {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum PackageFormat {
     Cargo,
+    Dart,
     Go,
     JavaScript,
     Poetry,
@@ -157,6 +161,12 @@ impl PackageFormat {
                     source: path.into(),
                 }),
             PackageFormat::Go => go::get_version(content, path, verbose).map_err(ErrorKind::Go),
+            PackageFormat::Dart => pubspec_yaml::get_version(content, path)
+                .map_err(ErrorKind::PubSpecYaml)
+                .map(|version| VersionFromSource {
+                    version,
+                    source: path.into(),
+                }),
         }
         .map_err(Error::from)
     }
@@ -186,6 +196,10 @@ impl PackageFormat {
             }
             PackageFormat::Go => {
                 go::set_version_in_file(dry_run, &content, new_version, path).map_err(Error::from)
+            }
+            PackageFormat::Dart => {
+                pubspec_yaml::set_version(dry_run, &content, &new_version.version, path)
+                    .map_err(Error::from)
             }
         }
     }
@@ -230,11 +244,17 @@ impl From<&Path> for VersionSource {
     }
 }
 
-const ALL_PACKAGE_FORMATS: [PackageFormat; 4] = [
+const ALL_PACKAGE_FORMATS: [PackageFormat; 5] = [
     PackageFormat::Cargo,
+    PackageFormat::Dart,
     PackageFormat::Go,
     PackageFormat::JavaScript,
     PackageFormat::Poetry,
 ];
-pub(crate) const PACKAGE_FORMAT_FILE_NAMES: [&str; ALL_PACKAGE_FORMATS.len()] =
-    ["Cargo.toml", "go.mod", "package.json", "pyproject.toml"];
+pub(crate) const PACKAGE_FORMAT_FILE_NAMES: [&str; ALL_PACKAGE_FORMATS.len()] = [
+    "Cargo.toml",
+    "pubspec.yaml",
+    "go.mod",
+    "package.json",
+    "pyproject.toml",
+];
