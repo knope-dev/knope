@@ -10,6 +10,16 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.13.3 (2023-12-17)
+
+### Features
+
+#### Support `pubspec.yaml` in `versioned_files`
+
+Knope can now version Dart projects! You can now add a `pubspec.yaml` file to your `package.versioned_files`.
+
+PR #732 closes #731. Thanks @FallenValkyrie!
+
 ## 0.13.2 (2023-11-11)
 
 ### Fixes
