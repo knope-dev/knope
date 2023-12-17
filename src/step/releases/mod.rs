@@ -28,6 +28,7 @@ pub(crate) mod github;
 pub(crate) mod go;
 pub(crate) mod package;
 mod package_json;
+mod pubspec_yaml;
 mod pyproject;
 pub(crate) mod semver;
 pub(crate) mod versioned_file;

@@ -1,0 +1,3 @@
+Would add the following to pubspec.yaml: 2.0.0
+Would add files to git:
+  pubspec.yaml

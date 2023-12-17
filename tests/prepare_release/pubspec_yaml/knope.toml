@@ -1,0 +1,8 @@
+[package]
+versioned_files = ["pubspec.yaml"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

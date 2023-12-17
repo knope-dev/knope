@@ -509,6 +509,55 @@ fn prepare_release_pyproject_toml(#[case] input_file: &str) {
     );
 }
 
+#[test]
+fn prepare_release_pubspec_yaml() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/prepare_release/pubspec_yaml");
+
+    init(temp_path);
+    copy(
+        source_path.join("pubspec.yaml"),
+        temp_path.join("pubspec.yaml"),
+    )
+    .unwrap();
+    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
+    add_all(temp_path);
+    commit(temp_path, "feat: Existing feature");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "feat!: New feature");
+
+    // Act.
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert.
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+    actual_assert.success().stdout_eq("");
+    assert().matches_path(
+        source_path.join("expected_pubspec.yaml"),
+        read_to_string(temp_path.join("pubspec.yaml")).unwrap(),
+    );
+
+    let expected_changes = ["M  pubspec.yaml"];
+    assert_eq!(
+        status(temp_path),
+        expected_changes,
+        "All modified changes should be added to Git"
+    );
+}
+
 /// Snapshot the error messages when a required file is missing.
 #[rstest]
 #[case("Cargo.toml_knope.toml")]
