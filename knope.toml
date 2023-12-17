@@ -4,20 +4,16 @@ changelog = "CHANGELOG.md"
 extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
 
 [[package.assets]]
-name = "knope-x86_64-unknown-linux-musl.tgz"
-path = "x86_64-unknown-linux-musl/artifact.tgz"
+path = "x86_64-unknown-linux-musl/knope-x86_64-unknown-linux-musl.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-pc-windows-msvc.tgz"
-path = "x86_64-pc-windows-msvc/artifact.tgz"
+path = "x86_64-pc-windows-msvc/knope-x86_64-pc-windows-msvc.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-apple-darwin.tgz"
-path = "x86_64-apple-darwin/artifact.tgz"
+path = "x86_64-apple-darwin/knope-x86_64-apple-darwin.tgz"
 
 [[package.assets]]
-name = "knope-aarch64-apple-darwin.tgz"
-path = "aarch64-apple-darwin/artifact.tgz"
+path = "aarch64-apple-darwin/knope-aarch64-apple-darwin.tgz"
 
 [[workflows]]
 name = "prepare-release"
