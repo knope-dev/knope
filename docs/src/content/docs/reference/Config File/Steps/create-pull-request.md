@@ -37,9 +37,7 @@ name = "create-release-pull-request"
 
 [[workflows.steps]]
 type = "CreatePullRequest"
-
-[workflows.steps.base]
-default = "main"
+base = "main"
 
 [workflows.steps.title]
 template = "chore: Release $version"
