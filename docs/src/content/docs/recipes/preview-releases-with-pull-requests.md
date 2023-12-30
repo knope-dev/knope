@@ -44,7 +44,7 @@ path = "artifacts/knope-x86_64-apple-darwin.tgz"
 path = "artifacts/knope-aarch64-apple-darwin.tgz"
 ```
 
-`package.assets` defines a list of files to upload to GitHub releases. You can also include `name` to change the name of the uploaded artifact. 
+`package.assets` defines a list of files to upload to GitHub releases. You can also include `name` to change the name of the uploaded artifact.
 It defaults to the last component of the path (for example, `knope-x86_64-unknown-linux-musl.tgz`).
 
 ### `prepare-release` workflow
