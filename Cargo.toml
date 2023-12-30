@@ -47,4 +47,4 @@ serde_yaml = "0.9.29"
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
 snapbox = "0.4.15"
-tempfile = "3.8.1"
+tempfile = "3.9.0"
