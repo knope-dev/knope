@@ -212,5 +212,5 @@ pub(crate) enum Error {
         help("Try setting the `name` property of the asset manually"),
         url("https://knope.tech/reference/config-file/packages/#assets")
     )]
-    AssetNameError(#[from] AssetNameError),
+    AssetName(#[from] AssetNameError),
 }
