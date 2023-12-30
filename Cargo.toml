@@ -8,7 +8,7 @@ license = "MIT"
 repository = "https://github.com/knope-dev/knope"
 homepage = "https://knope.tech"
 documentation = "https://knope.tech"
-keywords = ["jira", "git", "github", "workflow", "script"]
+keywords = ["semantic-version", "changelog", "changeset", "git", "github"]
 categories = ["command-line-utilities", "development-tools"]
 rust-version = "1.67"
 
