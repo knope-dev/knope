@@ -32,23 +32,20 @@ You'll either need to change any references to those variables or use the [workf
 
 ```toml
 [[package.assets]]
-name = "knope-x86_64-unknown-linux-musl.tgz"
-path = "x86_64-unknown-linux-musl/artifact.tgz"
+path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-pc-windows-msvc.tgz"
-path = "x86_64-pc-windows-msvc/artifact.tgz"
+path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-apple-darwin.tgz"
-path = "x86_64-apple-darwin/artifact.tgz"
+path = "artifacts/knope-x86_64-apple-darwin.tgz"
 
 [[package.assets]]
-name = "knope-aarch64-apple-darwin.tgz"
-path = "aarch64-apple-darwin/artifact.tgz"
+path = "artifacts/knope-aarch64-apple-darwin.tgz"
 ```
 
-`package.assets` defines a list of files to upload to GitHub releases. You can also omit `name` to use the name of the file instead, this wouldn't work in this case because the files are all named `artifact.tgz`.
+`package.assets` defines a list of files to upload to GitHub releases. You can also include `name` to change the name of the uploaded artifact. 
+It defaults to the last component of the path (for example, `knope-x86_64-unknown-linux-musl.tgz`).
 
 ### `prepare-release` workflow
 
@@ -231,7 +228,10 @@ release:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v4.0.0
+    - uses: actions/download-artifact@v4.1.0
+      with:
+        path: artifacts
+        merge-multiple: true
     - uses: knope-dev/action@v2.0.0
       with:
         version: 0.13.0
@@ -318,7 +318,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4.0.0
+      - uses: actions/download-artifact@v4.1.0
+        with:
+          path: artifacts
+          merge-multiple: true
       - uses: knope-dev/action@v2.0.0
         with:
           version: 0.13.0
