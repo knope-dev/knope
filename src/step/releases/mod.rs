@@ -125,7 +125,7 @@ pub(crate) enum Error {
     ConventionalCommits(#[from] conventional_commits::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    ParseError(#[from] changelog::ParseError),
+    Parse(#[from] changelog::ParseError),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
