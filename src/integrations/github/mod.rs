@@ -9,15 +9,6 @@ use crate::{app_config, app_config::get_or_prompt_for_github_token, state};
 mod create_pull_request;
 mod create_release;
 
-fn ureq_err_to_string(err: ureq::Error) -> String {
-    match err {
-        ureq::Error::Status(code, response) => {
-            format!("{}: {}", code, response.into_string().unwrap_or_default())
-        }
-        ureq::Error::Transport(err) => format!("Transport error: {err}"),
-    }
-}
-
 fn initialize_state(state: state::GitHub) -> Result<(String, Agent), app_config::Error> {
     Ok(match state {
         state::GitHub::Initialized { token, agent } => (token, agent),

@@ -1,15 +1,11 @@
 use miette::Diagnostic;
-use serde::Deserialize;
 use serde_json::json;
 use ureq::Agent;
 
 use crate::{
     app_config, config,
     dry_run::DryRun,
-    integrations::{
-        git,
-        github::{initialize_state, ureq_err_to_string},
-    },
+    integrations::{git, github::initialize_state, ureq_err_to_string, PullRequest},
     state,
     workflow::Verbose,
 };
@@ -138,11 +134,6 @@ fn create_pull_request(
         }
     }
     Ok(agent)
-}
-
-#[derive(Deserialize)]
-struct PullRequest {
-    url: String,
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

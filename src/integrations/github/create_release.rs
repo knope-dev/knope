@@ -2,13 +2,13 @@ use std::{io::Write, path::PathBuf};
 
 use datta::UriTemplate;
 use miette::Diagnostic;
-use serde::{Deserialize, Serialize};
 
-use super::ureq_err_to_string;
 use crate::{
     app_config, config,
     dry_run::DryRun,
-    integrations::github::initialize_state,
+    integrations::{
+        github::initialize_state, ureq_err_to_string, CreateReleaseInput, CreateReleaseResponse,
+    },
     state,
     step::releases::package::{Asset, AssetNameError},
 };
@@ -91,45 +91,6 @@ pub(crate) fn create_release(
     }
 
     Ok(state::GitHub::Initialized { token, agent })
-}
-
-#[derive(Serialize)]
-struct CreateReleaseInput<'a> {
-    tag_name: &'a str,
-    name: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    body: Option<&'a str>,
-    prerelease: bool,
-    /// Whether to automatically generate the body for this release.
-    /// If body is specified, the body will be pre-pended to the automatically generated notes.
-    generate_release_notes: bool,
-    /// true to create a draft (unpublished) release, false to create a published one.
-    draft: bool,
-}
-
-impl<'a> CreateReleaseInput<'a> {
-    fn new(
-        tag_name: &'a str,
-        name: &'a str,
-        body: Option<&'a str>,
-        prerelease: bool,
-        draft: bool,
-    ) -> Self {
-        Self {
-            generate_release_notes: body.is_none(),
-            tag_name,
-            name,
-            body,
-            prerelease,
-            draft,
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct CreateReleaseResponse {
-    url: String,
-    upload_url: String,
 }
 
 fn github_release_dry_run(
