@@ -24,6 +24,19 @@ pub(crate) fn get_or_prompt_for_github_token() -> Result<String, Error> {
     })
 }
 
+pub(crate) fn get_or_prompt_for_gitea_token(host: &str) -> Result<String, Error> {
+    std::env::var("GITEA_TOKEN").or_else(|_| {
+        let prompt = format!(
+            "\
+            No Gitea token found, generate one from {host}/user/settings/applications with\n\
+            `repository` permissions set to `Read and Write`\
+             and `issue` permissions set to `Read` and input here\
+            "
+        );
+        load_value_or_prompt("gitea_token", &prompt)
+    })
+}
+
 pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String, Error> {
     let app_dirs = AppDirs::new(Some("knope"), true).ok_or(Error::CouldNotOpenConfigPath)?;
     let config_path = app_dirs.config_dir.join(key);

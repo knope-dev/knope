@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod git;
+pub mod gitea;
 pub mod github;
 
 #[derive(Deserialize)]

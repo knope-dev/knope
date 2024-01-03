@@ -93,6 +93,41 @@ impl Gitea {
         format!("{host}/api/v1", host = self.host)
     }
 
+    /// get the base url to create and list PRs
+    pub(crate) fn get_pulls_url(&self) -> String {
+        format!(
+            "{base_url}/repos/{owner}/{repo}/pulls",
+            base_url = self.get_base_url(),
+            owner = self.owner,
+            repo = self.repo
+        )
+    }
+
+    /// get the URL to read/update a single PR
+    pub(crate) fn get_pull_url(&self, pr_number: u32) -> String {
+        format!("{pulls_url}/{pr_number}", pulls_url = self.get_pulls_url())
+    }
+
+    /// Get the URL to create/read releases
+    pub(crate) fn get_releases_url(&self) -> String {
+        format!(
+            "{base_url}/repos/{owner}/{repo}/releases",
+            base_url = self.get_base_url(),
+            owner = self.owner,
+            repo = self.repo
+        )
+    }
+
+    /// Get the URL to list repo issues
+    pub(crate) fn get_issues_url(&self) -> String {
+        format!(
+            "{base_url}/repos/{owner}/{repo}/issues",
+            base_url = self.get_base_url(),
+            owner = self.owner,
+            repo = self.repo
+        )
+    }
+
     /// try to build [Gitea] from a remote formatted like `git@{host}:/{owner}/{repo}`
     /// or `https://{host}/{owner}/{repo}`
     ///
