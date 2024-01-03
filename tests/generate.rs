@@ -138,3 +138,34 @@ fn generate_github(#[case] remote: &str) {
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
+
+/// Run `--generate` on a repo with a GitHub remote.
+#[rstest]
+#[case::ssh("git@codeberg.org:knope-dev/knope.git")]
+#[case::https("https://codeberg.org/knope-dev/knope.git")]
+#[case::ssh_without_git_suffix("git@codeberg.org:knope-dev/knope")]
+#[case::https_without_git_suffix("https://codeberg.org/knope-dev/knope")]
+fn generate_gitea(#[case] remote: &str) {
+    // Arrange
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let source_path = Path::new("tests/generate/gitea");
+    init(temp_path);
+    add_remote(temp_path, remote);
+
+    // Act
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
+    // Assert
+    assert
+        .success()
+        .stdout_eq("Generating a knope.toml file\n")
+        .stderr_eq("");
+    assert_eq_path(
+        source_path.join("knope.toml"),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
+    );
+}
