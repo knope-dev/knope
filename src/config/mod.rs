@@ -19,7 +19,9 @@ use crate::{
 
 pub(crate) mod toml;
 
-pub(crate) use self::toml::{ChangeLogSectionName, CommitFooter, CustomChangeType, GitHub, Jira};
+pub(crate) use self::toml::{
+    ChangeLogSectionName, CommitFooter, CustomChangeType, GitHub, Gitea, Jira,
+};
 
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
@@ -31,6 +33,8 @@ pub(crate) struct Config {
     pub(crate) jira: Option<Jira>,
     /// Optional configuration to talk to GitHub
     pub(crate) github: Option<GitHub>,
+    /// Optional configuration to communicate with a Gitea instance
+    pub(crate) gitea: Option<Gitea>,
 }
 
 impl Config {
@@ -65,12 +69,14 @@ impl Config {
             package: Option<toml::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
+            gitea: Option<Gitea>,
         }
 
         let config = SimpleConfig {
             package: self.packages.pop().map(toml::Package::from),
             workflows: self.workflows,
             github: self.github,
+            gitea: self.gitea,
         };
         #[allow(clippy::unwrap_used)] // because serde is annoying... I know it will serialize
         let serialized = to_string(&config).unwrap();
@@ -133,6 +139,7 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                 .collect(),
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
+            gitea: config.gitea.map(Spanned::into_inner),
         })
     }
 }
@@ -226,8 +233,9 @@ pub(crate) fn generate() -> Config {
     let mut variables = IndexMap::new();
     variables.insert(String::from("$version"), Variable::Version);
 
-    let github = match git::get_first_remote() {
-        Some(remote) if remote.contains("github.com") => {
+    let first_remote = git::get_first_remote();
+    let github = match first_remote {
+        Some(ref remote) if remote.contains("github.com") => {
             let parts = remote.split('/').collect::<Vec<_>>();
             let owner = parts.get(parts.len() - 2).map(|owner| {
                 owner
@@ -246,7 +254,19 @@ pub(crate) fn generate() -> Config {
         }
         _ => None,
     };
-    let mut release_steps = if github.is_some() {
+
+    let gitea = first_remote.as_ref().and_then(|remote| {
+        if Gitea::KNOWN_PUBLIC_GITEA_HOSTS
+            .iter()
+            .any(|known_host| remote.contains(known_host))
+        {
+            Gitea::try_from_remote(remote)
+        } else {
+            None
+        }
+    });
+
+    let mut release_steps = if github.is_some() || gitea.is_some() {
         vec![
             Step::Command {
                 command: String::from(
@@ -284,6 +304,7 @@ pub(crate) fn generate() -> Config {
         ],
         jira: None,
         github,
+        gitea,
         packages: find_packages().ok().into_iter().collect(),
     }
 }
