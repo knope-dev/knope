@@ -11,3 +11,5 @@ GitHub Actions
 musl
 TOML
 rebasing
+Gitea
+Codeberg
