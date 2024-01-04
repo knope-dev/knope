@@ -24,6 +24,7 @@ pub(crate) mod changelog;
 pub(crate) mod changesets;
 pub(crate) mod conventional_commits;
 pub(crate) mod git;
+pub(crate) mod gitea;
 pub(crate) mod github;
 pub(crate) mod go;
 pub(crate) mod package;
@@ -120,6 +121,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     GitHub(#[from] github::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Gitea(#[from] gitea::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     ConventionalCommits(#[from] conventional_commits::Error),
@@ -310,11 +314,13 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
     }
 
     let github_config = state.github_config.clone();
+    let gitea_config = state.gitea_config.clone();
     for package_to_release in releases {
         let tag = tag_name(
             &package_to_release.release.version,
             &package_to_release.package.name,
         );
+
         if let Some(github_config) = github_config.as_ref() {
             state.github = github::release(
                 package_to_release.package.name.as_ref(),
@@ -325,7 +331,22 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
                 package_to_release.package.assets.as_ref(),
                 &tag,
             )?;
-        } else {
+        }
+
+        if let Some(ref gitea_config) = gitea_config {
+            state.gitea = gitea::release(
+                package_to_release.package.name.as_ref(),
+                &package_to_release.release,
+                state.gitea,
+                gitea_config,
+                &mut dry_run_stdout,
+                package_to_release.package.assets.as_ref(),
+                &tag,
+            )?;
+        }
+
+        // if neither is present, we fall back to git release
+        if github_config.is_none() && gitea_config.is_none() {
             git::release(&mut dry_run_stdout, &tag)?;
         }
         add_go_mod_tags(&package_to_release, &tag, &mut dry_run_stdout)?;
