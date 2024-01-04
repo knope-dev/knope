@@ -2,7 +2,11 @@
 title: CreatePullRequest
 ---
 
-Create a pull request on GitHub from the current branch to a specified branch. If a pull request for those already exists, this step will overwrite the title and body of the existing pull request.
+Create a pull request on a configured forge from the current branch to a specified branch. If a pull request for those already exists, this step will overwrite the title and body of the existing pull request.
+
+## Prerequisites
+
+To use the `CreatePullRequest` step, you must configure a forge first. See [configuring a Forge] for more information.
 
 ## Parameters
 
@@ -52,3 +56,4 @@ For a full example of how to use this with GitHub Actions to help automate relea
 
 [Knope's prepare-release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/prepare_release.yml
 [knope's release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/release.yml
+[configuring a forge]: /reference/concepts/forge

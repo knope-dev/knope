@@ -10,7 +10,7 @@ In Knope, releasing a package consists of:
 2. Update all versioned files with the new version
 3. Add the details of all changes since the last release to the [changelog]
 4. Create a [Git tag](#git-tags)
-5. Optionally create a GitHub release (as part of the previous step) if [GitHub is configured](/reference/config-file/github)
+5. Optionally create a GitHub release (as part of the previous step) if [a forge is configured](/reference/concepts/forge)
 
 :::tip
 

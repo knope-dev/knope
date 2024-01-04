@@ -3,7 +3,7 @@ title: Release
 ---
 
 Release the configured [packages] which have pending changes.
-If there is a [GitHub config] set,
+If there is a [forge config] set,
 this creates a release on GitHub with the same release notes that it added to the changelog (if any).
 Otherwise, this tags the current commit as a release.
 In either case, this step adds a new Git tag with the package's tag format.
@@ -21,7 +21,7 @@ If the config file is using the `[packages.{name}]` syntax,
 each package gets its own tag in the format `{name}/v{version}` (this is the syntax required for Go modules).
 See examples below for more illustration.
 
-## GitHub release notes
+## Release notes
 
 There are several different possible release notes formats:
 
@@ -29,7 +29,7 @@ There are several different possible release notes formats:
 2. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is a changelog file for the package, the release notes will be taken from the relevant changelog section. This section header must match exactly what [`PrepareRelease`] would have created. Headers will one level higher (for example, `####` becomes `###`).
 3. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is no changelog file for the package, the step will use GitHub's automatic release notes generation.
 
-## GitHub release assets
+## Release assets
 
 You can optionally include any number of assets to include in a release via [package assets].
 If you do this, this step will:
@@ -46,11 +46,11 @@ you can use `on: release: created` to run as soon as the step creates the draft
 
 This step will fail if:
 
-1. [GitHub config] exists but Knope can't create a release on GitHub. For example:
-   1. There is no GitHub token set.
-   2. The GitHub token doesn't have permission to create releases.
-   3. The release already exists on GitHub (causing a conflict).
-2. There is no [GitHub config] set and Knope can't tag the current commit as a release.
+1. [forge config] exists but Knope can't create a release on the forge. For example:
+   1. There is no token set.
+   2. The token doesn't have permission to create releases.
+   3. The release already exists on the forge (causing a conflict).
+2. There is no [forge config] set and Knope can't tag the current commit as a release.
 3. Could not find the correct changelog section in the configured changelog file for loading release notes.
 4. One of the configured package assets doesn't exist.
 
@@ -179,7 +179,7 @@ See [Knope's release workflow] and [knope.toml] where we:
 3. Fan out into several jobs which each check out the changes and build a different binary
 4. Create a GitHub release with the new version, changelog, and the binary assets
 
-[github config]: /reference/config-file/github
+[forge config]: /reference/concepts/forge
 [`preparerelease`]: /reference/config-file/steps/prepare-release
 [packages]: /reference/concepts/package
 [package assets]: /reference/config-file/packages#assets
