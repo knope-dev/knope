@@ -1,0 +1,5 @@
+Would create a release on Gitea with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
+## Features
+
+### New feature
+NOTE: adding assets to a gitea release is currently not supported. Uploading assets will be skipped
