@@ -41,6 +41,13 @@ pub(crate) enum Step {
         /// If provided, only issues with this label will be included
         labels: Option<Vec<String>>,
     },
+    /// Search for Gitea issues by status and display the list of them in the terminal.
+    /// User is allowed to select one issue which will then change the workflow's state to
+    /// [`State::IssueSelected`].
+    SelectGiteaIssue {
+        /// If provided, only issues with this label will be included
+        labels: Option<Vec<String>>,
+    },
     /// Attempt to parse issue info from the current branch name and change the workflow's state to
     /// [`State::IssueSelected`].
     SelectIssueFromBranch,
@@ -97,6 +104,9 @@ impl Step {
             Step::SelectGitHubIssue { labels } => {
                 issues::github::select_issue(labels.as_deref(), run_type)?
             }
+            Step::SelectGiteaIssue { labels } => {
+                issues::gitea::select_issue(labels.as_deref(), run_type)?
+            }
             Step::SwitchBranches => git::switch_branches(run_type)?,
             Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
             Step::BumpVersion(rule) => releases::bump_version(run_type, &rule)?,
@@ -137,6 +147,9 @@ pub(super) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     GitHubIssue(#[from] issues::github::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    GiteaIssue(#[from] issues::gitea::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Git(#[from] git::Error),
