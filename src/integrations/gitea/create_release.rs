@@ -25,7 +25,7 @@ pub(crate) fn create_release(
     let gitea_release = CreateReleaseInput::new(tag_name, name, body, prerelease, false);
 
     if let Some(stdout) = dry_run_stdout {
-        gitea_release_dry_run(name, assets, &gitea_release, stdout)?;
+        gitea_release_dry_run(name, gitea_config, assets, &gitea_release, stdout)?;
         return Ok(gitea_state);
     }
 
@@ -62,6 +62,7 @@ pub(crate) fn create_release(
 
 fn gitea_release_dry_run(
     name: &str,
+    config: &config::Gitea,
     assets: Option<&Vec<Asset>>,
     gitea_release: &CreateReleaseInput,
     stdout: &mut Box<dyn Write>,
@@ -77,8 +78,9 @@ fn gitea_release_dry_run(
     );
     writeln!(
         stdout,
-        "Would create a {release_type} on Gitea with name {name} and tag {tag} and {body}",
-        tag = gitea_release.tag_name
+        "Would create a {release_type} on Gitea [{host}] with name {name} and tag {tag} and {body}",
+        tag = gitea_release.tag_name,
+        host = config.host
     )
     .map_err(Error::Stdout)?;
 
