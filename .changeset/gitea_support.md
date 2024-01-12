@@ -22,4 +22,4 @@ You can now use the above mentioned steps in the same way as their GitHub equiva
 ## Generating a configuration
 Knope can now generate a configuration for you, if your repository's remote is one of the known 
 public Gitea instances. Currently only [Codeberg](https://codeberg.org) is supported, 
-but feel free to add more [here](https://github.com/FallenValkyrie/knope/blob/f18e4cd6f786433d945d8a68d210f72a068ba98c/src/config/toml/config.rs#L90).
+but feel free to add more [here](https://github.com/knope-dev/knope/blob/main/src/config/toml/config.rs#L90).
