@@ -4,7 +4,7 @@ title: Release
 
 Release the configured [packages] which have pending changes.
 If there is a [forge config] set,
-this creates a release on GitHub with the same release notes that it added to the changelog (if any).
+this creates a release with the same release notes that it added to the changelog (if any).
 Otherwise, this tags the current commit as a release.
 In either case, this step adds a new Git tag with the package's tag format.
 You should run [`PrepareRelease`] before this step, though not necessarily in the same workflow.
@@ -27,7 +27,7 @@ There are several different possible release notes formats:
 
 1. If run after a [`PrepareRelease`] step in the same workflow, the release notes will be the same as the changelog section created by [`PrepareRelease`] even if there is no changelog file configured—with the exception that headers are one level higher (for example, `####` becomes `###`).
 2. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is a changelog file for the package, the release notes will be taken from the relevant changelog section. This section header must match exactly what [`PrepareRelease`] would have created. Headers will one level higher (for example, `####` becomes `###`).
-3. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is no changelog file for the package, the step will use GitHub's automatic release notes generation.
+3. If run in a workflow with no [`PrepareRelease`] step before it (the new version was set another way), and there is no changelog file for the package, the step will use automatic release notes generation.
 
 ## Release assets
 

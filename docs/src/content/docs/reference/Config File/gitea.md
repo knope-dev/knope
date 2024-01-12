@@ -12,7 +12,7 @@ Details needed to use steps that reference Gitea repositories.
 [gitea]
 owner = "knope-dev"
 repo = "knope"
-host = "codeberg.org"
+host = "https://codeberg.org"
 ```
 
 The first time you use a step which requires this config,
