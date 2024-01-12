@@ -31,10 +31,7 @@ pub(crate) fn select_issue(
                 )?;
             }
 
-            writeln!(
-                stdout,
-                "Would prompt user to select an issue and move workflow to IssueSelected state."
-            )?;
+            writeln!(stdout, "Would prompt user to select an issue")?;
 
             state.issue = state::Issue::Selected(Issue {
                 key: String::from("123"),
