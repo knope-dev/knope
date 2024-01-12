@@ -42,6 +42,11 @@ If you have any follow-up workflows triggered by GitHub releases,
 you can use `on: release: created` to run as soon as the step creates the draft
 (without assets) or `on: release: published` to run only after the assets are uploaded.
 
+:::caution
+[Package assets] are currently unsupported when used together with Gitea.
+This is due to one of our dependencies not supporting `multipart/form-data` requests.
+:::
+
 ## Errors
 
 This step will fail if:
