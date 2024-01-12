@@ -228,7 +228,7 @@ release:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4.1.1
-    - uses: actions/download-artifact@v4.1.0
+    - uses: actions/download-artifact@v4.1.1
       with:
         path: artifacts
         merge-multiple: true
@@ -318,7 +318,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.1.1
-      - uses: actions/download-artifact@v4.1.0
+      - uses: actions/download-artifact@v4.1.1
         with:
           path: artifacts
           merge-multiple: true
