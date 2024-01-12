@@ -46,5 +46,5 @@ serde_yaml = "0.9.30"
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
-snapbox = "0.4.15"
+snapbox = "0.4.16"
 tempfile = "3.8.1"
