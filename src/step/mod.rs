@@ -43,7 +43,7 @@ pub(crate) enum Step {
     },
     /// Search for Gitea issues by status and display the list of them in the terminal.
     /// User is allowed to select one issue which will then change the workflow's state to
-    /// [`State::IssueSelected`].
+    /// [`Issue::Selected`].
     SelectGiteaIssue {
         /// If provided, only issues with this label will be included
         labels: Option<Vec<String>>,
