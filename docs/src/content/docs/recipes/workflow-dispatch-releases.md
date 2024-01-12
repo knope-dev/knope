@@ -34,7 +34,7 @@ jobs:
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         name: Fetch entire history (for conventional commits)
         with:
           fetch-depth: 0
@@ -73,7 +73,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
 
@@ -84,7 +84,7 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
         run: sudo apt-get install -y musl-tools
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.7.2
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -104,7 +104,7 @@ jobs:
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.0.0
+        uses: actions/upload-artifact@v4.1.0
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -114,10 +114,10 @@ jobs:
     needs: [build-artifacts, prepare-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v4.1.0
+      - uses: actions/download-artifact@v4.1.1
         with:
           path: artifacts
           merge-multiple: true
