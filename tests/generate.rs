@@ -139,7 +139,7 @@ fn generate_github(#[case] remote: &str) {
     );
 }
 
-/// Run `--generate` on a repo with a GitHub remote.
+/// Run `--generate` on a repo with a Gitea remote.
 #[rstest]
 #[case::ssh("git@codeberg.org:knope-dev/knope.git")]
 #[case::https("https://codeberg.org/knope-dev/knope.git")]

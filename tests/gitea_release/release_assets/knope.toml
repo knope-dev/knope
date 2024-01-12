@@ -24,4 +24,4 @@ type = "Release"
 [gitea]
 owner = "knope-dev"
 repo = "knope"
-host = "codeberg.org"
+host = "https://codeberg.org"
