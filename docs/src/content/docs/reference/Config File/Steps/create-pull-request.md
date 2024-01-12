@@ -2,7 +2,12 @@
 title: CreatePullRequest
 ---
 
-Create a pull request on a configured forge from the current branch to a specified branch. If a pull request for those already exists, this step will overwrite the title and body of the existing pull request.
+Create a pull request on every configured forge from the current branch to a specified branch. If a pull request for those already exists, this step will overwrite the title and body of the existing pull request.
+
+:::caution
+If you configure more than one forge, Knope will assume that you wish to create a PR on all of them.
+Keep that in mind, when writing your configuration.
+:::
 
 ## Prerequisites
 
