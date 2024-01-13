@@ -4,6 +4,8 @@ default: minor
 
 # Gitea support
 
+PR #759 closed issue #743. Thank you, @FallenValkyrie!
+
 - Added Support for Gitea in the `CreatePullRequest` step
 - Added Support for Gitea in the `Release` step
 - Added A new `SelectGiteaIssue` step
