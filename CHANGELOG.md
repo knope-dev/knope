@@ -35,9 +35,9 @@ host = "https://codeberg.org"
 You can now use the supported steps in the same way as their GitHub equivalents.
 
 > [!TIP]
-> Knope can now generate a configuration for you, if your repository's remote is one of the known 
-public Gitea instances. Currently only [Codeberg](https://codeberg.org) is supported, 
-but feel free to add more [here](https://github.com/knope-dev/knope/blob/main/src/config/toml/config.rs#L90).
+> Knope can now generate a configuration for you, if your repository's remote is one of the known
+> public Gitea instances. Currently only [Codeberg](https://codeberg.org) is supported,
+> but feel free to add more [here](https://github.com/knope-dev/knope/blob/main/src/config/toml/config.rs#L90).
 
 ## 0.13.3 (2023-12-17)
 
