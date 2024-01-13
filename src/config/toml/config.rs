@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
 
@@ -21,6 +22,9 @@ pub(crate) struct ConfigLoader {
     /// Optional configuration to talk to GitHub
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) github: Option<Spanned<GitHub>>,
+    /// Optional configuration to talk to a Gitea instance
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) gitea: Option<Spanned<Gitea>>,
 }
 
 #[cfg(test)]
@@ -68,4 +72,154 @@ pub(crate) struct GitHub {
     pub(crate) owner: String,
     /// The name of the repository in GitHub that this project is utilizing
     pub(crate) repo: String,
+}
+
+/// Details needed to use steps that interact with a Gitea instance.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+pub(crate) struct Gitea {
+    /// The user or organization that owns the `repo`.
+    pub(crate) owner: String,
+    /// The name of the repository
+    pub(crate) repo: String,
+    /// The domain or IP of the Gitea instance
+    pub(crate) host: String,
+}
+
+impl Gitea {
+    /// This lists all known gitea hosts, so we can easily generate the gitea config
+    pub(crate) const KNOWN_PUBLIC_GITEA_HOSTS: &'static [&'static str] = &["codeberg.org"];
+
+    fn get_base_url(&self) -> String {
+        format!("{host}/api/v1", host = self.host)
+    }
+
+    /// get the base url to create and list PRs
+    pub(crate) fn get_pulls_url(&self) -> String {
+        format!(
+            "{base_url}/repos/{owner}/{repo}/pulls",
+            base_url = self.get_base_url(),
+            owner = self.owner,
+            repo = self.repo
+        )
+    }
+
+    /// get the URL to read/update a single PR
+    pub(crate) fn get_pull_url(&self, pr_number: u32) -> String {
+        format!("{pulls_url}/{pr_number}", pulls_url = self.get_pulls_url())
+    }
+
+    /// Get the URL to create/read releases
+    pub(crate) fn get_releases_url(&self) -> String {
+        format!(
+            "{base_url}/repos/{owner}/{repo}/releases",
+            base_url = self.get_base_url(),
+            owner = self.owner,
+            repo = self.repo
+        )
+    }
+
+    /// Get the URL to list repo issues
+    pub(crate) fn get_issues_url(&self) -> String {
+        format!(
+            "{base_url}/repos/{owner}/{repo}/issues",
+            base_url = self.get_base_url(),
+            owner = self.owner,
+            repo = self.repo
+        )
+    }
+
+    /// try to build [Gitea] from a remote formatted like `git@{host}:/{owner}/{repo}`
+    /// or `https://{host}/{owner}/{repo}`
+    ///
+    /// returns None if the remote isn't formatted correctly
+    pub(crate) fn try_from_remote(remote: &str) -> Option<Self> {
+        // gives [git@something, /x/y.git]
+        // or [http(s), host/x/y.git]
+        let (scheme, path) = remote.split_once(':')?;
+
+        if scheme.contains("git@") {
+            // ssh remote
+            // owner/repo.git -> [owner, repo.git]
+            let (owner, repo) = path.strip_prefix('/').unwrap_or(path).split_once('/')?;
+
+            Some(Self {
+                owner: owner.to_string(),
+                repo: repo.strip_suffix(".git").unwrap_or(repo).to_string(),
+                host: format!("https://{host}", host = scheme.strip_prefix("git@")?),
+            })
+        } else {
+            // HTTP(s) remote
+            // host/owner/repo -> [host, owner, repo]
+            let [host, owner, repo]: [&str; 3] = path
+                .strip_prefix("//")?
+                .splitn(3, '/')
+                .collect_vec()
+                .try_into()
+                .ok()?;
+
+            Some(Self {
+                host: format!("https://{host}"),
+                owner: owner.to_string(),
+                repo: repo.strip_suffix(".git").unwrap_or(repo).to_string(),
+            })
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_gitea_try_from_remote {
+    use super::Gitea;
+
+    #[test]
+    fn https_remote() {
+        let config = Gitea::try_from_remote("https://codeberg.org/knope-dev/knope.git");
+        assert_eq!(
+            Some(Gitea {
+                owner: "knope-dev".to_string(),
+                repo: "knope".to_string(),
+                host: "https://codeberg.org".to_string()
+            }),
+            config
+        );
+    }
+
+    #[test]
+    fn https_remote_without_git_suffix() {
+        let config = Gitea::try_from_remote("https://codeberg.org/knope-dev/knope");
+        assert_eq!(
+            Some(Gitea {
+                owner: "knope-dev".to_string(),
+                repo: "knope".to_string(),
+                host: "https://codeberg.org".to_string()
+            }),
+            config
+        );
+    }
+
+    #[test]
+    fn ssh_remote() {
+        let config = Gitea::try_from_remote("git@codeberg.org:/knope-dev/knope.git");
+        assert_eq!(
+            Some(Gitea {
+                owner: "knope-dev".to_string(),
+                repo: "knope".to_string(),
+                host: "https://codeberg.org".to_string()
+            }),
+            config
+        );
+    }
+
+    #[test]
+    fn ssh_remote_without_git_suffix() {
+        let config = Gitea::try_from_remote("git@codeberg.org:/knope-dev/knope");
+        assert_eq!(
+            Some(Gitea {
+                owner: "knope-dev".to_string(),
+                repo: "knope".to_string(),
+                host: "https://codeberg.org".to_string()
+            }),
+            config
+        );
+    }
 }

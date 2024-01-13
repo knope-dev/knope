@@ -135,6 +135,10 @@ Assets is a list of files to upload to a GitHub release. They do nothing without
 Assets are per-package. Each asset can optionally have a `name`, this is what it will appear as in GitHub releases.
 The `name` defaults to the final part of the path.
 
+:::caution
+Knope doesn't yet support uploading assets to Gitea, declaring both `[gitea]` and assets is an error.
+:::
+
 ```toml
 [package]
 

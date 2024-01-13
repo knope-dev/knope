@@ -11,6 +11,8 @@ use crate::{
 pub(crate) struct State {
     pub(crate) jira_config: Option<config::Jira>,
     pub(crate) github: GitHub,
+    pub(crate) gitea: Gitea,
+    pub(crate) gitea_config: Option<config::Gitea>,
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
     pub(crate) packages: Vec<releases::Package>,
@@ -22,11 +24,14 @@ impl State {
     pub(crate) fn new(
         jira_config: Option<config::Jira>,
         github_config: Option<config::GitHub>,
+        gitea_config: Option<config::Gitea>,
         packages: Vec<releases::Package>,
         verbose: Verbose,
     ) -> Self {
         State {
             jira_config,
+            gitea: Gitea::New,
+            gitea_config,
             github: GitHub::New,
             github_config,
             issue: Issue::Initial,
@@ -78,6 +83,12 @@ pub(crate) enum Issue {
 
 #[derive(Clone, Debug)]
 pub(crate) enum GitHub {
+    New,
+    Initialized { token: String, agent: ureq::Agent },
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum Gitea {
     New,
     Initialized { token: String, agent: ureq::Agent },
 }
