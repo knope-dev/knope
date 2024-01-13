@@ -44,7 +44,7 @@ you can use `on: release: created` to run as soon as the step creates the draft
 
 :::caution
 [Package assets] are currently unsupported when used together with Gitea.
-This is due to one of our dependencies not supporting `multipart/form-data` requests.
+This is due to one of Knope's dependencies not supporting `multipart/form-data` requests.
 :::
 
 ## Errors
