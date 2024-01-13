@@ -2,7 +2,6 @@
 
 [![Discord](https://img.shields.io/discord/1191584005112467456.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/W75uRrBCEM)
 
-
 A command line tool that happily completes the tasks which most developers find tedious.
 
 ## Example: Automating GitHub Actions Release
