@@ -59,7 +59,7 @@ pub(crate) enum Error {
     NotConfigured,
     #[error("Trouble communicating with the Gitea instance while {activity}: {err}")]
     #[diagnostic(
-        code(github::api_request_error),
+        code(gitea::api_request_error),
         help(
             "There was a problem communicating with the Gitea instance {host}, this may be a network issue or a permissions issue."
         )
@@ -69,7 +69,7 @@ pub(crate) enum Error {
         activity: String,
         host: String,
     },
-    #[error("Trouble decoding the response from GitHub while {activity}: {source}")]
+    #[error("Trouble decoding the response from Gitea while {activity}: {source}")]
     #[diagnostic(
         code(gitea::api_response_error),
         help(

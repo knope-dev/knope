@@ -91,7 +91,7 @@ pub(crate) enum Error {
         activity: String,
         host: String,
     },
-    #[error("Trouble decoding the response from GitHub while {activity}: {source}")]
+    #[error("Trouble decoding the response from Gitea while {activity}: {source}")]
     #[diagnostic(
         code(gitea::api_response_error),
         help(
