@@ -340,7 +340,6 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
                 state.gitea,
                 gitea_config,
                 &mut dry_run_stdout,
-                package_to_release.package.assets.as_ref(),
                 &tag,
             )?;
         }

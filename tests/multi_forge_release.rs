@@ -119,43 +119,6 @@ fn separate_prepare_and_release_workflows() {
 }
 
 #[test]
-fn release_assets() {
-    // Arrange a package that's ready to release with some artifacts
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/multi_forge_release/release_assets");
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-    Command::new(cargo_bin!("knope"))
-        .arg("prepare-release")
-        .current_dir(temp_dir.path())
-        .assert()
-        .success();
-    let assets_dir = temp_path.join("assets");
-    create_dir(&assets_dir).unwrap();
-    write(assets_dir.join("first"), "first").unwrap();
-    write(assets_dir.join("second"), "second").unwrap();
-
-    // Actual release
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
-}
-
-#[test]
 fn auto_generate_release_notes() {
     // Arrange a package that is ready to release, but hasn't been released yet
     let temp_dir = tempfile::tempdir().unwrap();

@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
 
@@ -135,39 +136,34 @@ impl Gitea {
     pub(crate) fn try_from_remote(remote: &str) -> Option<Self> {
         // gives [git@something, /x/y.git]
         // or [http(s), host/x/y.git]
-        let mut split_remote = remote.split(':');
+        let (scheme, path) = remote.split_once(':')?;
 
-        split_remote.next().and_then(|part| {
+        if scheme.contains("git@") {
             // ssh remote
-            if part.contains("git@") {
-                // owner/repo.git -> [owner, repo.git]
-                let path = split_remote.next()?;
-                let mut split_path = path.strip_prefix('/').unwrap_or(path).split('/');
+            // owner/repo.git -> [owner, repo.git]
+            let (owner, repo) = path.strip_prefix('/').unwrap_or(path).split_once('/')?;
 
-                Some(Self {
-                    owner: split_path.next()?.to_string(),
-                    // technically a remote should end in .git
-                    // but this may not always be the case, so this just makes
-                    // sure that we account for that, in case it happens
-                    repo: split_path.next()?.split('.').next()?.to_string(),
-                    host: format!("https://{host}", host = part.strip_prefix("git@")?),
-                })
-
+            Some(Self {
+                owner: owner.to_string(),
+                repo: repo.strip_suffix(".git").unwrap_or(repo).to_string(),
+                host: format!("https://{host}", host = scheme.strip_prefix("git@")?),
+            })
+        } else {
             // HTTP(s) remote
-            } else {
-                // host/owner/repo -> [host, owner, repo]
-                let mut split_parts = split_remote.next()?.strip_prefix("//")?.split('/');
+            // host/owner/repo -> [host, owner, repo]
+            let [host, owner, repo]: [&str; 3] = path
+                .strip_prefix("//")?
+                .splitn(3, '/')
+                .collect_vec()
+                .try_into()
+                .ok()?;
 
-                Some(Self {
-                    host: format!("https://{host}", host = split_parts.next()?),
-                    owner: split_parts.next()?.to_string(),
-                    // technically a remote should end in .git
-                    // but this may not always be the case, so this just makes
-                    // sure that we account for that, in case it happens
-                    repo: split_parts.next()?.split('.').next()?.to_string(),
-                })
-            }
-        })
+            Some(Self {
+                host: format!("https://{host}"),
+                owner: owner.to_string(),
+                repo: repo.strip_suffix(".git").unwrap_or(repo).to_string(),
+            })
+        }
     }
 }
 

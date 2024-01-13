@@ -129,6 +129,17 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                 .collect::<Result<Vec<Package>, Error>>()?,
             (None, None) => Vec::new(),
         };
+
+        if packages.iter().any(|package| {
+            package
+                .assets
+                .as_ref()
+                .is_some_and(|assets| !assets.is_empty())
+        }) && config.gitea.is_some()
+        {
+            return Err(Error::GiteaAssetUploads);
+        }
+
         Ok(Self {
             packages,
             workflows: config
@@ -203,10 +214,17 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/packages/")
     )]
     EmptyPackages,
+    #[error("Asset uploads for Gitea are not supported")]
+    #[diagnostic(
+        code(config::gitea_asset_uploads),
+        help("Remove the `[[package.assets]]` key from your config."),
+        url("https://github.com/knope-dev/knope/issues/779")
+    )]
+    GiteaAssetUploads,
 }
 
 #[cfg(test)]
-mod test_package_configs {
+mod test_errors {
 
     use super::Config;
 
@@ -220,6 +238,29 @@ mod test_package_configs {
             [[workflows.steps]]
             type = "Command"
             command = "echo this is nothing, really"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
+
+    #[test]
+    fn gitea_asset_error() {
+        let toml_string = r#"
+            [packages.something]
+            [[packages.something.assets]]
+            name = "something"
+            path = "something"
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+            [gitea]
+            host = "https://gitea.example.com"
+            owner = "knope"
+            repo = "knope"
         "#
         .to_string();
         let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();

@@ -8,7 +8,6 @@ use crate::{
     dry_run::DryRun,
     integrations::{ureq_err_to_string, CreateReleaseInput, CreateReleaseResponse},
     state,
-    step::releases::package::{Asset, AssetNameError},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -20,12 +19,11 @@ pub(crate) fn create_release(
     gitea_state: state::Gitea,
     gitea_config: &config::Gitea,
     dry_run_stdout: DryRun,
-    assets: Option<&Vec<Asset>>,
 ) -> Result<state::Gitea, Error> {
     let gitea_release = CreateReleaseInput::new(tag_name, name, body, prerelease, false);
 
     if let Some(stdout) = dry_run_stdout {
-        gitea_release_dry_run(name, gitea_config, assets, &gitea_release, stdout)?;
+        gitea_release_dry_run(name, gitea_config, &gitea_release, stdout)?;
         return Ok(gitea_state);
     }
 
@@ -47,23 +45,12 @@ pub(crate) fn create_release(
             host: gitea_config.host.clone(),
         })?;
 
-    /*
-     * NOTE: ureq currently doesn't support support multipart/form-data
-     *       so we cannot support release attachments on any Gitea instance
-     *       see: https://github.com/algesten/ureq/issues/698
-     *       docs: https://try.gitea.io/api/swagger#/repository/repoCreateReleaseAttachment
-     */
-    if assets.is_some() {
-        println!("NOTE: adding assets to a gitea release is currently not supported. Uploading assets will be skipped");
-    }
-
     Ok(state::Gitea::Initialized { token, agent })
 }
 
 fn gitea_release_dry_run(
     name: &str,
     config: &config::Gitea,
-    assets: Option<&Vec<Asset>>,
     gitea_release: &CreateReleaseInput,
     stdout: &mut Box<dyn Write>,
 ) -> Result<(), Error> {
@@ -84,9 +71,6 @@ fn gitea_release_dry_run(
     )
     .map_err(Error::Stdout)?;
 
-    if assets.is_some() {
-        println!("NOTE: adding assets to a gitea release is currently not supported. Uploading assets will be skipped");
-    }
     Ok(())
 }
 
@@ -121,11 +105,4 @@ pub(crate) enum Error {
     },
     #[error("Could not write to stdout")]
     Stdout(std::io::Error),
-    #[error("Asset was not uploaded to the Gitea instance, a release was created but is still a draft! {0}")]
-    #[diagnostic(
-        code(gitea::asset_name_error),
-        help("Try setting the `name` property of the asset manually"),
-        url("https://knope.tech/reference/config-file/packages/#assets")
-    )]
-    AssetName(#[from] AssetNameError),
 }

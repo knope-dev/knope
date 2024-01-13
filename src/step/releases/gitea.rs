@@ -1,6 +1,6 @@
 use miette::{diagnostic, Diagnostic};
 
-use super::{package::Asset, PackageName, Release, TimeError};
+use super::{PackageName, Release, TimeError};
 use crate::{config, dry_run::DryRun, integrations::gitea as api, state};
 
 pub(crate) fn release(
@@ -9,7 +9,6 @@ pub(crate) fn release(
     gitea_state: state::Gitea,
     gitea_config: &config::Gitea,
     dry_run_stdout: DryRun,
-    assets: Option<&Vec<Asset>>,
     tag: &str,
 ) -> Result<state::Gitea, Error> {
     let version = &release.version;
@@ -30,7 +29,6 @@ pub(crate) fn release(
         gitea_state,
         gitea_config,
         dry_run_stdout,
-        assets,
     )
     .map_err(Error::from)
 }
