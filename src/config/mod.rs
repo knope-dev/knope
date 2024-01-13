@@ -130,12 +130,13 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             (None, None) => Vec::new(),
         };
 
-        if packages.iter().any(|package| {
-            package
-                .assets
-                .as_ref()
-                .is_some_and(|assets| !assets.is_empty())
-        }) && config.gitea.is_some()
+        if config.gitea.is_some()
+            && packages.iter().any(|package| {
+                package
+                    .assets
+                    .as_ref()
+                    .is_some_and(|assets| !assets.is_empty())
+            })
         {
             return Err(Error::GiteaAssetUploads);
         }
