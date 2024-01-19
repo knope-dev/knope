@@ -95,14 +95,16 @@ pub(crate) enum Step {
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, Error> {
+    pub(crate) async fn run(self, run_type: RunType) -> Result<RunType, Error> {
         Ok(match self {
-            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
+            Step::SelectJiraIssue { status } => {
+                issues::jira::select_issue(&status, run_type).await?
+            }
             Step::TransitionJiraIssue { status } => {
-                issues::jira::transition_issue(&status, run_type)?
+                issues::jira::transition_issue(&status, run_type).await?
             }
             Step::SelectGitHubIssue { labels } => {
-                issues::github::select_issue(labels.as_deref(), run_type)?
+                issues::github::select_issue(labels.as_deref(), run_type).await?
             }
             Step::SelectGiteaIssue { labels } => {
                 issues::gitea::select_issue(labels.as_deref(), run_type)?

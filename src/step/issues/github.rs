@@ -1,5 +1,6 @@
 use miette::Diagnostic;
-use ureq::Agent;
+use reqwest::{Client, Response};
+use serde_json::json;
 
 use super::Issue;
 use crate::{
@@ -30,7 +31,10 @@ struct ResponseIssue {
     title: String,
 }
 
-pub(crate) fn select_issue(labels: Option<&[String]>, run_type: RunType) -> Result<RunType, Error> {
+pub(crate) async fn select_issue(
+    labels: Option<&[String]>,
+    run_type: RunType,
+) -> Result<RunType, Error> {
     match run_type {
         RunType::DryRun {
             mut state,
@@ -64,9 +68,10 @@ pub(crate) fn select_issue(labels: Option<&[String]>, run_type: RunType) -> Resu
             });
             Ok(RunType::DryRun { state, stdout })
         }
-        RunType::Real(state) => {
+        RunType::Real(mut state) => {
             let github_config = state.github_config.as_ref().ok_or(Error::NotConfigured)?;
-            let (github, issues) = list_issues(github_config, state.github, labels)?;
+            let (github, issues) =
+                list_issues(github_config, state.github, labels, state.get_client()).await?;
             let issue = select(issues, "Select an Issue")?;
             println!("Selected item : {}", &issue);
             Ok(RunType::Real(State {
@@ -94,14 +99,14 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/github/")
     )]
     Api {
-        source: Box<ureq::Error>,
+        source: Box<reqwest::Error>,
         context: &'static str,
     },
     #[error("Could not write to stdout")]
     Stdout(std::io::Error),
     #[error("I/O error encountered when communicating with GitHub: {0}")]
     #[diagnostic(code(issues::github::api_io), help("Check your network connection"))]
-    ApiIo(std::io::Error),
+    ApiIo(reqwest::Error),
     #[error("Could not deserialize response from GitHub into JSON: {0}")]
     Serde(#[from] serde_json::Error),
     #[error("Received unexpected data from GitHub: {0}")]
@@ -118,19 +123,20 @@ pub(crate) enum Error {
     AppConfig(#[from] app_config::Error),
 }
 
-fn list_issues(
+async fn list_issues(
     github_config: &config::GitHub,
     github_state: state::GitHub,
     labels: Option<&[String]>,
+    client: Client,
 ) -> Result<(state::GitHub, Vec<Issue>), Error> {
-    let (token, agent) = match github_state {
-        state::GitHub::Initialized { token, agent } => (token, agent),
-        state::GitHub::New => (get_or_prompt_for_github_token()?, Agent::new()),
+    let token = match github_state {
+        state::GitHub::Initialized { token } => token,
+        state::GitHub::New => get_or_prompt_for_github_token()?,
     };
-    let response = agent
+    let response = client
         .post("https://api.github.com/graphql")
-        .set("Authorization", &format!("bearer {token}"))
-        .send_json(ureq::json!({
+        .header("Authorization", &format!("bearer {token}"))
+        .json(&json!({
             "query": ISSUES_QUERY,
             "variables": {
                 "repo": github_config.repo,
@@ -138,12 +144,15 @@ fn list_issues(
                 "labels": labels
             }
         }))
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|source| Error::Api {
             source: Box::new(source),
             context: "loading issues",
         })?;
 
-    let gh_issues = decode_github_response(response)?;
+    let gh_issues = decode_github_response(response).await?;
 
     let issues = gh_issues
         .into_iter()
@@ -153,11 +162,11 @@ fn list_issues(
         })
         .collect();
 
-    Ok((state::GitHub::Initialized { token, agent }, issues))
+    Ok((state::GitHub::Initialized { token }, issues))
 }
 
-fn decode_github_response(response: ureq::Response) -> Result<Vec<ResponseIssue>, Error> {
-    let json_value: serde_json::Value = response.into_json().map_err(Error::ApiIo)?;
+async fn decode_github_response(response: Response) -> Result<Vec<ResponseIssue>, Error> {
+    let json_value: serde_json::Value = response.json().await.map_err(Error::ApiIo)?;
     let json_issues = json_value.pointer("/data/repository/issues/nodes");
     match json_issues {
         Some(value) => serde_json::from_value(value.clone()).map_err(Error::from),

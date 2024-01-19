@@ -1,15 +1,17 @@
 use miette::{diagnostic, Diagnostic};
+use reqwest::Client;
 
 use super::{PackageName, Release, TimeError};
 use crate::{config, dry_run::DryRun, integrations::gitea as api, state};
 
-pub(crate) fn release(
+pub(crate) async fn release(
     package_name: Option<&PackageName>,
     release: &Release,
     gitea_state: state::Gitea,
     gitea_config: &config::Gitea,
     dry_run_stdout: DryRun,
     tag: &str,
+    client: Client,
 ) -> Result<state::Gitea, Error> {
     let version = &release.version;
     let mut name = if let Some(package_name) = package_name {
@@ -29,7 +31,9 @@ pub(crate) fn release(
         gitea_state,
         gitea_config,
         dry_run_stdout,
+        client,
     )
+    .await
     .map_err(Error::from)
 }
 

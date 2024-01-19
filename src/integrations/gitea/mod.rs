@@ -1,5 +1,3 @@
-use ureq::Agent;
-
 use crate::{
     app_config::{self, get_or_prompt_for_gitea_token},
     state,
@@ -15,12 +13,9 @@ pub(crate) use create_pull_request::{
 pub(crate) use create_release::{create_release, Error as CreateReleaseError};
 pub(crate) use list_issues::{list_issues, Error as ListIssuesError};
 
-fn initialize_state(host: &str, state: state::Gitea) -> Result<(String, Agent), app_config::Error> {
+fn get_token(host: &str, state: state::Gitea) -> Result<String, app_config::Error> {
     Ok(match state {
-        state::Gitea::Initialized { token, agent } => (token, agent),
-        state::Gitea::New => {
-            let token = get_or_prompt_for_gitea_token(host)?;
-            (token, Agent::new())
-        }
+        state::Gitea::Initialized { token } => token,
+        state::Gitea::New => get_or_prompt_for_gitea_token(host)?,
     })
 }

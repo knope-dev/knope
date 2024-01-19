@@ -60,8 +60,9 @@ pub struct Error {
 
 /// Run a series of [`Step`], each of which updates `state`.
 pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
+    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime, unrecoverable");
     for step in workflow.steps {
-        state = match step.run(state) {
+        state = match rt.block_on(step.run(state)) {
             Ok(state) => state,
             Err(err) => {
                 return Err(Error {

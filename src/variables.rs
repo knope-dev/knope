@@ -212,6 +212,7 @@ mod test_replace_variables {
             issue: state::Issue::Selected(issue),
             packages: vec![package().0],
             verbose: Verbose::No,
+            client: None,
         };
 
         let result = replace_variables(
@@ -306,6 +307,7 @@ mod test_replace_variables {
             issue: state::Issue::Selected(issue),
             packages: Vec::new(),
             verbose: Verbose::No,
+            client: None,
         };
 
         let result = replace_variables(

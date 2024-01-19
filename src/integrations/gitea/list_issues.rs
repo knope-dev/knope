@@ -1,38 +1,40 @@
 use miette::Diagnostic;
+use reqwest::{Client, Response};
 
-use super::initialize_state;
-use crate::{
-    app_config, config,
-    integrations::{ureq_err_to_string, ResponseIssue},
-    prompt, state,
-    step::issues::Issue,
-};
+use super::get_token;
+use crate::{app_config, config, integrations::ResponseIssue, prompt, state, step::issues::Issue};
 
-pub(crate) fn list_issues(
+pub(crate) async fn list_issues(
     config: &Option<config::Gitea>,
     state: state::Gitea,
     labels: Option<&[String]>,
+    client: Client,
 ) -> Result<(state::Gitea, Vec<Issue>), Error> {
     let Some(config) = config else {
         return Err(Error::NotConfigured);
     };
-    let (token, agent) = initialize_state(&config.host, state)?;
+    let token = get_token(&config.host, state)?;
     let labels = labels.unwrap_or(&[]).join(",");
 
-    let issues: Vec<Issue> = agent
+    let issues: Vec<Issue> = client
         .get(&config.get_issues_url())
-        .set("Accept", "aplication/json")
-        .query("access_token", &token)
-        .query("labels", &labels)
-        .query("state", "open")
-        .query("limit", "30")
-        .call()
+        .header("Accept", "aplication/json")
+        .query(&[
+            ("state", "open"),
+            ("access_token", &token),
+            ("labels", &labels),
+            ("limit", "30"),
+        ])
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
+            err: source.to_string(),
             activity: "listing issues".to_string(),
             host: config.host.clone(),
         })?
-        .into_json::<Vec<ResponseIssue>>()
+        .json::<Vec<ResponseIssue>>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "listing issues",
@@ -45,7 +47,7 @@ pub(crate) fn list_issues(
         })
         .collect();
 
-    Ok((state::Gitea::Initialized { token, agent }, issues))
+    Ok((state::Gitea::Initialized { token }, issues))
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -77,7 +79,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: reqwest::Error,
         activity: &'static str,
         host: String,
     },

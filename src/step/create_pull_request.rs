@@ -8,7 +8,7 @@ use crate::{
     workflow::Verbose,
 };
 
-pub(super) fn run(
+pub(super) async fn run(
     base: &str,
     title: Template,
     body: Template,
@@ -21,6 +21,7 @@ pub(super) fn run(
     if state.github_config.is_none() && state.gitea_config.is_none() {
         return Err(Error::NotConfigured);
     }
+    let client = state.get_client();
 
     if let Some(github_config) = &state.github_config {
         state.github = github::create_or_update_pull_request(
@@ -31,9 +32,12 @@ pub(super) fn run(
             github_config,
             &mut dry_run,
             Verbose::Yes,
-        )?;
+            client.clone(),
+        )
+        .await?;
     }
 
+    // TODO: Do this in parallel with GitHub
     if let Some(gitea_config) = &state.gitea_config {
         state.gitea = gitea::create_or_update_pull_request(
             &title,
@@ -43,7 +47,9 @@ pub(super) fn run(
             gitea_config,
             &mut dry_run,
             Verbose::Yes,
-        )?;
+            client.clone(),
+        )
+        .await?;
     }
     Ok(RunType::recompose(state, dry_run))
 }

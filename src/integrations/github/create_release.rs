@@ -2,19 +2,19 @@ use std::{io::Write, path::PathBuf};
 
 use datta::UriTemplate;
 use miette::Diagnostic;
+use reqwest::{Client, Response};
+use serde_json::json;
 
 use crate::{
     app_config, config,
     dry_run::DryRun,
-    integrations::{
-        github::initialize_state, ureq_err_to_string, CreateReleaseInput, CreateReleaseResponse,
-    },
+    integrations::{github::initialize_state, CreateReleaseInput, CreateReleaseResponse},
     state,
     step::releases::package::{Asset, AssetNameError},
 };
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn create_release(
+pub(crate) async fn create_release(
     name: &str,
     tag_name: &str,
     body: Option<&str>,
@@ -23,6 +23,7 @@ pub(crate) fn create_release(
     github_config: &config::GitHub,
     dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
+    client: Client,
 ) -> Result<state::GitHub, Error> {
     let github_release =
         CreateReleaseInput::new(tag_name, name, body, prerelease, assets.is_some());
@@ -32,7 +33,7 @@ pub(crate) fn create_release(
         return Ok(github_state);
     }
 
-    let (token, agent) = initialize_state(github_state)?;
+    let token = initialize_state(github_state)?;
 
     let url = format!(
         "https://api.github.com/repos/{owner}/{repo}/releases",
@@ -41,15 +42,19 @@ pub(crate) fn create_release(
     );
     let token_header = format!("token {}", &token);
 
-    let response: CreateReleaseResponse = agent
+    let response: CreateReleaseResponse = client
         .post(&url)
-        .set("Authorization", &token_header)
-        .send_json(github_release)
+        .header("Authorization", &token_header)
+        .json(&github_release)
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
+            err: source.to_string(),
             activity: "creating a release".to_string(),
         })?
-        .into_json()
+        .json()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating a release",
@@ -58,6 +63,7 @@ pub(crate) fn create_release(
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
         for asset in assets {
+            // TODO: do these in parallel
             let file =
                 std::fs::read(&asset.path).map_err(|source| Error::CouldNotReadAssetFile {
                     path: asset.path.clone(),
@@ -65,32 +71,38 @@ pub(crate) fn create_release(
                 })?;
             let asset_name = asset.name()?;
             let upload_url = upload_template.set("name", asset_name.as_str()).build();
-            agent
+            client
                 .post(&upload_url)
-                .set("Authorization", &token_header)
-                .set("Content-Type", "application/octet-stream")
-                .set("Content-Length", &file.len().to_string())
-                .send_bytes(&file)
+                .header("Authorization", &token_header)
+                .header("Content-Type", "application/octet-stream")
+                .header("Content-Length", &file.len().to_string())
+                .body(file)
+                .send()
+                .await
+                .and_then(Response::error_for_status)
                 .map_err(|source| Error::ApiRequest {
-                    err: ureq_err_to_string(source),
+                    err: source.to_string(),
                     activity: format!(
                         "uploading asset {asset_name}. Release has been created but not published!",
                     ),
                 })?;
         }
-        agent
+        client
             .patch(&response.url)
-            .set("Authorization", &token_header)
-            .send_json(ureq::json!({
+            .header("Authorization", &token_header)
+            .json(&json!({
                 "draft": false
             }))
+            .send()
+            .await
+            .and_then(Response::error_for_status)
             .map_err(|source| Error::ApiRequest {
-                err: ureq_err_to_string(source),
+                err: source.to_string(),
                 activity: "publishing release".to_string(),
             })?;
     }
 
-    Ok(state::GitHub::Initialized { token, agent })
+    Ok(state::GitHub::Initialized { token })
 }
 
 fn github_release_dry_run(
@@ -162,7 +174,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: reqwest::Error,
         activity: &'static str,
     },
     #[error("Could not write to stdout")]

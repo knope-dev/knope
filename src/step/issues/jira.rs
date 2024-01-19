@@ -1,6 +1,8 @@
 use base64::{prelude::BASE64_STANDARD as base64, Engine};
 use miette::Diagnostic;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use super::Issue;
 use crate::{
@@ -13,7 +15,7 @@ use crate::{
     state::RunType,
 };
 
-pub(crate) fn select_issue(status: &str, run_type: RunType) -> Result<RunType, Error> {
+pub(crate) async fn select_issue(status: &str, run_type: RunType) -> Result<RunType, Error> {
     let (mut state, dry_run_stdout) = run_type.decompose();
     let jira_config = state.jira_config.as_ref().ok_or(Error::NotConfigured)?;
 
@@ -33,15 +35,16 @@ pub(crate) fn select_issue(status: &str, run_type: RunType) -> Result<RunType, E
         return Ok(RunType::DryRun { state, stdout });
     }
 
-    let issues = get_issues(jira_config, status)?;
+    let client = state.get_client();
+    let issues = get_issues(client, jira_config, status).await?;
     let issue = select(issues, "Select an Issue")?;
     println!("Selected item : {}", &issue);
     state.issue = state::Issue::Selected(issue);
     Ok(RunType::Real(state))
 }
 
-pub(crate) fn transition_issue(status: &str, run_type: RunType) -> Result<RunType, Error> {
-    let (state, dry_run_stdout) = run_type.decompose();
+pub(crate) async fn transition_issue(status: &str, run_type: RunType) -> Result<RunType, Error> {
+    let (mut state, dry_run_stdout) = run_type.decompose();
     let issue = match &state.issue {
         state::Issue::Selected(issue) => issue,
         state::Issue::Initial => return Err(Error::NoIssueSelected),
@@ -56,7 +59,7 @@ pub(crate) fn transition_issue(status: &str, run_type: RunType) -> Result<RunTyp
         return Ok(RunType::DryRun { state, stdout });
     }
 
-    run_transition(jira_config, &issue.key, status)?;
+    run_transition(state.get_client(), jira_config, &issue.key, status).await?;
     let key = &issue.key;
     println!("{key} transitioned to {status}");
     Ok(RunType::Real(state))
@@ -77,7 +80,7 @@ pub(crate) enum Error {
     Api {
         activity: &'static str,
         #[source]
-        inner: Box<ureq::Error>,
+        inner: Box<reqwest::Error>,
     },
     #[error("The specified transition name was not found in the Jira project")]
     #[diagnostic(
@@ -133,14 +136,14 @@ fn get_auth() -> Result<String, Error> {
     ))
 }
 
-pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>, Error> {
+pub(crate) async fn get_issues(client: Client, jira_config: &Jira, status: &str) -> Result<Vec<Issue>, Error> {
     let auth = get_auth()?;
     let project = &jira_config.project;
     let jql = format!("status = {status} AND project = {project}");
     let url = format!("{}/rest/api/3/search", jira_config.url);
-    Ok(ureq::post(&url)
+    Ok(client.post(&url)
         .set("Authorization", &auth)
-        .send_json(ureq::json!({"jql": jql, "fields": ["summary"]}))
+        .send_json(json!({"jql": jql, "fields": ["summary"]}))
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "querying for issues",
@@ -155,12 +158,11 @@ pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>,
         .collect())
 }
 
-fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(), Error> {
+async fn run_transition(client: Client, jira_config: &Jira, issue_key: &str, status: &str) -> Result<(), Error> {
     let auth = get_auth()?; // TODO: get auth once and store in state
     let base_url = &jira_config.url;
     let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions",);
-    let agent = ureq::Agent::new();
-    let response = agent
+    let response = client
         .get(&url)
         .set("Authorization", &auth)
         .call()
@@ -174,10 +176,10 @@ fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(
         .into_iter()
         .find(|transition| transition.name == status)
         .ok_or(Error::Transition)?;
-    let _response = agent
+    let _response = client
         .post(&url)
         .set("Authorization", &auth)
-        .send_json(ureq::json!({"transition": {"id": transition.id}}))
+        .send_json(json!({"transition": {"id": transition.id}}))
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "transitioning issue",

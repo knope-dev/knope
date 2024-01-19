@@ -280,7 +280,7 @@ impl From<Version> for CurrentVersions {
 /// Create a release for the package.
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
-pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
+pub(crate) async fn release(run_type: RunType) -> Result<RunType, Error> {
     let (mut state, mut dry_run_stdout) = run_type.decompose();
 
     let mut releases = state
@@ -315,6 +315,9 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
 
     let github_config = state.github_config.clone();
     let gitea_config = state.gitea_config.clone();
+
+    // TODO: Do these in parallel? Maybe dependencies make that a bad idea
+    let client = state.get_client();
     for package_to_release in releases {
         let tag = tag_name(
             &package_to_release.release.version,
@@ -330,9 +333,12 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
                 &mut dry_run_stdout,
                 package_to_release.package.assets.as_ref(),
                 &tag,
-            )?;
+                client.clone(),
+            )
+            .await?;
         }
 
+        // TODO: Do this in parallel with GitHub
         if let Some(ref gitea_config) = gitea_config {
             state.gitea = gitea::release(
                 package_to_release.package.name.as_ref(),
@@ -341,7 +347,9 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
                 gitea_config,
                 &mut dry_run_stdout,
                 &tag,
-            )?;
+                client.clone(),
+            )
+            .await?;
         }
 
         // if neither is present, we fall back to git release

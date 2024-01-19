@@ -1,9 +1,10 @@
 use miette::{diagnostic, Diagnostic};
+use reqwest::Client;
 
 use super::{package::Asset, PackageName, Release, TimeError};
 use crate::{config::GitHub, dry_run::DryRun, integrations::github as api, state};
 
-pub(crate) fn release(
+pub(crate) async fn release(
     package_name: Option<&PackageName>,
     release: &Release,
     github_state: state::GitHub,
@@ -11,6 +12,7 @@ pub(crate) fn release(
     dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
     tag: &str,
+    client: Client,
 ) -> Result<state::GitHub, Error> {
     let version = &release.version;
     let mut name = if let Some(package_name) = package_name {
@@ -31,7 +33,9 @@ pub(crate) fn release(
         github_config,
         dry_run_stdout,
         assets,
+        client,
     )
+    .await
     .map_err(Error::from)
 }
 

@@ -1,17 +1,18 @@
 use std::io::Write;
 
 use miette::Diagnostic;
+use reqwest::{Client, Response};
 
-use super::initialize_state;
+use super::get_token;
 use crate::{
     app_config, config,
     dry_run::DryRun,
-    integrations::{ureq_err_to_string, CreateReleaseInput, CreateReleaseResponse},
+    integrations::{CreateReleaseInput, CreateReleaseResponse},
     state,
 };
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn create_release(
+pub(crate) async fn create_release(
     name: &str,
     tag_name: &str,
     body: Option<&str>,
@@ -19,6 +20,7 @@ pub(crate) fn create_release(
     gitea_state: state::Gitea,
     gitea_config: &config::Gitea,
     dry_run_stdout: DryRun,
+    client: Client,
 ) -> Result<state::Gitea, Error> {
     let gitea_release = CreateReleaseInput::new(tag_name, name, body, prerelease, false);
 
@@ -27,25 +29,29 @@ pub(crate) fn create_release(
         return Ok(gitea_state);
     }
 
-    let (token, agent) = initialize_state(&gitea_config.host, gitea_state)?;
+    let token = get_token(&gitea_config.host, gitea_state)?;
 
-    agent
+    client
         .post(&gitea_config.get_releases_url())
-        .query("access_token", &token)
-        .send_json(gitea_release)
+        .query(&[("access_token", &token)])
+        .json(&gitea_release)
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
+            err: source.to_string(),
             activity: "creating a release".to_string(),
             host: gitea_config.host.clone(),
         })?
-        .into_json::<CreateReleaseResponse>()
+        .json::<CreateReleaseResponse>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating a release",
             host: gitea_config.host.clone(),
         })?;
 
-    Ok(state::Gitea::Initialized { token, agent })
+    Ok(state::Gitea::Initialized { token })
 }
 
 fn gitea_release_dry_run(
@@ -99,7 +105,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: reqwest::Error,
         activity: &'static str,
         host: String,
     },

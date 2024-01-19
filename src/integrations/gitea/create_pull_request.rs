@@ -1,17 +1,17 @@
 use miette::Diagnostic;
+use reqwest::{Client, Response};
 use serde_json::json;
-use ureq::Agent;
 
-use super::initialize_state;
+use super::get_token;
 use crate::{
     app_config, config,
     dry_run::DryRun,
-    integrations::{git, ureq_err_to_string, PullRequest},
+    integrations::{git, PullRequest},
     state,
     workflow::Verbose,
 };
 
-pub(crate) fn create_or_update_pull_request(
+pub(crate) async fn create_or_update_pull_request(
     title: &str,
     body: &str,
     base: &str,
@@ -19,6 +19,7 @@ pub(crate) fn create_or_update_pull_request(
     config: &config::Gitea,
     dry_run: DryRun,
     verbose: Verbose,
+    client: Client,
 ) -> Result<state::Gitea, Error> {
     let branch_ref = git::current_branch()?;
     let current_branch = branch_ref.split('/').last().ok_or(Error::GitRef)?;
@@ -32,25 +33,30 @@ pub(crate) fn create_or_update_pull_request(
         writeln!(stdout, "\tBody: {body}").map_err(Error::Stdout)?;
         return Ok(state);
     }
-    let (token, agent) = initialize_state(&config.host, state)?;
+    let token = get_token(&config.host, state)?;
 
-    let existing_pulls: Vec<PullRequest> = agent
+    let existing_pulls: Vec<PullRequest> = client
         .get(&config.get_pulls_url())
-        .set("Accept", "application/json")
-        .query("state", "open")
-        .query(
-            "head",
-            &format!("{owner}:{current_branch}", owner = config.owner),
-        )
-        .query("base", base)
-        .query("access_token", &token)
-        .call()
+        .header("Accept", "application/json")
+        .query(&[
+            ("state", "open"),
+            (
+                "head",
+                &format!("{owner}:{current_branch}", owner = config.owner),
+            ),
+            ("base", base),
+            ("access_token", &token),
+        ])
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|err| Error::ApiRequest {
-            err: ureq_err_to_string(err),
+            err: err.to_string(),
             activity: "fetching existing pull requests".to_string(),
             host: config.host.clone(),
         })?
-        .into_json()
+        .json()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "fetching existing pull requests",
@@ -62,14 +68,14 @@ pub(crate) fn create_or_update_pull_request(
         if let Verbose::Yes = verbose {
             println!("Updating existing pull request: {}", pr.url);
         }
-        update_pull_request(&agent, config, &token, pr.number, title, body)?;
+        update_pull_request(client, config, &token, pr.number, title, body).await?;
     // Create a new PR
     } else {
         if let Verbose::Yes = verbose {
             println!("No matching existing pull request found, creating a new one.");
         }
         create_pull_request(
-            &agent,
+            client,
             config,
             &token,
             verbose,
@@ -77,30 +83,34 @@ pub(crate) fn create_or_update_pull_request(
             current_branch,
             title,
             body,
-        )?;
+        )
+        .await?;
     }
 
-    Ok(state::Gitea::Initialized { token, agent })
+    Ok(state::Gitea::Initialized { token })
 }
 
-fn update_pull_request(
-    agent: &Agent,
+async fn update_pull_request(
+    client: Client,
     config: &config::Gitea,
     token: &str,
     number: u32,
     title: &str,
     body: &str,
 ) -> Result<(), Error> {
-    agent
+    client
         .patch(&config.get_pull_url(number))
-        .set("Accept", "application/json")
-        .query("access_token", token)
-        .send_json(json!({
+        .header("Accept", "application/json")
+        .query(&[("access_token", token)])
+        .json(&json!({
             "body": body,
             "title": title
         }))
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
+            err: source.to_string(),
             activity: "updating pull request".to_string(),
             host: config.host.clone(),
         })?;
@@ -108,8 +118,8 @@ fn update_pull_request(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn create_pull_request(
-    agent: &Agent,
+async fn create_pull_request(
+    client: Client,
     config: &config::Gitea,
     token: &str,
     verbose: Verbose,
@@ -118,22 +128,26 @@ fn create_pull_request(
     title: &str,
     body: &str,
 ) -> Result<(), Error> {
-    let new_pr = agent
+    let new_pr = client
         .post(&config.get_pulls_url())
-        .set("Accept", "application/json")
-        .query("access_token", token)
-        .send_json(json!({
+        .header("Accept", "application/json")
+        .query(&[("access_token", token)])
+        .json(&json!({
             "title": title,
             "body": body,
             "head": head,
             "base": base
         }))
+        .send()
+        .await
+        .and_then(Response::error_for_status)
         .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
+            err: source.to_string(),
             activity: "creating pull request".to_string(),
             host: config.host.clone(),
         })?
-        .into_json::<PullRequest>()
+        .json::<PullRequest>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating pull request",
@@ -168,7 +182,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: reqwest::Error,
         activity: &'static str,
         host: String,
     },

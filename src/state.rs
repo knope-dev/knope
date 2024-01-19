@@ -1,4 +1,5 @@
 use std::io::Write;
+use reqwest::Client;
 
 use crate::{
     config,
@@ -17,6 +18,7 @@ pub(crate) struct State {
     pub(crate) issue: Issue,
     pub(crate) packages: Vec<releases::Package>,
     pub(crate) verbose: Verbose,
+    pub(crate) client: Option<Client>,
 }
 
 impl State {
@@ -37,6 +39,18 @@ impl State {
             issue: Issue::Initial,
             packages,
             verbose,
+            client: None,
+        }
+    }
+
+    pub(crate) fn get_client(&mut self) -> Client {
+        match self.client.clone() {
+            Some(client) => client,
+            None => {
+                let client = Client::new();
+                self.client = Some(client.clone());
+                client
+            }
         }
     }
 }
@@ -84,11 +98,11 @@ pub(crate) enum Issue {
 #[derive(Clone, Debug)]
 pub(crate) enum GitHub {
     New,
-    Initialized { token: String, agent: ureq::Agent },
+    Initialized { token: String },
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum Gitea {
     New,
-    Initialized { token: String, agent: ureq::Agent },
+    Initialized { token: String },
 }

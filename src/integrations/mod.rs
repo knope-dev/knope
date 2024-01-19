@@ -54,12 +54,3 @@ struct ResponseIssue {
     number: usize,
     title: String,
 }
-
-fn ureq_err_to_string(err: ureq::Error) -> String {
-    match err {
-        ureq::Error::Status(code, response) => {
-            format!("{}: {}", code, response.into_string().unwrap_or_default())
-        }
-        ureq::Error::Transport(err) => format!("Transport error: {err}"),
-    }
-}
