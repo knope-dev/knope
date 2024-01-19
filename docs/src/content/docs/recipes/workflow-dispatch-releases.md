@@ -34,7 +34,7 @@ jobs:
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         name: Fetch entire history (for conventional commits)
         with:
           fetch-depth: 0
@@ -73,7 +73,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
 
@@ -84,7 +84,7 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
         run: sudo apt-get install -y musl-tools
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2.7.3
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -104,7 +104,7 @@ jobs:
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.0.0
+        uses: actions/upload-artifact@v4.2.0
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -114,10 +114,13 @@ jobs:
     needs: [build-artifacts, prepare-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v4.0.0
+      - uses: actions/download-artifact@v4.1.1
+        with:
+          path: artifacts
+          merge-multiple: true
       - name: Install the latest Knope
         uses: knope-dev/action@v2.0.0
         with:
@@ -143,20 +146,16 @@ versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 
 [[package.assets]]
-name = "knope-x86_64-unknown-linux-musl.tgz"
-path = "x86_64-unknown-linux-musl/artifact.tgz"
+path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-pc-windows-msvc.tgz"
-path = "x86_64-pc-windows-msvc/artifact.tgz"
+path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-apple-darwin.tgz"
-path = "x86_64-apple-darwin/artifact.tgz"
+path = "artifacts/knope-x86_64-apple-darwin.tgz"
 
 [[package.assets]]
-name = "knope-aarch64-apple-darwin.tgz"
-path = "aarch64-apple-darwin/artifact.tgz"
+path = "artifacts/knope-aarch64-apple-darwin.tgz"
 
 [[workflows]]
 name = "prepare-release"

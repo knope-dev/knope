@@ -67,7 +67,7 @@ mod test_run_command {
         let file = NamedTempFile::new().unwrap();
         let command = format!("cat {}", file.path().to_str().unwrap());
         let result = run_command(
-            RunType::Real(State::new(None, None, Vec::new(), Verbose::No)),
+            RunType::Real(State::new(None, None, None, Vec::new(), Verbose::No)),
             command.clone(),
             None,
         );
@@ -77,7 +77,7 @@ mod test_run_command {
         file.close().unwrap();
 
         let result = run_command(
-            RunType::Real(State::new(None, None, Vec::new(), Verbose::No)),
+            RunType::Real(State::new(None, None, None, Vec::new(), Verbose::No)),
             command,
             None,
         );

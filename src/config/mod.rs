@@ -19,7 +19,9 @@ use crate::{
 
 pub(crate) mod toml;
 
-pub(crate) use self::toml::{ChangeLogSectionName, CommitFooter, CustomChangeType, GitHub, Jira};
+pub(crate) use self::toml::{
+    ChangeLogSectionName, CommitFooter, CustomChangeType, GitHub, Gitea, Jira,
+};
 
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
@@ -31,6 +33,8 @@ pub(crate) struct Config {
     pub(crate) jira: Option<Jira>,
     /// Optional configuration to talk to GitHub
     pub(crate) github: Option<GitHub>,
+    /// Optional configuration to communicate with a Gitea instance
+    pub(crate) gitea: Option<Gitea>,
 }
 
 impl Config {
@@ -65,12 +69,14 @@ impl Config {
             package: Option<toml::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
+            gitea: Option<Gitea>,
         }
 
         let config = SimpleConfig {
             package: self.packages.pop().map(toml::Package::from),
             workflows: self.workflows,
             github: self.github,
+            gitea: self.gitea,
         };
         #[allow(clippy::unwrap_used)] // because serde is annoying... I know it will serialize
         let serialized = to_string(&config).unwrap();
@@ -123,6 +129,18 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                 .collect::<Result<Vec<Package>, Error>>()?,
             (None, None) => Vec::new(),
         };
+
+        if config.gitea.is_some()
+            && packages.iter().any(|package| {
+                package
+                    .assets
+                    .as_ref()
+                    .is_some_and(|assets| !assets.is_empty())
+            })
+        {
+            return Err(Error::GiteaAssetUploads);
+        }
+
         Ok(Self {
             packages,
             workflows: config
@@ -133,6 +151,7 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                 .collect(),
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
+            gitea: config.gitea.map(Spanned::into_inner),
         })
     }
 }
@@ -196,10 +215,17 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/packages/")
     )]
     EmptyPackages,
+    #[error("Asset uploads for Gitea are not supported")]
+    #[diagnostic(
+        code(config::gitea_asset_uploads),
+        help("Remove the `[[package.assets]]` key from your config."),
+        url("https://github.com/knope-dev/knope/issues/779")
+    )]
+    GiteaAssetUploads,
 }
 
 #[cfg(test)]
-mod test_package_configs {
+mod test_errors {
 
     use super::Config;
 
@@ -219,6 +245,29 @@ mod test_package_configs {
         let config = Config::try_from((config, toml_string));
         assert!(config.is_err(), "Expected an error, got {config:?}");
     }
+
+    #[test]
+    fn gitea_asset_error() {
+        let toml_string = r#"
+            [packages.something]
+            [[packages.something.assets]]
+            name = "something"
+            path = "something"
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+            [gitea]
+            host = "https://gitea.example.com"
+            owner = "knope"
+            repo = "knope"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
 }
 
 /// Generate a brand new Config for the project in the current directory.
@@ -226,8 +275,9 @@ pub(crate) fn generate() -> Config {
     let mut variables = IndexMap::new();
     variables.insert(String::from("$version"), Variable::Version);
 
-    let github = match git::get_first_remote() {
-        Some(remote) if remote.contains("github.com") => {
+    let first_remote = git::get_first_remote();
+    let github = match first_remote {
+        Some(ref remote) if remote.contains("github.com") => {
             let parts = remote.split('/').collect::<Vec<_>>();
             let owner = parts.get(parts.len() - 2).map(|owner| {
                 owner
@@ -246,7 +296,19 @@ pub(crate) fn generate() -> Config {
         }
         _ => None,
     };
-    let mut release_steps = if github.is_some() {
+
+    let gitea = first_remote.as_ref().and_then(|remote| {
+        if Gitea::KNOWN_PUBLIC_GITEA_HOSTS
+            .iter()
+            .any(|known_host| remote.contains(known_host))
+        {
+            Gitea::try_from_remote(remote)
+        } else {
+            None
+        }
+    });
+
+    let mut release_steps = if github.is_some() || gitea.is_some() {
         vec![
             Step::Command {
                 command: String::from(
@@ -284,6 +346,7 @@ pub(crate) fn generate() -> Config {
         ],
         jira: None,
         github,
+        gitea,
         packages: find_packages().ok().into_iter().collect(),
     }
 }

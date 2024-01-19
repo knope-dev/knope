@@ -4,16 +4,16 @@ changelog = "CHANGELOG.md"
 extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
 
 [[package.assets]]
-path = "x86_64-unknown-linux-musl/knope-x86_64-unknown-linux-musl.tgz"
+path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
 
 [[package.assets]]
-path = "x86_64-pc-windows-msvc/knope-x86_64-pc-windows-msvc.tgz"
+path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
 
 [[package.assets]]
-path = "x86_64-apple-darwin/knope-x86_64-apple-darwin.tgz"
+path = "artifacts/knope-x86_64-apple-darwin.tgz"
 
 [[package.assets]]
-path = "aarch64-apple-darwin/knope-aarch64-apple-darwin.tgz"
+path = "artifacts/knope-aarch64-apple-darwin.tgz"
 
 [[workflows]]
 name = "prepare-release"
@@ -24,6 +24,10 @@ command = "git switch -c release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "npx prettier CHANGELOG.md --write"
 
 [[workflows.steps]]
 type = "Command"

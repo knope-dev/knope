@@ -207,6 +207,8 @@ mod test_replace_variables {
             jira_config: None,
             github: state::GitHub::New,
             github_config: None,
+            gitea: state::Gitea::New,
+            gitea_config: None,
             issue: state::Issue::Selected(issue),
             packages: vec![package().0],
             verbose: Verbose::No,
@@ -240,7 +242,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let state = State::new(None, None, vec![package().0], Verbose::No);
+        let state = State::new(None, None, None, vec![package().0], Verbose::No);
 
         let result = replace_variables(
             Template {
@@ -269,7 +271,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let mut state = State::new(None, None, vec![package().0], Verbose::No);
+        let mut state = State::new(None, None, None, vec![package().0], Verbose::No);
         let version = Version::new(1, 2, 3, None);
         state.packages[0].prepared_release = Some(Release::empty(version.clone()));
 
@@ -299,6 +301,8 @@ mod test_replace_variables {
             jira_config: None,
             github: state::GitHub::New,
             github_config: None,
+            gitea: state::Gitea::New,
+            gitea_config: None,
             issue: state::Issue::Selected(issue),
             packages: Vec::new(),
             verbose: Verbose::No,
@@ -321,7 +325,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
-        let mut state = State::new(None, None, vec![package().0], Verbose::No);
+        let mut state = State::new(None, None, None, vec![package().0], Verbose::No);
         let version = Version::new(1, 2, 3, None);
         let changes = [Change::ConventionalCommit(ConventionalCommit {
             change_type: ChangeType::Feature,
@@ -366,7 +370,7 @@ mod test_replace_variables {
         let changelog_path = package.changelog.take().unwrap().path;
         write(&changelog_path, changelog_entry).unwrap();
         package.changelog = Some(changelog_path.try_into().unwrap()); // Have to reload content
-        let state = State::new(None, None, vec![package], Verbose::No);
+        let state = State::new(None, None, None, vec![package], Verbose::No);
 
         let result = replace_variables(
             Template {

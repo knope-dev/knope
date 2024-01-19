@@ -1,39 +1,39 @@
 [package]
 name = "knope"
 description = "A command line tool for automating common development tasks"
-version = "0.13.3"
+version = "0.13.4"
 authors = ["Dylan Anthony <contact@dylananthony.com>"]
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/knope-dev/knope"
 homepage = "https://knope.tech"
 documentation = "https://knope.tech"
-keywords = ["jira", "git", "github", "workflow", "script"]
+keywords = ["semantic-version", "changelog", "changeset", "git", "github"]
 categories = ["command-line-utilities", "development-tools"]
 rust-version = "1.70"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.193", features = ["derive"] }
-base64 = "0.21.5"
+serde = { version = "1.0.195", features = ["derive"] }
+base64 = "0.21.7"
 toml = "0.8.8"
-serde_json = { version = "1.0.108", features = ["preserve_order"] }
+serde_json = { version = "1.0.111", features = ["preserve_order"] }
 git2 = { version = "0.18.1", default-features = false }
 execute = "0.2.13"
 platform-dirs = "0.3.0"
 git-conventional = "0.12.4"
 ureq = { version = "2.9.1", features = ["json"] }
 http = "1.0.0"
-clap = { version = "4.4.12", features = ["cargo", "string", "env"] }
+clap = { version = "4.4.18", features = ["cargo", "string", "env"] }
 itertools = "0.12.0"
 miette = { version = "5.10.0", features = ["fancy"] }
-thiserror = "1.0.52"
+thiserror = "1.0.56"
 gix = { version = "0.57.1", default-features = false, features = [
   "max-performance-safe",
 ] }
 log = "0.4.20"
-env_logger = "0.10.1"
+env_logger = "0.11.0"
 indexmap = { version = "2.1.0", features = ["serde"] }
 inquire = { version = "0.6.2", default-features = false, features = [
   "crossterm",
@@ -41,10 +41,10 @@ inquire = { version = "0.6.2", default-features = false, features = [
 changesets = "0.2.2"
 time = { version = "0.3.31" }
 datta = "0.1.0"
-serde_yaml = "0.9.29"
+serde_yaml = "0.9.30"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
-snapbox = "0.4.15"
+snapbox = "0.4.16"
 tempfile = "3.9.0"

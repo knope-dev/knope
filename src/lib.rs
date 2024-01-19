@@ -206,6 +206,7 @@ fn create_state(
         workflows,
         jira,
         github,
+        gitea,
     } = config;
     if let Some(version_override) = sub_matches
         .as_deref_mut()
@@ -255,7 +256,7 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, packages, verbose);
+    let state = State::new(jira, github, gitea, packages, verbose);
     Ok((state, workflows))
 }
 

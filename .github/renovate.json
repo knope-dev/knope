@@ -15,5 +15,18 @@
         "^@astrojs/*"
       ]
     }
+  ],
+  "customManagers": [
+    {
+      "description": "Update GitHub Actions versions in docs",
+      "customType": "regex",
+      "datasourceTemplate": "github-releases",
+      "fileMatch": [
+        "^docs/src/content/docs.*\\.md(x)?$"
+      ],
+      "matchStrings": [
+        "uses: (?<depName>.+)@(?<currentValue>.+)"
+      ]
+    }
   ]
 }

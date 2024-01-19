@@ -32,23 +32,20 @@ You'll either need to change any references to those variables or use the [workf
 
 ```toml
 [[package.assets]]
-name = "knope-x86_64-unknown-linux-musl.tgz"
-path = "x86_64-unknown-linux-musl/artifact.tgz"
+path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-pc-windows-msvc.tgz"
-path = "x86_64-pc-windows-msvc/artifact.tgz"
+path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
 
 [[package.assets]]
-name = "knope-x86_64-apple-darwin.tgz"
-path = "x86_64-apple-darwin/artifact.tgz"
+path = "artifacts/knope-x86_64-apple-darwin.tgz"
 
 [[package.assets]]
-name = "knope-aarch64-apple-darwin.tgz"
-path = "aarch64-apple-darwin/artifact.tgz"
+path = "artifacts/knope-aarch64-apple-darwin.tgz"
 ```
 
-`package.assets` defines a list of files to upload to GitHub releases. You can also omit `name` to use the name of the file instead, this wouldn't work in this case because the files are all named `artifact.tgz`.
+`package.assets` defines a list of files to upload to GitHub releases. You can also include `name` to change the name of the uploaded artifact.
+It defaults to the last component of the path (for example, `knope-x86_64-unknown-linux-musl.tgz`).
 
 ### `prepare-release` workflow
 
@@ -152,7 +149,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'chore: prepare release')" # Skip merges from releases
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
@@ -230,8 +227,11 @@ release:
   needs: [build-artifacts]
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v4.0.0
+    - uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.1
+      with:
+        path: artifacts
+        merge-multiple: true
     - uses: knope-dev/action@v2.0.0
       with:
         version: 0.13.0
@@ -279,8 +279,8 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v4.1.1
+      - uses: Swatinem/rust-cache@v2.7.3
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
 
@@ -307,7 +307,7 @@ jobs:
         run: cp target/${{ matrix.target }}/release/knope ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.0.0
+        uses: actions/upload-artifact@v4.2.0
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -317,8 +317,11 @@ jobs:
     needs: [build-artifacts]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4.0.0
+      - uses: actions/checkout@v4.1.1
+      - uses: actions/download-artifact@v4.1.1
+        with:
+          path: artifacts
+          merge-multiple: true
       - uses: knope-dev/action@v2.0.0
         with:
           version: 0.13.0
@@ -330,8 +333,8 @@ jobs:
     needs: [release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: actions/checkout@v4.1.1
+      - uses: Swatinem/rust-cache@v2.7.3
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}
