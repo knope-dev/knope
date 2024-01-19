@@ -10,7 +10,7 @@ homepage = "https://knope.tech"
 documentation = "https://knope.tech"
 keywords = ["semantic-version", "changelog", "changeset", "git", "github"]
 categories = ["command-line-utilities", "development-tools"]
-rust-version = "1.70"
+rust-version = "1.71.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -48,3 +48,6 @@ pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
 snapbox = "0.4.16"
 tempfile = "3.9.0"
+
+[profile.release]
+strip = true
