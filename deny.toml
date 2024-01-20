@@ -169,7 +169,8 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "bitflags", version = "1", depth = 1 }, # crossterm, inquire, redox_syscall, etc. all use this
+  { name = "bitflags", version = "1", depth = 1 },       # crossterm, inquire, redox_syscall, etc. all use this
+  { name = "windows-sys", version = "0.48", depth = 5 }, # ring & mio need to update
 ]
 
 # This section is considered when running `cargo deny check sources`.
