@@ -224,7 +224,7 @@ This fixes a regression in the previous version of Knope where _all_ prereleases
 
 #### GitHub Actions Recipes
 
-There's a [new section of the docs](https://knope.tech/recipes/preview-releases-with-pull-requests/) with some recipes for using Knope in GitHub Actions. If you have suggestions for additional recipes, please open a [discussion](https://github.com/knope-dev/knope/discussions)!
+There's a [new section of the docs](https://knope.tech/recipes/1-preview-releases-with-pull-requests/) with some recipes for using Knope in GitHub Actions. If you have suggestions for additional recipes, please open a [discussion](https://github.com/knope-dev/knope/discussions)!
 
 ## 0.11.0 (2023-09-13)
 
