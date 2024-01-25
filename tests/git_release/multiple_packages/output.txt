@@ -1,5 +1,5 @@
 [..] chore: Prepare release
- 5 files changed, 25 insertions(+)
+ 5 files changed, 26 insertions(+)
  create mode 100644 Cargo.toml
  create mode 100644 FIRST_CHANGELOG.md
  create mode 100644 SECOND_CHANGELOG.md

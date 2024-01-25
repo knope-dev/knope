@@ -8,7 +8,7 @@ use snapbox::cmd::{cargo_bin, Command};
 
 mod helpers;
 
-/// Test all the `BumpVersion` rules.
+/// Test all the `Bumname = "default"` rules.
 #[rstest]
 #[case("bump-pre", "1.2.3", "1.2.4-rc.0")]
 #[case("bump-pre", "1.2.3-rc.0", "1.2.4-rc.0")]
@@ -35,7 +35,7 @@ fn bump_version(
     let cargo_toml = temp_dir.path().join("Cargo.toml");
     std::fs::write(
         cargo_toml,
-        format!("[package]\nversion = \"{current_version}\"\n"),
+        format!("[package]\nname = \"default\"\nversion = \"{current_version}\"\n"),
     )
     .unwrap();
 

@@ -19,7 +19,7 @@ pub(crate) struct VersionedFile {
     /// The path to the file that was parsed.
     pub(crate) path: PathBuf,
     /// The raw content of the package manager file so it doesn't have to be read again.
-    content: String,
+    pub(crate) content: String,
 }
 
 impl TryFrom<PathBuf> for VersionedFile {

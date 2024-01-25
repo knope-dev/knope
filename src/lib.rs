@@ -145,7 +145,7 @@ fn build_cli(config: &ConfigSource) -> Command {
                 .arg(arg!(--generate "Generate a knope.toml file").action(ArgAction::SetTrue));
             config
         }
-        ConfigSource::File(config) => {
+        ConfigSource::File(config) | ConfigSource::Hybrid(config) => {
             command = command.arg(arg!(--upgrade "Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax."));
             command = command.arg(arg!(--validate "Check that the `knope.toml` file is valid."));
             config

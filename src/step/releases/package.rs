@@ -30,7 +30,10 @@ use crate::{
     dry_run::DryRun,
     fs,
     integrations::git::{self, add_files},
-    step::releases::versioned_file::{VersionFromSource, VersionSource},
+    step::releases::{
+        versioned_file::{VersionFromSource, VersionSource},
+        workspace::check_for_workspaces,
+    },
     workflow::Verbose,
 };
 
@@ -144,6 +147,14 @@ impl Package {
             Ok(())
         } else {
             add_files(&paths).map_err(Error::from)
+        }
+    }
+
+    pub(crate) fn new(name: String, versioned_files: Vec<VersionedFile>) -> Self {
+        Self {
+            name: Some(PackageName::from(name)),
+            versioned_files,
+            ..Self::default()
         }
     }
 }
@@ -377,11 +388,16 @@ impl Display for ChangelogSectionSource {
 }
 
 /// Find all supported package formats in the current directory.
-pub(crate) fn find_packages() -> Result<Package, Error> {
-    let default = PathBuf::from("CHANGELOG.md");
-    let changelog = default
+pub(crate) fn find_packages() -> Result<Vec<Package>, Error> {
+    let packages = check_for_workspaces();
+    if !packages.is_empty() {
+        return Ok(packages);
+    }
+
+    let default_changelog_path = PathBuf::from("CHANGELOG.md");
+    let changelog = default_changelog_path
         .exists()
-        .then(|| Changelog::try_from(default))
+        .then(|| Changelog::try_from(default_changelog_path))
         .transpose()?;
 
     let versioned_files = PACKAGE_FORMAT_FILE_NAMES
@@ -395,11 +411,15 @@ pub(crate) fn find_packages() -> Result<Package, Error> {
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(Package {
-        versioned_files,
-        changelog,
-        ..Package::default()
-    })
+    if versioned_files.is_empty() {
+        Ok(vec![])
+    } else {
+        Ok(vec![Package {
+            versioned_files,
+            changelog,
+            ..Package::default()
+        }])
+    }
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -428,42 +448,11 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Git(#[from] git::Error),
-    #[error("No packages are defined")]
+    #[error("No packages to operate on")]
     #[diagnostic(
         code(package::no_defined_packages),
-        help("You must define at least one [package] in knope.toml. {package_suggestion}"),
+        help("There must be at least one package for Knope to work with, no supported package files were found in this directory."),
         url("https://knope.tech/reference/config-file/packages/")
     )]
-    NoDefinedPackages { package_suggestion: String },
-}
-
-impl Error {
-    pub fn no_defined_packages_with_help() -> Self {
-        match suggested_package_toml() {
-            Ok(help) => Self::NoDefinedPackages {
-                package_suggestion: help,
-            },
-            Err(err) => err,
-        }
-    }
-}
-
-/// Includes some helper text for the user to understand how to use the config to define packages.
-pub(crate) fn suggested_package_toml() -> Result<String, Error> {
-    let package = find_packages()?;
-    if package.versioned_files.is_empty() {
-        Ok(format!(
-            "No supported package managers found in current directory. \
-                    The supported formats are {formats}. Here's how you might define a package for `Cargo.toml`:\
-                    \n\n```\n[package]\nversioned_files = [\"Cargo.toml\"]\nchangelog = \"CHANGELOG.md\"\n```",
-            formats = PACKAGE_FORMAT_FILE_NAMES.join(", ")
-        ))
-    } else {
-        let toml = crate::config::toml::Package::from(package);
-        let toml = toml::to_string_pretty(&toml)?;
-        Ok(format!(
-            "Found some package metadata files in the current directory. You may need to add this \
-            to your knope.toml:\n\n```\n[package]\n{toml}```",
-        ))
-    }
+    NoDefinedPackages,
 }

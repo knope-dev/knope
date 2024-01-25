@@ -1,2 +1,3 @@
 [package]
+name = "multiple-packages"
 version = "0.1.3"

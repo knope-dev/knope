@@ -51,7 +51,8 @@ impl Config {
         };
 
         let config_loader: ConfigLoader = from_str(&source_code)?;
-        Self::try_from((config_loader, source_code)).map(ConfigSource::File)
+        let config_source = Self::try_from((config_loader, source_code)).map(ConfigSource::File)?;
+        Ok(config_source.fill_in_gaps())
     }
 
     /// Set the prerelease label for all `PrepareRelease` steps in all workflows in `self`.
@@ -162,13 +163,33 @@ pub(crate) enum ConfigSource {
     Default(Config),
     /// Config loaded from a file.
     File(Config),
+    /// Some things were loaded from file, some were defaults
+    Hybrid(Config),
 }
 
 impl ConfigSource {
     pub(crate) fn into_inner(self) -> Config {
         match self {
-            ConfigSource::File(config) | ConfigSource::Default(config) => config,
+            Self::File(config) | Self::Default(config) | Self::Hybrid(config) => config,
         }
+    }
+
+    /// Anything the config file was missing, fill in with defaults.
+    fn fill_in_gaps(self) -> Self {
+        let mut config = match self {
+            Self::Hybrid(_) | Self::Default(_) => return self,
+            Self::File(config) => config,
+        };
+        if config.packages.is_empty() {
+            config.packages = find_packages().ok().unwrap_or_default();
+        }
+        if config.workflows.is_empty() {
+            config.workflows = generate_workflows(
+                config.github.is_some() || config.gitea.is_some(),
+                &config.packages,
+            );
+        }
+        Self::Hybrid(config)
     }
 }
 
@@ -272,8 +293,7 @@ mod test_errors {
 
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Config {
-    let mut variables = IndexMap::new();
-    variables.insert(String::from("$version"), Variable::Version);
+    let packages = find_packages().ok().unwrap_or_default();
 
     let first_remote = git::get_first_remote();
     let github = match first_remote {
@@ -308,21 +328,37 @@ pub(crate) fn generate() -> Config {
         }
     });
 
-    let mut release_steps = if github.is_some() || gitea.is_some() {
+    Config {
+        workflows: generate_workflows(github.is_some() || gitea.is_some(), &packages),
+        jira: None,
+        github,
+        gitea,
+        packages,
+    }
+}
+
+fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
+    let (commit_message, variables) = if packages.len() < 2 {
+        let mut variables = IndexMap::new();
+        variables.insert(String::from("$version"), Variable::Version);
+        ("chore: prepare release $version", Some(variables))
+    } else {
+        ("chore: prepare releases", None)
+    };
+
+    let mut release_steps = if has_forge {
         vec![
             Step::Command {
-                command: String::from(
-                    "git commit -m \"chore: prepare release $version\" && git push",
-                ),
-                variables: Some(variables),
+                command: format!("git commit -m \"{commit_message}\" && git push",),
+                variables,
             },
             Step::Release,
         ]
     } else {
         vec![
             Step::Command {
-                command: String::from("git commit -m \"chore: prepare release $version\""),
-                variables: Some(variables),
+                command: format!("git commit -m \"{commit_message}\""),
+                variables,
             },
             Step::Release,
             Step::Command {
@@ -332,21 +368,14 @@ pub(crate) fn generate() -> Config {
         ]
     };
     release_steps.insert(0, Step::PrepareRelease(PrepareRelease::default()));
-
-    Config {
-        workflows: vec![
-            Workflow {
-                name: String::from("release"),
-                steps: release_steps,
-            },
-            Workflow {
-                name: String::from("document-change"),
-                steps: vec![Step::CreateChangeFile],
-            },
-        ],
-        jira: None,
-        github,
-        gitea,
-        packages: find_packages().ok().into_iter().collect(),
-    }
+    vec![
+        Workflow {
+            name: String::from("release"),
+            steps: release_steps,
+        },
+        Workflow {
+            name: String::from("document-change"),
+            steps: vec![Step::CreateChangeFile],
+        },
+    ]
 }

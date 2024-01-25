@@ -12,7 +12,7 @@ use super::semver::Version;
 use crate::{dry_run::DryRun, fs};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
-    toml::from_str::<Cargo>(content)
+    toml::from_str::<CargoPackage>(content)
         .map(|cargo| cargo.package.version.into_inner())
         .map_err(|source| Error::Deserialize {
             path: path.into(),
@@ -27,7 +27,7 @@ pub(crate) fn set_version(
     new_version: &Version,
     path: &Path,
 ) -> Result<String, Error> {
-    let doc: Cargo = toml::from_str(&cargo_toml).map_err(|source| Error::Deserialize {
+    let doc: CargoPackage = toml::from_str(&cargo_toml).map_err(|source| Error::Deserialize {
         path: path.into(),
         source,
     })?;
@@ -48,7 +48,7 @@ pub(crate) enum Error {
     #[error("Error deserializing {path}: {source}")]
     #[diagnostic(
         code(cargo::deserialize),
-        help("knope expects the Cargo.toml file to have a `package.version` property. Workspace support is coming soon!"),
+        help("Knope expects the Cargo.toml file to have `package.version` and `package.name` properties."),
         url("https://knope.tech/reference/config-file/packages/#cargotoml")
     )]
     Deserialize {
@@ -65,12 +65,13 @@ pub(crate) enum Error {
 }
 
 #[derive(Debug, Deserialize)]
-struct Cargo {
-    package: Package,
+pub(super) struct CargoPackage {
+    pub(crate) package: Package,
 }
 
 #[derive(Debug, Deserialize)]
-struct Package {
+pub(crate) struct Package {
+    pub name: String,
     version: Spanned<String>,
 }
 

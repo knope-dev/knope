@@ -62,6 +62,7 @@ pub(crate) fn replace_variables(template: Template, state: &State) -> Result<Str
                 } else {
                     first_package(state)?
                 };
+                package_cache = Some(package);
                 let version = if let Some(version) = version_cache.take() {
                     version
                 } else {
@@ -114,7 +115,7 @@ fn first_package(state: &State) -> Result<&Package, Error> {
     } else if let Some(package) = state.packages.first() {
         Ok(package)
     } else {
-        Err(package::Error::no_defined_packages_with_help().into())
+        Err(package::Error::NoDefinedPackages.into())
     }
 }
 
@@ -178,7 +179,7 @@ mod test_replace_variables {
     fn package() -> (Package, TempDir) {
         let temp_dir = tempfile::tempdir().unwrap();
         let cargo_toml = temp_dir.path().join("Cargo.toml");
-        write(&cargo_toml, "[package]\nversion = \"1.2.3\"").unwrap();
+        write(&cargo_toml, "[package]\nversion = \"1.2.3\"\nname=\"blah\"").unwrap();
         let changelog = temp_dir.path().join("CHANGELOG.md");
         write(&changelog, "").unwrap();
 

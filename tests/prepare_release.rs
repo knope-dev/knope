@@ -9,7 +9,10 @@ use changesets::{Change, ChangeType, UniqueId, Versioning};
 use helpers::*;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    assert_eq_path,
+    cmd::{cargo_bin, Command},
+};
 
 mod helpers;
 
@@ -1247,7 +1250,11 @@ fn handle_pre_versions_that_are_too_new() {
     let source_path = Path::new("tests/prepare_release/hande_pre_versions_that_are_too_new");
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
     let cargo_toml = temp_dir.path().join("Cargo.toml");
-    write(cargo_toml, "[package]\nversion = \"1.2.3\"\n").unwrap();
+    write(
+        cargo_toml,
+        "[package]\nname = \"default\"\nversion = \"1.2.3\"\n",
+    )
+    .unwrap();
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -1734,4 +1741,47 @@ fn pick_correct_tag_from_branching_history() {
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
+}
+
+#[test]
+fn test_cargo_workspace() {
+    let source_dir = Path::new("tests/prepare_release/cargo_workspace");
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    copy_dir(&source_dir.join("source"), temp_path);
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "first-package/v1.0.0");
+    tag(temp_path, "second-package/v0.1.0");
+    commit(temp_path, "feat(first-package): A feature");
+    commit(temp_path, "feat(second-package)!: A breaking feature");
+
+    let dry_run_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_path)
+        .assert();
+    let actual_output = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_path)
+        .assert();
+
+    dry_run_output
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_dir.join("dry_run_output.txt"));
+    actual_output
+        .success()
+        .with_assert(assert())
+        .stdout_matches_path(source_dir.join("output.txt"));
+
+    let expected_dir = source_dir.join("expected");
+    assert_eq_path(
+        expected_dir.join("first/Cargo.toml"),
+        read_to_string(temp_path.join("first/Cargo.toml")).unwrap(),
+    );
+    assert_eq_path(
+        expected_dir.join("second/CHANGELOG.md"),
+        read_to_string(temp_path.join("second/CHANGELOG.md")).unwrap(),
+    );
 }

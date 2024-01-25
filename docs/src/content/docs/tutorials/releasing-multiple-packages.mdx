@@ -46,30 +46,17 @@ gh repo create --private knope-tutorial --source .
 
 ## Create a Knope config file
 
-Knope requires a [config file](/reference/config-file/packages) to support multiple packages:
+Knope requires a [config file](/reference/config-file/packages) to support multiple packages.
+You _could_ use `knope --generate` to create the [default config](/reference/default-config),
+but it wouldn't be quite right for multiple packages.
 
-```shell
-knope --generate
-```
+:::tip
+If you're only using `Cargo.toml` files below, you can leverage Knope's [Cargo workspace support](/reference/default-config#cargo-workspaces)
+:::
 
-The default `knope.toml` file is for a single package, it needs some tweaks to support multiple packages.
-Open it up in your editor and remove the `[package]` section, then add three `[packages]` sections:
+Instead, create this by hand:
 
-```toml title="knope.toml" del={1} ins={2-6}
-[package]
-[packages.pizza]
-
-[packages.toppings]
-
-[packages.calzone]
-```
-
-## Set up the monorepo
-
-Each package should have some versioned files and a changelog.
-Knope supports [many file formats](/reference/config-file/packages#versioned_files), like `Cargo.toml` files:
-
-```toml title="knope.toml" ins={2-3,6-7,10-11}
+```toml title="knope.toml" {"Replace this with your GitHub or Gitea info": 12-15}
 [packages.pizza]
 versioned_files = ["pizza/Cargo.toml"]
 changelog = "pizza/CHANGELOG.md"
@@ -81,9 +68,17 @@ changelog = "toppings/CHANGELOG.md"
 [packages.calzone]
 versioned_files = ["calzone/Cargo.toml"]
 changelog = "calzone/CHANGELOG.md"
+
+[github]
+owner = ""
+repo = ""
 ```
 
-Those files must exist as well:
+:::tip
+Check out the [forges](/reference/concepts/forges) reference for more information about the `github` or `gitea` section.
+:::
+
+Those referenced files must exist as well:
 
 ```toml title="pizza/Cargo.toml"
 [package]
@@ -123,90 +118,6 @@ git add .
 git commit -m "Initial setup"
 ```
 
-## Some monorepo limitations
-
-Knope will report any problems with the config file:
-
-```shell
-knope --validate
-```
-
-You should see an error like this:
-
-```text
-Error:   × There are problems with the defined workflows
-
-Error:   × Problem with workflow release
-
-Error: variables::too_many_packages
-
-  × Too many packages defined
-  help: The Version variable in a Command step can only be used with a single [package].
-```
-
-There's a bit more work to do to convert this to a monorepo.
-Multi-package setups have some extra limitations at the time of writing.
-For example, multi-package configs can't use the `Version` variable:
-
-```toml title="knope.toml" del={4-6} del=" $version"
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m \"chore: prepare release $version\" && git push"
-
-[workflows.steps.variables]
-"$version" = "Version"
-```
-
-```shell
-knope --validate
-```
-
-If everything is correct, you'll see no output.
-
-<details>
-<summary>Full `knope.toml` at this stage</summary>
-
-The only difference between this `knope.toml` and yours should be the `[github]` section at the bottom.
-
-```toml title="knope.toml"
-[packages.pizza]
-versioned_files = ["pizza/Cargo.toml"]
-changelog = "pizza/CHANGELOG.md"
-
-[packages.toppings]
-versioned_files = ["toppings/Cargo.toml"]
-changelog = "toppings/CHANGELOG.md"
-
-[packages.calzone]
-versioned_files = ["calzone/Cargo.toml"]
-changelog = "calzone/CHANGELOG.md"
-
-[[workflows]]
-name = "release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m \"chore: prepare release\" && git push"
-
-[[workflows.steps]]
-type = "Release"
-
-[[workflows]]
-name = "document-change"
-
-[[workflows.steps]]
-type = "CreateChangeFile"
-
-[github]
-owner = "dbanty"
-repo = "knope-tutorial"
-```
-
-</details>
-
 ## Documenting changes
 
 As with a single package,
@@ -220,7 +131,7 @@ knope document-change
 ```
 
 :::tip
-That `document-change` command comes from the workflow in `knope.toml` with the same name, go check it out!
+That `document-change` command comes from the [default workflow](/reference/default-config#workflows) with the same name.
 :::
 
 Knope will ask which packages the change impacts:
@@ -519,8 +430,6 @@ In this tutorial, you:
 1. Configured Knope for a monorepo
 2. Documented changes using both changesets and conventional commits
 3. Created GitHub releases for each package
-
-Next up, you should consider [using GitHub Actions to automate releases](/recipes/preview-releases-with-pull-requests).
 
 :::note
 Don't forget to clean up your GitHub repo!

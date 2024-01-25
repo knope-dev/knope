@@ -35,10 +35,11 @@ Knope supports the following file names:
 
 ### `Cargo.toml`
 
-For versioning Rust projects. Must contain a `[package.version]` field, like so:
+For versioning Rust projects. Must contain `version` and `name` fields in the `package` table, like so:
 
 ```toml title="Cargo.toml"
 [package]
+name = "my-package"
 version = "1.0.0"
 ```
 
