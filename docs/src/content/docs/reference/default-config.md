@@ -3,7 +3,7 @@ title: "Default config"
 ---
 
 Knope has some default configuration for things that aren't specified in a `knope.toml` file
-(either when the file is not present, or when there are missing sections).
+(either when the file isn't present, or when there are missing sections).
 
 To find out what _your project's_ default config is, use
 `knope --generate` (with no `knope.toml` file in the current directory).
@@ -36,7 +36,7 @@ If there is a `Cargo.toml` file in the current directory that looks like a Cargo
 Knope will create a package for each member.
 
 :::caution
-Only a subset of Cargo workspace features are currently supported, notably members have to be explictly listed, not using any `*`.
+Only a subset of Cargo workspace features are currently supported, notably members have to be explicitly listed, not using any `*`.
 :::
 
 ```toml title="Cargo.toml"
@@ -44,7 +44,7 @@ Only a subset of Cargo workspace features are currently supported, notably membe
 members = ["member1", "member2"]
 ```
 
-The names of these packages are based on the name in their respective `Cargo.toml` files, not the directory name.
+The names of these packages are from the `name` in their respective `Cargo.toml` files, not the directory name.
 
 ```toml title="member1/Cargo.toml"
 [package]

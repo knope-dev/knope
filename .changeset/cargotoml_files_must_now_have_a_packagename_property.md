@@ -2,9 +2,9 @@
 default: major
 ---
 
-# Cargo.toml files must now have a `package.name` property
+# `Cargo.toml` files must now have a `package.name` property
 
-This was already required by Cargo, but wasn't enforced by Knope until now. Previously, a Cargo.toml file like
+This was already required by Cargo, but wasn't enforced by Knope until now. Before, a `Cargo.toml` file like
 
 ```toml
 [package]
