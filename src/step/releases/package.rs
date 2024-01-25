@@ -21,7 +21,7 @@ use super::{
     semver::{bump, ConventionalRule, Label, Version},
     versioned_file,
     versioned_file::{VersionedFile, PACKAGE_FORMAT_FILE_NAMES},
-    Change, Release, Rule,
+    workspace, Change, Release, Rule,
 };
 use crate::{
     config::{
@@ -390,7 +390,8 @@ impl Display for ChangelogSectionSource {
 
 /// Find all supported package formats in the current directory.
 pub(crate) fn find_packages() -> Result<Vec<Package>, Error> {
-    let packages = check_for_workspaces();
+    let packages = check_for_workspaces()?;
+
     if !packages.is_empty() {
         return Ok(packages);
     }
@@ -456,4 +457,7 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/packages/")
     )]
     NoDefinedPackages,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Workspace(#[from] workspace::Error),
 }

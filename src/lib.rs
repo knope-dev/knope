@@ -65,7 +65,7 @@ pub fn run() -> Result<()> {
 
     if let Ok(Some(true)) = matches.try_get_one("generate") {
         println!("Generating a knope.toml file");
-        let config = config::generate();
+        let config = config::generate()?;
         return config.write_out();
     }
 
@@ -287,6 +287,6 @@ mod tests {
 
     #[test]
     fn verify_app() {
-        build_cli(&ConfigSource::Default(config::generate())).debug_assert();
+        build_cli(&ConfigSource::Default(config::generate().unwrap())).debug_assert();
     }
 }

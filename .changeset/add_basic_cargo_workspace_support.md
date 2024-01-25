@@ -14,6 +14,7 @@ members = [
 ]
 ```
 
-then Knope will now treat each member like a package, assuming that there is a `Cargo.toml` file for each member.
+then Knope will now treat each member like a package.
+There must be a `Cargo.toml` file in each member directory, or Knope will error.
 
 This doesn't work with path globbing yet, only manual directory entries. See [the new docs](https://knope.tech/reference/default-config/#cargo-workspaces) for more details.

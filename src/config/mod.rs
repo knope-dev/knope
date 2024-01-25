@@ -10,7 +10,7 @@ use crate::{
     config::toml::ConfigLoader,
     integrations::git,
     step::{
-        releases::{find_packages, Package},
+        releases::{find_packages, package, Package},
         PrepareRelease, Step,
     },
     variables::Variable,
@@ -47,12 +47,12 @@ impl Config {
     pub(crate) fn load() -> Result<ConfigSource, Error> {
         let Ok(source_code) = fs::read_to_string(Self::CONFIG_PATH) else {
             log::debug!("No `knope.toml` found, using default config");
-            return Ok(ConfigSource::Default(generate()));
+            return Ok(ConfigSource::Default(generate()?));
         };
 
         let config_loader: ConfigLoader = from_str(&source_code)?;
         let config_source = Self::try_from((config_loader, source_code)).map(ConfigSource::File)?;
-        Ok(config_source.fill_in_gaps())
+        config_source.fill_in_gaps()
     }
 
     /// Set the prerelease label for all `PrepareRelease` steps in all workflows in `self`.
@@ -184,13 +184,13 @@ impl ConfigSource {
     }
 
     /// Anything the config file was missing, fill in with defaults.
-    fn fill_in_gaps(self) -> Self {
+    fn fill_in_gaps(self) -> Result<Self, Error> {
         let mut config = match self {
-            Self::Hybrid(_) | Self::Default(_) => return self,
+            Self::Hybrid(_) | Self::Default(_) => return Ok(self),
             Self::File(config) => config,
         };
         if config.packages.is_empty() {
-            config.packages = find_packages().ok().unwrap_or_default();
+            config.packages = find_packages()?;
         }
         if config.workflows.is_empty() {
             config.workflows = generate_workflows(
@@ -198,7 +198,7 @@ impl ConfigSource {
                 &config.packages,
             );
         }
-        Self::Hybrid(config)
+        Ok(Self::Hybrid(config))
     }
 }
 
@@ -252,6 +252,9 @@ pub(crate) enum Error {
         url("https://github.com/knope-dev/knope/issues/779")
     )]
     GiteaAssetUploads,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Package(#[from] package::Error),
 }
 
 #[cfg(test)]
@@ -301,8 +304,8 @@ mod test_errors {
 }
 
 /// Generate a brand new Config for the project in the current directory.
-pub(crate) fn generate() -> Config {
-    let packages = find_packages().ok().unwrap_or_default();
+pub(crate) fn generate() -> Result<Config, package::Error> {
+    let packages = find_packages()?;
 
     let first_remote = git::get_first_remote();
     let github = match first_remote {
@@ -337,13 +340,13 @@ pub(crate) fn generate() -> Config {
         }
     });
 
-    Config {
+    Ok(Config {
         workflows: generate_workflows(github.is_some() || gitea.is_some(), &packages),
         jira: None,
         github,
         gitea,
         packages,
-    }
+    })
 }
 
 fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
