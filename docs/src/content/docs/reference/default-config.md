@@ -35,7 +35,7 @@ The `changelog` field is only set if there is a `CHANGELOG.md` file in the curre
 If there is a `Cargo.toml` file in the current directory that looks like a Cargo workspace,
 Knope will create a package for each member.
 
-:::warning
+:::caution
 Only a subset of Cargo workspace features are currently supported, notably members have to be explictly listed, not using any `*`.
 :::
 
