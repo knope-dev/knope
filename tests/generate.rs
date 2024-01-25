@@ -155,3 +155,25 @@ fn generate_gitea(#[case] remote: &str) {
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
+
+#[test]
+fn cargo_workspace() {
+    let source_path = Path::new("tests/generate/cargo_workspace");
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    copy_dir(&source_path.join("source"), temp_path);
+
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
+    assert
+        .success()
+        .stdout_eq("Generating a knope.toml file\n")
+        .stderr_eq("");
+    assert_eq_path(
+        source_path.join("knope.toml"),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
+    );
+}

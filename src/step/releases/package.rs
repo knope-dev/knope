@@ -152,8 +152,9 @@ impl Package {
 
     pub(crate) fn new(name: String, versioned_files: Vec<VersionedFile>) -> Self {
         Self {
-            name: Some(PackageName::from(name)),
+            name: Some(PackageName(name.clone())),
             versioned_files,
+            scopes: Some(vec![name]),
             ..Self::default()
         }
     }

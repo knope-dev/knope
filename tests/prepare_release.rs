@@ -1781,7 +1781,7 @@ fn test_cargo_workspace() {
         read_to_string(temp_path.join("first/Cargo.toml")).unwrap(),
     );
     assert_eq_path(
-        expected_dir.join("second/CHANGELOG.md"),
-        read_to_string(temp_path.join("second/CHANGELOG.md")).unwrap(),
+        expected_dir.join("second/Cargo.toml"),
+        read_to_string(temp_path.join("second/Cargo.toml")).unwrap(),
     );
 }

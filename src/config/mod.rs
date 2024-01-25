@@ -68,13 +68,22 @@ impl Config {
         struct SimpleConfig {
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<toml::Package>,
+            #[serde(skip_serializing_if = "Vec::is_empty")]
+            packages: Vec<toml::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
             gitea: Option<Gitea>,
         }
 
+        let (package, packages) = if self.packages.len() < 2 {
+            (self.packages.pop().map(toml::Package::from), Vec::new())
+        } else {
+            (None, self.packages.into_iter().map(Package::into).collect())
+        };
+
         let config = SimpleConfig {
-            package: self.packages.pop().map(toml::Package::from),
+            package,
+            packages,
             workflows: self.workflows,
             github: self.github,
             gitea: self.gitea,
