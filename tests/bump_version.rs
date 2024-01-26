@@ -8,7 +8,7 @@ use snapbox::cmd::{cargo_bin, Command};
 
 mod helpers;
 
-/// Test all the `Bumname = "default"` rules.
+/// Test all the `BumpVersion` rules.
 #[rstest]
 #[case("bump-pre", "1.2.3", "1.2.4-rc.0")]
 #[case("bump-pre", "1.2.3-rc.0", "1.2.4-rc.0")]
