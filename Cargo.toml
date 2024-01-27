@@ -15,7 +15,7 @@ rust-version = "1.71.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.195", features = ["derive"] }
+serde = { version = "1.0.196", features = ["derive"] }
 base64 = "0.21.7"
 toml = "0.8.8"
 serde_json = { version = "1.0.111", features = ["preserve_order"] }
