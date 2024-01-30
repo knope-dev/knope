@@ -45,6 +45,7 @@ members = ["member1", "member2"]
 ```
 
 The names of these packages are from the `name` in their respective `Cargo.toml` files, not the directory name.
+There _must_ be a `Cargo.toml` file in each member directory, or Knope will error.
 
 ```toml title="member1/Cargo.toml"
 [package]
