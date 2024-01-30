@@ -62,9 +62,7 @@ fn cargo_workspace_members(path: &Path) -> Result<Vec<Package>, Error> {
     let workspace_path = path.parent().ok_or_else(|| Error::Parent(path.into()))?;
     let Some(members) = cargo_toml
         .get("workspace")
-        .and_then(|workspace| workspace.as_table())
-        .and_then(|workspace| workspace.get("members"))
-        .and_then(|members| members.as_array())
+        .and_then(|workspace| workspace.as_table()?.get("members")?.as_array())
     else {
         return Ok(Vec::new());
     };
