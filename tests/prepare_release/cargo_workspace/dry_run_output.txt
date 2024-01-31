@@ -1,0 +1,6 @@
+Would add the following to first/Cargo.toml: 1.1.0
+Would add files to git:
+  first/Cargo.toml
+Would add the following to second/Cargo.toml: 0.2.0
+Would add files to git:
+  second/Cargo.toml

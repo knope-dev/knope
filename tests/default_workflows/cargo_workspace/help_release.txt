@@ -1,0 +1,15 @@
+Usage: knope release [OPTIONS]
+
+Options:
+      --dry-run
+          Pretend to run a workflow, outputting what _would_ happen without actually doing it.
+      --override-version <override-multiple-versions>
+          Override the version set by `BumpVersion` or `PrepareRelease` for multiple packages. Format is like package_name=version, can be set multiple times.
+      --prerelease-label <prerelease-label>
+          Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime. [env: KNOPE_PRERELEASE_LABEL=]
+  -v, --verbose
+          Print extra information (for debugging)
+  -h, --help
+          Print help
+  -V, --version
+          Print version

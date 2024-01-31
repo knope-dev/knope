@@ -1,0 +1,7 @@
+Usage: knope document-change [OPTIONS]
+
+Options:
+      --dry-run  Pretend to run a workflow, outputting what _would_ happen without actually doing it.
+  -v, --verbose  Print extra information (for debugging)
+  -h, --help     Print help
+  -V, --version  Print version

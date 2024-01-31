@@ -1,4 +1,4 @@
 [..] chore: Bump to 1.1.0
- 2 files changed, 13 insertions(+)
+ 2 files changed, 14 insertions(+)
  create mode 100644 CHANGELOG.md
  create mode 100644 Cargo.toml

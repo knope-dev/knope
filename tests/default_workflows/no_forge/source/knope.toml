@@ -1,0 +1,2 @@
+[package]
+versioned_files = ["Cargo.toml"]

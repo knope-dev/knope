@@ -32,30 +32,14 @@ Error:   × Problem with workflow Cannot use Version variable when no metadata f
 
 Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
-  × No packages are defined
-  help: You must define at least one [package] in knope.toml. No supported
-        package managers found in current directory. The supported formats
-        are Cargo.toml, pubspec.yaml, go.mod, package.json, pyproject.toml.
-        Here's how you might define a package for `Cargo.toml`:
-        
-        ```
-        [package]
-        versioned_files = ["Cargo.toml"]
-        changelog = "CHANGELOG.md"
-        ```
+  × No packages to operate on
+  help: There must be at least one package for Knope to work with, no
+        supported package files were found in this directory.
 Error:   × Problem with workflow Cannot PrepareRelease with no configured packages
 
 Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
-  × No packages are defined
-  help: You must define at least one [package] in knope.toml. No supported
-        package managers found in current directory. The supported formats
-        are Cargo.toml, pubspec.yaml, go.mod, package.json, pyproject.toml.
-        Here's how you might define a package for `Cargo.toml`:
-        
-        ```
-        [package]
-        versioned_files = ["Cargo.toml"]
-        changelog = "CHANGELOG.md"
-        ```
+  × No packages to operate on
+  help: There must be at least one package for Knope to work with, no
+        supported package files were found in this directory.
 

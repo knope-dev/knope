@@ -8,22 +8,17 @@ use crate::{step::releases::package::PackageName, workflow::Workflow};
 
 /// Loads a `crate::Config` from a TOML file with as much span information as possible for better
 /// error messages.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct ConfigLoader {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) package: Option<Spanned<Package>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) packages: Option<IndexMap<PackageName, Spanned<Package>>>,
     /// The list of defined workflows that are selectable
-    pub(crate) workflows: Spanned<Vec<Spanned<Workflow>>>,
+    pub(crate) workflows: Option<Spanned<Vec<Spanned<Workflow>>>>,
     /// Optional configuration for Jira
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) jira: Option<Spanned<Jira>>,
     /// Optional configuration to talk to GitHub
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) github: Option<Spanned<GitHub>>,
     /// Optional configuration to talk to a Gitea instance
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) gitea: Option<Spanned<Gitea>>,
 }
 

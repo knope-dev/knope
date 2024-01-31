@@ -1,5 +1,5 @@
 use std::{
-    fs::{copy, read_to_string, remove_file, write},
+    fs::{copy, read_to_string, write},
     path::Path,
 };
 
@@ -49,31 +49,17 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
     init(temp_path);
     commit(temp_path, "feat: Existing Feature");
     tag(temp_path, "v1.0.0");
-    copy(
-        source_path.join("no_package_knope.toml"),
-        temp_path.join("knope.toml"),
-    )
-    .unwrap();
     for source_file in source_files {
         copy(source_path.join(source_file), temp_path.join(source_file)).unwrap();
     }
 
     // Act
-    // Validate should give a useful error message similar to generate
-    let validate_assert = Command::new(cargo_bin!("knope"))
-        .arg("--validate")
-        .current_dir(temp_path)
-        .assert();
-    remove_file(temp_path.join("knope.toml")).unwrap();
     let assert = Command::new(cargo_bin!("knope"))
         .arg("--generate")
         .current_dir(temp_path)
         .assert();
 
     // Assert
-    validate_assert
-        .failure()
-        .stderr_eq_path(source_path.join(format!("{target_file}_stderr.txt")));
     assert.success().stdout_eq("Generating a knope.toml file\n");
     assert_eq_path(
         source_path.join(target_file),
@@ -160,6 +146,28 @@ fn generate_gitea(#[case] remote: &str) {
         .assert();
 
     // Assert
+    assert
+        .success()
+        .stdout_eq("Generating a knope.toml file\n")
+        .stderr_eq("");
+    assert_eq_path(
+        source_path.join("knope.toml"),
+        read_to_string(temp_path.join("knope.toml")).unwrap(),
+    );
+}
+
+#[test]
+fn cargo_workspace() {
+    let source_path = Path::new("tests/generate/cargo_workspace");
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    copy_dir(&source_path.join("source"), temp_path);
+
+    let assert = Command::new(cargo_bin!("knope"))
+        .arg("--generate")
+        .current_dir(temp_path)
+        .assert();
+
     assert
         .success()
         .stdout_eq("Generating a knope.toml file\n")

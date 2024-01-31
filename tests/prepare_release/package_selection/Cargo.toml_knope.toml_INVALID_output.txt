@@ -14,6 +14,6 @@ Error: cargo::deserialize (https://knope.tech/reference/config-file/packages/#ca
         | ^
       missing field `package`
       
-  help: knope expects the Cargo.toml file to have a `package.version`
-        property. Workspace support is coming soon!
+  help: Knope expects the Cargo.toml file to have `package.version` and
+        `package.name` properties.
 

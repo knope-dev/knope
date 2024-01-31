@@ -10,7 +10,7 @@ use crate::{
     config::toml::ConfigLoader,
     integrations::git,
     step::{
-        releases::{find_packages, Package},
+        releases::{find_packages, package, Package},
         PrepareRelease, Step,
     },
     variables::Variable,
@@ -47,11 +47,12 @@ impl Config {
     pub(crate) fn load() -> Result<ConfigSource, Error> {
         let Ok(source_code) = fs::read_to_string(Self::CONFIG_PATH) else {
             log::debug!("No `knope.toml` found, using default config");
-            return Ok(ConfigSource::Default(generate()));
+            return Ok(ConfigSource::Default(generate()?));
         };
 
         let config_loader: ConfigLoader = from_str(&source_code)?;
-        Self::try_from((config_loader, source_code)).map(ConfigSource::File)
+        let config_source = Self::try_from((config_loader, source_code)).map(ConfigSource::File)?;
+        config_source.fill_in_gaps()
     }
 
     /// Set the prerelease label for all `PrepareRelease` steps in all workflows in `self`.
@@ -67,13 +68,22 @@ impl Config {
         struct SimpleConfig {
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<toml::Package>,
+            #[serde(skip_serializing_if = "Vec::is_empty")]
+            packages: Vec<toml::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
             gitea: Option<Gitea>,
         }
 
+        let (package, packages) = if self.packages.len() < 2 {
+            (self.packages.pop().map(toml::Package::from), Vec::new())
+        } else {
+            (None, self.packages.into_iter().map(Package::into).collect())
+        };
+
         let config = SimpleConfig {
-            package: self.packages.pop().map(toml::Package::from),
+            package,
+            packages,
             workflows: self.workflows,
             github: self.github,
             gitea: self.gitea,
@@ -141,14 +151,20 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             return Err(Error::GiteaAssetUploads);
         }
 
+        let workflows = config
+            .workflows
+            .map(|workflows| {
+                workflows
+                    .into_inner()
+                    .into_iter()
+                    .map(Spanned::into_inner)
+                    .collect()
+            })
+            .unwrap_or_default();
+
         Ok(Self {
             packages,
-            workflows: config
-                .workflows
-                .into_inner()
-                .into_iter()
-                .map(Spanned::into_inner)
-                .collect(),
+            workflows,
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
@@ -162,13 +178,33 @@ pub(crate) enum ConfigSource {
     Default(Config),
     /// Config loaded from a file.
     File(Config),
+    /// Some things were loaded from file, some were defaults
+    Hybrid(Config),
 }
 
 impl ConfigSource {
     pub(crate) fn into_inner(self) -> Config {
         match self {
-            ConfigSource::File(config) | ConfigSource::Default(config) => config,
+            Self::File(config) | Self::Default(config) | Self::Hybrid(config) => config,
         }
+    }
+
+    /// Anything the config file was missing, fill in with defaults.
+    fn fill_in_gaps(self) -> Result<Self, Error> {
+        let mut config = match self {
+            Self::Hybrid(_) | Self::Default(_) => return Ok(self),
+            Self::File(config) => config,
+        };
+        if config.packages.is_empty() {
+            config.packages = find_packages()?;
+        }
+        if config.workflows.is_empty() {
+            config.workflows = generate_workflows(
+                config.github.is_some() || config.gitea.is_some(),
+                &config.packages,
+            );
+        }
+        Ok(Self::Hybrid(config))
     }
 }
 
@@ -222,6 +258,9 @@ pub(crate) enum Error {
         url("https://github.com/knope-dev/knope/issues/779")
     )]
     GiteaAssetUploads,
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Package(#[from] package::Error),
 }
 
 #[cfg(test)]
@@ -271,9 +310,8 @@ mod test_errors {
 }
 
 /// Generate a brand new Config for the project in the current directory.
-pub(crate) fn generate() -> Config {
-    let mut variables = IndexMap::new();
-    variables.insert(String::from("$version"), Variable::Version);
+pub(crate) fn generate() -> Result<Config, package::Error> {
+    let packages = find_packages()?;
 
     let first_remote = git::get_first_remote();
     let github = match first_remote {
@@ -308,21 +346,37 @@ pub(crate) fn generate() -> Config {
         }
     });
 
-    let mut release_steps = if github.is_some() || gitea.is_some() {
+    Ok(Config {
+        workflows: generate_workflows(github.is_some() || gitea.is_some(), &packages),
+        jira: None,
+        github,
+        gitea,
+        packages,
+    })
+}
+
+fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
+    let (commit_message, variables) = if packages.len() < 2 {
+        let mut variables = IndexMap::new();
+        variables.insert(String::from("$version"), Variable::Version);
+        ("chore: prepare release $version", Some(variables))
+    } else {
+        ("chore: prepare releases", None)
+    };
+
+    let mut release_steps = if has_forge {
         vec![
             Step::Command {
-                command: String::from(
-                    "git commit -m \"chore: prepare release $version\" && git push",
-                ),
-                variables: Some(variables),
+                command: format!("git commit -m \"{commit_message}\" && git push",),
+                variables,
             },
             Step::Release,
         ]
     } else {
         vec![
             Step::Command {
-                command: String::from("git commit -m \"chore: prepare release $version\""),
-                variables: Some(variables),
+                command: format!("git commit -m \"{commit_message}\""),
+                variables,
             },
             Step::Release,
             Step::Command {
@@ -332,21 +386,14 @@ pub(crate) fn generate() -> Config {
         ]
     };
     release_steps.insert(0, Step::PrepareRelease(PrepareRelease::default()));
-
-    Config {
-        workflows: vec![
-            Workflow {
-                name: String::from("release"),
-                steps: release_steps,
-            },
-            Workflow {
-                name: String::from("document-change"),
-                steps: vec![Step::CreateChangeFile],
-            },
-        ],
-        jira: None,
-        github,
-        gitea,
-        packages: find_packages().ok().into_iter().collect(),
-    }
+    vec![
+        Workflow {
+            name: String::from("release"),
+            steps: release_steps,
+        },
+        Workflow {
+            name: String::from("document-change"),
+            steps: vec![Step::CreateChangeFile],
+        },
+    ]
 }

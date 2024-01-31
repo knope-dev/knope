@@ -35,7 +35,7 @@ fn bump_version(
     let cargo_toml = temp_dir.path().join("Cargo.toml");
     std::fs::write(
         cargo_toml,
-        format!("[package]\nversion = \"{current_version}\"\n"),
+        format!("[package]\nname = \"default\"\nversion = \"{current_version}\"\n"),
     )
     .unwrap();
 

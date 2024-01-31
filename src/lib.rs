@@ -65,7 +65,7 @@ pub fn run() -> Result<()> {
 
     if let Ok(Some(true)) = matches.try_get_one("generate") {
         println!("Generating a knope.toml file");
-        let config = config::generate();
+        let config = config::generate()?;
         return config.write_out();
     }
 
@@ -145,7 +145,7 @@ fn build_cli(config: &ConfigSource) -> Command {
                 .arg(arg!(--generate "Generate a knope.toml file").action(ArgAction::SetTrue));
             config
         }
-        ConfigSource::File(config) => {
+        ConfigSource::File(config) | ConfigSource::Hybrid(config) => {
             command = command.arg(arg!(--upgrade "Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax."));
             command = command.arg(arg!(--validate "Check that the `knope.toml` file is valid."));
             config
@@ -287,6 +287,6 @@ mod tests {
 
     #[test]
     fn verify_app() {
-        build_cli(&ConfigSource::Default(config::generate())).debug_assert();
+        build_cli(&ConfigSource::Default(config::generate().unwrap())).debug_assert();
     }
 }

@@ -33,6 +33,7 @@ mod pubspec_yaml;
 mod pyproject;
 pub(crate) mod semver;
 pub(crate) mod versioned_file;
+mod workspace;
 
 pub(crate) fn prepare_release(
     run_type: RunType,
@@ -43,7 +44,7 @@ pub(crate) fn prepare_release(
         RunType::Real(state) => (state, None),
     };
     if state.packages.is_empty() {
-        return Err(package::Error::no_defined_packages_with_help().into());
+        return Err(package::Error::NoDefinedPackages.into());
     }
     let PrepareRelease {
         prerelease_label,

@@ -1,0 +1,7 @@
+[package]
+versioned_files = ["Cargo.toml"]
+
+[gitea]
+owner = "knope-dev"
+repo = "knope"
+host = "https://codeberg.org"

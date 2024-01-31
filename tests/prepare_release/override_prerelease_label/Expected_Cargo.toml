@@ -1,2 +1,3 @@
 [package]
+name = "default"
 version = "2.0.0-alpha.0"

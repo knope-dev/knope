@@ -12,7 +12,7 @@ Once that trigger occurs:
 4. Knope creates a release on GitHub with the new version, changelog, and assets.
 
 :::hint
-You should also check out the [Pull Request Releases](/recipes/preview-releases-with-pull-requests) recipe,
+You should also check out the [Pull Request Releases](/recipes/1-preview-releases-with-pull-requests) recipe,
 which is similar, but includes release previews via pull requests.
 :::
 

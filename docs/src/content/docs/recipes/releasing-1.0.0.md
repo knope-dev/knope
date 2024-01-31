@@ -16,4 +16,4 @@ the version selected will be `1.0.0` regardless of which changes were included i
 [`PrepareRelease`]: /reference/config-file/steps/prepare-release
 [`BumpVersion`]: /reference/config-file/steps/bump-version
 [`--override-version` command line argument]: /reference/command-line-arguments#--override-version
-[default workflows]: /reference/default-workflows
+[default workflows]: /reference/default-config

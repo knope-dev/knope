@@ -140,4 +140,4 @@ i carry your heart(i carry it in my heart)
 
 [`PrepareRelease`]: /reference/config-file/steps/prepare-release
 [packages]: /reference/concepts/package
-[default workflows]: /reference/default-workflows
+[default workflows]: /reference/default-config

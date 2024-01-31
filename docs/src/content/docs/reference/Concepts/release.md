@@ -14,7 +14,7 @@ In Knope, releasing a package consists of:
 
 :::tip
 
-This is how the [built-in release workflow](/reference/default-workflows) works.
+This is how the [built-in release workflow](/reference/default-config) works.
 
 :::
 
