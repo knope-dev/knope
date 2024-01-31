@@ -51,7 +51,7 @@ You _could_ use `knope --generate` to create the [default config](/reference/def
 but it wouldn't be quite right for multiple packages.
 
 :::tip
-If you're only using `Cargo.toml` files below, you can leverage Knope's [Cargo workspace support](/reference/default-config#cargo-workspaces)
+Knope supports [Cargo workspaces](/reference/default-config#cargo-workspaces), which could make your config easier!
 :::
 
 Instead, create this by hand:
@@ -71,7 +71,7 @@ changelog = "calzone/CHANGELOG.md"
 
 [github]
 owner = ""
-repo = ""
+repo = "knope-tutorial"
 ```
 
 :::tip
@@ -82,6 +82,7 @@ Those referenced files must exist as well:
 
 ```toml title="pizza/Cargo.toml"
 [package]
+name = "pizza"
 version = "3.14.15"
 ```
 
@@ -93,6 +94,7 @@ Documenting everything new in the world of Pizza.
 
 ```toml title="toppings/Cargo.toml"
 [package]
+name = "toppings"
 version = "1.209.0"
 ```
 
@@ -104,6 +106,7 @@ New toppings are added here
 
 ```toml title="calzone/Cargo.toml"
 [package]
+name = "calzone"
 version = "0.14.2"
 ```
 
@@ -418,7 +421,11 @@ If there are no errors, your releases should exist!
 Open your repo in GitHub (you can use `gh repo view --web`), and click on "Releases" on the side.
 You should see something like this:
 
-![GitHub releases](./github-monorepo-releases.png)
+import darkModeScreenshot from './github-monorepo-releases-dark.png'
+import lightModeScreenshot from './github-monorepo-releases.png'
+
+<img className="light:sl-hidden" src={darkModeScreenshot.src}/>
+<img className="dark:sl-hidden" src={lightModeScreenshot.src}/>
 
 Knope creates one release on GitHub per package so that it's easy for consumers to see
 what's changed in only the packages they care about!
