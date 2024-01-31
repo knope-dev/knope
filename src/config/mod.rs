@@ -151,14 +151,20 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             return Err(Error::GiteaAssetUploads);
         }
 
+        let workflows = config
+            .workflows
+            .map(|workflows| {
+                workflows
+                    .into_inner()
+                    .into_iter()
+                    .map(Spanned::into_inner)
+                    .collect()
+            })
+            .unwrap_or_default();
+
         Ok(Self {
             packages,
-            workflows: config
-                .workflows
-                .into_inner()
-                .into_iter()
-                .map(Spanned::into_inner)
-                .collect(),
+            workflows,
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
