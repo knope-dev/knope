@@ -421,11 +421,11 @@ If there are no errors, your releases should exist!
 Open your repo in GitHub (you can use `gh repo view --web`), and click on "Releases" on the side.
 You should see something like this:
 
-import darkModeScreenshot from './github-monorepo-releases-dark.png'
-import lightModeScreenshot from './github-monorepo-releases.png'
+import darkModeScreenshot from "./github-monorepo-releases-dark.png";
+import lightModeScreenshot from "./github-monorepo-releases.png";
 
-<img className="light:sl-hidden" src={darkModeScreenshot.src}/>
-<img className="dark:sl-hidden" src={lightModeScreenshot.src}/>
+<img className="light:sl-hidden" src={darkModeScreenshot.src} />
+<img className="dark:sl-hidden" src={lightModeScreenshot.src} />
 
 Knope creates one release on GitHub per package so that it's easy for consumers to see
 what's changed in only the packages they care about!
