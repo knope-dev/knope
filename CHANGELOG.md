@@ -10,6 +10,56 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.14.0 (2024-02-04)
+
+### Breaking Changes
+
+#### `Cargo.toml` files must now have a `package.name` property
+
+This was already required by Cargo, but wasn't enforced by Knope until now. Before, a `Cargo.toml` file like
+
+```toml
+[package]
+version = "0.1.0"
+```
+
+was acceptable, but now it must be
+
+```toml
+[package]
+name = "my-package"
+version = "0.1.0"
+```
+
+### Features
+
+#### Add basic Cargo workspace support
+
+If you have a `Cargo.toml` file in the working directory which represents a Cargo workspace containing fixed members, like:
+
+```toml
+[workspace]
+members = [
+  "my-package",
+  "my-other-package",
+]
+```
+
+then Knope will now treat each member like a package.
+There must be a `Cargo.toml` file in each member directory, or Knope will error.
+
+This doesn't work with path globbing yet, only manual directory entries. See [the new docs](https://knope.tech/reference/default-config/#cargo-workspaces) for more details.
+
+#### Use default packages/workflows even when `knope.toml` exists
+
+If you define a `knope.toml` file without any packages, Knope will assume the default packages (as if you had no `knope.toml` file at all).
+
+Likewise, if you have no `[[workflows]]` in a `knope.toml` file, Knope will assume the default workflows.
+
+### Fixes
+
+#### Homebrew tap now contains Apple Silicon binaries and auto-publishes new versions (#827)
+
 ## 0.13.4 (2024-01-13)
 
 ### Features
