@@ -27,7 +27,7 @@ ureq = { version = "2.9.1", features = ["json"] }
 http = "1.0.0"
 clap = { version = "4.4.18", features = ["cargo", "string", "env"] }
 itertools = "0.12.1"
-miette = { version = "6.0.1", features = ["fancy"] }
+miette = { version = "7.0.0", features = ["fancy"] }
 thiserror = "1.0.56"
 gix = { version = "0.58.0", default-features = false, features = [
   "max-performance-safe",
