@@ -23,7 +23,7 @@ git2 = { version = "0.18.2", default-features = false }
 execute = "0.2.13"
 platform-dirs = "0.3.0"
 git-conventional = "0.12.4"
-ureq = { version = "2.9.5", features = ["json"] }
+ureq = { version = "2.9.6", features = ["json"] }
 http = "1.0.0"
 clap = { version = "4.5.0", features = ["cargo", "string", "env"] }
 itertools = "0.12.1"
