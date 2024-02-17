@@ -1,7 +1,10 @@
 use std::{fs::copy, path::Path};
 
 use helpers::*;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    file, Data,
+};
 
 mod helpers;
 
@@ -21,7 +24,7 @@ fn test_validate() {
         .arg("--validate")
         .current_dir(temp_path)
         .assert();
-    assert.failure().stderr_eq_path("tests/validate/output.txt");
+    assert.failure().stderr_eq(file!["validate/output.txt"]);
 }
 
 /// Run `--validate` with a config file that has both package configs—which is a conflict.
@@ -42,5 +45,8 @@ fn validate_conflicting_packages() {
         .current_dir(temp_path)
         .assert()
         .failure()
-        .stderr_eq_path("tests/validate/multiple_package_formats.txt");
+        .stderr_eq(Data::read_from(
+            &source_path.join("multiple_package_formats.txt"),
+            None,
+        ));
 }

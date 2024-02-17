@@ -4,7 +4,10 @@ use std::{fs::read_to_string, path::Path};
 
 use helpers::*;
 use rstest::rstest;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    Data,
+};
 
 mod helpers;
 
@@ -51,17 +54,21 @@ fn bump_version(
         .assert();
 
     // Assert.
-    dry_run_assert
-        .success()
-        .stdout_matches_path(source_path.join(format!(
+    dry_run_assert.success().stdout_matches(Data::read_from(
+        &source_path.join(format!(
             "{workflow}_{current_version}_{expected_version}_dry_run_output.txt"
-        )));
+        )),
+        None,
+    ));
     actual_assert.success().stdout_eq("");
 
-    assert().matches_path(
-        source_path.join(format!(
-            "{workflow}_{current_version}_{expected_version}_cargo.toml"
-        )),
+    assert().matches(
+        Data::read_from(
+            &source_path.join(format!(
+                "{workflow}_{current_version}_{expected_version}_cargo.toml"
+            )),
+            None,
+        ),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
 }
@@ -100,13 +107,16 @@ fn multiple_packages(#[case] workflow: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches(Data::read_from(
+            &expected_path.join("dry_run_output.txt"),
+            None,
+        ))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
 
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches_path(
-            expected_path.join(file),
+        assert().matches(
+            Data::read_from(&expected_path.join(file), None),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -147,13 +157,16 @@ fn multiple_packages_pre(#[case] workflow: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches(Data::read_from(
+            &expected_path.join("dry_run_output.txt"),
+            None,
+        ))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
 
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches_path(
-            expected_path.join(file),
+        assert().matches(
+            Data::read_from(&expected_path.join(file), None),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }
@@ -189,13 +202,14 @@ fn override_version_single_package() {
         .assert();
 
     // Assert.
-    dry_run_assert
-        .success()
-        .stdout_matches_path(source_path.join("override_dry_run_output.txt"));
+    dry_run_assert.success().stdout_matches(Data::read_from(
+        &source_path.join("override_dry_run_output.txt"),
+        None,
+    ));
     actual_assert.success().stdout_eq("");
 
-    assert().matches_path(
-        source_path.join("override_cargo.toml"),
+    assert().matches(
+        Data::read_from(&source_path.join("override_cargo.toml"), None),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
 }
@@ -233,13 +247,16 @@ fn override_version_multiple_packages() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches(Data::read_from(
+            &expected_path.join("dry_run_output.txt"),
+            None,
+        ))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
 
     for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches_path(
-            expected_path.join(file),
+        assert().matches(
+            Data::read_from(&expected_path.join(file), None),
             read_to_string(temp_path.join(file)).unwrap(),
         );
     }

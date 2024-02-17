@@ -1,10 +1,10 @@
-use std::{
-    fs::{copy, read_to_string},
-    path::Path,
-};
+use std::path::Path;
 
 use helpers::*;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    file, Data,
+};
 
 mod helpers;
 
@@ -18,16 +18,15 @@ fn git_release() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/git_release");
+    let data_path = Path::new("tests/git_release");
+    let source_path = data_path.join("source");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
     tag(temp_path, "v1.0.0");
     commit(temp_path, "feat: New feature");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&source_path, temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -44,19 +43,12 @@ fn git_release() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(file!["git_release/dry_run_output.txt"]);
     actual_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("output.txt"));
-    assert().matches_path(
-        source_path.join("EXPECTED_CHANGELOG.md"),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches_path(
-        source_path.join("Expected_Cargo.toml"),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+        .stdout_matches(file!["git_release/output.txt"]);
+    assert().subset_matches(data_path.join("expected"), temp_path);
     let tags = get_tags(temp_path);
     assert_eq!(tags, vec!["v1.1.0"]);
 }
@@ -67,7 +59,8 @@ fn multiple_packages() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/git_release/multiple_packages");
+    let data_path = Path::new("tests/git_release/multiple_packages");
+    let source_path = data_path.join("source");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -75,16 +68,7 @@ fn multiple_packages() {
     tag(temp_path, "second/v0.4.6");
     commit(temp_path, "feat!: New breaking feature");
 
-    for file in [
-        "knope.toml",
-        "FIRST_CHANGELOG.md",
-        "Cargo.toml",
-        "pyproject.toml",
-        "SECOND_CHANGELOG.md",
-        "package.json",
-    ] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&source_path, temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -101,21 +85,9 @@ fn multiple_packages() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
     let actual_assert = actual_assert.success().with_assert(assert());
-
-    for file in [
-        "FIRST_CHANGELOG.md",
-        "SECOND_CHANGELOG.md",
-        "Cargo.toml",
-        "pyproject.toml",
-        "package.json",
-    ] {
-        assert().matches_path(
-            source_path.join(format!("EXPECTED_{file}")),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
+    assert().subset_matches(data_path.join("expected"), temp_path);
     assert_eq!(get_tags(temp_path), vec!["first/v2.0.0", "second/v0.5.0"]);
-    actual_assert.stdout_matches_path(source_path.join("output.txt"));
+    actual_assert.stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
 }

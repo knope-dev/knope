@@ -5,8 +5,9 @@ use std::{
 
 use helpers::*;
 use snapbox::{
-    assert_eq_path,
+    assert_eq,
     cmd::{cargo_bin, Command},
+    Data,
 };
 
 mod helpers;
@@ -43,7 +44,10 @@ fn gitea_release() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 /// Verify that Release will operate on all defined packages independently
@@ -82,7 +86,10 @@ fn multiple_packages() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -115,7 +122,10 @@ fn separate_prepare_and_release_workflows() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -148,7 +158,10 @@ fn auto_generate_release_notes() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("auto_generate_dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("auto_generate_dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -174,7 +187,10 @@ fn no_previous_tag() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -206,7 +222,10 @@ fn version_go_mod() {
 
     let mut crlf_adjusted = read_to_string(temp_path.join("go/go.mod")).unwrap();
     crlf_adjusted.push_str("\r");
-    assert_eq_path(source_path.join("expected_go.mod"), crlf_adjusted);
+    assert_eq(
+        Data::read_from(&source_path.join("expected_go.mod"), None),
+        crlf_adjusted,
+    );
 
     // Run the actual release (but dry-run because don't test gitea)
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -219,5 +238,8 @@ fn version_go_mod() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
