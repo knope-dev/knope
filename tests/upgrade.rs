@@ -6,7 +6,10 @@ use std::{
 };
 
 use helpers::*;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    Data,
+};
 
 mod helpers;
 
@@ -27,8 +30,8 @@ fn upgrade_nothing() {
 
     // Assert
     output_assert.success().stdout_eq("Nothing to upgrade\n");
-    assert().matches_path(
-        source_path.join("expected_knope.toml"),
+    assert().matches(
+        Data::read_from(&source_path.join("expected_knope.toml"), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }

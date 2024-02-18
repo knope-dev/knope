@@ -4,7 +4,10 @@ use std::{fs::copy, path::Path};
 
 use helpers::*;
 use rstest::rstest;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    Data,
+};
 
 mod helpers;
 
@@ -29,7 +32,7 @@ fn release_no_remote() {
     // Assert
     assert
         .success()
-        .stdout_matches_path(source_path.join("stdout.txt"));
+        .stdout_matches(Data::read_from(&source_path.join("stdout.txt"), None));
 }
 
 /// Run `knope release --dry-run` on a repo with supported metadata files.
@@ -64,9 +67,10 @@ fn test_packages(#[case] source_files: &[&str], #[case] case: &str) {
         .assert();
 
     // Assert
-    assert
-        .success()
-        .stdout_matches_path(source_path.join(format!("{case}_stdout.txt")));
+    assert.success().stdout_matches(Data::read_from(
+        &source_path.join(format!("{case}_stdout.txt")),
+        None,
+    ));
 }
 
 /// Run `knope release --dry-run` on a repo with a GitHub remote to test that integration.
@@ -93,7 +97,7 @@ fn generate_github(#[case] remote: &str) {
     // Assert
     assert
         .success()
-        .stdout_matches_path(source_path.join("stdout.txt"));
+        .stdout_matches(Data::read_from(&source_path.join("stdout.txt"), None));
 }
 
 fn setup_commits(path: &Path) {

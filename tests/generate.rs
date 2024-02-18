@@ -6,8 +6,9 @@ use std::{
 use helpers::*;
 use rstest::rstest;
 use snapbox::{
-    assert_eq_path,
+    assert_eq,
     cmd::{cargo_bin, Command},
+    Data,
 };
 
 mod helpers;
@@ -22,15 +23,15 @@ fn generate_no_remote() {
     init(temp_path);
 
     // Act
-    let assert = Command::new(cargo_bin!("knope"))
+    let output = Command::new(cargo_bin!("knope"))
         .arg("--generate")
         .current_dir(temp_path)
         .assert();
 
     // Assert
-    assert.success().stdout_eq("Generating a knope.toml file\n");
-    assert_eq_path(
-        source_path.join("knope.toml"),
+    output.success().stdout_eq("Generating a knope.toml file\n");
+    assert_eq(
+        Data::read_from(&source_path.join("knope.toml"), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
@@ -61,8 +62,8 @@ fn generate_packages(#[case] source_files: &[&str], #[case] target_file: &str) {
 
     // Assert
     assert.success().stdout_eq("Generating a knope.toml file\n");
-    assert_eq_path(
-        source_path.join(target_file),
+    assert_eq(
+        Data::read_from(&source_path.join(target_file), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
@@ -90,8 +91,8 @@ fn generate_packages_changelog(#[case] has_changelog: bool, #[case] target_file:
 
     // Assert
     assert.success().stdout_eq("Generating a knope.toml file\n");
-    assert_eq_path(
-        source_path.join(target_file),
+    assert_eq(
+        Data::read_from(&source_path.join(target_file), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
@@ -119,8 +120,8 @@ fn generate_github(#[case] remote: &str) {
         .success()
         .stdout_eq("Generating a knope.toml file\n")
         .stderr_eq("");
-    assert_eq_path(
-        source_path.join("knope.toml"),
+    assert_eq(
+        Data::read_from(&source_path.join("knope.toml"), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
@@ -150,8 +151,8 @@ fn generate_gitea(#[case] remote: &str) {
         .success()
         .stdout_eq("Generating a knope.toml file\n")
         .stderr_eq("");
-    assert_eq_path(
-        source_path.join("knope.toml"),
+    assert_eq(
+        Data::read_from(&source_path.join("knope.toml"), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }
@@ -161,7 +162,7 @@ fn cargo_workspace() {
     let source_path = Path::new("tests/generate/cargo_workspace");
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    copy_dir(&source_path.join("source"), temp_path);
+    copy_dir_contents(&source_path.join("source"), temp_path);
 
     let assert = Command::new(cargo_bin!("knope"))
         .arg("--generate")
@@ -172,8 +173,8 @@ fn cargo_workspace() {
         .success()
         .stdout_eq("Generating a knope.toml file\n")
         .stderr_eq("");
-    assert_eq_path(
-        source_path.join("knope.toml"),
+    assert_eq(
+        Data::read_from(&source_path.join("knope.toml"), None),
         read_to_string(temp_path.join("knope.toml")).unwrap(),
     );
 }

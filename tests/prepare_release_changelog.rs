@@ -5,7 +5,10 @@ use std::{
 
 use helpers::*;
 use rstest::rstest;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    Data,
+};
 
 mod helpers;
 
@@ -64,29 +67,29 @@ fn prepare_release_changelog_selection(#[case] changelog: Option<&str>) {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(expected_dry_run_output);
+        .stdout_matches(Data::read_from(&expected_dry_run_output, None));
     actual_assert
         .success()
-        .stdout_matches_path(source_path.join("output.txt"));
+        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
 
     for changelog_name in all_changelogs {
         match changelog {
             Some(changelog) if changelog_name == changelog => {
-                assert().matches_path(
-                    source_path.join("EXPECTED_CHANGELOG.md"),
+                assert().matches(
+                    Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
                     read_to_string(temp_path.join(changelog_name)).unwrap(),
                 );
             }
             _ => {
-                assert().matches_path(
-                    source_path.join("CHANGELOG.md"),
+                assert().matches(
+                    Data::read_from(&source_path.join("CHANGELOG.md"), None),
                     read_to_string(temp_path.join(changelog_name)).unwrap(),
                 );
             }
         }
     }
-    assert().matches_path(
-        source_path.join("expected_Cargo.toml"),
+    assert().matches(
+        Data::read_from(&source_path.join("expected_Cargo.toml"), None),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
 }
@@ -140,22 +143,25 @@ fn notes() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
     actual_assert.success().stderr_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_Cargo.toml"),
+    assert().matches(
+        Data::read_from(&source_path.join("EXPECTED_Cargo.toml"), None),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
-    assert().matches_path(
-        source_path.join("EXPECTED_pyproject.toml"),
+    assert().matches(
+        Data::read_from(&source_path.join("EXPECTED_pyproject.toml"), None),
         read_to_string(temp_path.join("pyproject.toml")).unwrap(),
     );
-    assert().matches_path(
-        source_path.join("EXPECTED_FIRST_CHANGELOG.md"),
+    assert().matches(
+        Data::read_from(&source_path.join("EXPECTED_FIRST_CHANGELOG.md"), None),
         read_to_string(temp_path.join("FIRST_CHANGELOG.md")).unwrap(),
     );
-    assert().matches_path(
-        source_path.join("EXPECTED_SECOND_CHANGELOG.md"),
+    assert().matches(
+        Data::read_from(&source_path.join("EXPECTED_SECOND_CHANGELOG.md"), None),
         read_to_string(temp_path.join("SECOND_CHANGELOG.md")).unwrap(),
     );
 }
@@ -198,10 +204,13 @@ fn header_level_detection() {
         .success()
         .with_assert(assert())
         .stderr_eq("")
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
     actual_assert.success().stderr_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_CHANGELOG.md"),
+    assert().matches(
+        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 }
@@ -239,10 +248,13 @@ fn override_default_sections() {
         .success()
         .with_assert(assert())
         .stderr_eq("")
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
     actual_assert.success().stderr_eq("");
-    assert().matches_path(
-        source_path.join("EXPECTED_CHANGELOG.md"),
+    assert().matches(
+        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
         read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 }

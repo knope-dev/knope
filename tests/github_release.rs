@@ -5,8 +5,9 @@ use std::{
 
 use helpers::*;
 use snapbox::{
-    assert_eq_path,
+    assert_eq,
     cmd::{cargo_bin, Command},
+    Data,
 };
 
 mod helpers;
@@ -43,7 +44,10 @@ fn github_release() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 /// Verify that Release will operate on all defined packages independently
@@ -52,7 +56,7 @@ fn multiple_packages() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/github_release/multiple_packages");
+    let data_path = Path::new("tests/github_release/multiple_packages");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -60,16 +64,7 @@ fn multiple_packages() {
     tag(temp_path, "second/v0.4.6");
     commit(temp_path, "feat!: New breaking feature");
 
-    for file in [
-        "knope.toml",
-        "FIRST_CHANGELOG.md",
-        "Cargo.toml",
-        "pyproject.toml",
-        "SECOND_CHANGELOG.md",
-        "package.json",
-    ] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -82,7 +77,7 @@ fn multiple_packages() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 }
 
 #[test]
@@ -115,7 +110,10 @@ fn separate_prepare_and_release_workflows() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -152,7 +150,10 @@ fn release_assets() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -185,7 +186,10 @@ fn auto_generate_release_notes() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("auto_generate_dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("auto_generate_dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -211,7 +215,10 @@ fn no_previous_tag() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }
 
 #[test]
@@ -236,8 +243,8 @@ fn version_go_mod() {
         .assert()
         .success();
     commit(temp_path, "chore: Prepare release");
-    assert_eq_path(
-        source_path.join("expected_go.mod"),
+    assert_eq(
+        Data::read_from(&source_path.join("expected_go.mod"), None),
         read_to_string(temp_path.join("go/go.mod")).unwrap(),
     );
 
@@ -252,5 +259,8 @@ fn version_go_mod() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches_path(source_path.join("dry_run_output.txt"));
+        .stdout_matches(Data::read_from(
+            &source_path.join("dry_run_output.txt"),
+            None,
+        ));
 }

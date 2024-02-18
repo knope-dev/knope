@@ -4,7 +4,10 @@ use std::{fs::read_to_string, path::Path};
 
 use helpers::*;
 use rstest::rstest;
-use snapbox::cmd::{cargo_bin, Command};
+use snapbox::{
+    cmd::{cargo_bin, Command},
+    Data,
+};
 
 mod helpers;
 
@@ -51,17 +54,21 @@ fn bump_version(
         .assert();
 
     // Assert.
-    dry_run_assert
-        .success()
-        .stdout_matches_path(source_path.join(format!(
+    dry_run_assert.success().stdout_matches(Data::read_from(
+        &source_path.join(format!(
             "{workflow}_{current_version}_{expected_version}_dry_run_output.txt"
-        )));
+        )),
+        None,
+    ));
     actual_assert.success().stdout_eq("");
 
-    assert().matches_path(
-        source_path.join(format!(
-            "{workflow}_{current_version}_{expected_version}_cargo.toml"
-        )),
+    assert().matches(
+        Data::read_from(
+            &source_path.join(format!(
+                "{workflow}_{current_version}_{expected_version}_cargo.toml"
+            )),
+            None,
+        ),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
 }
@@ -79,12 +86,11 @@ fn multiple_packages(#[case] workflow: &str) {
     init(temp_path);
     commit(temp_path, "Initial commit");
     tag(temp_path, "v1.2.3"); // Need to have stable version as tag if pre version in Cargo.toml.
-    let source_path = Path::new("tests/bump_version/multiple_packages");
-    let expected_path = source_path.join(workflow);
+    let data_path = Path::new("tests/bump_version/multiple_packages");
+    let source_path = data_path.join("source");
+    let expected_path = data_path.join(workflow);
 
-    for file in ["knope.toml", "Cargo.toml", "pyproject.toml", "package.json"] {
-        std::fs::copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&source_path, temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -100,16 +106,13 @@ fn multiple_packages(#[case] workflow: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches(Data::read_from(
+            &expected_path.join("dry_run_output.txt"),
+            None,
+        ))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
-
-    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches_path(
-            expected_path.join(file),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
+    assert().subset_matches(expected_path.join("expected"), temp_path);
 }
 
 /// Test all the `BumpVersion` rules when multiple packages in pre-release versions are present.
@@ -126,12 +129,10 @@ fn multiple_packages_pre(#[case] workflow: &str) {
     tag(temp_path, "rust/v0.1.2");
     tag(temp_path, "python/v3.4.5");
     tag(temp_path, "javascript/v6.7.8");
-    let source_path = Path::new("tests/bump_version/multiple_packages_pre");
-    let expected_path = source_path.join(workflow);
-
-    for file in ["knope.toml", "Cargo.toml", "pyproject.toml", "package.json"] {
-        std::fs::copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    let data_path = Path::new("tests/bump_version/multiple_packages_pre");
+    let source_path = data_path.join("source");
+    copy_dir_contents(&source_path, temp_path);
+    let workflow_path = data_path.join(workflow);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -147,16 +148,13 @@ fn multiple_packages_pre(#[case] workflow: &str) {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches(Data::read_from(
+            &workflow_path.join("dry_run_output.txt"),
+            None,
+        ))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
-
-    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches_path(
-            expected_path.join(file),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
+    assert().subset_matches(workflow_path.join("expected"), temp_path);
 }
 
 #[test]
@@ -189,13 +187,14 @@ fn override_version_single_package() {
         .assert();
 
     // Assert.
-    dry_run_assert
-        .success()
-        .stdout_matches_path(source_path.join("override_dry_run_output.txt"));
+    dry_run_assert.success().stdout_matches(Data::read_from(
+        &source_path.join("override_dry_run_output.txt"),
+        None,
+    ));
     actual_assert.success().stdout_eq("");
 
-    assert().matches_path(
-        source_path.join("override_cargo.toml"),
+    assert().matches(
+        Data::read_from(&source_path.join("override_cargo.toml"), None),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
     );
 }
@@ -208,12 +207,11 @@ fn override_version_multiple_packages() {
     init(temp_path);
     commit(temp_path, "Initial commit");
     tag(temp_path, "v1.2.3"); // Need to have stable version as tag if pre version in Cargo.toml.
-    let source_path = Path::new("tests/bump_version/multiple_packages");
-    let expected_path = source_path.join("override");
+    let data_path = Path::new("tests/bump_version/multiple_packages");
+    let source_path = data_path.join("source");
+    let expected_path = data_path.join("override");
 
-    for file in ["knope.toml", "Cargo.toml", "pyproject.toml", "package.json"] {
-        std::fs::copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&source_path, temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -233,14 +231,12 @@ fn override_version_multiple_packages() {
     // Assert.
     dry_run_assert
         .success()
-        .stdout_matches_path(expected_path.join("dry_run_output.txt"))
+        .stdout_matches(Data::read_from(
+            &expected_path.join("dry_run_output.txt"),
+            None,
+        ))
         .stderr_eq("");
     actual_assert.success().stdout_eq("").stderr_eq("");
 
-    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches_path(
-            expected_path.join(file),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
+    assert().subset_matches(expected_path.join("expected"), temp_path);
 }
