@@ -23,7 +23,7 @@ fn prerelease_after_release() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/prerelease_after_release");
+    let data_path = Path::new("tests/prepare_release/prerelease_after_release");
 
     init(temp_path);
     commit(temp_path, "Initial commit");
@@ -32,9 +32,7 @@ fn prerelease_after_release() {
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let output_assert = Command::new(cargo_bin!("knope"))
@@ -50,23 +48,13 @@ fn prerelease_after_release() {
     // Assert.
     output_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
@@ -76,7 +64,7 @@ fn override_prerelease_label_with_option() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/override_prerelease_label");
+    let data_path = Path::new("tests/prepare_release/override_prerelease_label");
 
     init(temp_path);
     commit(temp_path, "Initial commit");
@@ -85,9 +73,7 @@ fn override_prerelease_label_with_option() {
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let output_assert = Command::new(cargo_bin!("knope"))
@@ -105,23 +91,13 @@ fn override_prerelease_label_with_option() {
     // Assert.
     output_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
@@ -131,7 +107,7 @@ fn override_prerelease_label_with_env() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/override_prerelease_label");
+    let data_path = Path::new("tests/prepare_release/override_prerelease_label");
 
     init(temp_path);
     commit(temp_path, "Initial commit");
@@ -140,9 +116,7 @@ fn override_prerelease_label_with_env() {
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let output_assert = Command::new(cargo_bin!("knope"))
@@ -160,23 +134,13 @@ fn override_prerelease_label_with_env() {
     // Assert.
     output_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
@@ -186,7 +150,7 @@ fn enable_prerelease_label_with_option() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/enable_prerelease");
+    let data_path = Path::new("tests/prepare_release/enable_prerelease");
 
     init(temp_path);
     commit(temp_path, "Initial commit");
@@ -195,9 +159,7 @@ fn enable_prerelease_label_with_option() {
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let output_assert = Command::new(cargo_bin!("knope"))
@@ -215,23 +177,13 @@ fn enable_prerelease_label_with_option() {
     // Assert.
     output_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
@@ -241,7 +193,7 @@ fn enable_prerelease_label_with_env() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/enable_prerelease");
+    let data_path = Path::new("tests/prepare_release/enable_prerelease");
 
     init(temp_path);
     commit(temp_path, "Initial commit");
@@ -250,9 +202,7 @@ fn enable_prerelease_label_with_env() {
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let output_assert = Command::new(cargo_bin!("knope"))
@@ -270,23 +220,13 @@ fn enable_prerelease_label_with_env() {
     // Assert.
     output_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
@@ -299,7 +239,7 @@ fn prerelease_label_option_overrides_env() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/enable_prerelease");
+    let data_path = Path::new("tests/prepare_release/enable_prerelease");
 
     init(temp_path);
     commit(temp_path, "Initial commit");
@@ -308,9 +248,7 @@ fn prerelease_label_option_overrides_env() {
     tag(temp_path, "v1.1.0");
     commit(temp_path, "feat!: Breaking feature in new RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let output_assert = Command::new(cargo_bin!("knope"))
@@ -330,23 +268,13 @@ fn prerelease_label_option_overrides_env() {
     // Assert.
     output_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a pre-release.
@@ -355,7 +283,7 @@ fn second_prerelease() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/second_prerelease");
+    let data_path = Path::new("tests/prepare_release/second_prerelease");
 
     init(temp_path);
     commit(temp_path, "An old prerelease which should not be checked");
@@ -365,9 +293,7 @@ fn second_prerelease() {
     tag(temp_path, "v1.1.0-rc.1");
     commit(temp_path, "feat: New feature in second RC");
 
-    for file in ["knope.toml", "CHANGELOG.md", "Cargo.toml"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -384,21 +310,11 @@ fn second_prerelease() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
     actual_assert
         .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("Expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
+        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
+    assert().subset_matches(data_path.join("expected"), temp_path);
 }
 
 /// Run a `PrepareRelease` in a repo with multiple versionable files—verify only the selected

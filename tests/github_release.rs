@@ -56,7 +56,7 @@ fn multiple_packages() {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/github_release/multiple_packages");
+    let data_path = Path::new("tests/github_release/multiple_packages");
 
     init(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -64,16 +64,7 @@ fn multiple_packages() {
     tag(temp_path, "second/v0.4.6");
     commit(temp_path, "feat!: New breaking feature");
 
-    for file in [
-        "knope.toml",
-        "FIRST_CHANGELOG.md",
-        "Cargo.toml",
-        "pyproject.toml",
-        "SECOND_CHANGELOG.md",
-        "package.json",
-    ] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
+    copy_dir_contents(&data_path.join("source"), temp_path);
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -86,10 +77,7 @@ fn multiple_packages() {
     dry_run_assert
         .success()
         .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
 }
 
 #[test]
