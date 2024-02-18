@@ -15,89 +15,39 @@ use snapbox::{
     Data,
 };
 
+use crate::helpers::GitCommand::{Commit, Tag};
+
 mod helpers;
+
+const FILE_NAME: &str = "prepare_release";
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release.
 #[test]
 fn prerelease_after_release() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/prerelease_after_release");
-
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "v1.1.0");
-    commit(temp_path, "feat!: Breaking feature in new RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let output_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .current_dir(temp_dir.path())
-        .assert();
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    output_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-
-    assert().subset_matches(data_path.join("expected"), temp_path);
+    TestCase::new(FILE_NAME, "prerelease_after_release")
+        .git(&[
+            Commit("Initial commit"),
+            Tag("v1.0.0"),
+            Commit("feat: New feature in existing release"),
+            Tag("v1.1.0"),
+            Commit("feat!: Breaking feature in new RC"),
+        ])
+        .run("prerelease");
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
 /// the configured `prerelease_label` at runtime using the `--prerelease-label` argument.
 #[test]
 fn override_prerelease_label_with_option() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/override_prerelease_label");
-
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "v1.1.0");
-    commit(temp_path, "feat!: Breaking feature in new RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let output_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .arg("--prerelease-label=alpha")
-        .current_dir(temp_dir.path())
-        .assert();
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .arg("--prerelease-label=alpha")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    output_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-
-    assert().subset_matches(data_path.join("expected"), temp_path);
+    TestCase::new(FILE_NAME, "override_prerelease_label")
+        .git(&[
+            Commit("Initial commit"),
+            Tag("v1.0.0"),
+            Commit("feat: New feature in existing release"),
+            Tag("v1.1.0"),
+            Commit("feat!: Breaking feature in new RC"),
+        ])
+        .run("prerelease --prerelease-label=alpha");
 }
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change

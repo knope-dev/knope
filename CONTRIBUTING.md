@@ -30,15 +30,30 @@ We also use [Prettier](https://prettier.io) to format Markdown (via [`npx`](http
 
 ## Snapshot Tests
 
-We use [snapbox](https://crates.io/crates/snapbox) for most of the integration tests in the `tests` dir. This allows us to run commands end-to-end and compare the output to what we expect (making it much clearer when things change).
+Most of the tests for Knope are end-to-end snapshot tests in the `tests` directory. Generally speaking, a test looks like this:
 
-The general workflow for a snapshot test is:
+```rust
+#[test]
+fn name_of_test() {
+    TestCase::new("this_file_name/name_of_test")  // Corresponds to a directory you make for this test
+        .git(&[  // Run Git commands as needed to set up the test
+            Commit("Initial commit"),
+            Tag("v0.1.0"),
+        ])
+        .env("KNOPE_PRERELEASE_LABEL", "alpha")  // Set environment variables as needed
+        .run("prepare-release --prerelease-label alpha")  // The command you want to run, omitting the binary name
+}
+```
 
-1. Create a new directory in `tests` (optionally nested in a subdirectory relevant to what you're testing) which contains all the setup files you need (e.g., a `knope.toml` and a `Cargo.toml`).
-2. Create a temp directory and copy all the source files over.
-3. Use the functions from `tests/git_repo_helpers` to set up a git repo and add any commits/tags you need (for testing releases).
-4. Run the command and verify the output using snapbox.
+Each `.rs` file in `tests` should have a directory named the same.
+Each test within the file should have a directory named the same as the test.
+That test directory must contain:
 
-A good example of this is the `prerelease_after_release` test in `tests/prepare_release.rs`.
+1. A `source` directory with all the files that the command needs to run. These will be copied to a temporary directory.
+2. An `expected` directory with all the files that the command should produce or modify. These will be compared to the temporary directory after the command runs.
+3. A `stdout.txt` file, this will match the output of the command.
+4. A `dry_run_stdout.txt` file, this will match the output of the command when run with `--dry-run`.
+
+`TestCase` leverages [snapbox](https://crates.io/crates/snapbox) under the hood, so you can set `SNAPSHOTS=overwrite` to update the snapshots if you've made changes to the test.
 
 [cargo-binstall]: https://github.com/cargo-bins/cargo-binstall
