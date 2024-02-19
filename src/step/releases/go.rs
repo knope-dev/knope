@@ -47,30 +47,49 @@ pub(crate) enum Error {
     ModuleLine(#[from] ModuleLineError),
 }
 
-/// Sets the version in go.mod, but does not create the Git tag which _actually_ is the source
+#[derive(Debug, Default, Eq, Clone, Copy, PartialEq)]
+pub(crate) enum GoVersioning {
+    #[default]
+    Standard,
+    IgnoreMajorRules,
+}
+
+/// Sets the version in `go.mod`, but doesn't create the Git tag which _actually_ is the source
 /// of truth for Go versions. That will be set by [`create_version_tag`] in the [`crate::Step::Release`].
 pub(crate) fn set_version_in_file(
     dry_run: DryRun,
     content: &str,
     new_version: &VersionFromSource,
     path: &Path,
+    versioning: GoVersioning,
 ) -> Result<String, Error> {
     let original_module_line = content
         .lines()
         .find(|line| line.starts_with("module "))
         .ok_or(Error::MissingModuleLine)?;
     let mut module_line = ModuleLine::from_str(original_module_line)?;
-    match (module_line.major_version, path.parent(), new_version.version.stable_component().major, &new_version.source) {
-        (None, _, new_major, _) if new_major == 0 || new_major == 1 => {},  // No change
-        (None, _, _, VersionSource::OverrideVersion) => {},  // Override tells us that they're aware of the risks
-        (None, _, _, _) => return Err(Error::BumpingToV2),  // No major version in go.mod, but we're bumping to >1 without explicit override
-        (Some(module_major), _, new_major, _) if module_major == new_major => {},  // No change
-        (Some(_), None, _, _)  => {} | (Some(old_major), Some(ancestor), _, _) if ancestor.display().to_string() != format!("v{old_major}")  // Allowed to bump >1 to >1 if not using path-based directories
-         => {},
-        (Some(_), _, _, _) => return Err(Error::MajorVersionDirectoryBased),
-    }
-    module_line.major_version = Some(new_version.version.stable_component().major);
     module_line.version = Some(new_version.version.clone());
+
+    let new_major = new_version.version.stable_component().major;
+    let module_line_needs_updating = new_major > 1
+        && new_major != module_line.major_version.unwrap_or(0)
+        && versioning == GoVersioning::Standard;
+
+    if module_line_needs_updating {
+        if module_line.major_version.is_none()
+            && new_version.source != VersionSource::OverrideVersion
+        {
+            return Err(Error::BumpingToV2);
+        }
+        let using_major_version_directories = module_line.major_version.is_some_and(|old_major| {
+            path.parent()
+                .is_some_and(|parent| parent.ends_with(format!("v{old_major}")))
+        });
+        if using_major_version_directories {
+            return Err(Error::MajorVersionDirectoryBased);
+        }
+        module_line.major_version = Some(new_version.version.stable_component().major);
+    }
 
     let new_content = content.replace(original_module_line, &module_line.to_string());
     fs::write(

@@ -5,12 +5,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use itertools::Itertools;
+use enum_iterator::{all, Sequence};
 use miette::Diagnostic;
 use thiserror::Error;
 
 use super::{cargo, git, go, package_json, pubspec_yaml, pyproject, semver::Version};
-use crate::{dry_run::DryRun, workflow::Verbose};
+use crate::{dry_run::DryRun, step::releases::go::GoVersioning, workflow::Verbose};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct VersionedFile {
@@ -99,15 +99,20 @@ impl VersionedFile {
         &mut self,
         dry_run: DryRun,
         version_str: &VersionFromSource,
+        go_versioning: GoVersioning,
     ) -> Result<()> {
-        self.content =
-            self.format
-                .set_version(dry_run, self.content.clone(), version_str, &self.path)?;
+        self.content = self.format.set_version(
+            dry_run,
+            self.content.clone(),
+            version_str,
+            &self.path,
+            go_versioning,
+        )?;
         Ok(())
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Sequence)]
 pub(crate) enum PackageFormat {
     Cargo,
     Dart,
@@ -124,10 +129,8 @@ impl TryFrom<&PathBuf> for PackageFormat {
             .file_name()
             .and_then(OsStr::to_str)
             .ok_or_else(|| ErrorKind::NotAFile(path.clone()))?;
-        PACKAGE_FORMAT_FILE_NAMES
-            .iter()
-            .find_position(|&name| *name == file_name)
-            .and_then(|(pos, _)| ALL_PACKAGE_FORMATS.get(pos).copied())
+        all::<PackageFormat>()
+            .find(|&format| format.file_name() == file_name)
             .ok_or_else(|| Error::from(ErrorKind::VersionedFileFormat(path.clone())))
     }
 }
@@ -160,7 +163,9 @@ impl PackageFormat {
                     version,
                     source: path.into(),
                 }),
-            PackageFormat::Go => go::get_version(content, path, verbose).map_err(ErrorKind::Go),
+            PackageFormat::Go { .. } => {
+                go::get_version(content, path, verbose).map_err(ErrorKind::Go)
+            }
             PackageFormat::Dart => pubspec_yaml::get_version(content, path)
                 .map_err(ErrorKind::PubSpecYaml)
                 .map(|version| VersionFromSource {
@@ -180,6 +185,7 @@ impl PackageFormat {
         content: String,
         new_version: &VersionFromSource,
         path: &Path,
+        go_versioning: GoVersioning,
     ) -> Result<String> {
         match self {
             PackageFormat::Cargo => {
@@ -195,12 +201,23 @@ impl PackageFormat {
                     .map_err(Error::from)
             }
             PackageFormat::Go => {
-                go::set_version_in_file(dry_run, &content, new_version, path).map_err(Error::from)
+                go::set_version_in_file(dry_run, &content, new_version, path, go_versioning)
+                    .map_err(Error::from)
             }
             PackageFormat::Dart => {
                 pubspec_yaml::set_version(dry_run, &content, &new_version.version, path)
                     .map_err(Error::from)
             }
+        }
+    }
+
+    pub(crate) const fn file_name(self) -> &'static str {
+        match self {
+            PackageFormat::Cargo => "Cargo.toml",
+            PackageFormat::Dart => "pubspec.yaml",
+            PackageFormat::Go { .. } => "go.mod",
+            PackageFormat::JavaScript => "package.json",
+            PackageFormat::Poetry => "pyproject.toml",
         }
     }
 }
@@ -243,18 +260,3 @@ impl From<&Path> for VersionSource {
         Self::File(path.display().to_string())
     }
 }
-
-const ALL_PACKAGE_FORMATS: [PackageFormat; 5] = [
-    PackageFormat::Cargo,
-    PackageFormat::Dart,
-    PackageFormat::Go,
-    PackageFormat::JavaScript,
-    PackageFormat::Poetry,
-];
-pub(crate) const PACKAGE_FORMAT_FILE_NAMES: [&str; ALL_PACKAGE_FORMATS.len()] = [
-    "Cargo.toml",
-    "pubspec.yaml",
-    "go.mod",
-    "package.json",
-    "pyproject.toml",
-];

@@ -1,4 +1,4 @@
-use std::{fmt, fmt::Display, path::PathBuf};
+use std::{fmt, fmt::Display, ops::Not, path::PathBuf};
 
 use git_conventional::FooterToken;
 use miette::Diagnostic;
@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::step::releases::{
-    changelog, changelog::Changelog, package::Asset, versioned_file, versioned_file::VersionedFile,
-    PackageName,
+    changelog, changelog::Changelog, go::GoVersioning, package::Asset, versioned_file,
+    versioned_file::VersionedFile, PackageName,
 };
 
 /// Represents a single package in `knope.toml`.
@@ -24,6 +24,8 @@ pub struct Package {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) extra_changelog_sections: Vec<ChangelogSection>,
     assets: Option<Vec<Asset>>,
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
+    ignore_go_major_versioning: bool,
 }
 
 impl TryFrom<(Option<PackageName>, Package)> for crate::step::releases::Package {
@@ -44,6 +46,11 @@ impl TryFrom<(Option<PackageName>, Package)> for crate::step::releases::Package 
             prepared_release: None,
             override_version: None,
             assets: package.assets,
+            go_versioning: if package.ignore_go_major_versioning {
+                GoVersioning::IgnoreMajorRules
+            } else {
+                GoVersioning::default()
+            },
         })
     }
 }
@@ -76,6 +83,7 @@ impl From<crate::step::releases::Package> for Package {
             scopes: package.scopes,
             extra_changelog_sections: package.changelog_sections.into(),
             assets: package.assets,
+            ignore_go_major_versioning: package.go_versioning == GoVersioning::IgnoreMajorRules,
         }
     }
 }

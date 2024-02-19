@@ -2,7 +2,15 @@
 title: Multiple major Go versions
 ---
 
-The [recommended best practice](https://go.dev/blog/v2-go-modules) for maintaining multiple major versions of Go modules is to include every major version on your main branch (rather than separate branches). To support multiple go modules files in Knope, you have to define them as separate packages:
+The [recommended best practice](https://go.dev/blog/v2-go-modules) for maintaining multiple major versions of Go modules is to include every major version on your main branch (rather than separate branches).
+
+:::tip
+
+It's also possible to [ignore Go's major version requirements](/reference/config-file/packages#ignore_go_major_versioning)
+
+:::
+
+To support multiple go modules files in Knope, you have to define them as separate packages:
 
 ```toml
 # knope.toml
