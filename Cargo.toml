@@ -41,7 +41,7 @@ inquire = { version = "0.6.2", default-features = false, features = [
 changesets = "0.2.2"
 time = { version = "0.3.34" }
 datta = "0.1.0"
-serde_yaml = "0.9.31"
+serde_yaml = "0.9.32"
 enum-iterator = "1.5.0"
 
 [dev-dependencies]
