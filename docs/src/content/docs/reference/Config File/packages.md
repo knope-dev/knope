@@ -83,6 +83,9 @@ module github.com/knope-dev/knope // v0.0.1
 module github.com/knope-dev/knope/v2 // v2.0.0
 ```
 
+To omit the major version from the module line (e.g., for binaries, where it doesn't matter much),
+use the [`ignore_go_major_versioning`](#ignore_go_major_versioning) option.
+
 ### `pubspec.yaml`
 
 For Dart projects, must contain a `version` field:
@@ -150,3 +153,24 @@ name = "linux-amd64.tgz"
 [[package.assets]]
 path = "artifact/my-binary-darwin-amd64.tgz"  # name will be "my-binary-darwin-amd64.tgz"
 ```
+
+## `ignore_go_major_versioning`
+
+Go has special rules about major versions above 1. Specifically, the module line in `go.mod` must end in the major version.
+By default, Knope follows these rules,
+so if there is no major version at the end of the module line,
+Knope will assume you're updating the latest 1.x or 0.x tag.
+
+To ignore this rule, and always use the latest tag (even if it doesn't match the module line), set `ignore_go_major_versioning` to `true` in the package config:
+
+```toml title="knope.toml"
+[package]
+versioned_files = ["go.mod"]
+ignore_go_major_versioning = true
+```
+
+:::tip
+
+To maintain multiple major versions of a Go module, check out [this recipe](/recipes/multiple-major-go-versions)
+
+:::

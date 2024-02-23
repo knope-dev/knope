@@ -214,7 +214,7 @@ impl Package {
         dry_run: DryRun,
     ) -> Result<Self, versioned_file::Error> {
         for versioned_file in &mut self.versioned_files {
-            versioned_file.set_version(dry_run, version)?;
+            versioned_file.set_version(dry_run, version, self.go_versioning)?;
         }
         Ok(self)
     }

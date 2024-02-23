@@ -1,0 +1,4 @@
+Would add the following to go.mod: 2.0.1
+Would add files to git:
+  go.mod
+Would create Git tag v2.0.1

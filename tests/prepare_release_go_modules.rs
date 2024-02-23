@@ -227,3 +227,42 @@ fn major_version_directories() {
         ]
     );
 }
+
+#[test]
+fn ignore_go_major_versioning() {
+    // Arrange.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let data_path = Path::new("tests/prepare_release/go_modules/ignore_go_major_versioning");
+    let source_path = data_path.join("source");
+
+    init(temp_path);
+    commit(temp_path, "Initial commit");
+    tag(temp_path, "v1.0.0");
+    commit(temp_path, "fix!: Breaking change");
+    tag(temp_path, "v2.0.0");
+    commit(temp_path, "fix: A fix");
+
+    copy_dir_contents(&source_path, temp_path);
+
+    // Act
+    let dry_run_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .arg("--dry-run")
+        .current_dir(temp_dir.path())
+        .assert();
+    let actual_assert = Command::new(cargo_bin!("knope"))
+        .arg("release")
+        .current_dir(temp_dir.path())
+        .assert();
+
+    // Assert
+    dry_run_assert
+        .success()
+        .with_assert(assert())
+        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
+    actual_assert.success().stdout_eq("");
+    assert().subset_matches(data_path.join("expected"), temp_path);
+    let tags = get_tags(temp_path);
+    assert_eq!(tags, vec!["v2.0.1"]);
+}
