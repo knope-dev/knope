@@ -1,3 +1,6 @@
+mod override_prerelease_label;
+mod prerelease_after_release;
+
 use std::{
     fs::{copy, create_dir, read_to_string, write},
     path::Path,
@@ -6,7 +9,6 @@ use std::{
 };
 
 use changesets::{Change, ChangeType, UniqueId, Versioning};
-use helpers::*;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use snapbox::{
@@ -15,83 +17,7 @@ use snapbox::{
     Data,
 };
 
-use crate::helpers::GitCommand::{Commit, Tag};
-
-mod helpers;
-
-const FILE_NAME: &str = "prepare_release";
-
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release.
-#[test]
-fn prerelease_after_release() {
-    TestCase::new(FILE_NAME, "prerelease_after_release")
-        .git(&[
-            Commit("Initial commit"),
-            Tag("v1.0.0"),
-            Commit("feat: New feature in existing release"),
-            Tag("v1.1.0"),
-            Commit("feat!: Breaking feature in new RC"),
-        ])
-        .run("prerelease");
-}
-
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
-/// the configured `prerelease_label` at runtime using the `--prerelease-label` argument.
-#[test]
-fn override_prerelease_label_with_option() {
-    TestCase::new(FILE_NAME, "override_prerelease_label")
-        .git(&[
-            Commit("Initial commit"),
-            Tag("v1.0.0"),
-            Commit("feat: New feature in existing release"),
-            Tag("v1.1.0"),
-            Commit("feat!: Breaking feature in new RC"),
-        ])
-        .run("prerelease --prerelease-label=alpha");
-}
-
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but change
-/// the configured `prerelease_label` at runtime using the `KNOPE_PRERELEASE_LABEL` environment variable.
-#[test]
-fn override_prerelease_label_with_env() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/override_prerelease_label");
-
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "v1.1.0");
-    commit(temp_path, "feat!: Breaking feature in new RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let output_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .env("KNOPE_PRERELEASE_LABEL", "alpha")
-        .current_dir(temp_dir.path())
-        .assert();
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .env("KNOPE_PRERELEASE_LABEL", "alpha")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    output_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-
-    assert().subset_matches(data_path.join("expected"), temp_path);
-}
+use crate::helpers::*;
 
 /// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
 /// the `prerelease_label` at runtime using the `--prerelease-label` argument.
@@ -270,11 +196,11 @@ fn second_prerelease() {
 /// Run a `PrepareRelease` in a repo with multiple versionable files—verify only the selected
 /// one is modified.
 #[rstest]
-#[case("Cargo.toml_knope.toml", &["Cargo.toml"])]
-#[case("pyproject.toml_knope.toml", &["pyproject.toml"])]
-#[case("package.json_knope.toml", &["package.json"])]
-#[case("go.mod_knope.toml", &["go.mod"])]
-#[case("multiple_files_in_package_knope.toml", &["Cargo.toml", "pyproject.toml"])]
+#[case("Cargo.toml_knope.toml", & ["Cargo.toml"])]
+#[case("pyproject.toml_knope.toml", & ["pyproject.toml"])]
+#[case("package.json_knope.toml", & ["package.json"])]
+#[case("go.mod_knope.toml", & ["go.mod"])]
+#[case("multiple_files_in_package_knope.toml", & ["Cargo.toml", "pyproject.toml"])]
 fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_files: &[&str]) {
     // Arrange.
     let temp_dir = tempfile::tempdir().unwrap();
@@ -366,7 +292,7 @@ fn prepare_release_pyproject_toml(#[case] input_file: &str) {
         source_path.join(input_file),
         temp_path.join("pyproject.toml"),
     )
-    .unwrap();
+        .unwrap();
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
     add_all(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -421,7 +347,7 @@ fn prepare_release_pubspec_yaml() {
         source_path.join("pubspec.yaml"),
         temp_path.join("pubspec.yaml"),
     )
-    .unwrap();
+        .unwrap();
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
     add_all(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -531,7 +457,7 @@ fn prepare_release_invalid_versioned_files(#[case] knope_toml: &str) {
         source_path.join("CHANGELOG.md"),
         temp_path.join("CHANGELOG.md"),
     )
-    .unwrap();
+        .unwrap();
     for file in ["Cargo.toml", "go.mod", "pyproject.toml", "package.json"] {
         write(temp_path.join(file), "").unwrap();
     }
@@ -575,7 +501,7 @@ fn prepare_release_creates_missing_changelog() {
         source_path.join("Cargo.toml_knope.toml"),
         temp_path.join("knope.toml"),
     )
-    .unwrap();
+        .unwrap();
     let file = "Cargo.toml";
     copy(source_path.join(file), temp_path.join(file)).unwrap();
 
@@ -630,7 +556,7 @@ fn test_prepare_release_multiple_files_inconsistent_versions() {
         source_path.join("Cargo_different_version.toml"),
         temp_path.join("Cargo.toml"),
     )
-    .unwrap();
+        .unwrap();
     for file in ["CHANGELOG.md", "pyproject.toml", "package.json"] {
         copy(source_path.join(file), temp_path.join(file)).unwrap();
     }
@@ -747,7 +673,7 @@ fn no_versioned_files() {
         source_path.join("CHANGELOG.md"),
         temp_path.join("CHANGELOG.md"),
     )
-    .unwrap();
+        .unwrap();
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -1189,7 +1115,7 @@ fn handle_pre_versions_that_are_too_new() {
         cargo_toml,
         "[package]\nname = \"default\"\nversion = \"1.2.3\"\n",
     )
-    .unwrap();
+        .unwrap();
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -1295,8 +1221,8 @@ fn changesets() {
             .to_string(),
         versioning: Versioning::from(("first", ChangeType::Major)),
     }
-    .write_to_directory(&changeset_path)
-    .unwrap();
+        .write_to_directory(&changeset_path)
+        .unwrap();
 
     let src_path = Path::new("tests/prepare_release/changesets");
     for file in [
@@ -1539,21 +1465,21 @@ fn verbose() {
             .to_string(),
         versioning: Versioning::from(("first", ChangeType::Major)),
     }
-    .write_to_directory(&changeset_path)
-    .unwrap();
+        .write_to_directory(&changeset_path)
+        .unwrap();
     Change {
         unique_id: UniqueId::from("feature"),
         summary:
-            "#### A feature for first, fix for second\n\nAnd even some details which aren't visible"
-                .to_string(),
+        "#### A feature for first, fix for second\n\nAnd even some details which aren't visible"
+            .to_string(),
         versioning: Versioning::try_from_iter([
             ("first", ChangeType::Minor),
             ("second", ChangeType::Patch),
         ])
-        .unwrap(),
+            .unwrap(),
     }
-    .write_to_directory(&changeset_path)
-    .unwrap();
+        .write_to_directory(&changeset_path)
+        .unwrap();
 
     let src_path = Path::new("tests/prepare_release/verbose");
     for file in [
