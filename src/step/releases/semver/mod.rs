@@ -330,8 +330,6 @@ pub(crate) fn bump(
 mod test_bump {
     use std::str::FromStr;
 
-    use rstest::rstest;
-
     use super::*;
 
     #[test]
@@ -339,7 +337,7 @@ mod test_bump {
         let stable = Version::new(1, 2, 3, None);
         let version = bump(stable.into(), &Rule::Major, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(2, 0, 0, None,));
+        assert_eq!(version, Version::new(2, 0, 0, None));
     }
 
     #[test]
@@ -347,26 +345,25 @@ mod test_bump {
         let stable = Version::new(0, 1, 2, None);
         let version = bump(stable.into(), &Rule::Major, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(0, 2, 0, None,));
+        assert_eq!(version, Version::new(0, 2, 0, None));
     }
 
     #[test]
     fn major_unset() {
         let version = bump(CurrentVersions::default(), &Rule::Major, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(0, 1, 0, None,));
+        assert_eq!(version, Version::new(0, 1, 0, None));
     }
 
-    #[rstest]
-    #[case("1.2.4-rc.0")]
-    #[case("1.3.0-rc.0")]
-    #[case("2.0.0-rc.0")]
-    fn major_after_pre(#[case] pre_version: &str) {
-        let mut versions = CurrentVersions::from(Version::new(1, 2, 3, None));
-        versions.update_version(Version::from_str(pre_version).unwrap());
-        let version = bump(versions, &Rule::Major, Verbose::No).unwrap();
+    #[test]
+    fn major_after_pre() {
+        for pre_version in ["1.2.4-rc.0", "1.3.0-rc.0", "2.0.0-rc.0"] {
+            let mut versions = CurrentVersions::from(Version::new(1, 2, 3, None));
+            versions.update_version(Version::from_str(pre_version).unwrap());
+            let version = bump(versions, &Rule::Major, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(2, 0, 0, None));
+            assert_eq!(version, Version::new(2, 0, 0, None));
+        }
     }
 
     #[test]
@@ -389,18 +386,18 @@ mod test_bump {
     fn minor_unset() {
         let version = bump(CurrentVersions::default(), &Rule::Minor, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(0, 0, 1, None,));
+        assert_eq!(version, Version::new(0, 0, 1, None));
     }
 
-    #[rstest]
-    #[case("1.2.4-rc.0")]
-    #[case("1.3.0-rc.0")]
-    fn minor_after_pre(#[case] pre_version: &str) {
-        let mut versions = CurrentVersions::from(Version::new(1, 2, 3, None));
-        versions.update_version(Version::from_str(pre_version).unwrap());
-        let version = bump(versions, &Rule::Minor, Verbose::No).unwrap();
+    #[test]
+    fn minor_after_pre() {
+        for pre_version in ["1.2.4-rc.0", "1.3.0-rc.0"] {
+            let mut versions = CurrentVersions::from(Version::new(1, 2, 3, None));
+            versions.update_version(Version::from_str(pre_version).unwrap());
+            let version = bump(versions, &Rule::Minor, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(1, 3, 0, None,));
+            assert_eq!(version, Version::new(1, 3, 0, None));
+        }
     }
 
     #[test]
@@ -416,14 +413,14 @@ mod test_bump {
         let stable = Version::new(0, 1, 0, None);
         let version = bump(stable.into(), &Rule::Patch, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(0, 1, 1, None,));
+        assert_eq!(version, Version::new(0, 1, 1, None));
     }
 
     #[test]
     fn patch_unset() {
         let version = bump(CurrentVersions::default(), &Rule::Patch, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(0, 0, 1, None,));
+        assert_eq!(version, Version::new(0, 0, 1, None));
     }
 
     #[test]
@@ -432,7 +429,7 @@ mod test_bump {
         versions.update_version(Version::from_str("1.2.4-rc.0").unwrap());
         let version = bump(versions, &Rule::Patch, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(1, 2, 4, None,));
+        assert_eq!(version, Version::new(1, 2, 4, None));
     }
 
     #[test]
@@ -514,7 +511,7 @@ mod test_bump {
 
         let version = bump(versions, &Rule::Release, Verbose::No).unwrap();
 
-        assert_eq!(version, Version::new(2, 0, 0, None,));
+        assert_eq!(version, Version::new(2, 0, 0, None));
     }
 }
 

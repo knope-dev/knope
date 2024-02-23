@@ -15,6 +15,7 @@ pub struct TestCase<const GIT_LENGTH: usize, const ENV_LENGTH: usize> {
     file_name: &'static str,
     git: [GitCommand; GIT_LENGTH],
     env: [(&'static str, &'static str); ENV_LENGTH],
+    remote: Option<&'static str>,
 }
 
 impl TestCase<0, 0> {
@@ -24,6 +25,7 @@ impl TestCase<0, 0> {
             file_name,
             env: [],
             git: [],
+            remote: None,
         }
     }
 
@@ -33,6 +35,7 @@ impl TestCase<0, 0> {
     ) -> TestCase<GIT_LENGTH, 0> {
         TestCase::<GIT_LENGTH, 0> {
             file_name: self.file_name,
+            remote: self.remote,
             git: commands,
             env: [],
         }
@@ -40,12 +43,20 @@ impl TestCase<0, 0> {
 }
 
 impl<const GIT_LENGTH: usize, const ENV_LENGTH: usize> TestCase<GIT_LENGTH, ENV_LENGTH> {
+    pub fn with_remote(mut self, remote: &'static str) -> TestCase<GIT_LENGTH, ENV_LENGTH> {
+        self.remote = Some(remote);
+        self
+    }
     pub fn run(self, command: &str) {
         let working_dir = tempfile::tempdir().unwrap();
         let parts = command.split_whitespace().collect::<Vec<_>>();
         let path = working_dir.path();
         let data_path = Path::new(self.file_name).parent().unwrap();
-        copy_dir_contents(&data_path.join("in"), path);
+
+        let in_dir = data_path.join("in");
+        if in_dir.exists() {
+            copy_dir_contents(&in_dir, path);
+        }
 
         init(path);
         for command in self.git {
@@ -117,6 +128,7 @@ impl<const GIT_LENGTH: usize> TestCase<GIT_LENGTH, 0> {
         TestCase {
             file_name: self.file_name,
             git: self.git,
+            remote: self.remote,
             env: [(key, value)],
         }
     }
@@ -128,6 +140,7 @@ impl<const GIT_LENGTH: usize> TestCase<GIT_LENGTH, 0> {
         TestCase {
             file_name: self.file_name,
             git: self.git,
+            remote: self.remote,
             env: envs,
         }
     }

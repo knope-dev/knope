@@ -42,12 +42,13 @@ corresponds to one test.
 To create a new test:
 
 1. Copy a test directory
-2. Modify the contents of `in` as required for what you're testing. This directory will be copied, and `knope` will be
+2. Add it as a `mod` to whatever directory is above it.
+3. Modify the contents of `in` as required for what you're testing. This directory will be copied, and `knope` will be
    run within it.
-3. Modify the contents of `out` to match what `in` should look like after running the command (e.g., increased versions)
-4. Modify `mod.rs` to have the setup & command invocation that you want
-5. Run the test with `just` (or `cargo test`)
-6. If the test fails, you can run `SNAPSHOTS=overwrite just` to update the snapshots
+4. Modify the contents of `out` to match what `in` should look like after running the command (e.g., increased versions)
+5. Modify `mod.rs` to have the setup & command invocation that you want
+6. Run the test with `just` (or `cargo test`)
+7. If the test fails, you can run `SNAPSHOTS=overwrite just` to update the snapshots
 
 ### How snapshot tests work
 
@@ -68,7 +69,8 @@ fn name_of_test() {
 
 This test is expected to be defined within a "test directory," which contains the following:
 
-1. A **required** `in` directory with all the files that the command needs to run. These will be copied to a temporary
+1. An `in` directory with all the files that the command needs to run.
+   These will be copied to a temporary
    directory.
 2. An `out` directory, if the command should alter the files in `in`.
 3. A `stdout.log` file if the command is expected to succeed and produce an output.

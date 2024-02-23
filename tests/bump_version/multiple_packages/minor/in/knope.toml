@@ -1,0 +1,15 @@
+[packages.rust]
+versioned_files = ["Cargo.toml"]
+
+[packages.javascript]
+versioned_files = ["package.json"]
+
+[packages.python]
+versioned_files = ["pyproject.toml"]
+
+[[workflows]]
+name = "bump"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Minor"
