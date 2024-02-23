@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    io::stderr,
+    path::{Path, PathBuf},
+};
 
 use snapbox::{
     cmd::{cargo_bin, Command},
@@ -8,37 +11,44 @@ use tempfile::TempDir;
 
 use crate::helpers::{assert, commit, copy_dir_contents, init, tag};
 
-pub struct TestCase {
-    working_dir: TempDir,
-    data_path: PathBuf,
-    env: Vec<(&'static str, &'static str)>,
+pub struct TestCase<const GIT_LENGTH: usize, const ENV_LENGTH: usize> {
+    file_name: &'static str,
+    git: [GitCommand; GIT_LENGTH],
+    env: [(&'static str, &'static str); ENV_LENGTH],
 }
 
-const OUT_DIR: &'static str = "out";
-
-const STDOUT_FILE: &'static str = "stdout.log";
-
-const STDERR_FILE: &'static str = "stderr.log";
-
-const DRY_RUN_STDOUT_FILE: &'static str = "dryrun_stdout.log";
-
-impl TestCase {
+impl TestCase<0, 0> {
     /// Create a new `TestCase`. `file_name` should be an invocation of `file!()`.
-    pub fn new(file_name: &'static str) -> Self {
-        let working_dir = tempfile::tempdir().unwrap();
-        let data_path = Path::new(file_name).parent().unwrap();
-        copy_dir_contents(&data_path.join("in"), working_dir.path());
+    pub const fn new(file_name: &'static str) -> Self {
         Self {
-            working_dir,
-            data_path: data_path.into(),
-            env: Vec::new(),
+            file_name,
+            env: [],
+            git: [],
         }
     }
 
-    pub fn git(self, commands: &[GitCommand]) -> Self {
-        let path = self.working_dir.path();
+    pub const fn git<const GIT_LENGTH: usize>(
+        self,
+        commands: [GitCommand; GIT_LENGTH],
+    ) -> TestCase<GIT_LENGTH, 0> {
+        TestCase::<GIT_LENGTH, 0> {
+            file_name: self.file_name,
+            git: commands,
+            env: [],
+        }
+    }
+}
+
+impl<const GIT_LENGTH: usize, const ENV_LENGTH: usize> TestCase<GIT_LENGTH, ENV_LENGTH> {
+    pub fn run(self, command: &str) {
+        let working_dir = tempfile::tempdir().unwrap();
+        let parts = command.split_whitespace().collect::<Vec<_>>();
+        let path = working_dir.path();
+        let data_path = Path::new(self.file_name).parent().unwrap();
+        copy_dir_contents(&data_path.join("in"), path);
+
         init(path);
-        for command in commands {
+        for command in self.git {
             match command {
                 GitCommand::Commit(message) => {
                     commit(path, message);
@@ -48,20 +58,13 @@ impl TestCase {
                 }
             }
         }
-        self
-    }
 
-    pub fn env(mut self, key: &'static str, value: &'static str) -> Self {
-        self.env.push((key, value));
-        self
-    }
-
-    pub fn run(self, command: &str) {
-        let parts = command.split_whitespace().collect::<Vec<_>>();
-        let path = self.working_dir.path();
-
-        let mut real = Command::new(cargo_bin!("knope")).current_dir(path);
-        let mut dry_run = Command::new(cargo_bin!("knope")).current_dir(path);
+        let mut real = Command::new(cargo_bin!("knope"))
+            .current_dir(path)
+            .with_assert(assert());
+        let mut dry_run = Command::new(cargo_bin!("knope"))
+            .current_dir(path)
+            .with_assert(assert());
 
         for arg in parts {
             real = real.arg(arg);
@@ -73,37 +76,64 @@ impl TestCase {
         }
         dry_run = dry_run.arg("--dry-run");
 
-        let real_assert = real.assert().with_assert(assert());
-
-        if self.data_path.join(STDERR_FILE).exists() {
-            real_assert
-                .failure()
-                .stderr_matches(Data::read_from(&self.data_path.join(STDERR_FILE), None));
-        } else {
-            let output = if self.data_path.join(STDOUT_FILE).exists() {
-                Data::read_from(&self.data_path.join(STDOUT_FILE), None)
-            } else {
-                "".into()
-            };
-            real_assert.success().stdout_matches(output);
-        }
-        if self.data_path.join(DRY_RUN_STDOUT_FILE).exists() {
+        let dry_run_stdout_file = data_path.join("dryrun_stdout.log");
+        let dry_run_stderr_file = data_path.join("dryrun_stderr.log");
+        if dry_run_stdout_file.exists() {
             dry_run
                 .assert()
                 .success()
-                .with_assert(assert())
-                .stdout_matches(Data::read_from(
-                    &self.data_path.join(DRY_RUN_STDOUT_FILE),
-                    None,
-                ));
+                .stdout_matches(Data::read_from(&dry_run_stdout_file, None));
+        } else if dry_run_stderr_file.exists() {
+            dry_run
+                .assert()
+                .failure()
+                .stderr_matches(Data::read_from(&dry_run_stderr_file, None));
         }
 
-        if self.data_path.join(OUT_DIR).exists() {
-            assert().subset_matches(self.data_path.join(OUT_DIR), path);
+        let stderr_file = data_path.join("stderr.log");
+        if stderr_file.exists() {
+            real.assert()
+                .failure()
+                .stderr_matches(Data::read_from(&stderr_file, None));
+        } else {
+            let stdout_file = data_path.join("stdout.log");
+            let output = if stdout_file.exists() {
+                Data::read_from(&stdout_file, None)
+            } else {
+                "".into()
+            };
+            real.assert().success().stdout_matches(output);
+        }
+
+        let out_dir = path.join("out");
+        if out_dir.exists() {
+            assert().subset_matches(out_dir, path);
         }
     }
 }
 
+impl<const GIT_LENGTH: usize> TestCase<GIT_LENGTH, 0> {
+    pub fn env(self, key: &'static str, value: &'static str) -> TestCase<GIT_LENGTH, 1> {
+        TestCase {
+            file_name: self.file_name,
+            git: self.git,
+            env: [(key, value)],
+        }
+    }
+
+    pub fn envs<const ENV_LENGTH: usize>(
+        self,
+        envs: [(&'static str, &'static str); ENV_LENGTH],
+    ) -> TestCase<GIT_LENGTH, ENV_LENGTH> {
+        TestCase {
+            file_name: self.file_name,
+            git: self.git,
+            env: envs,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum GitCommand {
     Commit(&'static str),
     Tag(&'static str),

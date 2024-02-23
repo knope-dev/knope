@@ -1,6 +1,5 @@
 [package]
-versioned_files = ["go.mod"]
-changelog = "CHANGELOG.md"
+versioned_files = ["pyproject.toml", "Cargo.toml", "package.json", "go.mod"]
 
 [[workflows]]
 name = "release"

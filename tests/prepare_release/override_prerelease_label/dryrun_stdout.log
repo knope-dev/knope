@@ -1,6 +1,6 @@
-Would add the following to Cargo.toml: 2.0.0-alpha.1
+Would add the following to Cargo.toml: 2.0.0-alpha.0
 Would add the following to CHANGELOG.md: 
-## 2.0.0-alpha.1 ([DATE])
+## 2.0.0-alpha.0 ([DATE])
 
 ### Breaking Changes
 

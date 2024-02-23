@@ -1,5 +1,13 @@
+mod changelog;
+mod enable_prerelease;
+mod inconsistent_versions;
+mod invalid_versioned_files;
+mod missing_versioned_files;
 mod override_prerelease_label;
+mod package_selection;
 mod prerelease_after_release;
+mod second_prerelease;
+mod unknown_versioned_file_format;
 
 use std::{
     fs::{copy, create_dir, read_to_string, write},
@@ -19,263 +27,6 @@ use snapbox::{
 
 use crate::helpers::*;
 
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
-/// the `prerelease_label` at runtime using the `--prerelease-label` argument.
-#[test]
-fn enable_prerelease_label_with_option() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/enable_prerelease");
-
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "v1.1.0");
-    commit(temp_path, "feat!: Breaking feature in new RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let output_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .arg("--prerelease-label=rc")
-        .current_dir(temp_dir.path())
-        .assert();
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .arg("--prerelease-label=rc")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    output_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-
-    assert().subset_matches(data_path.join("expected"), temp_path);
-}
-
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
-/// the `prerelease_label` at runtime using the `KNOPE_PRERELEASE_LABEL` environment variable.
-#[test]
-fn enable_prerelease_label_with_env() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/enable_prerelease");
-
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "v1.1.0");
-    commit(temp_path, "feat!: Breaking feature in new RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let output_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .env("KNOPE_PRERELEASE_LABEL", "rc")
-        .current_dir(temp_dir.path())
-        .assert();
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .env("KNOPE_PRERELEASE_LABEL", "rc")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    output_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-
-    assert().subset_matches(data_path.join("expected"), temp_path);
-}
-
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a release, but set
-/// the `prerelease_label` at runtime using both the `--prerelease-label` argument and the
-/// `KNOPE_PRERELEASE_LABEL` environment variable.
-///
-/// The `--prerelease-label` argument should take precedence over the environment variable.
-#[test]
-fn prerelease_label_option_overrides_env() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/enable_prerelease");
-
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature in existing release");
-    tag(temp_path, "v1.1.0");
-    commit(temp_path, "feat!: Breaking feature in new RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let output_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .env("KNOPE_PRERELEASE_LABEL", "alpha")
-        .arg("--prerelease-label=rc")
-        .current_dir(temp_dir.path())
-        .assert();
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .env("KNOPE_PRERELEASE_LABEL", "alpha")
-        .arg("--prerelease-label=rc")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    output_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-
-    assert().subset_matches(data_path.join("expected"), temp_path);
-}
-
-/// Run a `PrepareRelease` as a pre-release in a repo which already contains a pre-release.
-#[test]
-fn second_prerelease() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let data_path = Path::new("tests/prepare_release/second_prerelease");
-
-    init(temp_path);
-    commit(temp_path, "An old prerelease which should not be checked");
-    tag(temp_path, "v1.1.0-rc.2");
-    commit(temp_path, "feat: New feature in first RC");
-    tag(temp_path, "v1.0.0");
-    tag(temp_path, "v1.1.0-rc.1");
-    commit(temp_path, "feat: New feature in second RC");
-
-    copy_dir_contents(&data_path.join("source"), temp_path);
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("prerelease")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(&data_path.join("dry_run_output.txt"), None));
-    actual_assert
-        .success()
-        .stdout_matches(Data::read_from(&data_path.join("output.txt"), None));
-    assert().subset_matches(data_path.join("expected"), temp_path);
-}
-
-/// Run a `PrepareRelease` in a repo with multiple versionable files—verify only the selected
-/// one is modified.
-#[rstest]
-#[case("Cargo.toml_knope.toml", & ["Cargo.toml"])]
-#[case("pyproject.toml_knope.toml", & ["pyproject.toml"])]
-#[case("package.json_knope.toml", & ["package.json"])]
-#[case("go.mod_knope.toml", & ["go.mod"])]
-#[case("multiple_files_in_package_knope.toml", & ["Cargo.toml", "pyproject.toml"])]
-fn prepare_release_selects_files(#[case] knope_toml: &str, #[case] versioned_files: &[&str]) {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/package_selection");
-
-    init(temp_path);
-
-    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
-    for file in [
-        "CHANGELOG.md",
-        "Cargo.toml",
-        "go.mod",
-        "pyproject.toml",
-        "package.json",
-    ] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-
-    add_all(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join(format!("{knope_toml}_dry_run_output.txt")),
-            None,
-        ));
-    actual_assert
-        .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-
-    for file in ["Cargo.toml", "pyproject.toml", "package.json", "go.mod"] {
-        let expected_path = if versioned_files.contains(&file) {
-            format!("expected_{file}")
-        } else {
-            String::from(file)
-        };
-        assert().matches(
-            Data::read_from(&source_path.join(expected_path), None),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
-    let mut expected_changes = Vec::with_capacity(versioned_files.len() + 1);
-    for file in versioned_files {
-        expected_changes.push(format!("M  {file}"));
-    }
-    expected_changes.push("M  CHANGELOG.md".to_string());
-    expected_changes.sort();
-    assert_eq!(
-        status(temp_path),
-        expected_changes,
-        "All modified changes should be added to Git"
-    );
-}
-
 /// Run a `PrepareRelease` against all supported types of `pyproject.toml` files.
 #[rstest]
 #[case::poetry("poetry_pyproject.toml")]
@@ -292,7 +43,7 @@ fn prepare_release_pyproject_toml(#[case] input_file: &str) {
         source_path.join(input_file),
         temp_path.join("pyproject.toml"),
     )
-        .unwrap();
+    .unwrap();
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
     add_all(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -347,7 +98,7 @@ fn prepare_release_pubspec_yaml() {
         source_path.join("pubspec.yaml"),
         temp_path.join("pubspec.yaml"),
     )
-        .unwrap();
+    .unwrap();
     copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
     add_all(temp_path);
     commit(temp_path, "feat: Existing feature");
@@ -387,273 +138,6 @@ fn prepare_release_pubspec_yaml() {
     );
 }
 
-/// Snapshot the error messages when a required file is missing.
-#[rstest]
-#[case("Cargo.toml_knope.toml")]
-#[case("pyproject.toml_knope.toml")]
-#[case("package.json_knope.toml")]
-#[case("go.mod_knope.toml")]
-#[case("multiple_files_in_package_knope.toml")]
-fn prepare_release_versioned_file_not_found(#[case] knope_toml: &str) {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/package_selection");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
-    let file = "CHANGELOG.md";
-    copy(source_path.join(file), temp_path.join(file)).unwrap();
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join(format!("{knope_toml}_MISSING_output.txt")),
-        None,
-    ));
-    actual_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join(format!("{knope_toml}_MISSING_output.txt")),
-        None,
-    ));
-    assert().matches(
-        Data::read_from(&source_path.join("CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-}
-
-/// Run a `PrepareRelease` in a repo where the versioned files are invalid.
-#[rstest]
-#[case("Cargo.toml_knope.toml")]
-#[case("pyproject.toml_knope.toml")]
-#[case("package.json_knope.toml")]
-#[case("multiple_files_in_package_knope.toml")]
-fn prepare_release_invalid_versioned_files(#[case] knope_toml: &str) {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/package_selection");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
-    copy(
-        source_path.join("CHANGELOG.md"),
-        temp_path.join("CHANGELOG.md"),
-    )
-        .unwrap();
-    for file in ["Cargo.toml", "go.mod", "pyproject.toml", "package.json"] {
-        write(temp_path.join(file), "").unwrap();
-    }
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join(format!("{knope_toml}_INVALID_output.txt")),
-        None,
-    ));
-    actual_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join(format!("{knope_toml}_INVALID_output.txt")),
-        None,
-    ));
-}
-
-/// Run a `PrepareRelease` where the CHANGELOG.md file is missing and verify it's created.
-#[test]
-fn prepare_release_creates_missing_changelog() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/package_selection");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    copy(
-        source_path.join("Cargo.toml_knope.toml"),
-        temp_path.join("knope.toml"),
-    )
-        .unwrap();
-    let file = "Cargo.toml";
-    copy(source_path.join(file), temp_path.join(file)).unwrap();
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
-    actual_assert
-        .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
-    assert().matches(
-        Data::read_from(&source_path.join("NEW_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("expected_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
-}
-
-/// Run a `PrepareRelease` in a repo with multiple files that have different versions
-#[test]
-fn test_prepare_release_multiple_files_inconsistent_versions() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/package_selection");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    let knope_toml = "multiple_files_in_package_knope.toml";
-    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
-    copy(
-        source_path.join("Cargo_different_version.toml"),
-        temp_path.join("Cargo.toml"),
-    )
-        .unwrap();
-    for file in ["CHANGELOG.md", "pyproject.toml", "package.json"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join("test_prepare_release_multiple_files_inconsistent_versions.txt"),
-        None,
-    ));
-    actual_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join("test_prepare_release_multiple_files_inconsistent_versions.txt"),
-        None,
-    ));
-
-    // Nothing should change because it errored.
-    assert().matches(
-        Data::read_from(&source_path.join("Cargo_different_version.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
-    for file in ["pyproject.toml", "package.json", "CHANGELOG.md"] {
-        assert().matches(
-            Data::read_from(&source_path.join(file), None),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
-}
-
-/// Run a `PrepareRelease` where the configured `versioned_file` is not a supported format
-#[test]
-fn test_prepare_release_invalid_versioned_file_format() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/package_selection");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    let knope_toml = "invalid_versioned_file_format_knope.toml";
-    copy(source_path.join(knope_toml), temp_path.join("knope.toml")).unwrap();
-    for file in [
-        "CHANGELOG.md",
-        "Cargo.toml",
-        "pyproject.toml",
-        "package.json",
-        "setup.py",
-    ] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join("invalid_versioned_file_format_knope_output.txt"),
-        None,
-    ));
-    actual_assert.failure().stderr_eq(Data::read_from(
-        &source_path.join("invalid_versioned_file_format_knope_output.txt"),
-        None,
-    ));
-
-    // Nothing should change because it errored.
-    assert().matches(
-        Data::read_from(&source_path.join("CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-    for file in ["Cargo.toml", "pyproject.toml", "package.json"] {
-        assert().matches(
-            Data::read_from(&source_path.join(file), None),
-            read_to_string(temp_path.join(file)).unwrap(),
-        );
-    }
-}
-
 /// If `PrepareRelease` is run with no `versioned_files`, it should determine the version from the
 /// previous valid tag.
 #[test]
@@ -673,7 +157,7 @@ fn no_versioned_files() {
         source_path.join("CHANGELOG.md"),
         temp_path.join("CHANGELOG.md"),
     )
-        .unwrap();
+    .unwrap();
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -1115,7 +599,7 @@ fn handle_pre_versions_that_are_too_new() {
         cargo_toml,
         "[package]\nname = \"default\"\nversion = \"1.2.3\"\n",
     )
-        .unwrap();
+    .unwrap();
 
     // Act.
     let dry_run_assert = Command::new(cargo_bin!("knope"))
@@ -1221,8 +705,8 @@ fn changesets() {
             .to_string(),
         versioning: Versioning::from(("first", ChangeType::Major)),
     }
-        .write_to_directory(&changeset_path)
-        .unwrap();
+    .write_to_directory(&changeset_path)
+    .unwrap();
 
     let src_path = Path::new("tests/prepare_release/changesets");
     for file in [
@@ -1465,21 +949,21 @@ fn verbose() {
             .to_string(),
         versioning: Versioning::from(("first", ChangeType::Major)),
     }
-        .write_to_directory(&changeset_path)
-        .unwrap();
+    .write_to_directory(&changeset_path)
+    .unwrap();
     Change {
         unique_id: UniqueId::from("feature"),
         summary:
-        "#### A feature for first, fix for second\n\nAnd even some details which aren't visible"
-            .to_string(),
+            "#### A feature for first, fix for second\n\nAnd even some details which aren't visible"
+                .to_string(),
         versioning: Versioning::try_from_iter([
             ("first", ChangeType::Minor),
             ("second", ChangeType::Patch),
         ])
-            .unwrap(),
+        .unwrap(),
     }
-        .write_to_directory(&changeset_path)
-        .unwrap();
+    .write_to_directory(&changeset_path)
+    .unwrap();
 
     let src_path = Path::new("tests/prepare_release/verbose");
     for file in [

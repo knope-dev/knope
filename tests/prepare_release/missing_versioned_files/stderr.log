@@ -1,13 +1,12 @@
 Error: config::package_format (https://knope.tech/reference/config-file/packages/)
 
-  × The package definition is invalid: Error reading file package.json: No
+  × The package definition is invalid: Error reading file pyproject.toml: No
   │ such file or directory (os error 2)
    ╭─[1:1]
  1 │ ╭─▶ [package]
- 2 │ │   versioned_files = ["package.json"]
- 3 │ ├─▶ changelog = "CHANGELOG.md"
+ 2 │ ├─▶ versioned_files = ["pyproject.toml", "Cargo.toml", "package.json", "go.mod"]
    · ╰──── defined here
- 4 │     
+ 3 │     
    ╰────
   help: Check the package definition is valid.
 

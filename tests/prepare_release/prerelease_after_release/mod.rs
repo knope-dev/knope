@@ -7,7 +7,7 @@ use crate::helpers::{
 #[test]
 fn prerelease_after_release() {
     TestCase::new(file!())
-        .git(&[
+        .git([
             Commit("Initial commit"),
             Tag("v1.0.0"),
             Commit("feat: New feature in existing release"),
