@@ -15,14 +15,14 @@ rust-version = "1.71.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "1.0.196", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
 base64 = "0.21.7"
 toml = "0.8.10"
-serde_json = { version = "1.0.113", features = ["preserve_order"] }
+serde_json = { version = "1.0.114", features = ["preserve_order"] }
 git2 = { version = "0.18.2", default-features = false }
 execute = "0.2.13"
 platform-dirs = "0.3.0"
-git-conventional = "0.12.4"
+git-conventional = "0.12.6"
 ureq = { version = "2.9.6", features = ["json"] }
 http = "1.0.0"
 clap = { version = "4.5.1", features = ["cargo", "string", "env"] }
@@ -41,13 +41,13 @@ inquire = { version = "0.6.2", default-features = false, features = [
 changesets = "0.2.2"
 time = { version = "0.3.34" }
 datta = "0.1.0"
-serde_yaml = "0.9.31"
+serde_yaml = "0.9.32"
 enum-iterator = "1.5.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
-snapbox = { version = "0.5.1", features = ["path"] }
+snapbox = { version = "0.5.6", features = ["path"] }
 tempfile = "3.10.0"
 
 [profile.release]

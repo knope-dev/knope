@@ -8,6 +8,7 @@ use std::{
     path::PathBuf,
 };
 
+use enum_iterator::all;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use miette::Diagnostic;
@@ -20,7 +21,7 @@ use super::{
     semver,
     semver::{bump, ConventionalRule, Label, Version},
     versioned_file,
-    versioned_file::{VersionedFile, PACKAGE_FORMAT_FILE_NAMES},
+    versioned_file::VersionedFile,
     workspace, Change, Release, Rule,
 };
 use crate::{
@@ -31,7 +32,8 @@ use crate::{
     fs,
     integrations::git::{self, add_files},
     step::releases::{
-        versioned_file::{VersionFromSource, VersionSource},
+        go::GoVersioning,
+        versioned_file::{PackageFormat, VersionFromSource, VersionSource},
         workspace::check_for_workspaces,
     },
     workflow::Verbose,
@@ -49,6 +51,7 @@ pub(crate) struct Package {
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
     pub(crate) assets: Option<Vec<Asset>>,
+    pub(crate) go_versioning: GoVersioning,
 }
 
 impl Package {
@@ -402,10 +405,9 @@ pub(crate) fn find_packages() -> Result<Vec<Package>, Error> {
         .then(|| Changelog::try_from(default_changelog_path))
         .transpose()?;
 
-    let versioned_files = PACKAGE_FORMAT_FILE_NAMES
-        .iter()
-        .filter_map(|name| {
-            let path = PathBuf::from(name);
+    let versioned_files = all::<PackageFormat>()
+        .filter_map(|format| {
+            let path = PathBuf::from(format.file_name());
             if path.exists() {
                 Some(VersionedFile::try_from(path))
             } else {

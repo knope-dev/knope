@@ -1,0 +1,12 @@
+[package]
+versioned_files = ["go.mod"]
+ignore_go_major_versioning = true
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Release"
