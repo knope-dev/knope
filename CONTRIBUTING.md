@@ -21,19 +21,20 @@ Use `just reformat` to reformat the docs and `just build-docs` to check for brok
 ## `just` and `justfile`
 
 [`just`](https://just.systems/man/en/chapter_1.html) is a command runner (like `make`) which makes it easier to run
-common tasks the same way in multiple platforms. Specifically, you can run the same sorts of commands that CI does to
+common tasks the same way on many platforms. Specifically, you can run the same sorts of commands that CI does to
 replicate failures (or prevent them) locally! Start by installing
-via [your favorite method](https://just.systems/man/en/chapter_4.html) (personally, I
-use [`cargo binstall just`][cargo-binstall]). Then, run `just -l` to see all the available commands.
+via [your favorite method](https://just.systems/man/en/chapter_4.html) (like [`cargo binstall just`][cargo-binstall]).
+Then, run `just -l` to see all the available commands.
 
 ## Formatting
 
-We use `rustfmt` to format Rust code, but we depend on unstable features (e.g., sorting imports). You need to install
-the nightly toolchain (e.g., `rustup toolchain install nightly`) before formatting the code.
+This project uses `rustfmt` to format Rust code, but depends on unstable features (for example, sorting imports).
+You need to install the nightly toolchain (for example, with `rustup toolchain install nightly`) before formatting the
+code.
 
-We also use [Prettier](https://prettier.io) to format Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx))
-and [Taplo](https://crates.io/crates/taplo-cli) for formatting TOML. `just install-all-dependencies` will install
-Taplo (via [cargo-binstall], which must be installed separately), but will not install NPM.
+[Prettier](https://prettier.io) formats Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx))
+and [Taplo](https://crates.io/crates/taplo-cli) formats TOML. `just install-all-dependencies` will install
+Taplo (via [cargo-binstall], which you must install manually), but won't install NPM.
 
 ## Snapshot Tests
 
@@ -43,10 +44,12 @@ To create a new test:
 
 1. Copy a test directory
 2. Add it as a `mod` to whatever directory is above it.
-3. Modify the contents of `in` as required for what you're testing. This directory will be copied, and `knope` will be
+3. Change the contents of `in` as required for what you're testing.
+   This directory will be copied, and `knope` will be
    run within it.
-4. Modify the contents of `out` to match what `in` should look like after running the command (e.g., increased versions)
-5. Modify `mod.rs` to have the setup & command invocation that you want
+4. Change the contents of `out` to match what `in` should look like after running the command (for example, increased
+   versions)
+5. Change `mod.rs` to have the setup & command invocation that you want
 6. Run the test with `just` (or `cargo test`)
 7. If the test fails, you can run `SNAPSHOTS=overwrite just` to update the snapshots
 
