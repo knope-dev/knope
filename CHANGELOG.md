@@ -10,6 +10,19 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.14.1 (2024-02-23)
+
+### Features
+
+#### Add `ignore_go_major_versioning` option
+
+You can now set `ignore_go_major_versioning = true` for a package in
+`knope.toml` to turn off the major version validation & updating in `go.mod` files.
+
+More details in [the new docs](https://knope.tech/reference/config-file/packages/#ignore_go_major_versioning).
+
+Closes #863, thanks for the suggestion @BatmanAoD!
+
 ## 0.14.0 (2024-02-04)
 
 ### Breaking Changes
