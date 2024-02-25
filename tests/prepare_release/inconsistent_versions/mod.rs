@@ -7,7 +7,7 @@ use crate::helpers::{
 #[test]
 fn snapshot_error() {
     TestCase::new(file!())
-        .git([
+        .git(&[
             Commit("feat: Existing feature"),
             Tag("v1.0.0"),
             Commit("feat: New feature"),

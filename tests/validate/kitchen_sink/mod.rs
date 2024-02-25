@@ -4,6 +4,6 @@ use crate::helpers::{GitCommand::*, TestCase};
 #[test]
 fn kitchen_sink() {
     TestCase::new(file!())
-        .git([Commit("Initial commit"), Tag("1.0.0")])
+        .git(&[Commit("Initial commit"), Tag("1.0.0")])
         .run("--validate");
 }

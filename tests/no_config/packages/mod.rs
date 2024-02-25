@@ -4,7 +4,7 @@ use crate::helpers::{GitCommand::*, TestCase};
 #[test]
 fn test_packages() {
     TestCase::new(file!())
-        .git([
+        .git(&[
             Commit("feat: Existing Feature"),
             Tag("v1.0.0"),
             Commit("feat: Something"),

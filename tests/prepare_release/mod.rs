@@ -3,9 +3,11 @@ mod enable_prerelease;
 mod inconsistent_versions;
 mod invalid_versioned_files;
 mod missing_versioned_files;
+mod no_versioned_files;
 mod override_prerelease_label;
 mod package_selection;
 mod prerelease_after_release;
+mod pubspec_yaml;
 mod pyproject_toml;
 mod second_prerelease;
 mod unknown_versioned_file_format;
@@ -26,111 +28,6 @@ use snapbox::{
 };
 
 use crate::helpers::*;
-
-#[test]
-fn prepare_release_pubspec_yaml() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/pubspec_yaml");
-
-    init(temp_path);
-    copy(
-        source_path.join("pubspec.yaml"),
-        temp_path.join("pubspec.yaml"),
-    )
-    .unwrap();
-    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
-    add_all(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat!: New feature");
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
-    actual_assert.success().stdout_eq("");
-    assert().matches(
-        Data::read_from(&source_path.join("expected_pubspec.yaml"), None),
-        read_to_string(temp_path.join("pubspec.yaml")).unwrap(),
-    );
-
-    let expected_changes = ["M  pubspec.yaml"];
-    assert_eq!(
-        status(temp_path),
-        expected_changes,
-        "All modified changes should be added to Git"
-    );
-}
-
-/// If `PrepareRelease` is run with no `versioned_files`, it should determine the version from the
-/// previous valid tag.
-#[test]
-fn no_versioned_files() {
-    // Arrange.
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    let source_path = Path::new("tests/prepare_release/no_versioned_files");
-
-    init(temp_path);
-    commit(temp_path, "feat: Existing feature");
-    tag(temp_path, "v1.0.0");
-    commit(temp_path, "feat: New feature");
-
-    copy(source_path.join("knope.toml"), temp_path.join("knope.toml")).unwrap();
-    copy(
-        source_path.join("CHANGELOG.md"),
-        temp_path.join("CHANGELOG.md"),
-    )
-    .unwrap();
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_dir.path())
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_dir.path())
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
-    actual_assert
-        .success()
-        .stdout_matches(Data::read_from(&source_path.join("output.txt"), None));
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
-    );
-
-    // The release step should have created a tag with the right new version.
-    let actual_tags = get_tags(temp_path);
-    assert_eq!(vec!["v1.1.0"], actual_tags);
-}
 
 /// If `PrepareRelease` is run with no `prerelease_label`, it should skip any prerelease tags
 /// when parsing commits, as well as determine the next version from the previous released version

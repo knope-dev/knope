@@ -8,7 +8,7 @@ use crate::helpers::{
 #[test]
 fn prepare_release_selects_files() {
     TestCase::new(file!())
-        .git([
+        .git(&[
             Commit("feat: Existing feature"),
             Tag("v1.0.0"),
             Commit("feat: New feature"),

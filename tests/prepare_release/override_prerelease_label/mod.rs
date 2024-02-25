@@ -3,7 +3,7 @@ use crate::helpers::{
     TestCase,
 };
 
-const TEST_CASE: TestCase<5, 0> = TestCase::new(file!()).git([
+const TEST_CASE: TestCase = TestCase::new(file!()).git(&[
     Commit("Initial commit"),
     Tag("v1.0.0"),
     Commit("feat: New feature in existing release"),

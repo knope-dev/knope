@@ -58,7 +58,7 @@ Generally, the code of a snapshot test looks like this
 #[test]
 fn name_of_test() {
     TestCase::new(file!())  // Corresponds to a directory you make for this test
-        .git([              // Run Git commands as needed to set up the test
+        .git(&[              // Run Git commands as needed to set up the test
             Commit("Initial commit"),
             Tag("v0.1.0"),
         ])

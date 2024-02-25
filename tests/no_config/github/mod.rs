@@ -1,6 +1,6 @@
 use crate::helpers::{GitCommand::*, *};
 
-const TEST_CASE: TestCase = TestCase::new(file!()).git([
+const TEST_CASE: TestCase = TestCase::new(file!()).git(&[
     Commit("feat: Existing Feature"),
     Tag("v1.0.0"),
     Commit("feat: Something"),

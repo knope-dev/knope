@@ -9,44 +9,48 @@ use snapbox::{
 };
 use tempfile::TempDir;
 
-use crate::helpers::{assert, commit, copy_dir_contents, init, tag};
+use crate::helpers::{assert, commit, copy_dir_contents, get_tags, init, tag};
 
-pub struct TestCase<const GIT_LENGTH: usize, const ENV_LENGTH: usize> {
+pub struct TestCase {
     file_name: &'static str,
-    git: [GitCommand; GIT_LENGTH],
-    env: [(&'static str, &'static str); ENV_LENGTH],
+    git: &'static [GitCommand],
+    env: Option<(&'static str, &'static str)>,
     remote: Option<&'static str>,
+    expected_tags: Option<&'static [&'static str]>,
 }
 
-impl TestCase<0, 0> {
+impl TestCase {
     /// Create a new `TestCase`. `file_name` should be an invocation of `file!()`.
     pub const fn new(file_name: &'static str) -> Self {
         Self {
             file_name,
-            env: [],
-            git: [],
+            env: None,
+            git: &[],
             remote: None,
+            expected_tags: None,
         }
     }
 
-    pub const fn git<const GIT_LENGTH: usize>(
-        self,
-        commands: [GitCommand; GIT_LENGTH],
-    ) -> TestCase<GIT_LENGTH, 0> {
-        TestCase::<GIT_LENGTH, 0> {
+    pub const fn git(self, commands: &'static [GitCommand]) -> TestCase {
+        TestCase {
             file_name: self.file_name,
             remote: self.remote,
             git: commands,
-            env: [],
+            env: None,
+            expected_tags: self.expected_tags,
         }
     }
-}
 
-impl<const GIT_LENGTH: usize, const ENV_LENGTH: usize> TestCase<GIT_LENGTH, ENV_LENGTH> {
-    pub fn with_remote(mut self, remote: &'static str) -> TestCase<GIT_LENGTH, ENV_LENGTH> {
+    pub fn with_remote(mut self, remote: &'static str) -> TestCase {
         self.remote = Some(remote);
         self
     }
+
+    pub fn expected_tags(mut self, expected_tags: &'static [&'static str]) -> Self {
+        self.expected_tags = Some(expected_tags);
+        self
+    }
+
     pub fn run(self, command: &str) {
         let working_dir = tempfile::tempdir().unwrap();
         let parts = command.split_whitespace().collect::<Vec<_>>();
@@ -81,7 +85,7 @@ impl<const GIT_LENGTH: usize, const ENV_LENGTH: usize> TestCase<GIT_LENGTH, ENV_
             real = real.arg(arg);
             dry_run = dry_run.arg(arg);
         }
-        for (key, value) in self.env {
+        if let Some((key, value)) = self.env {
             real = real.env(key, value);
             dry_run = dry_run.env(key, value);
         }
@@ -120,28 +124,20 @@ impl<const GIT_LENGTH: usize, const ENV_LENGTH: usize> TestCase<GIT_LENGTH, ENV_
         if out_dir.exists() {
             assert().subset_matches(out_dir, path);
         }
-    }
-}
 
-impl<const GIT_LENGTH: usize> TestCase<GIT_LENGTH, 0> {
-    pub fn env(self, key: &'static str, value: &'static str) -> TestCase<GIT_LENGTH, 1> {
-        TestCase {
-            file_name: self.file_name,
-            git: self.git,
-            remote: self.remote,
-            env: [(key, value)],
+        if let Some(expected_tags) = self.expected_tags {
+            let actual_tags = get_tags(path);
+            pretty_assertions::assert_eq!(expected_tags, actual_tags);
         }
     }
 
-    pub fn envs<const ENV_LENGTH: usize>(
-        self,
-        envs: [(&'static str, &'static str); ENV_LENGTH],
-    ) -> TestCase<GIT_LENGTH, ENV_LENGTH> {
+    pub fn env(self, key: &'static str, value: &'static str) -> TestCase {
         TestCase {
             file_name: self.file_name,
             git: self.git,
             remote: self.remote,
-            env: envs,
+            env: Some((key, value)),
+            expected_tags: self.expected_tags,
         }
     }
 }

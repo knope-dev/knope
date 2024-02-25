@@ -3,7 +3,7 @@ use crate::helpers::{GitCommand::*, TestCase};
 #[test]
 fn test() {
     TestCase::new(file!())
-        .git([
+        .git(&[
             Commit("Initial commit"),
             Tag("rust/v0.1.2"),
             Tag("python/v3.4.5"),
