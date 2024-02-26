@@ -35,7 +35,7 @@ gix = { version = "0.59.0", default-features = false, features = [
 log = "0.4.20"
 env_logger = "0.11.2"
 indexmap = { version = "2.2.3", features = ["serde"] }
-inquire = { version = "0.6.2", default-features = false, features = [
+inquire = { version = "0.7.0", default-features = false, features = [
   "crossterm",
 ] }
 changesets = "0.2.2"
