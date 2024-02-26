@@ -30,24 +30,24 @@ itertools = "0.12.1"
 miette = { version = "7.1.0", features = ["fancy"] }
 thiserror = "1.0.57"
 gix = { version = "0.58.0", default-features = false, features = [
-  "max-performance-safe",
+    "max-performance-safe",
 ] }
 log = "0.4.20"
 env_logger = "0.11.2"
 indexmap = { version = "2.2.3", features = ["serde"] }
-inquire = { version = "0.6.2", default-features = false, features = [
-  "crossterm",
+inquire = { version = "0.7.0", default-features = false, features = [
+    "crossterm",
 ] }
 changesets = "0.2.2"
 time = { version = "0.3.34" }
 datta = "0.1.0"
 serde_yaml = "0.9.32"
-enum-iterator = "1.5.0"
+enum-iterator = "2.0.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 snapbox = { version = "0.5.6", features = [
-  "path",
+    "path",
 ], git = "https://github.com/dbanty/trycmd" }
 tempfile = "3.10.0"
 
