@@ -48,7 +48,7 @@ enum-iterator = "2.0.0"
 pretty_assertions = "1.4.0"
 rstest = { version = "0.18.2", default-features = false }
 snapbox = { version = "0.5.6", features = ["path"] }
-tempfile = "3.10.0"
+tempfile = "3.10.1"
 
 [profile.release]
 strip = true
