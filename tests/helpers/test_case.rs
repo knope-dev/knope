@@ -120,8 +120,11 @@ impl TestCase {
             real.assert().success().stdout_matches(output);
         }
 
-        let out_dir = path.join("out");
-        if out_dir.exists() {
+        if in_dir.exists() {
+            let mut out_dir = data_path.join("out");
+            if !out_dir.exists() {
+                out_dir = in_dir;
+            }
             assert().subset_matches(out_dir, path);
         }
 

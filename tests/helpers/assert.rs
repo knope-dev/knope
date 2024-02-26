@@ -14,4 +14,5 @@ pub fn assert() -> Assert {
     Assert::new()
         .substitutions(substitutions)
         .action_env("SNAPSHOTS")
+        .normalize_paths(false)
 }
