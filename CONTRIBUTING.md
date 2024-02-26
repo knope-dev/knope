@@ -45,8 +45,6 @@ To create a new test:
 1. Copy a test directory
 2. Add it as a `mod` to whatever directory is above it.
 3. Change the contents of `in` as required for what you're testing.
-   This directory will be copied, and `knope` will be
-   run within it.
 4. Change the contents of `out` to match what `in` should look like after running the command (for example, increased
    versions)
 5. Change `mod.rs` to have the setup & command invocation that you want
@@ -55,7 +53,7 @@ To create a new test:
 
 ### How snapshot tests work
 
-Generally, the code of a snapshot test looks like this
+Most snapshot tests look like this:
 
 ```rust
 #[test]
@@ -70,17 +68,19 @@ fn name_of_test() {
 }
 ```
 
-This test is expected to be defined within a "test directory," which contains the following:
+This test must be in a "test directory," which has the following:
 
 1. An `in` directory with all the files that the command needs to run.
-   These will be copied to a temporary
-   directory.
+   `TestCase::run` will create a temporary directory, copy the contents of `in` into it, and run the command from there.
 2. An `out` directory, if the command should alter the files in `in`.
-3. A `stdout.log` file if the command is expected to succeed and produce an output.
-4. A `dry_run_stdout.log` file if the command should also be run with `--dry-run` to snapshot the output.
-5. A `stderr.log` file if the command is expected to fail and produce an error message.
+3. If the command should succeed (exit with a 0 status code):
+   1. A `stdout.log` file if the command produces an output.
+   2. A `dryrun_stdout.log` file if `.run()` should _also_ execute the command with `--dry-run` to snapshot the output.
+4. If the command should fail (exit with a non-0 status code):
+   1. A `stderr.log` file if the command should fail and produce an error message.
+   2. A `dryrun_stderr.log` file if `.run()` should _also_ execute the command with `--dry-run` to snapshot the output.
 
-If neither of `stdout.log` or `stderr.log` are present, the test is expected to succeed and produce no output.
+If neither of `stdout.log` or `stderr.log` are present, the command should succeed and produce no output.
 
 `TestCase` leverages [snapbox](https://crates.io/crates/snapbox) under the hood, so you can set `SNAPSHOTS=overwrite` to
 update the snapshots if you've made changes to the test.
