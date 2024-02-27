@@ -13,16 +13,6 @@ extra_changelog_sections = [
   ] },
 ]
 
-[github]
-owner = "knope-dev"
-repo = "knope"
-
-[[workflows]]
-name = "prepare-release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
 [[workflows]]
 name = "release"
 

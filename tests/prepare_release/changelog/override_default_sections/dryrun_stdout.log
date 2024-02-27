@@ -17,15 +17,4 @@ Would add the following to CHANGELOG.md:
 Would add files to git:
   Cargo.toml
   CHANGELOG.md
-Would create a release on GitHub with name 2.0.0 ([DATE]) and tag v2.0.0 and body:
-## 🐣 Broke
-
-### Something you hopefully don't care about
-
-## 🔧 Fixed
-
-### Something you do care about
-
-## ➕ Added
-
-### Something new
+Would create Git tag v2.0.0
