@@ -1,7 +1,7 @@
 use snapbox::{Assert, Substitutions};
 use time::{macros::format_description, OffsetDateTime};
 
-/// Assert that inclues [DATE] substitution
+/// Assert that includes [DATE] substitution
 pub fn assert() -> Assert {
     let mut substitutions = Substitutions::default();
     let time_format = format_description!("[year]-[month]-[day]");
