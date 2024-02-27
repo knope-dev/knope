@@ -3,6 +3,7 @@ mod changelog;
 mod enable_prerelease;
 mod inconsistent_versions;
 mod invalid_versioned_files;
+mod merge_commits;
 mod missing_versioned_files;
 mod multiple_packages;
 mod no_version_change;
@@ -20,8 +21,6 @@ mod unknown_versioned_file_format;
 use std::{
     fs::{copy, create_dir, read_to_string, write},
     path::Path,
-    thread::sleep,
-    time::Duration,
 };
 
 use changesets::{Change, ChangeType, UniqueId, Versioning};
@@ -82,62 +81,6 @@ fn handle_pre_versions_that_are_too_new() {
     assert().matches(
         Data::read_from(&source_path.join("EXPECTED_Cargo.toml"), None),
         read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
-}
-
-#[test]
-fn merge_commits() {
-    env_logger::init();
-    // Arrange a knope project with a merge commit.
-    // Make a directory at a known path
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
-    init(temp_path);
-    commit(temp_path, "Initial commit");
-    create_branch(temp_path, "feature");
-    commit(temp_path, "feat: A new feature");
-    switch_branch(temp_path, "main");
-    // Even if the latest tag commit is newer than the merged, the ancestors from the merge should be processed
-    sleep(Duration::from_secs(1));
-    commit(temp_path, "feat: existing feature");
-    tag(temp_path, "v1.2.3"); // The current stable version
-    merge_branch(temp_path, "feature");
-
-    let source_path = Path::new("tests/prepare_release/merge_commits");
-    for file in ["knope.toml", "Cargo.toml", "CHANGELOG.md"] {
-        copy(source_path.join(file), temp_path.join(file)).unwrap();
-    }
-
-    // Act.
-    let dry_run_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .arg("--dry-run")
-        .current_dir(temp_path)
-        .assert();
-    let actual_assert = Command::new(cargo_bin!("knope"))
-        .arg("release")
-        .current_dir(temp_path)
-        .assert();
-
-    // Assert.
-    dry_run_assert
-        .success()
-        .with_assert(assert())
-        .stdout_matches(Data::read_from(
-            &source_path.join("dry_run_output.txt"),
-            None,
-        ));
-    actual_assert.success().stdout_matches(Data::read_from(
-        &source_path.join("actual_output.txt"),
-        None,
-    ));
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_Cargo.toml"), None),
-        read_to_string(temp_path.join("Cargo.toml")).unwrap(),
-    );
-    assert().matches(
-        Data::read_from(&source_path.join("EXPECTED_CHANGELOG.md"), None),
-        read_to_string(temp_path.join("CHANGELOG.md")).unwrap(),
     );
 }
 

@@ -4,7 +4,7 @@ use std::{
 };
 
 use snapbox::{
-    cmd::{cargo_bin, Command},
+    cmd::{cargo_bin, Command, OutputAssert},
     Data,
 };
 use tempfile::TempDir;
@@ -51,13 +51,13 @@ impl TestCase {
         self
     }
 
-    pub fn run(self, command: &str) {
+    /// Set up a new temporary directory with the contents of the `in` directory (if any).
+    /// Initialize a git repository and run the commands in `git`.
+    pub fn arrange(&self) -> TempDir {
         let working_dir = tempfile::tempdir().unwrap();
-        let parts = command.split_whitespace().collect::<Vec<_>>();
         let path = working_dir.path();
-        let data_path = Path::new(self.file_name).parent().unwrap();
 
-        let in_dir = data_path.join("in");
+        let in_dir = self.in_dir();
         if in_dir.exists() {
             copy_dir_contents(&in_dir, path);
         }
@@ -74,11 +74,18 @@ impl TestCase {
             }
         }
 
+        working_dir
+    }
+
+    /// Run `command` in `working_dir` with any `self.env` set.
+    pub fn act(&self, working_dir: TempDir, command: &str) -> Asserts {
+        let data_path = self.data_path();
+        let parts = command.split_whitespace().collect::<Vec<_>>();
         let mut real = Command::new(cargo_bin!("knope"))
-            .current_dir(path)
+            .current_dir(working_dir.path())
             .with_assert(assert());
         let mut dry_run = Command::new(cargo_bin!("knope"))
-            .current_dir(path)
+            .current_dir(working_dir.path())
             .with_assert(assert());
 
         for arg in parts {
@@ -91,24 +98,45 @@ impl TestCase {
         }
         dry_run = dry_run.arg("--dry-run");
 
-        let dry_run_stdout_file = data_path.join("dryrun_stdout.log");
-        let dry_run_stderr_file = data_path.join("dryrun_stderr.log");
+        let dry_run = if Self::dry_run_stdout(data_path).exists()
+            || Self::dry_run_stderr(data_path).exists()
+        {
+            Some(dry_run.assert())
+        } else {
+            None
+        };
+
+        Asserts {
+            dry_run,
+            real: real.assert(),
+            working_dir,
+        }
+    }
+
+    pub fn assert(&self, asserts: Asserts) {
+        let Asserts {
+            real,
+            dry_run,
+            working_dir,
+        } = asserts;
+        let data_path = self.data_path();
+        let dry_run_stdout_file = Self::dry_run_stdout(data_path);
+        let dry_run_stderr_file = Self::dry_run_stderr(data_path);
         if dry_run_stdout_file.exists() {
             dry_run
-                .assert()
+                .unwrap()
                 .success()
                 .stdout_matches(Data::read_from(&dry_run_stdout_file, None));
         } else if dry_run_stderr_file.exists() {
             dry_run
-                .assert()
+                .unwrap()
                 .failure()
                 .stderr_matches(Data::read_from(&dry_run_stderr_file, None));
         }
 
         let stderr_file = data_path.join("stderr.log");
         if stderr_file.exists() {
-            real.assert()
-                .failure()
+            real.failure()
                 .stderr_matches(Data::read_from(&stderr_file, None));
         } else {
             let stdout_file = data_path.join("stdout.log");
@@ -117,9 +145,12 @@ impl TestCase {
             } else {
                 "".into()
             };
-            real.assert().success().stdout_matches(output);
+            real.success().stdout_matches(output);
         }
 
+        let path = working_dir.path();
+
+        let in_dir = self.in_dir();
         if in_dir.exists() {
             let mut out_dir = data_path.join("out");
             if !out_dir.exists() {
@@ -134,6 +165,19 @@ impl TestCase {
         }
     }
 
+    fn dry_run_stderr(data_path: &Path) -> PathBuf {
+        data_path.join("dryrun_stderr.log")
+    }
+
+    fn dry_run_stdout(data_path: &Path) -> PathBuf {
+        data_path.join("dryrun_stdout.log")
+    }
+
+    /// Runs `.arrange()`, `.act()`, and `.assert()`.
+    pub fn run(self, command: &str) {
+        self.assert(self.act(self.arrange(), command));
+    }
+
     pub fn env(self, key: &'static str, value: &'static str) -> TestCase {
         TestCase {
             file_name: self.file_name,
@@ -143,6 +187,20 @@ impl TestCase {
             expected_tags: self.expected_tags,
         }
     }
+
+    fn data_path(&self) -> &Path {
+        Path::new(self.file_name).parent().unwrap()
+    }
+
+    fn in_dir(&self) -> PathBuf {
+        self.data_path().join("in")
+    }
+}
+
+pub struct Asserts {
+    real: OutputAssert,
+    dry_run: Option<OutputAssert>,
+    working_dir: TempDir,
 }
 
 #[derive(Clone, Copy, Debug)]
