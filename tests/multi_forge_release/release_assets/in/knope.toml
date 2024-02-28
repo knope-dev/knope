@@ -1,6 +1,13 @@
 [package]
-versioned_files = ["Cargo.toml", "go/go.mod"]
+versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
+
+[[package.assets]]
+name = "first_thing_alt_name"
+path = "assets/first_thing"
+
+[[package.assets]]
+path = "assets/second_thing"
 
 [[workflows]]
 name = "prepare-release"
@@ -18,7 +25,3 @@ type = "Release"
 owner = "knope-dev"
 repo = "knope"
 host = "https://codeberg.org"
-
-[github]
-owner = "knope-dev"
-repo = "knope"

@@ -1,3 +1,16 @@
+Would add the following to Cargo.toml: 1.1.0
+Would add the following to go/go.mod: 1.1.0
+Would add the following to CHANGELOG.md: 
+## 1.1.0 ([DATE])
+
+### Features
+
+#### New feature
+
+Would add files to git:
+  Cargo.toml
+  go/go.mod
+  CHANGELOG.md
 Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
 ## Features
 
