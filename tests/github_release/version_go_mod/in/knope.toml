@@ -1,5 +1,5 @@
 [package]
-versioned_files = ["Cargo.toml"]
+versioned_files = ["Cargo.toml", "go/go.mod"]
 changelog = "CHANGELOG.md"
 
 [[workflows]]

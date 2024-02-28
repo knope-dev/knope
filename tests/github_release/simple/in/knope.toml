@@ -1,15 +1,13 @@
 [package]
-versioned_files = ["Cargo.toml", "go/go.mod"]
+name = "test"
+versioned_files = ["Cargo.toml"]
 changelog = "CHANGELOG.md"
 
 [[workflows]]
-name = "prepare-release"
+name = "release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
-
-[[workflows]]
-name = "release"
 
 [[workflows.steps]]
 type = "Release"

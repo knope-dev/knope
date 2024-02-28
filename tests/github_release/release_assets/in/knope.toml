@@ -10,12 +10,6 @@ path = "assets/first_thing"
 path = "assets/second_thing"
 
 [[workflows]]
-name = "prepare-release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
-[[workflows]]
 name = "release"
 
 [[workflows.steps]]
