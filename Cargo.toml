@@ -32,7 +32,7 @@ thiserror = "1.0.57"
 gix = { version = "0.58.0", default-features = false, features = [
   "max-performance-safe",
 ] }
-log = "0.4.20"
+log = "0.4.21"
 env_logger = "0.11.2"
 indexmap = { version = "2.2.3", features = ["serde"] }
 inquire = { version = "0.7.0", default-features = false, features = [
