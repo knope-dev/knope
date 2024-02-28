@@ -1,0 +1,23 @@
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+extra_changelog_sections = [
+  { name = "🐣 Broke", types = [
+    "major",
+  ] },
+  { name = "🔧 Fixed", types = [
+    "patch",
+  ] }, # Order intentially different than normal
+  { name = "➕ Added", types = [
+    "minor",
+  ] },
+]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Release"

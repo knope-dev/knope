@@ -29,7 +29,7 @@ clap = { version = "4.5.1", features = ["cargo", "string", "env"] }
 itertools = "0.12.1"
 miette = { version = "7.1.0", features = ["fancy"] }
 thiserror = "1.0.57"
-gix = { version = "0.59.0", default-features = false, features = [
+gix = { version = "0.58.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 log = "0.4.20"
@@ -46,7 +46,6 @@ enum-iterator = "2.0.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
-rstest = { version = "0.18.2", default-features = false }
 snapbox = { version = "0.5.7", features = ["path"] }
 tempfile = "3.10.1"
 

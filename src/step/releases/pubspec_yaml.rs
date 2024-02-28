@@ -109,7 +109,7 @@ mod tests {
     use crate::dry_run::fake_dry_run;
     #[test]
     fn test_get_version() {
-        let content = include_str!("../../../tests/prepare_release/pubspec_yaml/pubspec.yaml");
+        let content = include_str!("../../../tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
 
         assert_eq!(
             get_version(content, Path::new("")).unwrap(),
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_set_version() {
-        let content = include_str!("../../../tests/prepare_release/pubspec_yaml/pubspec.yaml");
+        let content = include_str!("../../../tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
 
         let new = set_version(
             &mut fake_dry_run(),

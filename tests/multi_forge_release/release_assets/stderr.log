@@ -1,0 +1,5 @@
+Error: config::gitea_asset_uploads (https://github.com/knope-dev/knope/issues/779)
+
+  × Asset uploads for Gitea are not supported
+  help: Remove the `[[package.assets]]` key from your config.
+

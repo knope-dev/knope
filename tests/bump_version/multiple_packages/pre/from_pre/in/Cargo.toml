@@ -1,0 +1,3 @@
+[package]
+name = "multiple-packages.pre"
+version = "0.1.3-rc.0"

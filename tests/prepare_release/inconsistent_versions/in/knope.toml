@@ -1,0 +1,8 @@
+[package]
+versioned_files = ["pyproject.toml", "Cargo.toml"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

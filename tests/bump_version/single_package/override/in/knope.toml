@@ -1,0 +1,9 @@
+[package]
+versioned_files = ["Cargo.toml"]
+
+[[workflows]]
+name = "bump"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Major"

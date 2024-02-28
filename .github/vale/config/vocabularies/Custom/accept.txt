@@ -13,3 +13,7 @@ TOML
 rebasing
 Gitea
 Codeberg
+toolchain
+Taplo
+NPM
+snapbox

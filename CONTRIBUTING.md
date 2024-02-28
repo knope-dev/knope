@@ -20,25 +20,74 @@ Use `just reformat` to reformat the docs and `just build-docs` to check for brok
 
 ## `just` and `justfile`
 
-[`just`](https://just.systems/man/en/chapter_1.html) is a command runner (like `make`) which makes it easier to run common tasks the same way in multiple platforms. Specifically, you can run the same sorts of commands that CI does to replicate failures (or prevent them) locally! Start by installing via [your favorite method](https://just.systems/man/en/chapter_4.html) (personally, I use [`cargo binstall just`][cargo-binstall]). Then, run `just -l` to see all the available commands.
+[`just`](https://just.systems/man/en/chapter_1.html) is a command runner (like `make`) which makes it easier to run
+common tasks the same way on many platforms. Specifically, you can run the same sorts of commands that CI does to
+replicate failures (or prevent them) locally! Start by installing
+via [your favorite method](https://just.systems/man/en/chapter_4.html) (like [`cargo binstall just`][cargo-binstall]).
+Then, run `just -l` to see all the available commands.
 
 ## Formatting
 
-We use `rustfmt` to format Rust code, but we depend on unstable features (e.g., sorting imports). You need to install the nightly toolchain (e.g., `rustup toolchain install nightly`) before formatting the code.
+This project uses `rustfmt` to format Rust code, but depends on unstable features (for example, sorting imports).
+You need to install the nightly toolchain (for example, with `rustup toolchain install nightly`) before formatting the
+code.
 
-We also use [Prettier](https://prettier.io) to format Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx)) and [Taplo](https://crates.io/crates/taplo-cli) for formatting TOML. `just install-all-dependencies` will install Taplo (via [cargo-binstall], which must be installed separately), but will not install NPM.
+[Prettier](https://prettier.io) formats Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx))
+and [Taplo](https://crates.io/crates/taplo-cli) formats TOML. `just install-all-dependencies` will install
+Taplo (via [cargo-binstall], which you must install manually), but won't install NPM.
 
 ## Snapshot Tests
 
-We use [snapbox](https://crates.io/crates/snapbox) for most of the integration tests in the `tests` dir. This allows us to run commands end-to-end and compare the output to what we expect (making it much clearer when things change).
+Most of the tests for Knope are end-to-end snapshot tests in the `tests` directory, where one directory/module
+corresponds to one test.
+To create a new test:
 
-The general workflow for a snapshot test is:
+1. Copy a test directory
+2. Add it as a `mod` to whatever directory is above it.
+3. Change the contents of `in` as required for what you're testing.
+4. Change the contents of `out` to match what `in` should look like after running the command (for example, increased
+   versions)
+5. Change `mod.rs` to have the setup & command invocation that you want
+6. Run the test with `just` (or `cargo test`)
+7. If the test fails, you can run `SNAPSHOTS=overwrite just` to update the snapshots
 
-1. Create a new directory in `tests` (optionally nested in a subdirectory relevant to what you're testing) which contains all the setup files you need (e.g., a `knope.toml` and a `Cargo.toml`).
-2. Create a temp directory and copy all the source files over.
-3. Use the functions from `tests/git_repo_helpers` to set up a git repo and add any commits/tags you need (for testing releases).
-4. Run the command and verify the output using snapbox.
+### How snapshot tests work
 
-A good example of this is the `prerelease_after_release` test in `tests/prepare_release.rs`.
+Most snapshot tests look like this:
+
+```rust
+#[test]
+fn name_of_test() {
+    TestCase::new(file!())  // Corresponds to a directory you make for this test
+        .git(&[              // Run Git commands as needed to set up the test
+            Commit("Initial commit"),
+            Tag("v0.1.0"),
+        ])
+        .env("KNOPE_PRERELEASE_LABEL", "alpha")  // Set environment variables as needed
+        .run("prepare-release --prerelease-label alpha")  // The command you want to run, omitting the binary name
+}
+```
+
+This test must be in a "test directory," which has the following:
+
+1. An `in` directory with all the files that the command needs to run.
+   `TestCase::run` will create a temporary directory, copy the contents of `in` into it, and run the command from there.
+2. An `out` directory, if the command should alter the files in `in`.
+3. If the command should succeed (exit with a 0 status code):
+   1. A `stdout.log` file if the command produces an output.
+   2. A `dryrun_stdout.log` file if `.run()` should _also_ execute the command with `--dry-run` to snapshot the output.
+4. If the command should fail (exit with a non-0 status code):
+   1. A `stderr.log` file if the command should fail and produce an error message.
+   2. A `dryrun_stderr.log` file if `.run()` should _also_ execute the command with `--dry-run` to snapshot the output.
+
+If neither of `stdout.log` or `stderr.log` are present, the command should succeed and produce no output.
+
+`TestCase` leverages [snapbox](https://crates.io/crates/snapbox) under the hood, so you can set `SNAPSHOTS=overwrite` to
+update the snapshots if you've made changes to the test.
+
+The setup functions (`new`, `git`, `env`) of `TestCase` are `const`,
+so you can define them once and reuse them in multiple cases,
+when slightly different setups should produce the same results
+(for example, in `tests/prepare_release/override_prerelease_label/mod.rs`).
 
 [cargo-binstall]: https://github.com/cargo-bins/cargo-binstall
