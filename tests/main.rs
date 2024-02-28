@@ -8,4 +8,5 @@ mod helpers;
 mod multi_forge_release;
 mod no_config;
 mod prepare_release;
+mod upgrade;
 mod validate;
