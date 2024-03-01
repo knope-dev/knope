@@ -327,9 +327,9 @@ dependencies = [
 
 [[package]]
 name = "datta"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b1b21522a40222b0c97683682936f69688c57a189c4d1e38072f5f0f34837b7"
+checksum = "2897b6ee2df01d35004f74c652187aca598d5d5f072b08b346453dd8ac67690a"
 dependencies = [
  "regex",
 ]

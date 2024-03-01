@@ -40,7 +40,7 @@ inquire = { version = "0.7.0", default-features = false, features = [
 ] }
 changesets = "0.2.2"
 time = { version = "0.3.34" }
-datta = "0.1.0"
+datta = "0.1.1"
 serde_yaml = "0.9.32"
 enum-iterator = "2.0.0"
 
