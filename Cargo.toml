@@ -46,7 +46,7 @@ enum-iterator = "2.0.0"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
-snapbox = { version = "0.5.7", features = ["path"] }
+snapbox = { version = "0.5.8", features = ["path"] }
 tempfile = "3.10.1"
 
 [profile.release]
