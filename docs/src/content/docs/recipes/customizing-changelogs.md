@@ -121,9 +121,9 @@ Now, when running a [`CreateChangeFile`] step (for example, with `knope document
 
 ```text
 ? What type of change is this?
-  major
-  minor
   patch
+  minor
+  major
 > note
 [↑↓ to move, enter to select, type to filter]
 ```

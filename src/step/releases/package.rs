@@ -230,16 +230,16 @@ impl Default for ChangelogSections {
     fn default() -> Self {
         let mut changelog_sections = IndexMap::new();
         changelog_sections.insert(
-            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("major")),
-            ChangeLogSectionName::from("Breaking Changes"),
+            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("patch")),
+            ChangeLogSectionName::from("Fixes"),
         );
         changelog_sections.insert(
             ChangelogSectionSource::CustomChangeType(CustomChangeType::from("minor")),
             ChangeLogSectionName::from("Features"),
         );
         changelog_sections.insert(
-            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("patch")),
-            ChangeLogSectionName::from("Fixes"),
+            ChangelogSectionSource::CustomChangeType(CustomChangeType::from("major")),
+            ChangeLogSectionName::from("Breaking Changes"),
         );
         changelog_sections.insert(CommitFooter::from("Changelog-Note").into(), "Notes".into());
         Self(changelog_sections)
