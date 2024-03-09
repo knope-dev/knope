@@ -18,6 +18,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
+        if: matrix.os == 'ubuntu-latest'
         with:
           node-version: 20
           cache: 'npm'
@@ -31,7 +32,13 @@ jobs:
         run: cargo-binstall --no-confirm just --force
 
       - name: Run CI
+        if: matrix.os == 'ubuntu-latest'
         run: just binstall_args="--force" install-all-dependencies ci
+
+      - name: Run tests only
+        if: matrix.os == 'windows-latest'
+        run: just test
+
   vale:
     name: Vale
     runs-on: ubuntu-latest
