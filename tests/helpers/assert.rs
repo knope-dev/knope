@@ -2,7 +2,7 @@ use snapbox::{Assert, Substitutions};
 use time::{macros::format_description, OffsetDateTime};
 
 /// Assert that includes [DATE] substitution
-pub fn assert() -> Assert {
+pub fn assert(normalize_paths: bool) -> Assert {
     let mut substitutions = Substitutions::default();
     let time_format = format_description!("[year]-[month]-[day]");
     substitutions
@@ -14,5 +14,5 @@ pub fn assert() -> Assert {
     Assert::new()
         .substitutions(substitutions)
         .action_env("SNAPSHOTS")
-        .normalize_paths(false)
+        .normalize_paths(normalize_paths)
 }

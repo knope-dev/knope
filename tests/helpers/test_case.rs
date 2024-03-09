@@ -83,10 +83,10 @@ impl TestCase {
         let parts = command.split_whitespace().collect::<Vec<_>>();
         let mut real = Command::new(cargo_bin!("knope"))
             .current_dir(working_dir.path())
-            .with_assert(assert());
+            .with_assert(assert(true));
         let mut dry_run = Command::new(cargo_bin!("knope"))
             .current_dir(working_dir.path())
-            .with_assert(assert());
+            .with_assert(assert(true));
 
         for arg in parts {
             real = real.arg(arg);
@@ -156,7 +156,7 @@ impl TestCase {
             if !out_dir.exists() {
                 out_dir = in_dir;
             }
-            assert().subset_matches(out_dir, path);
+            assert(false).subset_matches(out_dir, path);
         }
 
         if let Some(expected_tags) = self.expected_tags {
