@@ -22,11 +22,7 @@ jobs:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: docs/package-lock.json
-      - name: Install cargo-binstall
-        run: |
-          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-          cp cargo-binstall $HOME/.cargo/bin
+      - uses: cargo-bins/cargo-binstall@main
 
       - name: Install nightly toolchain (for formatting)
         run: rustup toolchain install nightly --component rustfmt
