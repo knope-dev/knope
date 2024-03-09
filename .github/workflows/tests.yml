@@ -26,6 +26,7 @@ jobs:
       - uses: cargo-bins/cargo-binstall@main
 
       - name: Install nightly toolchain (for formatting)
+        if: matrix.os == 'ubuntu-latest'
         run: rustup toolchain install nightly --component rustfmt
 
       - name: Install Just
