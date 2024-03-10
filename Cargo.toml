@@ -20,7 +20,6 @@ base64 = "0.21.7"
 toml = "0.8.10"
 serde_json = { version = "1.0.114", features = ["preserve_order"] }
 git2 = { version = "0.18.2", default-features = false }
-execute = "0.2.13"
 platform-dirs = "0.3.0"
 git-conventional = "0.12.6"
 ureq = { version = "2.9.6", features = ["json"] }
@@ -43,6 +42,7 @@ time = { version = "0.3.34" }
 datta = "0.1.1"
 enum-iterator = "2.0.0"
 relative-path = { version = "1.9.2", features = ["serde"] }
+subprocess = "0.2.9"
 serde_yaml = "0.9.32"
 
 [dev-dependencies]
