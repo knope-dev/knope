@@ -1,4 +1,5 @@
 mod bump_version;
+mod command;
 mod default_workflows;
 mod generate;
 mod git_release;

@@ -1,25 +1,3 @@
-#![forbid(unsafe_code)]
-#![deny(clippy::all)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::cargo)]
-#![deny(warnings)]
-#![allow(clippy::multiple_crate_versions)] // Let cargo-deny handle this
-
-// Don't panic!
-#![cfg_attr(
-    not(test),
-    deny(
-        clippy::panic,
-        clippy::exit,
-        clippy::unimplemented,
-        clippy::todo,
-        clippy::expect_used,
-        clippy::unwrap_used,
-        clippy::indexing_slicing,
-        clippy::missing_panics_doc
-    )
-)]
-
 use std::{io::stdout, str::FromStr};
 
 use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};

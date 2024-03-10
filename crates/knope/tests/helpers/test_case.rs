@@ -189,7 +189,9 @@ impl TestCase {
     }
 
     fn data_path(&self) -> &Path {
-        Path::new(self.file_name).parent().unwrap()
+        Path::new(self.file_name.strip_prefix("crates/knope/").unwrap())
+            .parent()
+            .unwrap()
     }
 
     fn in_dir(&self) -> PathBuf {

@@ -194,80 +194,6 @@ mod test_replace_variables {
     }
 
     #[test]
-    fn multiple_variables() {
-        let template = "blah $$ branch_name".to_string();
-        let mut variables = IndexMap::new();
-        variables.insert("$$".to_string(), Variable::Version);
-        variables.insert("branch_name".to_string(), Variable::IssueBranch);
-        let issue = Issue {
-            key: "13".to_string(),
-            summary: "1234".to_string(),
-        };
-        let expected_branch_name = branch_name_from_issue(&issue);
-        let state = State {
-            jira_config: None,
-            github: state::GitHub::New,
-            github_config: None,
-            gitea: state::Gitea::New,
-            gitea_config: None,
-            issue: state::Issue::Selected(issue),
-            packages: vec![package().0],
-            verbose: Verbose::No,
-        };
-
-        let result = replace_variables(
-            Template {
-                template,
-                variables,
-            },
-            &state,
-        )
-        .unwrap();
-
-        assert_eq!(
-            result,
-            format!(
-                "blah {} {}",
-                &state.packages[0]
-                    .get_version(Verbose::No)
-                    .unwrap()
-                    .into_latest()
-                    .unwrap(),
-                expected_branch_name
-            )
-        );
-    }
-
-    #[test]
-    fn replace_version() {
-        let template = "blah $$ other blah".to_string();
-        let mut variables = IndexMap::new();
-        variables.insert("$$".to_string(), Variable::Version);
-        let state = State::new(None, None, None, vec![package().0], Verbose::No);
-
-        let result = replace_variables(
-            Template {
-                template,
-                variables,
-            },
-            &state,
-        )
-        .unwrap();
-
-        assert_eq!(
-            result,
-            format!(
-                "blah {} other blah",
-                &state.packages[0]
-                    .get_version(Verbose::No)
-                    .unwrap()
-                    .into_latest()
-                    .unwrap(),
-            )
-        );
-    }
-
-    #[test]
     fn replace_prepared_version() {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
@@ -357,30 +283,5 @@ mod test_replace_variables {
             .body()
             .unwrap();
         assert_eq!(result, format!("blah {changelog_entry} other blah"));
-    }
-
-    #[test]
-    fn replace_changelog_entry_previous_release() {
-        let template = "blah $$ other blah".to_string();
-        let mut variables = IndexMap::new();
-        variables.insert("$$".to_string(), Variable::ChangelogEntry);
-        let (mut package, _temp_dir_guard) = package();
-        let version = Version::new(1, 2, 3, None);
-        let changelog_entry_body = "### Features\n\n#### Blah";
-        let changelog_entry = format!("## {version} 2023-09-17\n\n{changelog_entry_body}");
-        let changelog_path = package.changelog.take().unwrap().path;
-        write(&changelog_path, changelog_entry).unwrap();
-        package.changelog = Some(changelog_path.try_into().unwrap()); // Have to reload content
-        let state = State::new(None, None, None, vec![package], Verbose::No);
-
-        let result = replace_variables(
-            Template {
-                template,
-                variables,
-            },
-            &state,
-        )
-        .unwrap();
-        assert_eq!(result, format!("blah {changelog_entry_body} other blah"));
     }
 }
