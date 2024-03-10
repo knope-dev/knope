@@ -28,6 +28,7 @@ pub(crate) enum Variable {
 /// A template string and the variables that should be replaced in it.
 pub(crate) struct Template {
     pub(crate) template: String,
+    #[serde(default)]
     pub(crate) variables: IndexMap<String, Variable>,
 }
 
@@ -124,7 +125,7 @@ pub(crate) enum Error {
     #[error("Too many packages defined")]
     #[diagnostic(
         code(variables::too_many_packages),
-        help("The Version variable in a Command step can only be used with a single [package].")
+        help("The Version and Changelog variables can only be used with a single [package].")
     )]
     TooManyPackages,
     #[error(transparent)]

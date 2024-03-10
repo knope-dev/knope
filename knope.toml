@@ -1,19 +1,23 @@
-[package]
-versioned_files = ["Cargo.toml"]
+[packages.knope]
+versioned_files = ["crates/knope/Cargo.toml"]
 changelog = "CHANGELOG.md"
 extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
 
-[[package.assets]]
+[[packages.knope.assets]]
 path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
 
-[[package.assets]]
+[[packages.knope.assets]]
 path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
 
-[[package.assets]]
+[[packages.knope.assets]]
 path = "artifacts/knope-x86_64-apple-darwin.tgz"
 
-[[package.assets]]
+[[packages.knope.assets]]
 path = "artifacts/knope-aarch64-apple-darwin.tgz"
+
+[packages.knope-versioned-files]
+versioned_files = ["crates/knope-versioned-files/Cargo.toml"]
+changelog = "crates/knope-versioned-files/CHANGELOG.md"
 
 [[workflows]]
 name = "prepare-release"
@@ -31,22 +35,17 @@ command = "npx prettier CHANGELOG.md --write"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release $version\" && git push --force --set-upstream origin release"
-
-[workflows.steps.variables]
-"$version" = "Version"
+command = "git commit -m \"chore: prepare release\" && git push --force --set-upstream origin release"
 
 [[workflows.steps]]
 type = "CreatePullRequest"
 base = "main"
 
 [workflows.steps.title]
-template = "chore: prepare release $version"
-variables = { "$version" = "Version" }
+template = "chore: prepare releases"
 
 [workflows.steps.body]
-template = "This PR was created by Knope. Merging it will create a new release\n\n$changelog"
-variables = { "$changelog" = "ChangelogEntry" }
+template = "This PR was created by Knope. Merging it will create a new release"
 
 [[workflows]]
 name = "release"

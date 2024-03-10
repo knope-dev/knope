@@ -1,0 +1,19 @@
+[package]
+name = "knope-versioned-files"
+description = "A library for handling all the versioned files supported by Knope"
+version = "0.1.0"
+authors = ["Dylan Anthony <contact@dylananthony.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/knope-dev/knope"
+keywords = ["semantic-version"]
+categories = ["development-tools"]
+rust-version = "1.71.1"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[lints]
+workspace = true
