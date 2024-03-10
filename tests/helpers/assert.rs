@@ -11,6 +11,9 @@ pub fn assert(normalize_paths: bool) -> Assert {
             OffsetDateTime::now_utc().format(time_format).unwrap(),
         )
         .unwrap();
+    substitutions
+        .insert("[EXE]", std::env::consts::EXE_SUFFIX)
+        .unwrap();
     Assert::new()
         .substitutions(substitutions)
         .action_env("SNAPSHOTS")

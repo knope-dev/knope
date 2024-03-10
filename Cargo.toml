@@ -41,8 +41,9 @@ inquire = { version = "0.7.0", default-features = false, features = [
 changesets = "0.2.2"
 time = { version = "0.3.34" }
 datta = "0.1.1"
-serde_yaml = "0.9.32"
 enum-iterator = "2.0.0"
+relative-path = { version = "1.9.2", features = ["serde"] }
+serde_yaml = "0.9.32"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
