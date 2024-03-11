@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
+use knope_versioning::{Label, PreVersion, Prerelease, StableVersion, Version};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
-pub(crate) use version::{Label, PreVersion, Prerelease, StableVersion, Version};
 
 use super::{package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release};
 use crate::{
@@ -12,8 +12,6 @@ use crate::{
     workflow::Verbose,
     RunType,
 };
-
-pub(crate) mod version;
 
 /// The various rules that can be used when bumping the current version of a project via
 /// [`crate::step::Step::BumpVersion`].

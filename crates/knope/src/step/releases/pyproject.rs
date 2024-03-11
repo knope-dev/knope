@@ -3,12 +3,12 @@ use std::{
     str::FromStr,
 };
 
+use knope_versioning::Version;
 use miette::Diagnostic;
 use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use super::{semver, semver::Version};
 use crate::{dry_run::DryRun, fs};
 
 /// Extract the consistent version from a `pyproject.toml` file's content or return an error.
@@ -74,7 +74,7 @@ pub(crate) enum Error {
     NoVersions(PathBuf),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Semver(#[from] semver::version::Error),
+    Semver(#[from] knope_versioning::semver::Error),
 }
 
 #[derive(Debug, Deserialize)]

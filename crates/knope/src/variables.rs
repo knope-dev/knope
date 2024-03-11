@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use knope_versioning::Version;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +7,7 @@ use crate::{
     integrations::git::branch_name_from_issue,
     state,
     state::State,
-    step::releases::{package, semver, semver::Version, Package, Release},
+    step::releases::{package, semver, Package, Release},
     workflow::Verbose,
 };
 
@@ -161,6 +162,7 @@ pub(crate) enum Error {
 mod test_replace_variables {
     use std::fs::write;
 
+    use knope_versioning::Version;
     use pretty_assertions::assert_eq;
     use tempfile::TempDir;
 
@@ -171,7 +173,7 @@ mod test_replace_variables {
             issues::Issue,
             releases::{
                 changelog::HeaderLevel, conventional_commits::ConventionalCommit,
-                package::ChangelogSections, semver::Version, Change, ChangeType, Package, Release,
+                package::ChangelogSections, Change, ChangeType, Package, Release,
             },
         },
         workflow::Verbose,

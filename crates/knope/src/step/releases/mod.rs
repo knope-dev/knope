@@ -3,9 +3,9 @@ use std::{collections::BTreeMap, fmt, fmt::Display};
 use ::changesets::PackageChange;
 use conventional_commits::{add_releases_from_conventional_commits, ConventionalCommit};
 use itertools::Itertools;
+use knope_versioning::{PreVersion, StableVersion, Version};
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
-use semver::{PreVersion, StableVersion, Version};
 use versioned_file::PackageFormat;
 
 pub(crate) use self::{
@@ -177,7 +177,7 @@ type Prereleases = BTreeMap<StableVersion, PrereleaseMap>;
 mod non_empty_map {
     use std::collections::BTreeMap;
 
-    use super::semver::{Label, Prerelease};
+    use knope_versioning::{Label, Prerelease};
 
     #[derive(Clone, Debug, Eq, PartialEq)]
     /// Used to track the various pre-releases of a version, can never be empty

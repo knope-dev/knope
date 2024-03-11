@@ -3,16 +3,13 @@ use std::{
     str::FromStr,
 };
 
+use knope_versioning::Version;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use serde_yaml::{from_str, to_string, Mapping, Value};
 use thiserror::Error;
 
-use crate::{
-    dry_run::DryRun,
-    fs,
-    step::{releases, releases::semver::Version},
-};
+use crate::{dry_run::DryRun, fs};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
     from_str::<PubSpec>(content)
@@ -91,7 +88,7 @@ pub(crate) enum Error {
     },
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Version(#[from] releases::semver::version::Error),
+    Version(#[from] knope_versioning::semver::Error),
 }
 
 #[derive(Debug, Deserialize, Serialize)]

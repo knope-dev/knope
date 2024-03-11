@@ -8,6 +8,7 @@ use std::{
 use git2::{build::CheckoutBuilder, Branch, BranchType, IndexAddOption, Repository};
 use gix::{object::Kind, refs::transaction::PreviousValue, ObjectId};
 use itertools::Itertools;
+use knope_versioning::Version;
 use log::error;
 use miette::Diagnostic;
 
@@ -16,10 +17,7 @@ use crate::{
     fs, prompt,
     prompt::select,
     state,
-    step::{
-        issues::Issue,
-        releases::{semver::Version, CurrentVersions},
-    },
+    step::{issues::Issue, releases::CurrentVersions},
     workflow::Verbose,
     RunType,
 };

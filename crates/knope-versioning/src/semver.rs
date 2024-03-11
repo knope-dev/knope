@@ -1,29 +1,33 @@
 use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
+#[cfg(feature = "miette")]
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Version {
+pub enum Version {
     Stable(StableVersion),
     Pre(PreVersion),
 }
 
 impl Version {
-    pub(crate) const fn stable_component(&self) -> StableVersion {
+    #[must_use]
+    pub const fn stable_component(&self) -> StableVersion {
         match self {
             Self::Stable(stable) => *stable,
             Self::Pre(pre) => pre.stable_component,
         }
     }
 
-    pub(crate) const fn is_prerelease(&self) -> bool {
+    #[must_use]
+    pub const fn is_prerelease(&self) -> bool {
         matches!(self, Version::Pre(_))
     }
 }
 
 impl Version {
-    pub(crate) fn new(major: u64, minor: u64, patch: u64, pre: Option<Prerelease>) -> Self {
+    #[must_use]
+    pub fn new(major: u64, minor: u64, patch: u64, pre: Option<Prerelease>) -> Self {
         let stable = StableVersion {
             major,
             minor,
@@ -39,12 +43,6 @@ impl Version {
     }
 }
 
-impl Default for Version {
-    fn default() -> Self {
-        Self::new(0, 0, 0, None)
-    }
-}
-
 impl From<StableVersion> for Version {
     fn from(stable: StableVersion) -> Self {
         Self::Stable(stable)
@@ -52,14 +50,15 @@ impl From<StableVersion> for Version {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(crate) struct StableVersion {
-    pub(crate) major: u64,
+pub struct StableVersion {
+    pub major: u64,
     pub(crate) minor: u64,
     pub(crate) patch: u64,
 }
 
 impl StableVersion {
-    pub(crate) const fn increment_major(self) -> Self {
+    #[must_use]
+    pub const fn increment_major(self) -> Self {
         Self {
             major: self.major + 1,
             minor: 0,
@@ -67,7 +66,8 @@ impl StableVersion {
         }
     }
 
-    pub(crate) const fn increment_minor(self) -> Self {
+    #[must_use]
+    pub const fn increment_minor(self) -> Self {
         Self {
             major: self.major,
             minor: self.minor + 1,
@@ -75,7 +75,8 @@ impl StableVersion {
         }
     }
 
-    pub(crate) const fn increment_patch(self) -> Self {
+    #[must_use]
+    pub const fn increment_patch(self) -> Self {
         Self {
             major: self.major,
             minor: self.minor,
@@ -112,9 +113,9 @@ impl Display for StableVersion {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct PreVersion {
-    pub(crate) stable_component: StableVersion,
-    pub(crate) pre_component: Prerelease,
+pub struct PreVersion {
+    pub stable_component: StableVersion,
+    pub pre_component: Prerelease,
 }
 
 impl Ord for Version {
@@ -168,40 +169,35 @@ impl FromStr for Version {
     }
 }
 
-#[derive(Debug, Diagnostic, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "miette", derive(Diagnostic))]
 #[error("Found invalid semantic version {0}")]
-#[diagnostic(
-    code(version),
-    help("The version must be a valid Semantic Version"),
-    url("https://knope.tech/reference/concepts/semantic-versioning")
+#[cfg_attr(
+    feature = "miette",
+    diagnostic(
+        code(version),
+        help("The version must be a valid Semantic Version"),
+        url("https://knope.tech/reference/concepts/semantic-versioning")
+    )
 )]
-pub(crate) struct Error(String);
+pub struct Error(String);
 
 impl Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Stable(StableVersion {
-                major,
-                minor,
-                patch,
-            }) => write!(f, "{major}.{minor}.{patch}"),
+            Self::Stable(stable) => write!(f, "{stable}"),
             Self::Pre(PreVersion {
-                stable_component:
-                    StableVersion {
-                        major,
-                        minor,
-                        patch,
-                    },
+                stable_component,
                 pre_component,
-            }) => write!(f, "{major}.{minor}.{patch}-{pre_component}",),
+            }) => write!(f, "{stable_component}-{pre_component}",),
         }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct Prerelease {
-    pub(crate) label: Label,
-    pub(crate) version: u64,
+pub struct Prerelease {
+    pub label: Label,
+    pub version: u64,
 }
 
 impl Display for Prerelease {
@@ -241,7 +237,8 @@ impl PartialOrd for Prerelease {
 }
 
 impl Prerelease {
-    pub(crate) fn new(label: Label, version: u64) -> Self {
+    #[must_use]
+    pub fn new(label: Label, version: u64) -> Self {
         Self { label, version }
     }
 }
@@ -249,7 +246,7 @@ impl Prerelease {
 /// The label component of a Prerelease (e.g., "alpha" in "1.0.0-alpha.1").
 #[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[repr(transparent)]
-pub(crate) struct Label(pub(crate) String);
+pub struct Label(pub String);
 
 impl Display for Label {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -2,15 +2,13 @@ use std::{io::stdout, str::FromStr};
 
 use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
 use itertools::Itertools;
+use knope_versioning::Version;
 use miette::{miette, Result};
 
 use crate::{
     config::{Config, ConfigSource},
     state::{RunType, State},
-    step::{
-        releases::{semver::Version, PackageName},
-        Step,
-    },
+    step::{releases::PackageName, Step},
     workflow::{Verbose, Workflow},
 };
 

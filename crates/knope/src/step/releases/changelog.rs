@@ -2,11 +2,12 @@ use std::{fmt::Display, path::PathBuf, str::FromStr};
 
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_versioning::Version;
 use miette::Diagnostic;
 use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
 
-use super::{semver::Version, Change, ChangeType, ChangelogSectionSource, Package, TimeError};
+use super::{Change, ChangeType, ChangelogSectionSource, Package, TimeError};
 use crate::{dry_run::DryRun, fs, step::releases::package::ChangelogSections};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -149,9 +150,9 @@ mod test_get_release {
     use time::macros::date;
 
     use super::*;
-    use crate::step::releases::{changelog::HeaderLevel, semver::Version};
+    use crate::step::releases::changelog::HeaderLevel;
 
-    const CONTENT: &str = r#"
+    const CONTENT: &str = r"
 # Changelog
 
 Hey ya'll this is a changelog
@@ -171,7 +172,7 @@ Now with more detail!
 
 ## 0.0.1
 Initial release
-"#;
+";
 
     #[test]
     fn first_section() {

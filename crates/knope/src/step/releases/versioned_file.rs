@@ -6,10 +6,11 @@ use std::{
 };
 
 use enum_iterator::{all, Sequence};
+use knope_versioning::Version;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use super::{cargo, git, go, package_json, pubspec_yaml, pyproject, semver::Version};
+use super::{cargo, git, go, package_json, pubspec_yaml, pyproject};
 use crate::{dry_run::DryRun, step::releases::go::GoVersioning, workflow::Verbose};
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -11,6 +11,7 @@ use std::{
 use enum_iterator::all;
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_versioning::{Label, Version};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +20,7 @@ use super::{
     changelog::Changelog,
     changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
     semver,
-    semver::{bump, ConventionalRule, Label, Version},
+    semver::{bump, ConventionalRule},
     versioned_file,
     versioned_file::VersionedFile,
     workspace, Change, Release, Rule,

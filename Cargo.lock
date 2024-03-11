@@ -1189,6 +1189,7 @@ dependencies = [
  "indexmap",
  "inquire",
  "itertools",
+ "knope-versioning",
  "log",
  "miette",
  "platform-dirs",
@@ -1205,8 +1206,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "knope-versioned-files"
+name = "knope-versioning"
 version = "0.1.0"
+dependencies = [
+ "miette",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "libc"

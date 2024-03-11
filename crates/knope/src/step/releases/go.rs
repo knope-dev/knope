@@ -1,9 +1,10 @@
 use std::{fmt::Display, path::Path, str::FromStr};
 
+use knope_versioning::Version;
 use miette::Diagnostic;
 use thiserror::Error;
 
-use super::{semver::Version, versioned_file::VersionFromSource};
+use super::versioned_file::VersionFromSource;
 use crate::{
     dry_run::DryRun,
     fs,
@@ -410,7 +411,7 @@ pub(crate) fn get_version(
     }
 
     Ok(VersionFromSource {
-        version: Version::default(),
+        version: Version::new(0, 0, 0, None),
         source: VersionSource::Default,
     })
 }

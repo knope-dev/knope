@@ -3,12 +3,12 @@ use std::{
     str::FromStr,
 };
 
+use knope_versioning::Version;
 use miette::Diagnostic;
 use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use super::semver::Version;
 use crate::{dry_run::DryRun, fs};
 
 pub(crate) fn get_version(content: &str, path: &Path) -> Result<Version, Error> {
@@ -61,7 +61,7 @@ pub(crate) enum Error {
     Fs(#[from] fs::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Semver(#[from] super::semver::version::Error),
+    Semver(#[from] knope_versioning::semver::Error),
 }
 
 #[derive(Debug, Deserialize)]
