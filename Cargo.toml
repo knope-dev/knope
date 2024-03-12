@@ -17,7 +17,7 @@ rust-version = "1.71.1"
 [dependencies]
 serde = { version = "1.0.197", features = ["derive"] }
 base64 = "0.21.7"
-toml = "0.8.10"
+toml = "0.8.11"
 serde_json = { version = "1.0.114", features = ["preserve_order"] }
 git2 = { version = "0.18.2", default-features = false }
 platform-dirs = "0.3.0"
@@ -27,14 +27,14 @@ http = "1.1.0"
 clap = { version = "4.5.2", features = ["cargo", "string", "env"] }
 itertools = "0.12.1"
 miette = { version = "7.2.0", features = ["fancy"] }
-thiserror = "1.0.57"
+thiserror = "1.0.58"
 gix = { version = "0.58.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 log = "0.4.21"
 env_logger = "0.11.3"
 indexmap = { version = "2.2.5", features = ["serde"] }
-inquire = { version = "0.7.0", default-features = false, features = [
+inquire = { version = "0.7.1", default-features = false, features = [
   "crossterm",
 ] }
 changesets = "0.2.2"

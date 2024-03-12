@@ -135,7 +135,7 @@ extra_changelog_sections = [
 
 ## `assets`
 
-Assets is a list of files to upload to a GitHub release. They do nothing without [GitHub configuration](/reference/Config File/github).
+Assets is a list of files to upload to a GitHub release. They do nothing without [GitHub configuration](/reference/config-file/github).
 Assets are per-package. Each asset can optionally have a `name`, this is what it will appear as in GitHub releases.
 The `name` defaults to the final part of the path.
 
