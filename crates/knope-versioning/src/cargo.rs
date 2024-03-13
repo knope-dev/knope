@@ -1,3 +1,4 @@
+#[cfg(feature = "miette")]
 use miette::Diagnostic;
 use serde::Deserialize;
 use thiserror::Error;
