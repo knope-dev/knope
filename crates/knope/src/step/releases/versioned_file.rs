@@ -6,12 +6,12 @@ use std::{
 };
 
 use enum_iterator::{all, Sequence};
-use knope_versioning::Version;
+use knope_versioning::{Cargo, Version};
 use miette::Diagnostic;
 use thiserror::Error;
 
-use super::{cargo, git, go, package_json, pubspec_yaml, pyproject};
-use crate::{dry_run::DryRun, step::releases::go::GoVersioning, workflow::Verbose};
+use super::{git, go, package_json, pubspec_yaml, pyproject};
+use crate::{dry_run::DryRun, fs, step::releases::go::GoVersioning, workflow::Verbose};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct VersionedFile {
@@ -77,7 +77,7 @@ enum ErrorKind {
     Go(#[from] go::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Cargo(#[from] cargo::Error),
+    Cargo(#[from] knope_versioning::cargo::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     PyProject(#[from] pyproject::Error),
@@ -87,6 +87,9 @@ enum ErrorKind {
     #[error(transparent)]
     #[diagnostic(transparent)]
     PubSpecYaml(#[from] pubspec_yaml::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -146,12 +149,14 @@ impl PackageFormat {
         verbose: Verbose,
     ) -> Result<VersionFromSource> {
         match self {
-            PackageFormat::Cargo => cargo::get_version(content, path)
-                .map_err(ErrorKind::Cargo)
-                .map(|version| VersionFromSource {
-                    version,
-                    source: path.into(),
-                }),
+            PackageFormat::Cargo => {
+                Cargo::new(path.to_string_lossy().to_string(), content.to_string())
+                    .map_err(ErrorKind::Cargo)
+                    .map(|cargo| VersionFromSource {
+                        version: cargo.get_version().clone(),
+                        source: path.into(),
+                    })
+            }
             PackageFormat::Poetry => pyproject::get_version(content, path)
                 .map_err(ErrorKind::PyProject)
                 .map(|version| VersionFromSource {
@@ -190,8 +195,12 @@ impl PackageFormat {
     ) -> Result<String> {
         match self {
             PackageFormat::Cargo => {
-                cargo::set_version(dry_run, content, &new_version.version, path)
+                let cargo = Cargo::new(path.to_string_lossy().into(), content)?
+                    .set_version(new_version.version.clone());
+                let new_version = new_version.version.to_string();
+                fs::write(dry_run, &new_version, path, cargo.get_toml())
                     .map_err(Error::from)
+                    .map(|()| new_version)
             }
             PackageFormat::Poetry => {
                 pyproject::set_version(dry_run, content, &new_version.version, path)

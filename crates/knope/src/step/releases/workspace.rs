@@ -5,13 +5,13 @@ use std::{
 
 use enum_iterator::{all, Sequence};
 use itertools::Itertools;
+use knope_versioning::cargo;
 use miette::Diagnostic;
 
 use crate::{
     fs,
     fs::read_to_string,
     step::releases::{
-        cargo::CargoPackage,
         versioned_file::{PackageFormat, VersionedFile},
         Package,
     },
@@ -72,7 +72,7 @@ fn cargo_workspace_members(path: &Path) -> Result<Vec<Package>, Error> {
             let member = member_val.as_str().ok_or(Error::Members)?;
             let member_path = workspace_path.join(member).join("Cargo.toml");
             let member_contents = read_to_string(&member_path)?;
-            toml::from_str::<CargoPackage>(&member_contents)
+            toml::from_str::<cargo::Toml>(&member_contents)
                 .map_err(|err| Error::Toml(err, member_path.clone()))
                 .map(|cargo| {
                     Package::new(

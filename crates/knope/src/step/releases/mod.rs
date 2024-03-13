@@ -19,7 +19,6 @@ use crate::{
     workflow::Verbose, RunType,
 };
 
-mod cargo;
 pub(crate) mod changelog;
 pub(crate) mod changesets;
 pub(crate) mod conventional_commits;

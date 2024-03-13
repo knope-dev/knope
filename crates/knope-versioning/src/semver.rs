@@ -49,6 +49,13 @@ impl From<StableVersion> for Version {
     }
 }
 
+impl<'de> Deserialize<'de> for Version {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let version = String::deserialize(deserializer)?;
+        Version::from_str(&version).map_err(serde::de::Error::custom)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct StableVersion {
     pub major: u64,
