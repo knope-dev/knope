@@ -25,7 +25,7 @@ env_logger = "0.11.3"
 execute = "0.2.13"
 git2 = { version = "0.18.2", default-features = false }
 git-conventional = "0.12.6"
-gix = { version = "0.58.0", default-features = false, features = [
+gix = { version = "0.60.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 http = "1.1.0"
