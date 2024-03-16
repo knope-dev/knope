@@ -1,0 +1,12 @@
+Error: config::missing_versioned_file
+
+  × File pyproject.toml does not exist
+   ╭─[2:20]
+ 1 │ [package]
+ 2 │ versioned_files = ["pyproject.toml", "Cargo.toml", "package.json", "go.mod"]
+   ·                    ────────┬───────
+   ·                            ╰── Declared here
+ 3 │ 
+   ╰────
+  help: Make sure the file exists and is accessible.
+

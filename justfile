@@ -16,10 +16,10 @@ build-docs:
     npm run --prefix docs build
 
 test:
-    cargo t
+    cargo t --workspace
 
 lint:
-    cargo clippy -- -D warnings
+    cargo clippy --workspace -- -D warnings
     cargo-deny check
 
 # Reformat all files, requires `npx` and `install-lint-dependencies`

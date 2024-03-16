@@ -1,0 +1,8 @@
+Error: package_json::deserialize (https://knope.tech/reference/config-file/packages/#packagejson)
+
+  × Error deserializing package.json: EOF while parsing a value at line 1
+  │ column 0
+  ╰─▶ EOF while parsing a value at line 1 column 0
+  help: knope expects the package.json file to be an object with a top level
+        `version` property
+

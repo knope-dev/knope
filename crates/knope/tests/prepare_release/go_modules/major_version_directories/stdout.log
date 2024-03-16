@@ -1,0 +1,26 @@
+Loading package v1
+go.mod has version 1.0.0
+sub_dir/go.mod has version 1.0.0
+Loading package v2
+v2/go.mod has version 2.0.0
+sub_dir/v2/go.mod has version 2.0.0
+Getting conventional commits since last release of package v1
+Only checking commits with scopes: ["v1"]
+No tags found matching pattern v1/v
+Finding ALL commits
+Getting conventional commits since last release of package v2
+Only checking commits with scopes: ["v2"]
+No tags found matching pattern v2/v
+Finding ALL commits
+Determining new version for v1
+Looking for Git tags matching package name.
+No tags found matching pattern v1/v
+commit fix(v1): A fix
+	implies rule PATCH
+Using PATCH rule to bump from 1.0.0 to 1.0.1
+Determining new version for v2
+Looking for Git tags matching package name.
+No tags found matching pattern v2/v
+commit feat(v2): New feature
+	implies rule MINOR
+Using MINOR rule to bump from 2.0.0 to 2.1.0

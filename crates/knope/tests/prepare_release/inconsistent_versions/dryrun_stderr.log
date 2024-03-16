@@ -1,0 +1,6 @@
+Error: knope_versioning::inconsistent_versions (https://knope.tech/reference/concepts/package/#version)
+
+  × Found inconsistent versions in package: pyproject.toml had 1.0.0 and
+  │ Cargo.toml had 2.0.0
+  help: All files in a package must have the same version
+
