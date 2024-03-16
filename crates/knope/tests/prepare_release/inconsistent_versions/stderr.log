@@ -1,8 +1,6 @@
-Error:   × Problem with workflow release
+Error: knope_versioning::inconsistent_versions (https://knope.tech/reference/concepts/package/#version)
 
-Error: semver::inconsistent_versions (https://knope.tech/reference/concepts/package/#version)
-
-  × Versioned files within the same package must have the same version. Found
-  │ 1.0.0 in file pyproject.toml which does not match 2.0.0 in file Cargo.toml
-  help: Manually update all versioned_files to have the correct version
+  × Found inconsistent versions in package: pyproject.toml had 1.0.0 and
+  │ Cargo.toml had 2.0.0
+  help: All files in a package must have the same version
 

@@ -17,6 +17,7 @@ pub(crate) struct State {
     pub(crate) issue: Issue,
     pub(crate) packages: Vec<releases::Package>,
     pub(crate) verbose: Verbose,
+    pub(crate) all_git_tags: Vec<String>,
 }
 
 impl State {
@@ -26,6 +27,7 @@ impl State {
         github_config: Option<config::GitHub>,
         gitea_config: Option<config::Gitea>,
         packages: Vec<releases::Package>,
+        all_git_tags: Vec<String>,
         verbose: Verbose,
     ) -> Self {
         State {
@@ -37,6 +39,7 @@ impl State {
             issue: Issue::Initial,
             packages,
             verbose,
+            all_git_tags,
         }
     }
 }

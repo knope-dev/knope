@@ -1,4 +1,4 @@
-use crate::helpers::{GitCommand::*, *};
+use crate::helpers::*;
 
 #[test]
 fn https_remote() {

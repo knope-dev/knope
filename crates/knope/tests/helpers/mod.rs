@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::expect_used)]
 
 mod assert;
 mod files;

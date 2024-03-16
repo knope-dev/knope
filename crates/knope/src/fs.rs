@@ -47,8 +47,8 @@ pub(crate) fn create_dir(dry_run: DryRun, path: &Path) -> Result<(), Error> {
     }
 }
 
-pub(crate) fn read_to_string(path: &Path) -> Result<String, Error> {
-    std::fs::read_to_string(path).map_err(|source| Error::Read {
+pub(crate) fn read_to_string<P: AsRef<Path> + Into<PathBuf>>(path: P) -> Result<String, Error> {
+    std::fs::read_to_string(path.as_ref()).map_err(|source| Error::Read {
         path: path.into(),
         source,
     })

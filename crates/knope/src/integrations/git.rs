@@ -263,6 +263,7 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, Error> {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod test_select_issue_from_branch_name {
     use super::*;
 
@@ -482,16 +483,45 @@ pub(crate) fn create_tag(dry_run: DryRun, name: &str) -> Result<(), Error> {
 ///
 /// ## Parameters
 /// - `prefix`: Only tag names starting with this string will be considered.
+/// - `major_filter`: Only versions with this major number will be considered.
 /// - `verbose`: Whether to print extra information.
 pub(crate) fn get_current_versions_from_tags(
     prefix: Option<&str>,
-    major_filter: Option<&Vec<u64>>,
     verbose: Verbose,
-) -> Result<CurrentVersions, Error> {
-    let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
+    all_tags: &[String],
+) -> CurrentVersions {
     let pattern = prefix
         .as_ref()
         .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
+    let tags: Vec<&String> = all_tags
+        .iter()
+        .filter(|tag| tag.starts_with(&pattern))
+        .collect();
+
+    if let Verbose::Yes = verbose {
+        if tags.is_empty() {
+            println!("No tags found matching pattern {pattern}");
+        }
+    }
+
+    let mut current_versions = CurrentVersions::default();
+    for tag in tags {
+        let version_string = tag.replace(&pattern, "");
+        if let Ok(version) = Version::from_str(version_string.as_str()) {
+            let is_stable = !version.is_prerelease();
+            current_versions.update_version(version);
+            if is_stable {
+                break; // Only prereleases newer than the last stable version are relevant
+            }
+        }
+    }
+
+    current_versions
+}
+
+/// Get all tags on the current branch.
+pub(crate) fn all_tags_on_branch(verbose: Verbose) -> Result<Vec<String>, Error> {
+    let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
     let mut all_tags: HashMap<ObjectId, Vec<String>> = HashMap::new();
     for (id, tag) in repo
         .references()?
@@ -509,7 +539,6 @@ pub(crate) fn get_current_versions_from_tags(
                 )
             })
         })
-        .filter(|(_id, tag_name)| tag_name.starts_with(&pattern))
     {
         all_tags.entry(id).or_default().push(tag);
     }
@@ -525,7 +554,6 @@ pub(crate) fn get_current_versions_from_tags(
             tags.extend(tag);
         }
     }
-
     if let Verbose::Yes = verbose {
         if !all_tags.is_empty() {
             println!(
@@ -533,27 +561,6 @@ pub(crate) fn get_current_versions_from_tags(
                 tags = all_tags.values().flatten().join(", ")
             );
         }
-        if tags.is_empty() {
-            println!("No tags found matching pattern {pattern}");
-        }
     }
-
-    let mut current_versions = CurrentVersions::default();
-    for tag in tags {
-        let version_string = tag.replace(&pattern, "");
-        if let Ok(version) = Version::from_str(version_string.as_str()) {
-            if let Some(major_filter) = major_filter.as_ref() {
-                if !major_filter.contains(&version.stable_component().major) {
-                    continue;
-                }
-            }
-            let is_stable = !version.is_prerelease();
-            current_versions.update_version(version);
-            if is_stable {
-                break; // Only prereleases newer than the last stable version are relevant
-            }
-        }
-    }
-
-    Ok(current_versions)
+    Ok(tags)
 }

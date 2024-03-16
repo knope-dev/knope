@@ -11,5 +11,5 @@ fn release_assets() {
             Tag("v1.0.0"),
             Commit("feat: New feature"),
         ])
-        .run("release --dry-run")
+        .run("release --dry-run");
 }

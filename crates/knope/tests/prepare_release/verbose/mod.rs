@@ -3,7 +3,7 @@ use crate::helpers::{
     TestCase,
 };
 
-/// The PrepareRelease step should print out every commit and changeset summary that will be included,
+/// The `PrepareRelease` step should print out every commit and changeset summary that will be included,
 /// which packages those commits/changesets are applicable to,
 /// and the semantic rules applicable to each change, as well as the final rule and version selected
 /// for each package when the `--verbose` flag is provided.

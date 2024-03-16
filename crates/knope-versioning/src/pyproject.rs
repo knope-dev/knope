@@ -1,27 +1,28 @@
-use std::{path::PathBuf, str::FromStr};
+use std::str::FromStr;
 
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::Version;
+use crate::{action::Action, Version};
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyProject {
-    path: String,
+    path: RelativePathBuf,
     raw_toml: String,
     parsed: Toml,
     version: Version,
 }
 
 impl PyProject {
-    pub(crate) fn new(path: String, raw_toml: String) -> Result<Self, Error> {
+    pub(crate) fn new(path: RelativePathBuf, raw_toml: String) -> Result<Self, Error> {
         match toml::from_str::<Toml>(&raw_toml) {
             Ok(parsed) => parsed
                 .version(&path)
-                .and_then(|version| Version::from_str(&version).map_err(Error::from))
+                .and_then(|version| Version::from_str(version).map_err(Error::from))
                 .map(|version| PyProject {
                     path,
                     raw_toml,
@@ -35,18 +36,30 @@ impl PyProject {
     pub(crate) fn get_version(&self) -> &Version {
         &self.version
     }
+    pub(crate) fn get_path(&self) -> &RelativePathBuf {
+        &self.path
+    }
 
-    pub(crate) fn set_version(mut self, new_version: Version) -> Self {
+    pub(crate) fn set_version(mut self, new_version: &Version) -> Action {
         let version_str = new_version.to_string();
-        self.version = new_version;
-        self.raw_toml = self.parsed.set_version(self.raw_toml, &version_str);
-        self
+        let (poetry_version, project_version) = self.parsed.versions();
+
+        for version in [poetry_version, project_version].into_iter().flatten() {
+            // Account for quotes around value with +- 1
+            let start = version.span().start + 1;
+            let end = version.span().end - 1;
+            self.raw_toml.replace_range(start..end, &version_str);
+        }
+        Action::WriteToFile {
+            path: self.path,
+            content: self.raw_toml,
+        }
     }
 }
 
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
-pub(crate) enum Error {
+pub enum Error {
     #[error("Could not deserialize {0} as a pyproject.toml: {1}")]
     #[cfg_attr( feature = "miette", diagnostic(
         code(pyproject::invalid),
@@ -57,7 +70,7 @@ pub(crate) enum Error {
         ),
         url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
     ))]
-    Deserialization(String, #[source] toml::de::Error),
+    Deserialization(RelativePathBuf, #[source] toml::de::Error),
     #[error("Found conflicting versions {project} and {poetry} in {path}")]
     #[cfg_attr(
         feature = "miette",
@@ -70,7 +83,7 @@ pub(crate) enum Error {
     InconsistentVersions {
         project: String,
         poetry: String,
-        path: PathBuf,
+        path: RelativePathBuf,
     },
     #[error("No versions were found in {0}")]
     #[cfg_attr(
@@ -81,13 +94,13 @@ pub(crate) enum Error {
             url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
         )
     )]
-    NoVersions(PathBuf),
+    NoVersions(RelativePathBuf),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     Semver(#[from] crate::semver::Error),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 struct Toml {
     tool: Option<Tool>,
     project: Option<Metadata>,
@@ -96,7 +109,7 @@ struct Toml {
 impl Toml {
     /// Get the consistent version from `pyproject.toml` or error.
     /// `path` is used for better error messages.
-    fn version(&self, path: &str) -> Result<&str, Error> {
+    fn version(&self, path: &RelativePathBuf) -> Result<&str, Error> {
         let (poetry_version, project_version) = self.versions();
 
         match (poetry_version, project_version) {
@@ -113,7 +126,7 @@ impl Toml {
             }
             (Some(poetry_version), None) => Ok(poetry_version.as_ref()),
             (None, Some(project_version)) => Ok(project_version.as_ref()),
-            (None, None) => Err(Error::NoVersions(path.into())),
+            (None, None) => Err(Error::NoVersions(path.clone())),
         }
     }
 
@@ -128,48 +141,22 @@ impl Toml {
             .and_then(|project| project.version.as_ref());
         (poetry_version, project_version)
     }
-
-    fn versions_mut(&mut self) -> (Option<&mut Spanned<String>>, Option<&mut Spanned<String>>) {
-        let poetry_version = self
-            .tool
-            .as_mut()
-            .and_then(|tool| tool.poetry.as_mut()?.version.as_mut());
-        let project_version = self
-            .project
-            .as_mut()
-            .and_then(|project| project.version.as_mut());
-        (poetry_version, project_version)
-    }
-
-    /// Replace the version(s) in the file's content with `new_version`.
-    ///
-    /// Uses the inner spans of the parsed TOML to determine where the replace contents.
-    fn set_version(&mut self, mut raw_contents: String, new_version: &str) -> String {
-        let (poetry_version, project_version) = self.versions_mut();
-
-        for version in [poetry_version, project_version].into_iter().flatten() {
-            // Account for quotes around value with +- 1
-            let start = version.span().start + 1;
-            let end = version.span().end - 1;
-            raw_contents.replace_range(start..end, new_version);
-            *version.as_mut() = new_version.to_string();
-        }
-        raw_contents
-    }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 struct Tool {
     poetry: Option<Metadata>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 struct Metadata {
     version: Option<Spanned<String>>,
 }
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
 
     #[test]
@@ -181,7 +168,7 @@ mod tests {
         "#;
 
         assert_eq!(
-            PyProject::new(String::new(), content.to_string())
+            PyProject::new(RelativePathBuf::new(), content.to_string())
                 .unwrap()
                 .version,
             Version::from_str("0.1.0-rc.0").unwrap()
@@ -197,7 +184,7 @@ mod tests {
         "#;
 
         assert_eq!(
-            PyProject::new(String::new(), content.to_string())
+            PyProject::new(RelativePathBuf::new(), content.to_string())
                 .unwrap()
                 .version,
             Version::from_str("0.1.0-rc.0").unwrap()
@@ -217,7 +204,7 @@ mod tests {
         "#;
 
         assert_eq!(
-            PyProject::new(String::new(), content.to_string())
+            PyProject::new(RelativePathBuf::new(), content.to_string())
                 .unwrap()
                 .get_version(),
             &Version::from_str("0.1.0-rc.0").unwrap()
@@ -236,7 +223,7 @@ mod tests {
         version = "2.3.4"
         "#;
 
-        match PyProject::new(String::new(), content.to_string()) {
+        match PyProject::new(RelativePathBuf::new(), content.to_string()) {
             Err(Error::InconsistentVersions {
                 poetry, project, ..
             }) => {
@@ -259,10 +246,12 @@ mod tests {
         version = "0.1.0-rc.0"
         "#;
 
-        let pyproject = PyProject::new(String::from("beep/boop"), String::from(content)).unwrap();
-        let pyproject = pyproject.set_version(Version::from_str("1.2.3-rc.4").unwrap());
+        let pyproject =
+            PyProject::new(RelativePathBuf::from("beep/boop"), String::from(content)).unwrap();
+        let action = pyproject.set_version(&Version::from_str("1.2.3-rc.4").unwrap());
 
-        let expected = r#"
+        let expected = Action::WriteToFile {
+            content: r#"
         [tool.poetry]
         name = "tester"
         version = "1.2.3-rc.4"
@@ -271,7 +260,9 @@ mod tests {
         name = "tester"
         version = "1.2.3-rc.4"
         "#
-        .to_string();
-        assert_eq!(pyproject.raw_toml, expected);
+            .to_string(),
+            path: RelativePathBuf::from("beep/boop"),
+        };
+        assert_eq!(action, expected);
     }
 }

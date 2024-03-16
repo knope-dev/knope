@@ -1,4 +1,4 @@
-/// Specifically designed to catch https://github.com/knope-dev/knope/issues/505
+/// Specifically designed to catch <https://github.com/knope-dev/knope/issues/505/>
 use crate::helpers::{commit, create_branch, merge_branch, switch_branch, tag, TestCase};
 
 #[test]

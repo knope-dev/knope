@@ -25,7 +25,7 @@ impl Workflow {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Verbose {
     Yes,
     No,

@@ -1,3 +1,9 @@
+Loading package v1
+go.mod has version 1.0.0
+sub_dir/go.mod has version 1.0.0
+Loading package v2
+v2/go.mod has version 2.0.0
+sub_dir/v2/go.mod has version 2.0.0
 Getting conventional commits since last release of package v1
 Only checking commits with scopes: ["v1"]
 No tags found matching pattern v1/v
@@ -9,13 +15,6 @@ Finding ALL commits
 Determining new version for v1
 Looking for Git tags matching package name.
 No tags found matching pattern v1/v
-Finding version for go.mod
-No version comment in go.mod, searching for relevant Git tags instead.
-Found 1.0.0 from git tag v1.0.0
-Finding version for sub_dir/go.mod
-sub_dir/go.mod is in the subdirectory sub_dir, so it will be used to filter tags.
-No version comment in sub_dir/go.mod, searching for relevant Git tags instead.
-Found 1.0.0 from git tag sub_dir/v1.0.0
 commit fix(v1): A fix
 	implies rule PATCH
 Using PATCH rule to bump from 1.0.0 to 1.0.1
@@ -35,15 +34,6 @@ Would add files to git:
 Determining new version for v2
 Looking for Git tags matching package name.
 No tags found matching pattern v2/v
-Finding version for v2/go.mod
-Major version directory v2 detected, only tags matching that major version will be used.
-No version comment in v2/go.mod, searching for relevant Git tags instead.
-Found 2.0.0 from git tag v2.0.0
-Finding version for sub_dir/v2/go.mod
-Major version directory v2 detected, only tags matching that major version will be used.
-sub_dir/v2/go.mod is in the subdirectory sub_dir, so it will be used to filter tags.
-No version comment in sub_dir/v2/go.mod, searching for relevant Git tags instead.
-Found 2.0.0 from git tag sub_dir/v2.0.0
 commit feat(v2): New feature
 	implies rule MINOR
 Using MINOR rule to bump from 2.0.0 to 2.1.0

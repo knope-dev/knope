@@ -9,5 +9,5 @@ fn test() {
             Tag("python/v3.4.5"),
             Tag("javascript/v6.7.8"),
         ])
-        .run("bump")
+        .run("bump");
 }

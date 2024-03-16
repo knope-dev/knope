@@ -9,7 +9,7 @@ use snapbox::{
 };
 use tempfile::TempDir;
 
-use crate::helpers::{assert, commit, copy_dir_contents, get_tags, init, tag};
+use crate::helpers::{add_remote, assert, commit, copy_dir_contents, get_tags, init, tag};
 
 pub struct TestCase {
     file_name: &'static str,
@@ -63,6 +63,9 @@ impl TestCase {
         }
 
         init(path);
+        if let Some(remote) = self.remote {
+            add_remote(path, remote);
+        }
         for command in self.git {
             match command {
                 GitCommand::Commit(message) => {
@@ -151,11 +154,11 @@ impl TestCase {
         let path = working_dir.path();
 
         let in_dir = self.in_dir();
-        if in_dir.exists() {
-            let mut out_dir = data_path.join("out");
-            if !out_dir.exists() {
-                out_dir = in_dir;
-            }
+        let mut out_dir = data_path.join("out");
+        if !out_dir.exists() {
+            out_dir = in_dir;
+        }
+        if out_dir.exists() {
             assert().subset_matches(out_dir, path);
         }
 

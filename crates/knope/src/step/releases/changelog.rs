@@ -1,8 +1,8 @@
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{fmt::Display, mem::swap, path::PathBuf, str::FromStr};
 
 use indexmap::IndexMap;
 use itertools::Itertools;
-use knope_versioning::Version;
+use knope_versioning::{GoVersioning, Version};
 use miette::Diagnostic;
 use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
@@ -72,7 +72,12 @@ impl TryFrom<PathBuf> for Changelog {
 }
 
 impl Changelog {
-    pub(crate) fn get_release(&self, version: &Version) -> Result<Option<Release>, ParseError> {
+    pub(crate) fn get_release(
+        &self,
+        version: &Version,
+        package: Option<knope_versioning::Package>,
+        go_versioning: GoVersioning,
+    ) -> Result<Option<Release>, ParseError> {
         let section_header_level = self.section_header_level.as_str();
         let expected_header_start = format!("{section_header_level} {version}");
         let mut content_starting_with_first_release = self
@@ -92,11 +97,21 @@ impl Changelog {
             release_sections,
             &format!("{section_header_level}#"),
         ));
+        let additional_tags = package
+            .map(|pkg| pkg.set_version(&version, go_versioning).unwrap_or_default())
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|action| match action {
+                knope_versioning::Action::AddTag { tag } => Some(tag),
+                knope_versioning::Action::WriteToFile { .. } => None,
+            })
+            .collect();
         Ok(Some(Release {
             version,
             date,
             sections,
             header_level,
+            additional_tags,
         }))
     }
 
@@ -142,99 +157,6 @@ impl Changelog {
     }
 }
 
-#[cfg(test)]
-mod test_get_release {
-    use std::path::PathBuf;
-
-    use pretty_assertions::assert_eq;
-    use time::macros::date;
-
-    use super::*;
-    use crate::step::releases::changelog::HeaderLevel;
-
-    const CONTENT: &str = r"
-# Changelog
-
-Hey ya'll this is a changelog
-
-## 0.1.2 2023-05-02
-
-### Features
-- Blah
-
-## 0.1.1
-
-### Fixes
-
-#### it's fixex!
-
-Now with more detail!
-
-## 0.0.1
-Initial release
-";
-
-    #[test]
-    fn first_section() {
-        let changelog = Changelog {
-            path: PathBuf::default(),
-            content: CONTENT.to_string(),
-            section_header_level: HeaderLevel::H2,
-        };
-
-        let section = changelog
-            .get_release(&Version::new(0, 1, 2, None))
-            .unwrap()
-            .unwrap();
-        let expected = Release {
-            version: Version::new(0, 1, 2, None),
-            date: Some(date!(2023 - 05 - 02)),
-            sections: Some(vec![Section {
-                title: "Features".to_string(),
-                body: "- Blah".to_string(),
-            }]),
-            header_level: HeaderLevel::H2,
-        };
-        assert_eq!(section, expected);
-    }
-
-    #[test]
-    fn middle_section() {
-        let changelog = Changelog {
-            path: PathBuf::default(),
-            content: CONTENT.to_string(),
-            section_header_level: HeaderLevel::H2,
-        };
-
-        let section = changelog
-            .get_release(&Version::new(0, 1, 1, None))
-            .unwrap()
-            .unwrap();
-        let expected = Release {
-            version: Version::new(0, 1, 1, None),
-            date: None,
-            sections: Some(vec![Section {
-                title: "Fixes".to_string(),
-                body: "#### it's fixex!\n\nNow with more detail!".to_string(),
-            }]),
-            header_level: HeaderLevel::H2,
-        };
-        assert_eq!(section, expected);
-    }
-
-    #[test]
-    fn no_section() {
-        let changelog = Changelog {
-            path: PathBuf::default(),
-            content: CONTENT.to_string(),
-            section_header_level: HeaderLevel::H2,
-        };
-
-        let section = changelog.get_release(&Version::new(0, 1, 0, None)).unwrap();
-        assert!(section.is_none());
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Release {
     pub(crate) version: Version,
@@ -244,6 +166,10 @@ pub(crate) struct Release {
     ///
     /// Content within is written expecting that the release title will be written at this level
     header_level: HeaderLevel,
+    /// Any tags that should be added for the sake of the versioned files (specifically `go.mod`s)
+    /// This doesn't include the package-level tags, since those will get added by GitHub/Gitea
+    /// sometimes.
+    pub(crate) additional_tags: Vec<String>,
 }
 impl Release {
     pub(crate) fn new(
@@ -251,6 +177,7 @@ impl Release {
         changes: &[Change],
         changelog_sections: &ChangelogSections,
         header_level: HeaderLevel,
+        additional_tags: Vec<String>,
     ) -> Self {
         let mut sections: IndexMap<String, Section> = changelog_sections
             .values()
@@ -297,15 +224,17 @@ impl Release {
             date,
             sections,
             header_level,
+            additional_tags,
         }
     }
 
-    pub(crate) fn empty(version: Version) -> Self {
+    pub(crate) fn empty(version: Version, additional_tags: Vec<String>) -> Self {
         Self {
             version,
             date: Some(OffsetDateTime::now_utc().date()),
             sections: None,
             header_level: HeaderLevel::H2,
+            additional_tags,
         }
     }
 
@@ -438,6 +367,7 @@ impl Release {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test_parse_title {
     use time::macros::date;
 
@@ -557,6 +487,8 @@ impl Package {
         version: Version,
         dry_run: DryRun,
     ) -> Result<Release, Error> {
+        let mut additional_tags = Vec::new();
+        swap(&mut self.pending_tags, &mut additional_tags);
         let release = Release::new(
             version,
             &self.pending_changes,
@@ -564,6 +496,7 @@ impl Package {
             self.changelog
                 .as_ref()
                 .map_or(HeaderLevel::H2, |it| it.section_header_level),
+            additional_tags,
         );
 
         if let Some(changelog) = self.changelog.as_mut() {

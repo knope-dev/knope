@@ -1,15 +1,15 @@
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::Version;
+use crate::{action::Action, Version};
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Cargo {
-    #[allow(dead_code)]
-    path: String,
+    path: RelativePathBuf,
     raw_toml: String,
     parsed: Toml,
 }
@@ -20,7 +20,7 @@ impl Cargo {
     /// # Errors
     ///
     /// If the TOML is invalid or missing the `package.version` property.
-    pub fn new(path: String, raw_toml: String) -> Result<Self, Error> {
+    pub fn new(path: RelativePathBuf, raw_toml: String) -> Result<Self, Error> {
         match toml::from_str::<Toml>(&raw_toml) {
             Ok(parsed) => Ok(Cargo {
                 path,
@@ -37,20 +37,26 @@ impl Cargo {
     }
 
     #[must_use]
-    pub fn get_toml(&self) -> &str {
-        &self.raw_toml
+    pub fn get_path(&self) -> &RelativePathBuf {
+        &self.path
     }
 
     #[must_use]
-    pub fn set_version(mut self, new_version: Version) -> Self {
-        // Account for quotes with +- 1
+    pub fn get_package_name(&self) -> &str {
+        &self.parsed.package.name
+    }
+
+    #[must_use]
+    pub fn set_version(mut self, new_version: &Version) -> Action {
         let start = self.parsed.package.version.span().start + 1;
         let end = self.parsed.package.version.span().end - 1;
         let version_str = new_version.to_string();
-        *self.parsed.package.version.as_mut() = new_version;
 
         self.raw_toml.replace_range(start..end, &version_str);
-        self
+        Action::WriteToFile {
+            path: self.path,
+            content: self.raw_toml,
+        }
     }
 }
 
@@ -64,7 +70,7 @@ pub enum Error {
         url("https://knope.tech/reference/config-file/packages/#cargotoml")
     ))]
     Deserialize {
-        path: String,
+        path: RelativePathBuf,
         #[source]
         source: toml::de::Error,
     },
@@ -73,18 +79,19 @@ pub enum Error {
     Semver(#[from] crate::semver::Error),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Toml {
     pub package: Package,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Package {
     pub name: String,
     version: Spanned<Version>,
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use std::str::FromStr;
 
@@ -103,12 +110,16 @@ mod tests {
         knope-versioning = "0.1.0"
         "#;
 
-        let new = Cargo::new(String::from("beep/boop"), String::from(content)).unwrap();
+        let new = Cargo::new(RelativePathBuf::from("beep/boop"), String::from(content)).unwrap();
 
         let new_version = "1.2.3-rc.4";
         let expected = content.replace("0.1.0-rc.0", new_version);
-        let new = new.set_version(Version::from_str(new_version).unwrap());
+        let expected = Action::WriteToFile {
+            path: RelativePathBuf::from("beep/boop"),
+            content: expected,
+        };
+        let new = new.set_version(&Version::from_str(new_version).unwrap());
 
-        assert_eq!(new.get_toml(), expected);
+        assert_eq!(new, expected);
     }
 }

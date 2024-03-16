@@ -6,33 +6,28 @@ use itertools::Itertools;
 use knope_versioning::{PreVersion, StableVersion, Version};
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
-use versioned_file::PackageFormat;
 
 pub(crate) use self::{
     changelog::Release,
     changesets::{create_change_file, ChangeType},
-    package::{find_packages, ChangelogSectionSource, Package, PackageName},
+    package::{ChangelogSectionSource, Package, PackageName},
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
-    dry_run::DryRun, integrations::git::get_current_versions_from_tags, step::PrepareRelease,
-    workflow::Verbose, RunType,
+    integrations::git::{create_tag, get_current_versions_from_tags},
+    step::PrepareRelease,
+    workflow::Verbose,
+    RunType,
 };
 
 pub(crate) mod changelog;
 pub(crate) mod changesets;
 pub(crate) mod conventional_commits;
-pub(crate) mod git;
 pub(crate) mod gitea;
 pub(crate) mod github;
-pub(crate) mod go;
 pub(crate) mod package;
-mod package_json;
-mod pubspec_yaml;
-mod pyproject;
 pub(crate) mod semver;
 pub(crate) mod versioned_file;
-mod workspace;
 
 pub(crate) fn prepare_release(
     run_type: RunType,
@@ -49,22 +44,28 @@ pub(crate) fn prepare_release(
         prerelease_label,
         allow_empty,
     } = prepare_release;
-    state.packages = add_releases_from_conventional_commits(state.packages, state.verbose)
-        .map_err(Error::from)
-        .and_then(|packages| {
-            changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
-                .map_err(Error::from)
-        })
-        .and_then(|packages| {
-            packages
-                .into_iter()
-                .map(|package| {
-                    package
-                        .write_release(prerelease_label, &mut dry_run_stdout, state.verbose)
-                        .map_err(Error::from)
-                })
-                .collect()
-        })?;
+    state.packages =
+        add_releases_from_conventional_commits(state.packages, &state.all_git_tags, state.verbose)
+            .map_err(Error::from)
+            .and_then(|packages| {
+                changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
+                    .map_err(Error::from)
+            })
+            .and_then(|packages| {
+                packages
+                    .into_iter()
+                    .map(|package| {
+                        package
+                            .write_release(
+                                prerelease_label,
+                                &state.all_git_tags,
+                                &mut dry_run_stdout,
+                                state.verbose,
+                            )
+                            .map_err(Error::from)
+                    })
+                    .collect()
+            })?;
 
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
@@ -106,9 +107,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Semver(#[from] semver::Error),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    GitRelease(#[from] self::git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Git(#[from] crate::integrations::git::Error),
@@ -302,7 +300,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
             .packages
             .iter()
             .map(|package| {
-                find_prepared_release(package, state.verbose).map(|release| {
+                find_prepared_release(package, state.verbose, &state.all_git_tags).map(|release| {
                     release.map(|release| PackageWithRelease {
                         package: package.clone(),
                         release,
@@ -344,11 +342,17 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
             )?;
         }
 
-        // if neither is present, we fall back to git release
+        // if neither is present, we fall back to just creating a tag
         if github_config.is_none() && gitea_config.is_none() {
-            git::release(&mut dry_run_stdout, &tag)?;
+            create_tag(&mut dry_run_stdout, &tag)?;
         }
-        add_go_mod_tags(&package_to_release, &tag, &mut dry_run_stdout)?;
+
+        package_to_release
+            .release
+            .additional_tags
+            .iter()
+            .filter(|additional_tag| **additional_tag != tag)
+            .try_for_each(|additional_tag| create_tag(&mut dry_run_stdout, additional_tag))?;
     }
 
     if let Some(stdout) = dry_run_stdout {
@@ -378,47 +382,38 @@ struct PackageWithRelease {
 
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
-fn find_prepared_release(package: &Package, verbose: Verbose) -> Result<Option<Release>, Error> {
-    let Some(current_version) = package.version_from_files(verbose)? else {
+fn find_prepared_release(
+    package: &Package,
+    verbose: Verbose,
+    all_tags: &[String],
+) -> Result<Option<Release>, Error> {
+    let Some(current_version) = package.version_from_files() else {
         return Ok(None);
     };
     if let Verbose::Yes = verbose {
         println!("Searching for last package tag to determine if there's a release to release");
     }
-    let last_tag = get_current_versions_from_tags(package.name.as_deref(), None, verbose)
-        .map(CurrentVersions::into_latest)?;
+    let last_tag = CurrentVersions::into_latest(get_current_versions_from_tags(
+        package.name.as_deref(),
+        verbose,
+        all_tags,
+    ));
     let version_of_new_release = match last_tag {
-        Some(last_tag) if last_tag != current_version => current_version,
+        Some(last_tag) if last_tag != *current_version => current_version,
         None => current_version,
         _ => return Ok(None),
     };
     package
         .changelog
         .as_ref()
-        .map(|changelog| changelog.get_release(&version_of_new_release))
+        .map(|changelog| {
+            changelog.get_release(
+                version_of_new_release,
+                package.files.clone(),
+                package.go_versioning,
+            )
+        })
         .transpose()
         .map(Option::flatten)
         .map_err(Error::from)
-}
-
-/// Go modules have their versions determined by a Git tag. They _also_ have a _piece_ of their
-/// version in the `go.mod` file _sometimes_. For every other language, `PrepareRelease` updates
-/// the version in the file that defines the version (e.g., Cargo.toml). Typically, consumers will
-/// add a new Git commit _after_ `PrepareRelease`, before `Release`, so if we add the Go tag there,
-/// it's in the wrong place. So the `Release` step needs to write the _right_ version.
-fn add_go_mod_tags(
-    package_with_release: &PackageWithRelease,
-    existing_tag: &str,
-    dry_run: DryRun,
-) -> Result<(), git::Error> {
-    let PackageWithRelease { package, release } = package_with_release;
-    let go_mods = package
-        .versioned_files
-        .iter()
-        .filter(|versioned_file| matches!(versioned_file.format, PackageFormat::Go { .. }))
-        .collect_vec();
-    for go_mod in go_mods {
-        go::create_version_tag(&go_mod.path, &release.version, existing_tag, dry_run)?;
-    }
-    Ok(())
 }

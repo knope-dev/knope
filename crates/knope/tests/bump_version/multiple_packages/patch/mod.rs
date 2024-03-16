@@ -4,5 +4,5 @@ use crate::helpers::{GitCommand::*, TestCase};
 fn test() {
     TestCase::new(file!())
         .git(&[Commit("Initial commit"), Tag("v1.2.3")])
-        .run("bump")
+        .run("bump");
 }

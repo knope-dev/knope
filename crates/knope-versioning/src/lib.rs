@@ -1,34 +1,20 @@
+mod action;
 pub mod cargo;
+mod go_mod;
+mod package;
+mod package_json;
+mod pubspec;
 mod pyproject;
 pub mod semver;
+mod versioned_file;
 
-pub use cargo::Cargo;
-pub use pyproject::PyProject;
+pub use action::Action;
+use cargo::Cargo;
+pub use go_mod::GoVersioning;
+pub use package::{NewError as PackageNewError, Package};
+use pubspec::PubSpec;
+use pyproject::PyProject;
 pub use semver::{Label, PreVersion, Prerelease, StableVersion, Version};
-
-#[derive(Debug)]
-pub enum VersionedFile {
-    Cargo(Cargo),
-    // PubSpec(PubSpec),
-    // GoMod(GoMod),
-    // PackageJson(PackageJson),
-    PyProject(PyProject),
-}
-
-impl VersionedFile {
-    #[must_use]
-    pub fn set_version(self, new_version: Version) -> Self {
-        match self {
-            VersionedFile::Cargo(cargo) => VersionedFile::Cargo(cargo.set_version(new_version)),
-            VersionedFile::PyProject(pyproject) => {
-                VersionedFile::PyProject(pyproject.set_version(new_version))
-            } // VersionedFile::PubSpec(pubspec) => {
-              //     VersionedFile::PubSpec(pubspec.update_version(new_version))
-              // }
-              // VersionedFile::GoMod(gomod) => VersionedFile::GoMod(gomod.update_version(new_version)),
-              // VersionedFile::PackageJson(package_json) => {
-              //     VersionedFile::PackageJson(package_json.update_version(new_version))
-              // }
-        }
-    }
-}
+pub use versioned_file::{
+    Error as VersionedFileError, Path as VersionedFilePath, SetError, UnknownFile, VersionedFile,
+};

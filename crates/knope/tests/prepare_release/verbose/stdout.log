@@ -1,3 +1,8 @@
+Loading package first
+Cargo.toml has version 1.2.3
+pyproject.toml has version 1.2.3
+Loading package second
+package.json has version 0.4.6
 Getting conventional commits since last release of package first
 Only checking commits with scopes: ["first"]
 Finding all commits since tag first/v1.2.3
@@ -5,10 +10,6 @@ Getting conventional commits since last release of package second
 Finding all commits since tag second/v0.4.6
 Determining new version for first
 Looking for Git tags matching package name.
-Finding version for Cargo.toml
-Found 1.2.3 from file Cargo.toml
-Finding version for pyproject.toml
-Found 1.2.3 from file pyproject.toml
 commit feat: A feature
 	implies rule MINOR
 commit feat!: A breaking feature
@@ -34,8 +35,6 @@ changeset feature.md
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
 Determining new version for second
 Looking for Git tags matching package name.
-Finding version for package.json
-Found 0.4.6 from file package.json
 commit feat: A feature
 	implies rule MINOR
 commit feat!: A breaking feature

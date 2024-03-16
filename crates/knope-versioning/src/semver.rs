@@ -56,6 +56,13 @@ impl<'de> Deserialize<'de> for Version {
     }
 }
 
+impl Serialize for Version {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let version = self.to_string();
+        serializer.serialize_str(&version)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct StableVersion {
     pub major: u64,

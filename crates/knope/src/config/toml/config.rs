@@ -23,6 +23,7 @@ pub(crate) struct ConfigLoader {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test_package_configs {
 
     use pretty_assertions::assert_eq;

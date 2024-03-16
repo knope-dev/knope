@@ -8,10 +8,11 @@ use std::{
     path::PathBuf,
 };
 
-use enum_iterator::all;
 use indexmap::IndexMap;
 use itertools::Itertools;
-use knope_versioning::{Label, Version};
+use knope_versioning::{
+    GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
+};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -21,33 +22,31 @@ use super::{
     changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
     semver,
     semver::{bump, ConventionalRule},
-    versioned_file,
-    versioned_file::VersionedFile,
-    workspace, Change, Release, Rule,
+    Change, Release, Rule,
 };
 use crate::{
-    config::{
-        toml::package::ChangelogSection, ChangeLogSectionName, CommitFooter, CustomChangeType,
-    },
+    config,
+    config::{ChangeLogSectionName, ChangelogSection, CommitFooter, CustomChangeType},
     dry_run::DryRun,
     fs,
+    fs::read_to_string,
     integrations::git::{self, add_files},
     step::releases::{
-        go::GoVersioning,
-        versioned_file::{PackageFormat, VersionFromSource, VersionSource},
-        workspace::check_for_workspaces,
+        semver::UpdatePackageVersionError,
+        versioned_file::{VersionFromSource, VersionSource},
     },
     workflow::Verbose,
 };
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
-    pub(crate) versioned_files: Vec<VersionedFile>,
+    pub(crate) files: Option<knope_versioning::Package>,
     pub(crate) changelog: Option<Changelog>,
     pub(crate) changelog_sections: ChangelogSections,
     pub(crate) name: Option<PackageName>,
     pub(crate) scopes: Option<Vec<String>>,
     pub(crate) pending_changes: Vec<Change>,
+    pub(crate) pending_tags: Vec<String>,
     pub(crate) prepared_release: Option<Release>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
@@ -56,6 +55,76 @@ pub(crate) struct Package {
 }
 
 impl Package {
+    pub(crate) fn load(
+        packages: Vec<config::Package>,
+        git_tags: &[String],
+        verbose: Verbose,
+    ) -> Result<Vec<Self>, Error> {
+        let packages = packages
+            .into_iter()
+            .map(|package| Package::validate(package, git_tags, verbose))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(packages)
+    }
+
+    fn validate(
+        package: config::Package,
+        git_tags: &[String],
+        verbose: Verbose,
+    ) -> Result<Self, Error> {
+        if verbose == Verbose::Yes {
+            if let Some(package_name) = &package.name {
+                println!("Loading package {package_name}");
+            } else {
+                println!("Loading package");
+            }
+        }
+        let versioned_files: Vec<VersionedFile> = package
+            .versioned_files
+            .iter()
+            .map(|path| {
+                let content = read_to_string(path.to_pathbuf())?;
+                VersionedFile::new(path, content, git_tags).map_err(Error::VersionedFile)
+            })
+            .try_collect()?;
+        if verbose == Verbose::Yes {
+            for versioned_file in &versioned_files {
+                println!(
+                    "{} has version {}",
+                    versioned_file.path(),
+                    versioned_file.version(),
+                );
+            }
+        }
+        let files = match knope_versioning::Package::new(versioned_files) {
+            Ok(pkg) => Some(pkg),
+            Err(err) => match err {
+                PackageNewError::NoPackages => None,
+                err @ PackageNewError::InconsistentVersions(..) => return Err(err.into()),
+            },
+        };
+        Ok(Self {
+            files,
+            changelog: package
+                .changelog
+                .map(|path| path.to_path("").try_into())
+                .transpose()?,
+            changelog_sections: package.extra_changelog_sections.into(),
+            name: package.name,
+            scopes: package.scopes,
+            assets: package.assets,
+            go_versioning: if package.ignore_go_major_versioning {
+                GoVersioning::IgnoreMajorRules
+            } else {
+                GoVersioning::default()
+            },
+            pending_changes: Vec::new(),
+            pending_tags: Vec::new(),
+            prepared_release: None,
+            override_version: None,
+        })
+    }
+
     fn bump_rule(&self, verbose: Verbose) -> ConventionalRule {
         self.pending_changes
             .iter()
@@ -77,6 +146,7 @@ impl Package {
     pub(crate) fn write_release(
         mut self,
         prerelease_label: &Option<Label>,
+        git_tags: &[String],
         dry_run: DryRun,
         verbose: Verbose,
     ) -> Result<Self, Error> {
@@ -99,7 +169,7 @@ impl Package {
                 source: VersionSource::OverrideVersion,
             }
         } else {
-            let versions = self.get_version(verbose)?;
+            let versions = self.get_version(verbose, git_tags);
             let bump_rule = self.bump_rule(verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
@@ -125,9 +195,12 @@ impl Package {
     fn stage_changes_to_git(&self, dry_run: DryRun) -> Result<(), Error> {
         let changeset_path = PathBuf::from(".changeset");
         let paths = self
-            .versioned_files
+            .files
+            .as_ref()
+            .map(knope_versioning::Package::versioned_files)
+            .unwrap_or_default()
             .iter()
-            .map(|versioned_file| versioned_file.path.clone())
+            .map(|versioned_file| versioned_file.path().to_path(""))
             .chain(
                 self.changelog
                     .as_ref()
@@ -153,13 +226,34 @@ impl Package {
             add_files(&paths).map_err(Error::from)
         }
     }
+}
 
-    pub(crate) fn new(name: String, versioned_files: Vec<VersionedFile>) -> Self {
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+impl Package {
+    pub(crate) fn default() -> Self {
         Self {
-            name: Some(PackageName(name.clone())),
-            versioned_files,
-            scopes: Some(vec![name]),
-            ..Self::default()
+            files: knope_versioning::Package::new(vec![VersionedFile::new(
+                &knope_versioning::VersionedFilePath::new("Cargo.toml".into()).unwrap(),
+                r#"
+                [package]
+                name = "knope"
+                version = "0.1.0""#
+                    .to_string(),
+                &[""],
+            )
+            .unwrap()])
+            .ok(),
+            changelog: None,
+            changelog_sections: ChangelogSections::default(),
+            name: None,
+            scopes: None,
+            pending_changes: vec![],
+            pending_tags: vec![],
+            prepared_release: None,
+            override_version: None,
+            assets: None,
+            go_versioning: GoVersioning::default(),
         }
     }
 }
@@ -392,46 +486,8 @@ impl Display for ChangelogSectionSource {
     }
 }
 
-/// Find all supported package formats in the current directory.
-pub(crate) fn find_packages() -> Result<Vec<Package>, Error> {
-    let packages = check_for_workspaces()?;
-
-    if !packages.is_empty() {
-        return Ok(packages);
-    }
-
-    let default_changelog_path = PathBuf::from("CHANGELOG.md");
-    let changelog = default_changelog_path
-        .exists()
-        .then(|| Changelog::try_from(default_changelog_path))
-        .transpose()?;
-
-    let versioned_files = all::<PackageFormat>()
-        .filter_map(|format| {
-            let path = PathBuf::from(format.file_name());
-            if path.exists() {
-                Some(VersionedFile::try_from(path))
-            } else {
-                None
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    if versioned_files.is_empty() {
-        Ok(vec![])
-    } else {
-        Ok(vec![Package {
-            versioned_files,
-            changelog,
-            ..Package::default()
-        }])
-    }
-}
-
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    VersionedFile(#[from] versioned_file::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Changelog(#[from] changelog::Error),
@@ -462,5 +518,11 @@ pub(crate) enum Error {
     NoDefinedPackages,
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Workspace(#[from] workspace::Error),
+    VersionedFile(#[from] VersionedFileError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    UpdatePackageVersion(#[from] UpdatePackageVersionError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    New(#[from] PackageNewError),
 }

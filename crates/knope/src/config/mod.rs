@@ -1,26 +1,29 @@
-use std::fs;
+use std::path::Path;
 
 use ::toml::{from_str, to_string, Spanned};
 use indexmap::IndexMap;
+use itertools::Itertools;
 use miette::{Diagnostic, IntoDiagnostic, Result, SourceSpan};
+pub(crate) use package::Package;
 use serde::Serialize;
 use thiserror::Error;
+use toml::ConfigLoader;
 
 use crate::{
-    config::toml::ConfigLoader,
+    fs,
     integrations::git,
-    step::{
-        releases::{find_packages, package, Package},
-        PrepareRelease, Step,
-    },
+    step::{PrepareRelease, Step},
     variables::Variable,
     workflow::Workflow,
 };
 
-pub(crate) mod toml;
+mod package;
+mod toml;
 
-pub(crate) use self::toml::{
-    ChangeLogSectionName, CommitFooter, CustomChangeType, GitHub, Gitea, Jira,
+pub(crate) use toml::{GitHub, Gitea, Jira};
+
+pub(crate) use self::package::{
+    ChangeLogSectionName, ChangelogSection, CommitFooter, CustomChangeType,
 };
 
 /// A valid config, loaded from a supported file (or detected via default)
@@ -91,7 +94,7 @@ impl Config {
         #[allow(clippy::unwrap_used)] // because serde is annoying... I know it will serialize
         let serialized = to_string(&config).unwrap();
 
-        fs::write(Config::CONFIG_PATH, serialized).into_diagnostic()
+        fs::write(&mut None, "", Path::new(Config::CONFIG_PATH), serialized).into_diagnostic()
     }
 }
 
@@ -113,30 +116,17 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                     Err(Error::EmptyPackages)
                 }
             }
-            (Some(package), None) => {
-                let span = package.span();
-                vec![package
-                    .into_inner()
-                    .try_into()
-                    .map_err(|err| Error::PackageFormat {
-                        inner: err,
-                        source_code,
-                        span: span.into(),
-                    })?]
-            }
+            (Some(package), None) => vec![Package::from_toml(
+                None,
+                package.into_inner(),
+                &source_code,
+            )?],
             (None, Some(packages)) => packages
                 .into_iter()
-                .map(|(name, config)| {
-                    let span = config.span();
-                    Package::try_from((name, config.into_inner())).map_err(|err| {
-                        Error::PackageFormat {
-                            inner: err,
-                            source_code: source_code.clone(),
-                            span: span.into(),
-                        }
-                    })
+                .map(|(name, spanned)| {
+                    Package::from_toml(Some(name), spanned.into_inner(), &source_code)
                 })
-                .collect::<Result<Vec<Package>, Error>>()?,
+                .try_collect()?,
             (None, None) => Vec::new(),
         };
 
@@ -196,7 +186,7 @@ impl ConfigSource {
             Self::File(config) => config,
         };
         if config.packages.is_empty() {
-            config.packages = find_packages()?;
+            config.packages = Package::find_in_working_dir()?;
         }
         if config.workflows.is_empty() {
             config.workflows = generate_workflows(
@@ -214,7 +204,7 @@ pub(crate) enum Error {
     #[diagnostic(
         code(config::toml),
         help("Check the TOML is valid."),
-        url("https://knope.tech/reference/config-file/github/")
+        url("https://knope.tech/reference/config-file/packages/")
     )]
     Toml(#[from] ::toml::de::Error),
     #[error("You cannot define both `packages` and `package`")]
@@ -230,19 +220,6 @@ pub(crate) enum Error {
         package_definition: SourceSpan,
         #[label("`packages` defined here")]
         packages_definition: SourceSpan,
-    },
-    #[error("The package definition is invalid: {inner}")]
-    #[diagnostic(
-        code(config::package_format),
-        help("Check the package definition is valid."),
-        url("https://knope.tech/reference/config-file/packages/")
-    )]
-    PackageFormat {
-        inner: toml::package::Error,
-        #[label("defined here")]
-        span: SourceSpan,
-        #[source_code]
-        source_code: String,
     },
     #[error("The `packages` key is defined but does not contain any packages")]
     #[diagnostic(
@@ -261,57 +238,14 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Package(#[from] package::Error),
-}
-
-#[cfg(test)]
-mod test_errors {
-
-    use super::Config;
-
-    #[test]
-    fn conflicting_format() {
-        let toml_string = r#"
-            package = {}
-            [packages.something]
-            [[workflows]]
-            name = "default"
-            [[workflows.steps]]
-            type = "Command"
-            command = "echo this is nothing, really"
-        "#
-        .to_string();
-        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
-        let config = Config::try_from((config, toml_string));
-        assert!(config.is_err(), "Expected an error, got {config:?}");
-    }
-
-    #[test]
-    fn gitea_asset_error() {
-        let toml_string = r#"
-            [packages.something]
-            [[packages.something.assets]]
-            name = "something"
-            path = "something"
-            [[workflows]]
-            name = "default"
-            [[workflows.steps]]
-            type = "Command"
-            command = "echo this is nothing, really"
-            [gitea]
-            host = "https://gitea.example.com"
-            owner = "knope"
-            repo = "knope"
-        "#
-        .to_string();
-        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
-        let config = Config::try_from((config, toml_string));
-        assert!(config.is_err(), "Expected an error, got {config:?}");
-    }
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    VersionedFile(#[from] package::VersionedFileError),
 }
 
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Result<Config, package::Error> {
-    let packages = find_packages()?;
+    let packages = Package::find_in_working_dir()?;
 
     let first_remote = git::get_first_remote();
     let github = match first_remote {
@@ -396,4 +330,51 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             steps: vec![Step::CreateChangeFile],
         },
     ]
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod test_errors {
+
+    use super::Config;
+
+    #[test]
+    fn conflicting_format() {
+        let toml_string = r#"
+            package = {}
+            [packages.something]
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
+
+    #[test]
+    fn gitea_asset_error() {
+        let toml_string = r#"
+            [packages.something]
+            [[packages.something.assets]]
+            name = "something"
+            path = "something"
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+            [gitea]
+            host = "https://gitea.example.com"
+            owner = "knope"
+            repo = "knope"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
 }

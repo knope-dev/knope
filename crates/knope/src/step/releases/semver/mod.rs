@@ -1,12 +1,15 @@
 use std::fmt::Display;
 
-use knope_versioning::{Label, PreVersion, Prerelease, StableVersion, Version};
+use knope_versioning::{
+    Action, GoVersioning, Label, PreVersion, Prerelease, StableVersion, Version,
+};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
-use super::{package::Package, versioned_file, ChangeType, CurrentVersions, Prereleases, Release};
+use super::{package::Package, ChangeType, CurrentVersions, Prereleases, Release};
 use crate::{
     dry_run::DryRun,
+    fs,
     integrations::{git, git::get_current_versions_from_tags},
     step::releases::versioned_file::{VersionFromSource, VersionSource},
     workflow::Verbose,
@@ -126,14 +129,20 @@ pub(crate) fn bump_version_and_update_state(
                     source: VersionSource::OverrideVersion,
                 }
             } else {
-                let version = bump(package.get_version(state.verbose)?, rule, state.verbose)?;
+                let version = bump(
+                    package.get_version(state.verbose, &state.all_git_tags),
+                    rule,
+                    state.verbose,
+                )?;
                 VersionFromSource {
                     version,
                     source: VersionSource::Calculated,
                 }
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            package.prepared_release = Some(Release::empty(version.version));
+            let additional_tags = package.pending_tags;
+            package.pending_tags = Vec::new();
+            package.prepared_release = Some(Release::empty(version.version, additional_tags));
             Ok(package)
         })
         .collect::<Result<Vec<Package>, Error>>()?;
@@ -147,62 +156,25 @@ pub(crate) fn bump_version_and_update_state(
 impl Package {
     /// Get the current version of a package determined by the last tag for the package _and_ the
     /// version in versioned files. The version from files takes precedent over version from tag.
-    pub(crate) fn get_version(&self, verbose: Verbose) -> Result<CurrentVersions, Error> {
+    pub(crate) fn get_version(&self, verbose: Verbose, all_tags: &[String]) -> CurrentVersions {
         if let Verbose::Yes = verbose {
             println!("Looking for Git tags matching package name.");
         }
         let mut current_versions =
-            get_current_versions_from_tags(self.name.as_deref(), None, verbose)?;
+            get_current_versions_from_tags(self.name.as_deref(), verbose, all_tags);
 
-        if let Some(version_from_files) = self.version_from_files(verbose)? {
-            current_versions.update_version(version_from_files);
+        if let Some(version_from_files) = self.version_from_files() {
+            current_versions.update_version(version_from_files.clone());
         }
 
-        Ok(current_versions)
+        current_versions
     }
 
-    /// The version of the package per its versioned files.
-    ///
-    /// # Errors
-    ///
-    /// 1. If the versions of all versioned files are not consistent
-    /// 2. If the file cannot be parsed into a [`Version`]
-    pub(crate) fn version_from_files(&self, verbose: Verbose) -> Result<Option<Version>, Error> {
-        self.versioned_files
-            .iter()
-            .map(|versioned_file| {
-                if let Verbose::Yes = verbose {
-                    println!(
-                        "Finding version for {path}",
-                        path = versioned_file.path.display()
-                    );
-                }
-                let version = versioned_file.get_version(verbose).map_err(Error::from)?;
-                if let Verbose::Yes = verbose {
-                    println!("Found {version}");
-                }
-                Ok(version)
-            })
-            .reduce(|accumulator, version| match (version, accumulator) {
-                (Ok(version), Ok(accumulator)) => {
-                    if version.version == accumulator.version {
-                        Ok(accumulator)
-                    } else {
-                        Err(Error::InconsistentVersions {
-                            first_version: accumulator.version.to_string(),
-                            first_source: accumulator.source.to_string(),
-                            second_version: version.version.to_string(),
-                            second_source: version.source.to_string(),
-                        })
-                    }
-                }
-                (_, Err(err)) | (Err(err), _) => Err(err),
-            })
-            .map(|res| res.map(|version| version.version))
-            .transpose()
+    pub(crate) fn version_from_files(&self) -> Option<&Version> {
+        Some(self.files.as_ref()?.get_version())
     }
 
-    /// Consumes a [`PackageVersion`], writing it back to the file it came from. Returns the new version
+    /// Consumes a [`Package`], writing it back to the file it came from. Returns the new version
     /// that was written. Adds all modified package files to Git.
     ///
     /// If `dry_run` is `true`, the version will not be written to any files.
@@ -210,37 +182,52 @@ impl Package {
         mut self,
         version: &VersionFromSource,
         dry_run: DryRun,
-    ) -> Result<Self, versioned_file::Error> {
-        for versioned_file in &mut self.versioned_files {
-            versioned_file.set_version(dry_run, version, self.go_versioning)?;
+    ) -> Result<Self, UpdatePackageVersionError> {
+        let version_str = version.version.to_string();
+        let Some(files) = self.files.clone() else {
+            return Ok(self);
+        };
+        let go_versioning = match &version {
+            VersionFromSource {
+                source: VersionSource::OverrideVersion,
+                ..
+            } => GoVersioning::BumpMajor,
+            _ => self.go_versioning,
+        };
+        let actions = files.set_version(&version.version, go_versioning)?;
+        for action in actions {
+            match action {
+                Action::WriteToFile { path, content } => {
+                    fs::write(dry_run, &version_str, &path.to_path(""), content)?;
+                }
+                Action::AddTag { tag } => self.pending_tags.push(tag),
+            }
         }
         Ok(self)
     }
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum UpdatePackageVersionError {
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    KnopeVersioning(#[from] knope_versioning::SetError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
+}
+
+#[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
-    #[error("Versioned files within the same package must have the same version. Found {first_version} in {first_source} which does not match {second_version} in {second_source}")]
-    #[diagnostic(
-        code(semver::inconsistent_versions),
-        help("Manually update all versioned_files to have the correct version"),
-        url("https://knope.tech/reference/concepts/package/#version")
-    )]
-    InconsistentVersions {
-        first_version: String,
-        first_source: String,
-        second_version: String,
-        second_source: String,
-    },
     #[error(transparent)]
     #[diagnostic(transparent)]
     InvalidPreReleaseVersion(#[from] InvalidPreReleaseVersion),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    VersionedFile(#[from] versioned_file::Error),
+    Git(#[from] git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Git(#[from] git::Error),
+    UpdatePackageVersion(#[from] UpdatePackageVersionError),
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -324,7 +311,53 @@ pub(crate) fn bump(
     }
 }
 
+/// Bumps the pre-release component of a [`Version`].
+///
+/// If the existing [`Version`] has no pre-release,
+/// `semantic_rule` will be used to bump to primary components before the
+/// pre-release component is added.
+///
+/// # Errors
+///
+/// Can fail if there is an existing pre-release component that can't be incremented.
+fn bump_pre(
+    stable: StableVersion,
+    prereleases: &Prereleases,
+    label: &Label,
+    stable_rule: ConventionalRule,
+    verbose: Verbose,
+) -> Result<Version, InvalidPreReleaseVersion> {
+    if let Verbose::Yes = verbose {
+        println!("Pre-release label {label} selected. Determining next stable version...");
+    }
+    let stable_component = bump(stable.into(), &stable_rule.into(), verbose)?.stable_component();
+    let pre_component = prereleases
+        .get(&stable_component)
+        .and_then(|pres| {
+            pres.get(label).cloned().map(|mut pre| {
+                if let Verbose::Yes = verbose {
+                    println!("Found existing pre-release version {pre}");
+                }
+                pre.version += 1;
+                pre
+            })
+        })
+        .unwrap_or_else(|| {
+            let pre = Prerelease::new(label.clone(), 0);
+            if let Verbose::Yes = verbose {
+                println!("No existing pre-release version found; creating {pre}");
+            }
+            pre
+        });
+
+    Ok(Version::Pre(PreVersion {
+        stable_component,
+        pre_component,
+    }))
+}
+
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod test_bump {
     use std::str::FromStr;
 
@@ -511,49 +544,4 @@ mod test_bump {
 
         assert_eq!(version, Version::new(2, 0, 0, None));
     }
-}
-
-/// Bumps the pre-release component of a [`Version`].
-///
-/// If the existing [`Version`] has no pre-release,
-/// `semantic_rule` will be used to bump to primary components before the
-/// pre-release component is added.
-///
-/// # Errors
-///
-/// Can fail if there is an existing pre-release component that can't be incremented.
-fn bump_pre(
-    stable: StableVersion,
-    prereleases: &Prereleases,
-    label: &Label,
-    stable_rule: ConventionalRule,
-    verbose: Verbose,
-) -> Result<Version, InvalidPreReleaseVersion> {
-    if let Verbose::Yes = verbose {
-        println!("Pre-release label {label} selected. Determining next stable version...");
-    }
-    let stable_component = bump(stable.into(), &stable_rule.into(), verbose)?.stable_component();
-    let pre_component = prereleases
-        .get(&stable_component)
-        .and_then(|pres| {
-            pres.get(label).cloned().map(|mut pre| {
-                if let Verbose::Yes = verbose {
-                    println!("Found existing pre-release version {pre}");
-                }
-                pre.version += 1;
-                pre
-            })
-        })
-        .unwrap_or_else(|| {
-            let pre = Prerelease::new(label.clone(), 0);
-            if let Verbose::Yes = verbose {
-                println!("No existing pre-release version found; creating {pre}");
-            }
-            pre
-        });
-
-    Ok(Version::Pre(PreVersion {
-        stable_component,
-        pre_component,
-    }))
 }

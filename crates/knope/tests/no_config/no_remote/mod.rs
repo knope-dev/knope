@@ -11,5 +11,5 @@ fn test() {
             Tag("v1.0.0"),
             Commit("feat: Something"),
         ])
-        .run("release --dry-run")
+        .run("release --dry-run");
 }

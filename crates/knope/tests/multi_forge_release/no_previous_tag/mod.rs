@@ -4,5 +4,5 @@ use crate::helpers::{GitCommand::Commit, TestCase};
 fn no_previous_tag() {
     TestCase::new(file!())
         .git(&[Commit("feat: Existing feature")])
-        .run("release --dry-run")
+        .run("release --dry-run");
 }

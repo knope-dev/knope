@@ -1,13 +1,12 @@
-Error: config::package_format (https://knope.tech/reference/config-file/packages/)
+Error: config::unknown_versioned_file (https://knope.tech/reference/config-file/packages#versioned_files)
 
-  × The package definition is invalid: The versioned file setup.py is not a
-  │ supported format
-   ╭─[1:1]
- 1 │ ╭─▶ [package]
- 2 │ │   versioned_files = ["setup.py"]
- 3 │ ├─▶ changelog = "CHANGELOG.md"
-   · ╰──── defined here
- 4 │     
+  × Unknown file name setup.py
+   ╭─[2:20]
+ 1 │ [package]
+ 2 │ versioned_files = ["setup.py"]
+   ·                    ─────┬────
+   ·                         ╰── Declared here
+ 3 │ changelog = "CHANGELOG.md"
    ╰────
-  help: Check the package definition is valid.
+  help: Knope relies on the name of the file to determine its type.
 

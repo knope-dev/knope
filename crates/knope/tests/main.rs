@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 mod bump_version;
 mod command;
 mod default_workflows;

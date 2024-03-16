@@ -7,8 +7,12 @@ use miette::{miette, Result};
 
 use crate::{
     config::{Config, ConfigSource},
+    integrations::git::all_tags_on_branch,
     state::{RunType, State},
-    step::{releases::PackageName, Step},
+    step::{
+        releases::{Package, PackageName},
+        Step,
+    },
     workflow::{Verbose, Workflow},
 };
 
@@ -178,12 +182,19 @@ fn create_state(
     verbose: Verbose,
 ) -> Result<(State, Vec<Workflow>)> {
     let Config {
-        mut packages,
+        packages,
         workflows,
         jira,
         github,
         gitea,
     } = config;
+    let git_tags = if packages.is_empty() {
+        // Don't mess with Git if there aren't any packages defined
+        Vec::new()
+    } else {
+        all_tags_on_branch(verbose).unwrap_or_default()
+    };
+    let mut packages = Package::load(packages, &git_tags, verbose)?;
     if let Some(version_override) = sub_matches
         .as_deref_mut()
         .and_then(|matches| matches.try_remove_one::<Version>(OVERRIDE_ONE_VERSION).ok())
@@ -232,7 +243,7 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, gitea, packages, verbose);
+    let state = State::new(jira, github, gitea, packages, git_tags, verbose);
     Ok((state, workflows))
 }
 
@@ -258,6 +269,7 @@ impl FromStr for VersionOverride {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

@@ -40,6 +40,7 @@ knope-versioning = { path = "../knope-versioning", version = "0.1.0", features =
 log = "0.4.21"
 miette = { version = "7.2.0", features = ["fancy"] }
 platform-dirs = "0.3.0"
+relative-path = { version = "1.9.2", features = ["serde"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.114", features = ["preserve_order"] }
 serde_yaml = "0.9.32"
