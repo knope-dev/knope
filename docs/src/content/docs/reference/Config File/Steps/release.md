@@ -128,7 +128,11 @@ type = "Release"
 # Push the commit and the new tag to our remote repository.
 [[workflows.steps]]
 type = "Command"
-command = "git push && git push --tags"
+command = "git push"
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --tags"
 ```
 
 If `PrepareRelease` set the new version to "1.2.3", then a Git tag would be created called "v1.2.3".

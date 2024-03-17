@@ -17,4 +17,5 @@ Would add files to git:
   CHANGELOG.md
 Would run git commit -m "chore: prepare release 1.1.0"
 Would create Git tag v1.1.0
-Would run git push && git push --tags
+Would run git push
+Would run git push --tags
