@@ -1,6 +1,6 @@
+use execute::shell;
 use indexmap::IndexMap;
 use miette::Diagnostic;
-use subprocess::{Exec, ExitStatus, PopenError};
 
 use crate::{
     variables,
@@ -32,7 +32,7 @@ pub(crate) fn run_command(
         writeln!(stdout, "Would run {command}")?;
         return Ok(run_type);
     }
-    let status = Exec::shell(command).join()?;
+    let status = shell(command).status()?;
     if status.success() {
         return Ok(run_type);
     }
@@ -46,10 +46,7 @@ pub(crate) enum Error {
         code(command::failed),
         help("The command failed to execute. Try running it manually to get more information.")
     )]
-    Command(ExitStatus),
-    #[error("Failed to run command")]
-    #[diagnostic(code(command::subprocess))]
-    Subprocess(#[from] PopenError),
+    Command(std::process::ExitStatus),
     #[error("I/O error: {0}")]
     #[diagnostic(code(command::io))]
     Io(#[from] std::io::Error),
