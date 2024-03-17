@@ -1,4 +1,8 @@
-use std::{fmt::Display, path::Path, str::FromStr};
+use std::{
+    fmt::Display,
+    path::{Path, MAIN_SEPARATOR},
+    str::FromStr,
+};
 
 use miette::Diagnostic;
 use thiserror::Error;
@@ -315,7 +319,7 @@ pub(crate) fn create_version_tag(
             let prefix = parent_str
                 .strip_suffix(&format!("v{major}"))
                 .unwrap_or(&parent_str);
-            let prefix = prefix.strip_suffix('/').unwrap_or(prefix);
+            let prefix = prefix.strip_suffix(MAIN_SEPARATOR).unwrap_or(prefix);
             if prefix.is_empty() {
                 None
             } else {

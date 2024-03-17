@@ -9,30 +9,37 @@ on:
 jobs:
   checks:
     name: Run Checks
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4.1.1
 
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
+        if: matrix.os == 'ubuntu-latest'
         with:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: docs/package-lock.json
-      - name: Install cargo-binstall
-        run: |
-          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-          cp cargo-binstall $HOME/.cargo/bin
+      - uses: cargo-bins/cargo-binstall@main
 
       - name: Install nightly toolchain (for formatting)
+        if: matrix.os == 'ubuntu-latest'
         run: rustup toolchain install nightly --component rustfmt
 
       - name: Install Just
         run: cargo-binstall --no-confirm just --force
 
       - name: Run CI
+        if: matrix.os == 'ubuntu-latest'
         run: just binstall_args="--force" install-all-dependencies ci
+
+      - name: Run tests only
+        if: matrix.os == 'windows-latest'
+        run: just test
+
   vale:
     name: Vale
     runs-on: ubuntu-latest

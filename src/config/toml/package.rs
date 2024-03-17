@@ -2,6 +2,7 @@ use std::{fmt, fmt::Display, ops::Not, path::PathBuf};
 
 use git_conventional::FooterToken;
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -15,7 +16,7 @@ use crate::step::releases::{
 pub struct Package {
     /// The files which define the current version of the package.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) versioned_files: Vec<PathBuf>,
+    pub(crate) versioned_files: Vec<RelativePathBuf>,
     /// The path to the `CHANGELOG.md` file (if any) to be updated when running [`Step::PrepareRelease`].
     pub(crate) changelog: Option<PathBuf>,
     /// Optional scopes that can be used to filter commits when running [`Step::PrepareRelease`].
@@ -36,6 +37,7 @@ impl TryFrom<(Option<PackageName>, Package)> for crate::step::releases::Package 
             versioned_files: package
                 .versioned_files
                 .into_iter()
+                .map(|rel| rel.to_path(""))
                 .map(VersionedFile::try_from)
                 .collect::<std::result::Result<Vec<_>, _>>()?,
             name,
@@ -77,7 +79,7 @@ impl From<crate::step::releases::Package> for Package {
             versioned_files: package
                 .versioned_files
                 .into_iter()
-                .map(|file| file.path)
+                .filter_map(|file| RelativePathBuf::from_path(file.path).ok())
                 .collect(),
             changelog: package.changelog.map(|changelog| changelog.path),
             scopes: package.scopes,
