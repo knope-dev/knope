@@ -1,4 +1,3 @@
-use execute::shell;
 use indexmap::IndexMap;
 use miette::Diagnostic;
 
@@ -32,7 +31,7 @@ pub(crate) fn run_command(
         writeln!(stdout, "Would run {command}")?;
         return Ok(run_type);
     }
-    let status = shell(command).status()?;
+    let status = execute::command(command).status()?;
     if status.success() {
         return Ok(run_type);
     }
