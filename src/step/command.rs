@@ -56,28 +56,24 @@ pub(crate) enum Error {
 
 #[cfg(test)]
 mod test_run_command {
-    use tempfile::NamedTempFile;
 
     use super::*;
     use crate::{workflow::Verbose, State};
 
     #[test]
     fn test() {
-        let file = NamedTempFile::new().unwrap();
-        let command = format!("cat {}", file.path().to_str().unwrap());
+        let command = "echo \"hello\"";
         let result = run_command(
             RunType::Real(State::new(None, None, None, Vec::new(), Verbose::No)),
-            command.clone(),
+            command.to_string(),
             None,
         );
 
         assert!(result.is_ok());
 
-        file.close().unwrap();
-
         let result = run_command(
             RunType::Real(State::new(None, None, None, Vec::new(), Verbose::No)),
-            command,
+            String::from("exit 1"),
             None,
         );
         assert!(result.is_err());
