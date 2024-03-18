@@ -62,7 +62,11 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release $version\" && git push --force --set-upstream origin release"
+command = "git commit -m \"chore: prepare release $version\""
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --force --set-upstream origin release"
 
 [workflows.steps.variables]
 "$version" = "Version"

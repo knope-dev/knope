@@ -19,7 +19,11 @@ type = "Release"
 
 [[workflows.steps]]
 type = "Command"
-command = "git push && git push --tags"
+command = "git push"
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --tags"
 
 [[workflows]]
 name = "document-change"

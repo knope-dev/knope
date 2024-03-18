@@ -165,7 +165,11 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release $version\" && git push"
+command = "git commit -m \"chore: prepare release $version\""
+
+[[workflows.steps]]
+type = "Command"
+command = "git push"
 
 [workflows.steps.variables]
 "$version" = "Version"
