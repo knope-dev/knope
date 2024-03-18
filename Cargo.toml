@@ -18,7 +18,7 @@ rust-version = "1.71.1"
 execute = "0.2.13"
 serde = { version = "1.0.197", features = ["derive"] }
 base64 = "0.21.7"
-toml = "0.8.11"
+toml = "0.8.12"
 serde_json = { version = "1.0.114", features = ["preserve_order"] }
 git2 = { version = "0.18.2", default-features = false }
 platform-dirs = "0.3.0"
