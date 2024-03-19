@@ -71,6 +71,9 @@ pub(crate) enum Step {
         /// A map of value-to-replace to [Variable][`crate::command::Variable`] to replace
         /// it with.
         variables: Option<IndexMap<String, Variable>>,
+        /// Whether to run the command in the current working directory or the directory of the config file.
+        /// If not set, the command will be run in the current working directory.
+        use_working_directory: Option<bool>,
     },
     /// This will look through all commits since the last tag and parse any
     /// [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will
@@ -110,9 +113,11 @@ impl Step {
             Step::SwitchBranches => git::switch_branches(run_type)?,
             Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
             Step::BumpVersion(rule) => releases::bump_version(run_type, &rule)?,
-            Step::Command { command, variables } => {
-                command::run_command(run_type, command, variables)?
-            }
+            Step::Command {
+                command,
+                variables,
+                use_working_directory,
+            } => command::run_command(run_type, command, variables, use_working_directory)?,
             Step::PrepareRelease(prepare_release) => {
                 releases::prepare_release(run_type, &prepare_release)?
             }

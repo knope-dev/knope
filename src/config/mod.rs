@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
 use ::toml::{from_str, to_string, Spanned};
 use indexmap::IndexMap;
@@ -40,12 +40,37 @@ pub(crate) struct Config {
 impl Config {
     const CONFIG_PATH: &'static str = "knope.toml";
 
+    /// Get the path to the config file
+    pub(crate) fn config_path() -> Option<PathBuf> {
+        let mut config_path = std::env::current_dir().ok()?;
+
+        // Recursively search for the config file in all parent directories
+        loop {
+            let path = config_path.join(Self::CONFIG_PATH);
+            log::debug!("Attempting to load config from {path:?}");
+            if path.exists() {
+                return Some(path);
+            }
+            config_path.pop();
+            let parent = config_path.parent();
+            if parent.is_none() {
+                log::debug!("No `knope.toml` found");
+                return None;
+            }
+        }
+    }
+
     /// Create a Config from a TOML file or load the default config via `generate`
     ///
     /// ## Errors
     /// 1. Cannot parse file contents into a Config
     pub(crate) fn load() -> Result<ConfigSource, Error> {
-        let Ok(source_code) = fs::read_to_string(Self::CONFIG_PATH) else {
+        let Some(config_path) = Self::config_path() else {
+            log::debug!("No `knope.toml` found, using default config");
+            return Ok(ConfigSource::Default(generate()?));
+        };
+
+        let Ok(source_code) = fs::read_to_string(config_path) else {
             log::debug!("No `knope.toml` found, using default config");
             return Ok(ConfigSource::Default(generate()?));
         };
@@ -263,52 +288,6 @@ pub(crate) enum Error {
     Package(#[from] package::Error),
 }
 
-#[cfg(test)]
-mod test_errors {
-
-    use super::Config;
-
-    #[test]
-    fn conflicting_format() {
-        let toml_string = r#"
-            package = {}
-            [packages.something]
-            [[workflows]]
-            name = "default"
-            [[workflows.steps]]
-            type = "Command"
-            command = "echo this is nothing, really"
-        "#
-        .to_string();
-        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
-        let config = Config::try_from((config, toml_string));
-        assert!(config.is_err(), "Expected an error, got {config:?}");
-    }
-
-    #[test]
-    fn gitea_asset_error() {
-        let toml_string = r#"
-            [packages.something]
-            [[packages.something.assets]]
-            name = "something"
-            path = "something"
-            [[workflows]]
-            name = "default"
-            [[workflows.steps]]
-            type = "Command"
-            command = "echo this is nothing, really"
-            [gitea]
-            host = "https://gitea.example.com"
-            owner = "knope"
-            repo = "knope"
-        "#
-        .to_string();
-        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
-        let config = Config::try_from((config, toml_string));
-        assert!(config.is_err(), "Expected an error, got {config:?}");
-    }
-}
-
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Result<Config, package::Error> {
     let packages = find_packages()?;
@@ -369,10 +348,12 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\"",),
                 variables,
+                use_working_directory: None,
             },
             Step::Command {
                 command: String::from("git push"),
                 variables: None,
+                use_working_directory: None,
             },
             Step::Release,
         ]
@@ -381,15 +362,18 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\""),
                 variables,
+                use_working_directory: None,
             },
             Step::Release,
             Step::Command {
                 command: String::from("git push"),
                 variables: None,
+                use_working_directory: None,
             },
             Step::Command {
                 command: String::from("git push --tags"),
                 variables: None,
+                use_working_directory: None,
             },
         ]
     };
@@ -404,4 +388,50 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             steps: vec![Step::CreateChangeFile],
         },
     ]
+}
+
+#[cfg(test)]
+mod test_errors {
+
+    use super::Config;
+
+    #[test]
+    fn conflicting_format() {
+        let toml_string = r#"
+            package = {}
+            [packages.something]
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
+
+    #[test]
+    fn gitea_asset_error() {
+        let toml_string = r#"
+            [packages.something]
+            [[packages.something.assets]]
+            name = "something"
+            path = "something"
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+            [gitea]
+            host = "https://gitea.example.com"
+            owner = "knope"
+            repo = "knope"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
 }

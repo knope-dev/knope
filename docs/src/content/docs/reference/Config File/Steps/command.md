@@ -27,3 +27,9 @@ and the value is one of the [available variables](/reference/config-file/variabl
 **Take care when selecting a key to replace** as Knope will replace _any_ matching string that it finds.
 Replacements occur in the order they're declared in the config,
 so Knope may replace earlier substitutions with later ones.
+
+## Working directory
+
+By default, the command will be run from the current working directory.
+If you want to run the command from the directory of the first config file in the ancestry of the current working directory,
+you can set the `use_working_directory` attribute to `false`.
