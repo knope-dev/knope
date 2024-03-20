@@ -1,2 +1,2 @@
-#[cfg(windows)]
+#[cfg(not(windows))]
 mod shell;
