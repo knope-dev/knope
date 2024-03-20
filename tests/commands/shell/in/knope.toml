@@ -1,0 +1,7 @@
+[[workflows]]
+name = "shell-command"
+
+[[workflows.steps]]
+type = "Command"
+shell = true
+command = "echo $AN_ENV_VAR"
