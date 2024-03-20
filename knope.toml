@@ -29,6 +29,10 @@ type = "PrepareRelease"
 type = "Command"
 command = "npx prettier CHANGELOG.md --write"
 
+[[workflow.steps]]
+type = "Command"
+command = "git add CHANGELOG.md"
+
 [[workflows.steps]]
 type = "Command"
 command = "git commit -m \"chore: prepare release $version\""
