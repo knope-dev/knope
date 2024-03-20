@@ -369,10 +369,12 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\"",),
                 variables,
+                shell: None,
             },
             Step::Command {
                 command: String::from("git push"),
                 variables: None,
+                shell: None,
             },
             Step::Release,
         ]
@@ -381,15 +383,18 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\""),
                 variables,
+                shell: None,
             },
             Step::Release,
             Step::Command {
                 command: String::from("git push"),
                 variables: None,
+                shell: None,
             },
             Step::Command {
                 command: String::from("git push --tags"),
                 variables: None,
+                shell: None,
             },
         ]
     };

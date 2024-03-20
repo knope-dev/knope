@@ -27,6 +27,7 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
+shell = true
 command = "npx prettier CHANGELOG.md --write && git add CHANGELOG.md"
 
 [[workflows.steps]]
