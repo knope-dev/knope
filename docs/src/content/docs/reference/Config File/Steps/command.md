@@ -28,9 +28,9 @@ and the value is one of the [available variables](/reference/config-file/variabl
 Replacements occur in the order they're declared in the config,
 so Knope may replace earlier substitutions with later ones.
 
-## Shell Mode
+## Shell mode
 
-By default, commands are split into the executable name and its arguments, and the executable is called directly.
+By default, Knope splits commands into the executable name and its arguments, and calls the executable directly.
 This works around common issues with Windows shells, particularly when quoting arguments.
 However, you may want to use your current shell to run the command, for example to access environment variables or
 to use shell features like pipes or redirection. You can do this by setting `shell=true` in the step configuration.
