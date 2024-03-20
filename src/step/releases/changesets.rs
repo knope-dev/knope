@@ -141,6 +141,7 @@ pub(crate) const DEFAULT_CHANGESET_PACKAGE_NAME: &str = "default";
 
 pub(crate) fn add_releases_from_changeset(
     packages: Vec<Package>,
+    is_prerelease: bool,
     dry_run: DryRun,
 ) -> Result<Vec<Package>, Error> {
     let changeset_path = PathBuf::from(".changeset");
@@ -162,7 +163,7 @@ pub(crate) fn add_releases_from_changeset(
                     .pending_changes
                     .extend(release_changes.changes.into_iter().map(|change| {
                         let file_name = change.unique_id.to_file_name();
-                        if !changesets_deleted.contains(&file_name) {
+                        if !changesets_deleted.contains(&file_name) && !is_prerelease {
                             if let Some(dry_run) = dry_run {
                                 writeln!(
                                     dry_run,

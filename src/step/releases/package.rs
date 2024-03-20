@@ -116,12 +116,14 @@ impl Package {
         };
 
         self = self.write_version(&new_version, dry_run)?;
-        self.prepared_release = Some(self.write_changelog(new_version.version, dry_run)?);
-        self.stage_changes_to_git(dry_run)?;
+        let prepared_release = self.write_changelog(new_version.version, dry_run)?;
+        let is_prerelease = prepared_release.version.is_prerelease();
+        self.prepared_release = Some(prepared_release);
+        self.stage_changes_to_git(is_prerelease, dry_run)?;
 
         Ok(self)
     }
-    fn stage_changes_to_git(&self, dry_run: DryRun) -> Result<(), Error> {
+    fn stage_changes_to_git(&self, is_prerelease: bool, dry_run: DryRun) -> Result<(), Error> {
         let changeset_path = PathBuf::from(".changeset");
         let paths = self
             .versioned_files
@@ -133,7 +135,9 @@ impl Package {
                     .map(|changelog| changelog.path.clone()),
             )
             .chain(self.pending_changes.iter().filter_map(|change| {
-                if let Change::ChangeSet(change) = change {
+                if is_prerelease {
+                    None
+                } else if let Change::ChangeSet(change) = change {
                     Some(changeset_path.join(change.unique_id.to_file_name()))
                 } else {
                     None
