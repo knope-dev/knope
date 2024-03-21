@@ -326,6 +326,51 @@ pub(crate) fn bump(
     }
 }
 
+/// Bumps the pre-release component of a [`Version`].
+///
+/// If the existing [`Version`] has no pre-release,
+/// `semantic_rule` will be used to bump to primary components before the
+/// pre-release component is added.
+///
+/// # Errors
+///
+/// Can fail if there is an existing pre-release component that can't be incremented.
+fn bump_pre(
+    stable: StableVersion,
+    prereleases: &Prereleases,
+    label: &Label,
+    stable_rule: ConventionalRule,
+    verbose: Verbose,
+) -> Result<Version, InvalidPreReleaseVersion> {
+    if let Verbose::Yes = verbose {
+        println!("Pre-release label {label} selected. Determining next stable version...");
+    }
+    let stable_component = bump(stable.into(), &stable_rule.into(), verbose)?.stable_component();
+    let pre_component = prereleases
+        .get(&stable_component)
+        .and_then(|pres| {
+            pres.get(label).cloned().map(|mut pre| {
+                if let Verbose::Yes = verbose {
+                    println!("Found existing pre-release version {pre}");
+                }
+                pre.version += 1;
+                pre
+            })
+        })
+        .unwrap_or_else(|| {
+            let pre = Prerelease::new(label.clone(), 0);
+            if let Verbose::Yes = verbose {
+                println!("No existing pre-release version found; creating {pre}");
+            }
+            pre
+        });
+
+    Ok(Version::Pre(PreVersion {
+        stable_component,
+        pre_component,
+    }))
+}
+
 #[cfg(test)]
 mod test_bump {
     use std::str::FromStr;
@@ -513,49 +558,4 @@ mod test_bump {
 
         assert_eq!(version, Version::new(2, 0, 0, None));
     }
-}
-
-/// Bumps the pre-release component of a [`Version`].
-///
-/// If the existing [`Version`] has no pre-release,
-/// `semantic_rule` will be used to bump to primary components before the
-/// pre-release component is added.
-///
-/// # Errors
-///
-/// Can fail if there is an existing pre-release component that can't be incremented.
-fn bump_pre(
-    stable: StableVersion,
-    prereleases: &Prereleases,
-    label: &Label,
-    stable_rule: ConventionalRule,
-    verbose: Verbose,
-) -> Result<Version, InvalidPreReleaseVersion> {
-    if let Verbose::Yes = verbose {
-        println!("Pre-release label {label} selected. Determining next stable version...");
-    }
-    let stable_component = bump(stable.into(), &stable_rule.into(), verbose)?.stable_component();
-    let pre_component = prereleases
-        .get(&stable_component)
-        .and_then(|pres| {
-            pres.get(label).cloned().map(|mut pre| {
-                if let Verbose::Yes = verbose {
-                    println!("Found existing pre-release version {pre}");
-                }
-                pre.version += 1;
-                pre
-            })
-        })
-        .unwrap_or_else(|| {
-            let pre = Prerelease::new(label.clone(), 0);
-            if let Verbose::Yes = verbose {
-                println!("No existing pre-release version found; creating {pre}");
-            }
-            pre
-        });
-
-    Ok(Version::Pre(PreVersion {
-        stable_component,
-        pre_component,
-    }))
 }

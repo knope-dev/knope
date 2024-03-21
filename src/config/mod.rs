@@ -263,52 +263,6 @@ pub(crate) enum Error {
     Package(#[from] package::Error),
 }
 
-#[cfg(test)]
-mod test_errors {
-
-    use super::Config;
-
-    #[test]
-    fn conflicting_format() {
-        let toml_string = r#"
-            package = {}
-            [packages.something]
-            [[workflows]]
-            name = "default"
-            [[workflows.steps]]
-            type = "Command"
-            command = "echo this is nothing, really"
-        "#
-        .to_string();
-        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
-        let config = Config::try_from((config, toml_string));
-        assert!(config.is_err(), "Expected an error, got {config:?}");
-    }
-
-    #[test]
-    fn gitea_asset_error() {
-        let toml_string = r#"
-            [packages.something]
-            [[packages.something.assets]]
-            name = "something"
-            path = "something"
-            [[workflows]]
-            name = "default"
-            [[workflows.steps]]
-            type = "Command"
-            command = "echo this is nothing, really"
-            [gitea]
-            host = "https://gitea.example.com"
-            owner = "knope"
-            repo = "knope"
-        "#
-        .to_string();
-        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
-        let config = Config::try_from((config, toml_string));
-        assert!(config.is_err(), "Expected an error, got {config:?}");
-    }
-}
-
 /// Generate a brand new Config for the project in the current directory.
 pub(crate) fn generate() -> Result<Config, package::Error> {
     let packages = find_packages()?;
@@ -411,4 +365,50 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             steps: vec![Step::CreateChangeFile],
         },
     ]
+}
+
+#[cfg(test)]
+mod test_errors {
+
+    use super::Config;
+
+    #[test]
+    fn conflicting_format() {
+        let toml_string = r#"
+            package = {}
+            [packages.something]
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
+
+    #[test]
+    fn gitea_asset_error() {
+        let toml_string = r#"
+            [packages.something]
+            [[packages.something.assets]]
+            name = "something"
+            path = "something"
+            [[workflows]]
+            name = "default"
+            [[workflows.steps]]
+            type = "Command"
+            command = "echo this is nothing, really"
+            [gitea]
+            host = "https://gitea.example.com"
+            owner = "knope"
+            repo = "knope"
+        "#
+        .to_string();
+        let config: super::toml::ConfigLoader = toml::from_str(&toml_string).unwrap();
+        let config = Config::try_from((config, toml_string));
+        assert!(config.is_err(), "Expected an error, got {config:?}");
+    }
 }

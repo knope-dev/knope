@@ -185,6 +185,120 @@ pub(crate) enum ModuleLineError {
     MissingModulePath,
 }
 
+pub(crate) fn create_version_tag(
+    path: &Path,
+    version: &Version,
+    existing_tag: &str,
+    dry_run: DryRun,
+) -> Result<(), git::Error> {
+    let tag = path
+        .parent()
+        .and_then(|parent| {
+            let parent_str = parent.to_string_lossy();
+            let major = version.stable_component().major;
+            let prefix = parent_str
+                .strip_suffix(&format!("v{major}"))
+                .unwrap_or(&parent_str);
+            let prefix = prefix.strip_suffix(MAIN_SEPARATOR).unwrap_or(prefix);
+            if prefix.is_empty() {
+                None
+            } else {
+                Some(prefix.to_string())
+            }
+        })
+        .map_or_else(
+            || format!("v{version}"),
+            |prefix| format!("{prefix}/v{version}"),
+        );
+    if tag != existing_tag {
+        git::create_tag(dry_run, &tag)?; // Avoid recreating the top-level package tag
+    }
+    Ok(())
+}
+
+/// Gets the version from the comment in the `go.mod` file, if any, or defers to the latest tag
+/// for the module.
+pub(crate) fn get_version(
+    content: &str,
+    path: &Path,
+    verbose: Verbose,
+) -> Result<VersionFromSource, Error> {
+    let mut parent = path.parent();
+    let module_line = content
+        .lines()
+        .find(|line| line.starts_with("module "))
+        .map(ModuleLine::from_str)
+        .ok_or(Error::MissingModuleLine)??;
+    if let Some(version) = module_line.version {
+        return Ok(VersionFromSource {
+            version,
+            source: path.into(),
+        });
+    }
+
+    let major_filter = if let Some(major) = module_line.major_version {
+        let major_dir = format!("v{major}");
+        if parent.is_some_and(|parent| parent.ends_with(&major_dir)) {
+            // Major version directories are not tag prefixes!
+            parent = parent.and_then(Path::parent);
+            if let Verbose::Yes = verbose {
+                println!(
+                    "Major version directory {major_dir} detected, only tags matching that major version will be used.",
+                );
+            }
+        }
+        Some(vec![major])
+    } else {
+        Some(vec![0, 1])
+    };
+
+    let prefix = match parent.map(|parent| parent.display().to_string()) {
+        Some(submodule) if !submodule.is_empty() => {
+            if let Verbose::Yes = verbose {
+                println!(
+                    "{path} is in the subdirectory {submodule}, so it will be used to filter tags.",
+                    path = path.display()
+                );
+            }
+            Some(submodule)
+        }
+        _ => None,
+    };
+
+    if let Verbose::Yes = verbose {
+        println!(
+            "No version comment in {path}, searching for relevant Git tags instead.",
+            path = path.display()
+        );
+    }
+
+    if let Some(version_from_tag) =
+        get_current_versions_from_tags(prefix.as_deref(), major_filter.as_ref(), verbose)
+            .map(|current_versions| {
+                current_versions.into_latest().map(|version| {
+                    let tag = if let Some(prefix) = prefix {
+                        format!("{prefix}/v{version}")
+                    } else {
+                        format!("v{version}")
+                    };
+                    VersionFromSource {
+                        source: VersionSource::GitTag(tag),
+                        version,
+                    }
+                })
+            })
+            .map_err(Error::from)
+            .transpose()
+    {
+        return version_from_tag;
+    }
+
+    Ok(VersionFromSource {
+        version: Version::default(),
+        source: VersionSource::Default,
+    })
+}
+
 #[cfg(test)]
 mod test_module_line {
     use std::str::FromStr;
@@ -303,118 +417,4 @@ mod test_module_line {
             "module github.com/owner/repo/v2 // v3.1.4"
         );
     }
-}
-
-pub(crate) fn create_version_tag(
-    path: &Path,
-    version: &Version,
-    existing_tag: &str,
-    dry_run: DryRun,
-) -> Result<(), git::Error> {
-    let tag = path
-        .parent()
-        .and_then(|parent| {
-            let parent_str = parent.to_string_lossy();
-            let major = version.stable_component().major;
-            let prefix = parent_str
-                .strip_suffix(&format!("v{major}"))
-                .unwrap_or(&parent_str);
-            let prefix = prefix.strip_suffix(MAIN_SEPARATOR).unwrap_or(prefix);
-            if prefix.is_empty() {
-                None
-            } else {
-                Some(prefix.to_string())
-            }
-        })
-        .map_or_else(
-            || format!("v{version}"),
-            |prefix| format!("{prefix}/v{version}"),
-        );
-    if tag != existing_tag {
-        git::create_tag(dry_run, &tag)?; // Avoid recreating the top-level package tag
-    }
-    Ok(())
-}
-
-/// Gets the version from the comment in the `go.mod` file, if any, or defers to the latest tag
-/// for the module.
-pub(crate) fn get_version(
-    content: &str,
-    path: &Path,
-    verbose: Verbose,
-) -> Result<VersionFromSource, Error> {
-    let mut parent = path.parent();
-    let module_line = content
-        .lines()
-        .find(|line| line.starts_with("module "))
-        .map(ModuleLine::from_str)
-        .ok_or(Error::MissingModuleLine)??;
-    if let Some(version) = module_line.version {
-        return Ok(VersionFromSource {
-            version,
-            source: path.into(),
-        });
-    }
-
-    let major_filter = if let Some(major) = module_line.major_version {
-        let major_dir = format!("v{major}");
-        if parent.is_some_and(|parent| parent.ends_with(&major_dir)) {
-            // Major version directories are not tag prefixes!
-            parent = parent.and_then(Path::parent);
-            if let Verbose::Yes = verbose {
-                println!(
-                    "Major version directory {major_dir} detected, only tags matching that major version will be used.",
-                );
-            }
-        }
-        Some(vec![major])
-    } else {
-        Some(vec![0, 1])
-    };
-
-    let prefix = match parent.map(|parent| parent.display().to_string()) {
-        Some(submodule) if !submodule.is_empty() => {
-            if let Verbose::Yes = verbose {
-                println!(
-                    "{path} is in the subdirectory {submodule}, so it will be used to filter tags.",
-                    path = path.display()
-                );
-            }
-            Some(submodule)
-        }
-        _ => None,
-    };
-
-    if let Verbose::Yes = verbose {
-        println!(
-            "No version comment in {path}, searching for relevant Git tags instead.",
-            path = path.display()
-        );
-    }
-
-    if let Some(version_from_tag) =
-        get_current_versions_from_tags(prefix.as_deref(), major_filter.as_ref(), verbose)
-            .map(|current_versions| {
-                current_versions.into_latest().map(|version| {
-                    let tag = if let Some(prefix) = prefix {
-                        format!("{prefix}/v{version}")
-                    } else {
-                        format!("v{version}")
-                    };
-                    VersionFromSource {
-                        source: VersionSource::GitTag(tag),
-                        version,
-                    }
-                })
-            })
-            .map_err(Error::from)
-            .transpose()
-    {
-        return version_from_tag;
-    }
-
-    Ok(VersionFromSource {
-        version: Version::default(),
-        source: VersionSource::Default,
-    })
 }
