@@ -168,6 +168,11 @@ fn build_cli(config: &ConfigSource) -> Command {
 
     for workflow in &config.workflows {
         let mut subcommand = Command::new(workflow.name.clone());
+
+        if let Some(help) = &workflow.help_text {
+            subcommand = subcommand.about(help);
+        }
+
         let contains_bump_version = workflow
             .steps
             .iter()
