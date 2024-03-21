@@ -151,7 +151,7 @@ mod test_get_release {
     use super::*;
     use crate::step::releases::{changelog::HeaderLevel, semver::Version};
 
-    const CONTENT: &str = r#"
+    const CONTENT: &str = r"
 # Changelog
 
 Hey ya'll this is a changelog
@@ -171,7 +171,7 @@ Now with more detail!
 
 ## 0.0.1
 Initial release
-"#;
+";
 
     #[test]
     fn first_section() {
@@ -363,9 +363,7 @@ impl Release {
     /// GitHub releases _always_ use the [`HeaderLevel::H1`] format, so they call [`Self::body_at_h1`]
     /// which is like this function, but with optional conversion.
     pub(crate) fn body(&self) -> Option<String> {
-        let Some(sections) = self.sections.as_ref() else {
-            return None;
-        };
+        let sections = self.sections.as_ref()?;
         let mut res = String::new();
         for section in sections {
             res.push_str(&format!(
