@@ -397,10 +397,12 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
     vec![
         Workflow {
             name: String::from("release"),
+            help_text: None,
             steps: release_steps,
         },
         Workflow {
             name: String::from("document-change"),
+            help_text: None,
             steps: vec![Step::CreateChangeFile],
         },
     ]
