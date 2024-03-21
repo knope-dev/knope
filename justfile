@@ -32,7 +32,7 @@ reformat-toml:
     taplo format
 
 reformat-docs:
-    npx prettier *.md --write
+    npx prettier *.md .changeset*.md --write --no-error-on-unmatched-pattern
     npm --prefix docs run reformat
 
 check-format: check-rust-format check-toml-format check-docs-format
@@ -44,7 +44,7 @@ check-toml-format:
     taplo format --check
 
 check-docs-format:
-    npx prettier *.md --list-different
+    npx prettier *.md .changeset/*.md --list-different --no-error-on-unmatched-pattern
     npm --prefix docs run check-format
 
 # Install dependencies for `lint`, `default`, `check-format`, `reformat`, and some of `ci`. Requires `cargo-binstall`

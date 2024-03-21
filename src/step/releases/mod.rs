@@ -53,8 +53,12 @@ pub(crate) fn prepare_release(
     state.packages = add_releases_from_conventional_commits(state.packages, state.verbose)
         .map_err(Error::from)
         .and_then(|packages| {
-            changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
-                .map_err(Error::from)
+            changesets::add_releases_from_changeset(
+                packages,
+                prerelease_label.is_some(),
+                &mut dry_run_stdout,
+            )
+            .map_err(Error::from)
         })
         .and_then(|packages| {
             packages

@@ -10,6 +10,30 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.16.0 (2024-03-20)
+
+### Breaking Changes
+
+#### Don't delete changesets for prereleases
+
+Previously, using `PrepareRelease` to create a prerelease (for example, with `--prerelease-label`) would delete all
+changesets, just like a full release. This was a bug, but the fix is a breaking change if you were
+relying on that behavior.
+
+### Features
+
+#### Add a `shell` variable for `Command` steps
+
+You can now add `shell=true` to a `Command` step to run the command in the current shell.
+This lets you opt in to the pre-0.15.0 behavior.
+
+```toml
+[[workflows.steps]]
+type = "Command"
+command = "echo $AN_ENV_VAR"
+shell = true
+```
+
 ## 0.15.0 (2024-03-18)
 
 ### Breaking Changes
