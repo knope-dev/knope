@@ -2,9 +2,9 @@
 default: minor
 ---
 
-# Add help_text to workflow arguments in knope.toml
+# Add `help_text` option to workflows
 
-This change allows users to specify a `help_text` for a workflow in their `knope.toml` file within the `[[workflows]]` section.
+`[[workflows]]` can now have `help_text`:
 
 Example:
 
@@ -14,7 +14,7 @@ name = "release"
 help_text = "Prepare a release"
 ```
 
-When running `knope --help`, this will be displayed:
+The message is displayed when running `knope --help`:
 
 ```text
 A command line tool for automating common development tasks
@@ -22,17 +22,10 @@ A command line tool for automating common development tasks
 Usage: knope [OPTIONS] [COMMAND]
 
 Commands:
-  prepare-release
   release          Prepare a release
-  document-change
-  pwd
   help             Print this message or the help of the given subcommand(s)
 
-Options:
-      --dry-run   Pretend to run a workflow, outputting what _would_ happen without actually doing it.
-  -v, --verbose   Print extra information (for debugging)
-      --upgrade   Upgrade to the latest `knope.toml` syntax from any deprecated (but still supported) syntax.
-      --validate  Check that the `knope.toml` file is valid.
-  -h, --help      Print help
-  -V, --version   Print version
+...
 ```
+
+PR #960 closes issue #959. Thanks @alex-way!
