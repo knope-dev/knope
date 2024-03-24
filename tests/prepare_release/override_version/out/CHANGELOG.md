@@ -2,7 +2,7 @@
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 ## 0.1.0
 

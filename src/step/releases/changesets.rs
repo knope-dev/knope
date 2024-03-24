@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt, io::Write, path::PathBuf};
+use std::{collections::HashSet, io::Write, path::PathBuf};
 
 use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
@@ -34,14 +34,8 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
             let package_name = package.name;
             let change_types = package
                 .changelog_sections
-                .into_keys()
-                .filter_map(|key| {
-                    if let ChangelogSectionSource::CustomChangeType(_) = &key {
-                        Some(ChangeType::Custom(key))
-                    } else {
-                        None
-                    }
-                })
+                .iter()
+                .flat_map(|(_, sources)| sources.iter().filter_map(ChangeType::to_changeset_type))
                 .collect_vec();
             let prompt = if let Some(package_name) = package_name.as_ref() {
                 format!("What type of change is this for {package_name}?")
@@ -52,12 +46,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
                 .prompt()
                 .map_err(prompt::Error::from)
                 .map_err(Error::from)
-                .map(|change_type| {
-                    (
-                        package_name.unwrap_or_default().to_string(),
-                        change_type.into(),
-                    )
-                })
+                .map(|change_type| (package_name.unwrap_or_default().to_string(), change_type))
         })
         .collect::<Result<Versioning, Error>>()?;
     let summary = inquire::Text::new("What is a short summary of this change?")
@@ -96,13 +85,16 @@ pub(crate) enum ChangeType {
     Custom(ChangelogSectionSource),
 }
 
-impl fmt::Display for ChangeType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl ChangeType {
+    pub(crate) fn to_changeset_type(&self) -> Option<changesets::ChangeType> {
         match self {
-            Self::Breaking => write!(f, "breaking"),
-            Self::Feature => write!(f, "feature"),
-            Self::Fix => write!(f, "fix"),
-            Self::Custom(custom) => write!(f, "{custom}"),
+            Self::Breaking => Some(changesets::ChangeType::Major),
+            Self::Feature => Some(changesets::ChangeType::Minor),
+            Self::Fix => Some(changesets::ChangeType::Patch),
+            Self::Custom(ChangelogSectionSource::CustomChangeType(custom)) => {
+                Some(changesets::ChangeType::Custom(custom.to_string()))
+            }
+            Self::Custom(ChangelogSectionSource::CommitFooter(_)) => None,
         }
     }
 }

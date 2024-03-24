@@ -4,7 +4,7 @@ use git_conventional::{Commit, Footer, Type};
 use log::debug;
 use miette::Diagnostic;
 
-use super::{package::ChangelogSectionSource, Change, ChangeType, Package};
+use super::{Change, ChangeType, Package};
 use crate::{
     config::CommitFooter,
     integrations::git::{self, get_commit_messages_after_tag, get_current_versions_from_tags},
@@ -45,14 +45,15 @@ impl ConventionalCommit {
 
     fn from_commits(package: &Package, commits: Vec<Commit>) -> Vec<Self> {
         let mut conventional_commits = Vec::with_capacity(commits.len());
+        let relevant_footers = package.changelog_sections.footers();
 
         for commit in commits {
             let commit_summary = format_commit_summary(&commit);
             for footer in commit.footers() {
-                let source: ChangelogSectionSource = CommitFooter::from(footer.token()).into();
-                if package.changelog_sections.contains_key(&source) {
+                let source = CommitFooter::from(footer.token());
+                if relevant_footers.contains(&source) {
                     conventional_commits.push(Self {
-                        change_type: ChangeType::from(source),
+                        change_type: source.into(),
                         message: footer.value().to_string(),
                         original_source: format_commit_footer(&commit_summary, footer),
                     });
@@ -140,7 +141,8 @@ mod test_conventional_commits {
 
     use super::*;
     use crate::{
-        config::toml::package::ChangelogSection, step::releases::package::ChangelogSections,
+        config::toml::package::ChangelogSection,
+        step::releases::{package::ChangelogSections, ChangelogSectionSource},
     };
 
     #[test]

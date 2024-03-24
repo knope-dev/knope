@@ -161,13 +161,6 @@ impl Change {
             Change::ChangeSet(change) => (&change.change_type).into(),
         }
     }
-
-    fn summary(&self) -> String {
-        match self {
-            Change::ConventionalCommit(commit) => commit.message.clone(),
-            Change::ChangeSet(change) => change.summary.clone(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

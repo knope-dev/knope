@@ -5,7 +5,7 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### New breaking feature
+- New breaking feature
 
 Would add files to git:
   Cargo.toml
@@ -17,7 +17,7 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### New breaking feature
+- New breaking feature
 
 Would add files to git:
   package.json
@@ -25,8 +25,8 @@ Would add files to git:
 Would create a release on Gitea [https://codeberg.org] with name first 2.0.0 ([DATE]) and tag first/v2.0.0 and body:
 ## Breaking Changes
 
-### New breaking feature
+- New breaking feature
 Would create a release on Gitea [https://codeberg.org] with name second 0.5.0 ([DATE]) and tag second/v0.5.0 and body:
 ## Breaking Changes
 
-### New breaking feature
+- New breaking feature

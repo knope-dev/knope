@@ -4,9 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Features
 
-#### Existing feature
-
-#### New feature
+- New feature
 
 Would add files to git:
   sub_dir/go.mod

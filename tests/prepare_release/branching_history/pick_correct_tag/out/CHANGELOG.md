@@ -4,6 +4,6 @@
 
 ### Fixes
 
-#### A bug
+- A bug
 
 ## 1.0.0

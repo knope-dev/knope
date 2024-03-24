@@ -9,8 +9,8 @@ Would run git push
 Would create a release on GitHub with name first-package 1.1.0 ([DATE]) and tag first-package/v1.1.0 and body:
 ## Features
 
-### New Feature
+- New Feature
 Would create a release on GitHub with name second-package 0.1.1 ([DATE]) and tag second-package/v0.1.1 and body:
 ## Features
 
-### New Feature
+- New Feature

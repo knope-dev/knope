@@ -18,6 +18,10 @@ build-docs:
 test:
     cargo t
 
+# Update the snapshot of specific tests, like `just snapshot <id_of_test_to_update> <another id>`
+snapshot +tests:
+    SNAPSHOTS=overwrite cargo t {{tests}}
+
 lint:
     cargo clippy -- -D warnings
     cargo-deny check
@@ -32,7 +36,7 @@ reformat-toml:
     taplo format
 
 reformat-docs:
-    npx prettier *.md .changeset*.md --write --no-error-on-unmatched-pattern
+    npx prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern
     npm --prefix docs run reformat
 
 check-format: check-rust-format check-toml-format check-docs-format

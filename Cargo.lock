@@ -175,9 +175,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "changesets"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf07f590d03d31b8c8fac9fbefead153de37cc9a621d294e20174fb7279f63e"
+checksum = "9d6a1a7ad146c0cee60b13b03eda4616a332430bc5575b237ba448d1c5e8100d"
 
 [[package]]
 name = "clap"
@@ -592,9 +592,9 @@ dependencies = [
 
 [[package]]
 name = "gix"
-version = "0.61.1"
+version = "0.61.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d03e6e306a2c85bcd8e1de93dfd061531068ccd45eb05633d80c7e93f7e55fb9"
+checksum = "e4e0e59a44bf00de058ee98d6ecf3c9ed8f8842c1da642258ae4120d41ded8f7"
 dependencies = [
  "gix-actor",
  "gix-commitgraph",

@@ -2,8 +2,8 @@
 
 ### Features
 
-#### Shared feat
+- Shared feat
 
 ### Fixes
 
-#### Fix for first only
+- Fix for first only

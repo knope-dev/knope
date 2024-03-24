@@ -2,7 +2,7 @@
 
 ### Features
 
-#### A new shared feature from a conventional commit
+- A new shared feature from a conventional commit
 
 ## 0.4.6
 

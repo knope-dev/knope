@@ -2,8 +2,8 @@
 
 ### Breaking Changes
 
-#### New breaking feature with a scope
+- New breaking feature with a scope
 
 ### Features
 
-#### No scope feature
+- No scope feature

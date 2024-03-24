@@ -204,6 +204,6 @@ and create releases as needed by parsing the contents of `CHANGELOG.md` for the 
 The release is initially created as a draft, then Knope uploads assets before publishing the release
 (so your subscribers won't be notified until it's all ready).
 
-[`PrepareRelease`]: /reference/Config File/Steps/prepare-release
+[`PrepareRelease`]: /reference/config-file/steps/prepare-release
 [create a fine-grained access token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
-[`Release`]: /reference/Config File/Steps/release
+[`Release`]: /reference/config-file/steps/release
