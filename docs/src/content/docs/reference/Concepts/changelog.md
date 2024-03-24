@@ -59,14 +59,15 @@ for example "Breaking changes" or "Features."
 ### Breaking changes
 ```
 
-Following the section heading, there's at least one change. Simple changes will appear as bullets immediately under the section heading:
+Following the section heading, there's at least one change.
+[simple changes](#simple-vs-complex-changes) will appear as bullets immediately under the section heading:
 
 ```markdown
 - A very easy to describe change
 - Another as well
 ```
 
-Following any simple changes, more complex changes will each get a heading (two levels below the version heading):
+Next, [complex changes](#simple-vs-complex-changes) will each get a heading (two levels below the version heading):
 
 ```markdown
 #### A breaking change
@@ -95,5 +96,16 @@ Some details about the fixing
 
 Knope sorts versions from newest to oldest,
 so the most recent version is near the top of the changelog right after the optional title and introduction.
+
+## Simple vs Complex changes
+
+Knope divides each change section into simple and complex changes. Simple changes are those which are described by
+a single sentence. All changes which comes from [conventional commits](/reference/concepts/conventional-commits) are
+simple changes.
+Additionally, any changeset with only a header in it is considered a simple change.
+Simple changes are documented as bullets at the top of a section.
+
+Complex changes are changesets which have content below their header. Each complex change gets its own sub-section with
+a header.
 
 [package]: /reference/concepts/package

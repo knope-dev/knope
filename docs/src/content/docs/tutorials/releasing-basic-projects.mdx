@@ -28,17 +28,12 @@ The [monorepo tutorial](/tutorials/releasing-multiple-packages) covers automatin
 
 ## Creating a project
 
-Create a new empty directory wherever you like and open it in your terminal.
+Create a new directory for this tutorial and initialize a Git repository:
 
 ```sh
 mkdir knope-tutorial  # create a new directory
 cd knope-tutorial     # change into the new directory
-```
-
-Initialize a Git repository:
-
-```sh
-git init
+git init              # initialize Git
 ```
 
 Now open the directory in your text editor and create two files:
@@ -62,7 +57,7 @@ This package is starting at version `1.0.0`,
 as you make changes, the version will increase depending on the type of change.
 
 :::note
-Knope supports [many package formats for many languages](/reference/Config File/packages#versioned_files).
+Knope supports [many package formats for many languages](/reference/config-file/packages/#versioned_files).
 :::
 
 Knope needs a GitHub repository to publish releases. You can create one with the [GitHub CLI](https://cli.github.com/).
@@ -97,7 +92,7 @@ knope release --dry-run
 ```text
 Would add the following to package.json: 1.0.1
 Would add the following to CHANGELOG.md:
-## 1.0.1 (2023-11-01)
+## 1.0.1 (2024-03-24)
 
 ### Fixes
 
@@ -108,7 +103,7 @@ package.json
 CHANGELOG.md
 Would run git commit -m "chore: prepare release 1.0.1"
 Would run git push
-Would create a release on GitHub with name 1.0.1 (2023-11-01) and tag v1.0.1 and body:
+Would create a release on GitHub with name 1.0.1 (2024-03-24) and tag v1.0.1 and body:
 
 ## Fixes
 
@@ -132,7 +127,7 @@ Time to release it for real!
 
 ## Creating a release
 
-Running the `release` workflow again without the `--dry-run` causes Knope to do everything it promised to.
+Running the `release` workflow again without the `--dry-run` option causes Knope to do everything it promised to.
 
 :::caution
 The next step will save GitHub credentials to a file on your computer.
@@ -149,11 +144,6 @@ knope release
 
 Knope wants to create that GitHub release, but it needs access to GitHub!
 Go ahead and generate a token with the link it provided, then paste it into your terminal.
-
-:::note
-Knope will write this token to a file to store for later use (where depends on your operating system).
-If you don't want to store the token, you can set the `GITHUB_TOKEN` environment variable instead.
-:::
 
 Now that the workflow has complete, the `package.json` has the new version number:
 
@@ -183,8 +173,6 @@ And that same content is in a new GitHub release:
 ```sh
 gh release view --web
 ```
-
-[//]: # "TODO: Update this screenshot"
 
 ![GitHub release](./release_1.0.1.png)
 
@@ -245,7 +233,7 @@ knope release --dry-run
 <details>
     <summary>Example output from Knope</summary>
 
-```text {16-18,37-39}
+```text {16-18,38-40}
 Would delete: .changeset/add_calzones.md
 Would add the following to package.json: 1.1.0
 Would add the following to CHANGELOG.md:
@@ -349,13 +337,17 @@ knope release
 gh release view --web
 ```
 
-[//]: # "TODO: Update this screenshot"
-
 ![GitHub release](./release_1.1.0.png)
 
 This illustrates one of the big advantages to changesets,
 you can write as much Markdown content as you need to describe a change.
 There could be code snippets, screenshots, even collapsible sections!
+
+:::note
+Notice that the simple changes from conventional commits form a bulleted list at the top of the section, whereas
+the changeset content is its own section with a header.
+Simple changes in changesets, that is, headers without content, will also be included in the bulleted list.
+:::
 
 ## Finishing up
 
