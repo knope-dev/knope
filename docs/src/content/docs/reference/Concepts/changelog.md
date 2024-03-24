@@ -97,15 +97,14 @@ Some details about the fixing
 Knope sorts versions from newest to oldest,
 so the most recent version is near the top of the changelog right after the optional title and introduction.
 
-## Simple vs Complex changes
+## Simple vs complex changes
 
-Knope divides each change section into simple and complex changes. Simple changes are those which are described by
-a single sentence. All changes which comes from [conventional commits](/reference/concepts/conventional-commits) are
-simple changes.
-Additionally, any changeset with only a header in it is considered a simple change.
-Simple changes are documented as bullets at the top of a section.
+Knope divides each change section into simple and complex changes.
+Changes that are descibed by only a single sentence are simple changes. All changes which come from [conventional commits](/reference/concepts/conventional-commits) are simple changes.
+Additionally, any changeset with only a header in is a simple change.
+Knope includes simple changes as bullets at the top of a section.
 
-Complex changes are changesets which have content below their header. Each complex change gets its own sub-section with
+Complex changes are changesets that have content below their header. Each complex change gets its own sub-section with
 a header.
 
 [package]: /reference/concepts/package
