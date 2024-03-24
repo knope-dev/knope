@@ -10,6 +10,86 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.16.1 (2024-03-24)
+
+### Features
+
+#### Add `help_text` option to workflows
+
+`[[workflows]]` can now have `help_text`:
+
+Example:
+
+```toml
+[[workflows]]
+name = "release"
+help_text = "Prepare a release"
+```
+
+The message is displayed when running `knope --help`:
+
+```text
+A command line tool for automating common development tasks
+
+Usage: knope [OPTIONS] [COMMAND]
+
+Commands:
+  release          Prepare a release
+  help             Print this message or the help of the given subcommand(s)
+
+...
+```
+
+PR #960 closes issue #959. Thanks @alex-way!
+
+#### Use bullets to describe simple changes
+
+The previous changelog & forge release format used headers for the summary of all changes, these entries were hard
+to follow for simple changes like this:
+
+```markdown
+### Features
+
+#### A feature
+
+#### Another header with no content in between?
+```
+
+Now, _simple_ changes are described with bullets at the _top_ of the section. More complex changes will come after
+any bullets, using the previous format:
+
+```markdown
+### Features
+
+- A simple feature
+- Another simple feature
+
+#### A complex feature
+
+Some details about that feature
+```
+
+Right now, a simple change is any change which comes from a conventional commit (whether from the commit summary or
+from a footer) _or_ a changeset with only a header in it. Here are three simple changes:
+
+```
+feat: A simple feature
+
+Changelog-Note: A note entry
+```
+
+```markdown
+---
+default: minor
+---
+
+# A simple feature with no description
+```
+
+A complex change is any changeset which has content (not just empty lines) below the header.
+
+PR #969 implemented #930. Thanks for the suggestion @ematipico!
+
 ## 0.16.0 (2024-03-20)
 
 ### Breaking Changes
