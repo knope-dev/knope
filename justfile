@@ -36,7 +36,7 @@ reformat-toml:
     taplo format
 
 reformat-docs:
-    npx prettier *.md .changeset*.md --write --no-error-on-unmatched-pattern
+    npx prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern
     npm --prefix docs run reformat
 
 check-format: check-rust-format check-toml-format check-docs-format

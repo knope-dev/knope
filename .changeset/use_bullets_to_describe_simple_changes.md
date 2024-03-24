@@ -4,7 +4,7 @@ default: minor
 
 # Use bullets to describe simple changes
 
-The previous changelog & forge release format used headers for the summary of all changes, these entries were hard 
+The previous changelog & forge release format used headers for the summary of all changes, these entries were hard
 to follow for simple changes like this:
 
 ```markdown
@@ -15,7 +15,7 @@ to follow for simple changes like this:
 #### Another header with no content in between?
 ```
 
-Now, _simple_ changes are described with bullets at the _top_ of the section. More complex changes will come after 
+Now, _simple_ changes are described with bullets at the _top_ of the section. More complex changes will come after
 any bullets, using the previous format:
 
 ```markdown
@@ -29,7 +29,7 @@ any bullets, using the previous format:
 Some details about that feature
 ```
 
-Right now, a simple change is any change which comes from a conventional commit (whether from the commit summary or 
+Right now, a simple change is any change which comes from a conventional commit (whether from the commit summary or
 from a footer) _or_ a changeset with only a header in it. Here are three simple changes:
 
 ```
