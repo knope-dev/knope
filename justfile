@@ -18,6 +18,10 @@ build-docs:
 test:
     cargo t
 
+# Update the snapshot of specific tests, like `just snapshot <id_of_test_to_update> <another id>`
+snapshot +tests:
+    SNAPSHOTS=overwrite cargo t {{tests}}
+
 lint:
     cargo clippy -- -D warnings
     cargo-deny check

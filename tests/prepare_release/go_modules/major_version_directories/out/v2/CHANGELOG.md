@@ -4,7 +4,7 @@
 
 ### Features
 
-#### New feature
+- New feature
 
 ## 2.0.0
 

@@ -2,7 +2,7 @@
 
 ### Features
 
-#### A new feature
+- A new feature
 
 ## 1.2.3
 

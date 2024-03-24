@@ -4,15 +4,15 @@
 
 ## 🐣 Broke
 
-### Something you hopefully don't care about
+- Something you hopefully don't care about
 
 ## 🔧 Fixed
 
-### Something you do care about
+- Something you do care about
 
 ## ➕ Added
 
-### Something new
+- Something new
 
 # 1.0.0 - 2023-01-01
 

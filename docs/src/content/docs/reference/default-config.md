@@ -28,11 +28,11 @@ versioned_files = ["Cargo.toml", "package.json"]
 changelog = "CHANGELOG.md"
 ```
 
-The `changelog` field is only set if there is a `CHANGELOG.md` file in the current directory.
+The `changelog` field is only set if there's a `CHANGELOG.md` file in the current directory.
 
 ### Cargo workspaces
 
-If there is a `Cargo.toml` file in the current directory that looks like a Cargo workspace,
+If there's a `Cargo.toml` file in the current directory that looks like a Cargo workspace,
 Knope will create a package for each member.
 
 :::caution

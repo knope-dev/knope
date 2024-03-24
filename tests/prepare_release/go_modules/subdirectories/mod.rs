@@ -8,8 +8,8 @@ use crate::helpers::{
 fn subdirectories() {
     TestCase::new(file!())
         .git(&[
-            Commit("feat: Existing feature"),
-            Tag("sub_dir/v1.0.0"),
+            Commit("Initial"),
+            Tag("v1.0.0"),
             Commit("feat: New feature"),
         ])
         .expected_tags(&["sub_dir/v1.1.0", "v1.1.0"])

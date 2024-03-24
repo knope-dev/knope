@@ -38,7 +38,7 @@ indexmap = { version = "2.2.5", features = ["serde"] }
 inquire = { version = "0.7.3", default-features = false, features = [
   "crossterm",
 ] }
-changesets = "0.2.2"
+changesets = { version = "0.2.2", path = "../changesets" }
 time = { version = "0.3.34" }
 datta = "0.1.1"
 serde_yaml = "0.9.33"

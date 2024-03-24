@@ -5,7 +5,7 @@ Would add the following to CHANGELOG.md:
 
 ### Features
 
-#### New feature
+- New feature
 
 Would add files to git:
   Cargo.toml
@@ -14,9 +14,9 @@ Would add files to git:
 Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
 ## Features
 
-### New feature
+- New feature
 Would create a release on Gitea [https://codeberg.org] with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
 ## Features
 
-### New feature
+- New feature
 Would create Git tag go/v1.1.0

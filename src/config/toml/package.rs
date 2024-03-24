@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::step::releases::{
     changelog, changelog::Changelog, go::GoVersioning, package::Asset, versioned_file,
-    versioned_file::VersionedFile, PackageName,
+    versioned_file::VersionedFile, ChangeType, ChangelogSectionSource, PackageName,
 };
 
 /// Represents a single package in `knope.toml`.
@@ -133,6 +133,12 @@ impl From<&str> for CommitFooter {
     }
 }
 
+impl From<CommitFooter> for ChangeType {
+    fn from(footer: CommitFooter) -> Self {
+        Self::Custom(ChangelogSectionSource::CommitFooter(footer))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct CustomChangeType(String);
@@ -152,6 +158,37 @@ impl From<String> for CustomChangeType {
 impl From<&str> for CustomChangeType {
     fn from(token: &str) -> Self {
         Self(token.into())
+    }
+}
+
+impl AsRef<str> for CustomChangeType {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<CustomChangeType> for String {
+    fn from(custom: CustomChangeType) -> Self {
+        custom.0
+    }
+}
+
+impl From<CustomChangeType> for ChangeType {
+    fn from(custom: CustomChangeType) -> Self {
+        changesets::ChangeType::from(String::from(custom)).into()
+    }
+}
+
+impl From<changesets::ChangeType> for ChangeType {
+    fn from(change_type: changesets::ChangeType) -> Self {
+        match change_type {
+            changesets::ChangeType::Major => Self::Breaking,
+            changesets::ChangeType::Minor => Self::Feature,
+            changesets::ChangeType::Patch => Self::Fix,
+            changesets::ChangeType::Custom(custom) => {
+                Self::Custom(ChangelogSectionSource::CustomChangeType(custom.into()))
+            }
+        }
     }
 }
 

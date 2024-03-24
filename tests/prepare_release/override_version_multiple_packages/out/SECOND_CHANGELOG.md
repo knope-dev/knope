@@ -2,7 +2,7 @@
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 ## 1.2.3
 

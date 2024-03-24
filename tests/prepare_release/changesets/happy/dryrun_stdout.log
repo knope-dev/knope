@@ -1,4 +1,6 @@
+Would delete: .changeset/a_complex_feature.md
 Would delete: .changeset/breaking_change.md
+Would delete: .changeset/simple_feature.md
 Would add the following to Cargo.toml: 2.0.0
 Would add the following to pyproject.toml: 2.0.0
 Would add the following to FIRST_CHANGELOG.md: 
@@ -12,20 +14,29 @@ A breaking change for only the first package
 
 ### Features
 
-#### A new shared feature from a conventional commit
+- A new shared feature from a conventional commit
+- A simple feature with no description
+
+#### A complex feature with description
+
+```rust
+println!("This format is nicer to read");
+```
 
 Would add files to git:
   Cargo.toml
   pyproject.toml
   FIRST_CHANGELOG.md
+  .changeset/a_complex_feature.md
   .changeset/breaking_change.md
+  .changeset/simple_feature.md
 Would add the following to package.json: 0.4.7
 Would add the following to SECOND_CHANGELOG.md: 
 ## 0.4.7 ([DATE])
 
 ### Features
 
-#### A new shared feature from a conventional commit
+- A new shared feature from a conventional commit
 
 Would add files to git:
   package.json

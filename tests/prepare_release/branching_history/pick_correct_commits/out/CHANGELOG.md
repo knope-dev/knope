@@ -4,7 +4,7 @@
 
 ### Fixes
 
-#### Another bug
+- Another bug
 
 ## 2.0.0
 

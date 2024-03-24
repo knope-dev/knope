@@ -2,11 +2,11 @@
 
 ### Breaking Changes
 
-#### Breaking change
+- Breaking change
 
 ### Features
 
-#### New feature
+- New feature
 
 ## 1.1.0-rc.1
 

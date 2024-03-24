@@ -4,11 +4,11 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### New breaking feature with a scope
+- New breaking feature with a scope
 
 ### Features
 
-#### No scope feature
+- No scope feature
 
 Would add files to git:
   Cargo.toml
@@ -19,11 +19,11 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### New breaking feature with a scope
+- New breaking feature with a scope
 
 ### Features
 
-#### No scope feature
+- No scope feature
 
 Would add files to git:
   pyproject.toml

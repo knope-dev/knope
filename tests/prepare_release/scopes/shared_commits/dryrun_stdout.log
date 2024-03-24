@@ -4,11 +4,11 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Features
 
-#### Shared feat
+- Shared feat
 
 ### Fixes
 
-#### Fix for first only
+- Fix for first only
 
 Would add files to git:
   Cargo.toml
@@ -19,11 +19,11 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### Breaking change for second only
+- Breaking change for second only
 
 ### Features
 
-#### Shared feat
+- Shared feat
 
 Would add files to git:
   pyproject.toml

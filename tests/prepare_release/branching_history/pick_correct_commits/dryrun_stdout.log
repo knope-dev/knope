@@ -4,7 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Fixes
 
-#### Another bug
+- Another bug
 
 Would add files to git:
   Cargo.toml

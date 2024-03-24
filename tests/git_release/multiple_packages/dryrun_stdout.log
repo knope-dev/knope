@@ -5,7 +5,7 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### New breaking feature
+- New breaking feature
 
 Would add files to git:
   Cargo.toml
@@ -17,7 +17,7 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### New breaking feature
+- New breaking feature
 
 Would add files to git:
   package.json

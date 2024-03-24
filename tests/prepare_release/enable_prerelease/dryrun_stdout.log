@@ -4,7 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Breaking Changes
 
-#### Breaking feature in new RC
+- Breaking feature in new RC
 
 Would add files to git:
   Cargo.toml
