@@ -60,7 +60,7 @@ for example "Breaking changes" or "Features."
 ```
 
 Following the section heading, there's at least one change.
-[simple changes](#simple-vs-complex-changes) will appear as bullets immediately under the section heading:
+[Simple changes](#simple-vs-complex-changes) will appear as bullets immediately under the section heading:
 
 ```markdown
 - A very easy to describe change
