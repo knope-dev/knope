@@ -299,12 +299,22 @@ impl From<Vec<ChangelogSection>> for ChangelogSections {
             types,
         } in sections_from_toml
         {
-            let sources = footers
+            let mut sources = footers
                 .into_iter()
                 .map(ChangeType::from)
                 .chain(types.into_iter().map(ChangeType::from))
                 .collect_vec();
             defaults.retain(|(_, source)| !sources.contains(source));
+
+            // If there's a duplicate section name, combine it
+            while let Some((index, (_, change_type))) = defaults
+                .iter()
+                .enumerate()
+                .find(|(_, (default_name, _))| default_name == &name)
+            {
+                sources.push(change_type.clone());
+                defaults.remove(index);
+            }
             sections.push((name, sources));
         }
         let defaults = defaults

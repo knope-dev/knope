@@ -4,9 +4,6 @@
 
 - A standard note
 - Standard note first only
-
-### Notes
-
 - A custom note
 
 ### Something Special 🚀
