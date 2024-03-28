@@ -96,7 +96,9 @@ pub fn run() -> Result<()> {
         RunType::Real(state)
     };
 
-    workflow::run(workflow, state)?;
+    let assume_yes = matches.get_flag("assumeyes");
+
+    workflow::run(workflow, state, assume_yes)?;
     Ok(())
 }
 
@@ -104,6 +106,7 @@ const OVERRIDE_ONE_VERSION: &str = "override-one-version";
 const OVERRIDE_MULTIPLE_VERSIONS: &str = "override-multiple-versions";
 const PRERELEASE_LABEL: &str = "prerelease-label";
 const VERBOSE: &str = "verbose";
+const ASSUMEYES: &str = "assumeyes";
 
 fn build_cli(config: &ConfigSource) -> Command {
     let mut command = command!()
@@ -111,6 +114,11 @@ fn build_cli(config: &ConfigSource) -> Command {
         .arg(
             Arg::new("dry-run").long("dry-run")
                 .help("Pretend to run a workflow, outputting what _would_ happen without actually doing it.")
+                .action(ArgAction::SetTrue)
+                .global(true)
+        ).arg(
+            Arg::new(ASSUMEYES).long(ASSUMEYES).short('y')
+                .help("Automatic yes to prompts. Assume \"yes\" as answer to all prompts and run non-interactively.")
                 .action(ArgAction::SetTrue)
                 .global(true)
         ).arg(
@@ -157,10 +165,12 @@ fn build_cli(config: &ConfigSource) -> Command {
             .steps
             .iter()
             .any(|step| matches!(*step, Step::BumpVersion(_)));
+
         let contains_prepare_release = workflow
             .steps
             .iter()
             .any(|step| matches!(*step, Step::PrepareRelease(_)));
+
         if contains_bump_version || contains_prepare_release {
             if let Some(arg) = version_override_arg.clone() {
                 subcommand = subcommand.arg(arg);

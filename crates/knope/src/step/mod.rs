@@ -101,7 +101,7 @@ pub(crate) enum Step {
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, Error> {
+    pub(crate) fn run(self, run_type: RunType, assume_yes: bool) -> Result<RunType, Error> {
         Ok(match self {
             Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
             Step::TransitionJiraIssue { status } => {
@@ -130,7 +130,7 @@ impl Step {
             Step::CreatePullRequest { base, title, body } => {
                 create_pull_request::run(&base, title, body, run_type)?
             }
-            Step::Confirm { message } => confirm::confirm(run_type, message.as_str())?,
+            Step::Confirm { message } => confirm::confirm(run_type, message.as_str(), assume_yes)?,
         })
     }
 

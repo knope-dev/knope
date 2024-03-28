@@ -3,7 +3,14 @@ use miette::Diagnostic;
 
 use crate::{app_config, RunType};
 
-pub(crate) fn confirm(mut run_type: RunType, message: &str) -> Result<RunType, Error> {
+pub(crate) fn confirm(
+    mut run_type: RunType,
+    message: &str,
+    assume_yes: bool,
+) -> Result<RunType, Error> {
+    if assume_yes {
+        return Ok(run_type);
+    }
     let (_, dry_run_stdout) = match &mut run_type {
         RunType::DryRun { state, stdout } => (state, Some(stdout)),
         RunType::Real(state) => (state, None),
