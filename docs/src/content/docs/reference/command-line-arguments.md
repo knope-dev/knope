@@ -71,3 +71,7 @@ producing an error if either of those packages isn't configured.
 
 [`BumpVersion`]: /reference/config-file/steps/bump-version
 [`PrepareRelease`]: /reference/config-file/steps/prepare-release
+
+### `--assumeyes`
+
+Automatically answer all confirmation steps with a "yes". See [`Confirm`](/reference/config-file/steps/confirm/) for more information about the `Confirm` step type.
