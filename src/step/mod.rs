@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod command;
+pub mod confirm;
 mod create_pull_request;
 pub mod issues;
 pub mod releases;
@@ -95,6 +96,8 @@ pub(crate) enum Step {
         title: Template,
         body: Template,
     },
+    /// Prompt the user to confirm the next step.
+    Confirm { message: String },
 }
 
 impl Step {
@@ -127,6 +130,7 @@ impl Step {
             Step::CreatePullRequest { base, title, body } => {
                 create_pull_request::run(&base, title, body, run_type)?
             }
+            Step::Confirm { message } => confirm::confirm(run_type, message.as_str())?,
         })
     }
 
@@ -167,6 +171,9 @@ pub(super) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     CreatePullRequest(#[from] create_pull_request::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Confirm(#[from] confirm::Error),
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.
