@@ -95,13 +95,22 @@ command = "git push"
 [[workflows.steps]]
 type = "Release"
 
-
-
 [[workflows]]
 name = "document-change"
 
 [[workflows.steps]]
 type = "CreateChangeFile"
+
+[[workflows]]
+name = "get-version"
+help_text = "Get the current version of the project"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo \"$version\""
+
+[[workflows.steps.variables]]
+"$version" = "Version"
 ```
 
 ## Forges

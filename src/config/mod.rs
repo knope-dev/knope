@@ -353,6 +353,16 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
         ]
     };
     release_steps.insert(0, Step::PrepareRelease(PrepareRelease::default()));
+
+    let mut get_version_variables = IndexMap::new();
+    get_version_variables.insert(String::from("$version"), Variable::Version);
+
+    let get_version_steps = vec![Step::Command {
+        command: String::from("echo \"$version\""),
+        variables: Some(get_version_variables),
+        shell: None,
+    }];
+
     vec![
         Workflow {
             name: String::from("release"),
@@ -363,6 +373,11 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             name: String::from("document-change"),
             help_text: None,
             steps: vec![Step::CreateChangeFile],
+        },
+        Workflow {
+            name: String::from("get-version"),
+            help_text: Some(String::from("Get the current version of the project")),
+            steps: get_version_steps,
         },
     ]
 }
