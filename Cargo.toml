@@ -39,7 +39,7 @@ inquire = { version = "0.7.4", default-features = false, features = [
   "crossterm",
 ] }
 changesets = "0.2.3"
-time = { version = "0.3.34" }
+time = { version = "0.3.35" }
 datta = "0.1.1"
 serde_yaml = "0.9.34"
 enum-iterator = "2.0.0"
