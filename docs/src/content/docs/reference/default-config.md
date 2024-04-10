@@ -60,11 +60,11 @@ version = "0.1.0"
 ```
 
 ```toml title="knope.toml"
-[package.something]
+[packages.something]
 versioned_files = ["member1/Cargo.toml"]
 scopes = ["something"]
 
-[package.something-else]
+[packages.something-else]
 versioned_files = ["member2/Cargo.toml"]
 scopes = ["something-else"]
 ```
