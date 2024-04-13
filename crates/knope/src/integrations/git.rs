@@ -479,12 +479,13 @@ pub(crate) fn create_tag(dry_run: DryRun, name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-/// Get the (relevant) current versions from Git tags.
+/// Get the (relevant) current versions from a slice of Git tags.
+/// Doesn't interface with Git directly.
 ///
 /// ## Parameters
 /// - `prefix`: Only tag names starting with this string will be considered.
-/// - `major_filter`: Only versions with this major number will be considered.
 /// - `verbose`: Whether to print extra information.
+/// - `all_tags`: All tags in the repository.
 pub(crate) fn get_current_versions_from_tags(
     prefix: Option<&str>,
     verbose: Verbose,
@@ -493,13 +494,13 @@ pub(crate) fn get_current_versions_from_tags(
     let pattern = prefix
         .as_ref()
         .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
-    let tags: Vec<&String> = all_tags
+    let mut tags = all_tags
         .iter()
         .filter(|tag| tag.starts_with(&pattern))
-        .collect();
+        .peekable();
 
     if let Verbose::Yes = verbose {
-        if tags.is_empty() {
+        if tags.peek().is_none() {
             println!("No tags found matching pattern {pattern}");
         }
     }
