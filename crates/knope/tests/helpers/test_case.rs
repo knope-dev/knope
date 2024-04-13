@@ -1,6 +1,6 @@
 use std::{
     io::stderr,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR},
 };
 
 use snapbox::{
@@ -192,7 +192,8 @@ impl TestCase {
     }
 
     fn data_path(&self) -> &Path {
-        Path::new(self.file_name.strip_prefix("crates/knope/").unwrap())
+        let prefix = format!("crates{MAIN_SEPARATOR}knope{MAIN_SEPARATOR}",);
+        Path::new(self.file_name.strip_prefix(&prefix).unwrap())
             .parent()
             .unwrap()
     }
