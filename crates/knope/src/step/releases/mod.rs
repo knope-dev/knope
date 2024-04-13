@@ -10,7 +10,7 @@ pub(crate) use non_empty_map::PrereleaseMap;
 pub(crate) use self::{
     changelog::Release,
     changesets::{create_change_file, ChangeType},
-    package::{ChangelogSectionSource, Package, PackageName},
+    package::{Package, PackageName},
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
@@ -48,8 +48,12 @@ pub(crate) fn prepare_release(
         add_releases_from_conventional_commits(state.packages, &state.all_git_tags, state.verbose)
             .map_err(Error::from)
             .and_then(|packages| {
-                changesets::add_releases_from_changeset(packages, &mut dry_run_stdout)
-                    .map_err(Error::from)
+                changesets::add_releases_from_changeset(
+                    packages,
+                    prerelease_label.is_some(),
+                    &mut dry_run_stdout,
+                )
+                .map_err(Error::from)
             })
             .and_then(|packages| {
                 packages
@@ -152,13 +156,6 @@ impl Change {
         match self {
             Change::ConventionalCommit(commit) => commit.change_type.clone(),
             Change::ChangeSet(change) => (&change.change_type).into(),
-        }
-    }
-
-    fn summary(&self) -> String {
-        match self {
-            Change::ConventionalCommit(commit) => commit.message.clone(),
-            Change::ChangeSet(change) => change.summary.clone(),
         }
     }
 }

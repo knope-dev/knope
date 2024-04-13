@@ -5,7 +5,7 @@ Would add the following to CHANGELOG.md:
 
 ## Features
 
-### We support custom header levels now 🎉
+- We support custom header levels now 🎉
 
 ### A title from a changeset
 
@@ -18,7 +18,7 @@ Would add files to git:
 Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
 ## Features
 
-### We support custom header levels now 🎉
+- We support custom header levels now 🎉
 
 ### A title from a changeset
 

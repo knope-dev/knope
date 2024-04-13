@@ -4,7 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Breaking Changes
 
-#### Breaking change
+- Breaking change
 
 Would add files to git:
   go.mod

@@ -31,11 +31,16 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "npx prettier CHANGELOG.md --write"
+shell = true
+command = "npx prettier CHANGELOG.md --write && git add CHANGELOG.md"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release\" && git push --force --set-upstream origin release"
+command = "git commit -m \"chore: prepare release\""
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --force --set-upstream origin release"
 
 [[workflows.steps]]
 type = "CreatePullRequest"

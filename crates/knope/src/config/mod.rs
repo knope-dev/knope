@@ -301,8 +301,14 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
     let mut release_steps = if has_forge {
         vec![
             Step::Command {
-                command: format!("git commit -m \"{commit_message}\" && git push",),
+                command: format!("git commit -m \"{commit_message}\"",),
                 variables,
+                shell: None,
+            },
+            Step::Command {
+                command: String::from("git push"),
+                variables: None,
+                shell: None,
             },
             Step::Release,
         ]
@@ -311,11 +317,18 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\""),
                 variables,
+                shell: None,
             },
             Step::Release,
             Step::Command {
-                command: String::from("git push && git push --tags"),
+                command: String::from("git push"),
                 variables: None,
+                shell: None,
+            },
+            Step::Command {
+                command: String::from("git push --tags"),
+                variables: None,
+                shell: None,
             },
         ]
     };
@@ -323,10 +336,12 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
     vec![
         Workflow {
             name: String::from("release"),
+            help_text: None,
             steps: release_steps,
         },
         Workflow {
             name: String::from("document-change"),
+            help_text: None,
             steps: vec![Step::CreateChangeFile],
         },
     ]

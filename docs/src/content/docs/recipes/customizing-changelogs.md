@@ -41,7 +41,7 @@ Knope will always include these sections in the same order, but it only includes
 
 ## Changing the header level
 
-By default, the heading of a version is `##`, each section is `###`, and each change is `####`.
+By default, the heading of a version is `##`, each section is `###`, and each [complex change](/reference/concepts/changelog/#simple-vs-complex-changes) is `####`.
 The _relative_ level of those sections is always the same,
 but you can change each version to be a top-level heading (`#`)
 by modifying the last version in the changelog to be that level.
@@ -58,7 +58,7 @@ If you have a different format for your pre-existing headers, you'll need to upd
 
 ## Breaking changes
 
-### A breaking change
+- A breaking change
 
 # 1.0.0
 
@@ -78,7 +78,7 @@ extra_changelog_sections = [
 ```
 
 You can add as many sections as you want, they will appear in order _after_ the built-in sections.
-Each section can be added to from any number of [conventional commit footers] and [changeset types].
+Each section can be added to from any number of [conventional commit footers](/reference/concepts/conventional-commits/#footers) and [changeset types](https://github.com/knope-dev/changesets?tab=readme-ov-file#change-type).
 The semantic version impact of any custom changes is `patch`.
 
 ## Overriding built-in sections
@@ -117,7 +117,7 @@ extra_changelog_sections = [
 ]
 ```
 
-Now, when running a [`CreateChangeFile`] step (for example, with `knope document-change`), the `note` type will be available:
+Now, when running a [`CreateChangeFile`](/reference/config-file/steps/create-change-file/) step (for example, with `knope document-change`), the `note` type will be available:
 
 ```text
 ? What type of change is this?

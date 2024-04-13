@@ -2,6 +2,5 @@
 
 ### Notes
 
-#### A standard note
-
-#### Standard note second only
+- A standard note
+- Standard note second only

@@ -4,7 +4,7 @@ Would add the following to CHANGELOG.md:
 
 ### Features
 
-#### New feature in second RC
+- New feature in second RC
 
 Would add files to git:
   Cargo.toml

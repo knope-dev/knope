@@ -2,14 +2,11 @@
 
 ### Notes
 
-#### A standard note
-
-#### Standard note first only
-
-#### A custom note
+- A standard note
+- Standard note first only
+- A custom note
 
 ### Something Special 🚀
 
-#### Special note
-
-#### Whatever note
+- Special note
+- Whatever note

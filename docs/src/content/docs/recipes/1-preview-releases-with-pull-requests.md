@@ -62,7 +62,11 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare release $version\" && git push --force --set-upstream origin release"
+command = "git commit -m \"chore: prepare release $version\""
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --force --set-upstream origin release"
 
 [workflows.steps.variables]
 "$version" = "Version"
@@ -182,7 +186,7 @@ The steps here:
 The `continue-on-error` attribute means even if this step fails, the workflow will pass.
 This is because the workflow runs on every push to `main`, but shouldn't fail when there's nothing to release.
 However, the workflow also won't fail if there are real errors from Knope.
-You may want to instead use the [`allow_empty` option](/reference/Config File/Step/prepare-release.md#options) in
+You may want to instead use the [`allow_empty` option](/reference/config-file/steps/prepare-release#options) in
 `knope.toml` and split the rest of the steps into a second workflow.
 Then, you can use some scripting in GitHub Actions to skip the rest of the workflow if there's nothing to release.
 :::
@@ -351,10 +355,10 @@ Just to summarize, this recipe describes a process that:
 1. Automatically creates a pull request in GitHub every time a new commit is pushed to `main`. That pull request contains a preview of the next release.
 2. Automatically releases the package every time a release preview's pull request is merged.
 
-[variables]: /reference/Config File/variables.md
-[workflow dispatch workflow]: ./workflow_dispatch.md
-[`PrepareRelease`]: /reference/Config File/Steps/prepare-release.md
-[`CreatePullRequest`]: ../config/step/CreatePullRequest.md
-[`Release`]: ../config/step/Release.md
-[`CreateChangeFile`]: ../config/step/CreateChangeFile.md
+[variables]: /reference/config-file/variables
+[workflow dispatch recipe]: /recipes/workflow-dispatch-releases
+[`PrepareRelease`]: /reference/config-file/steps/prepare-release
+[`CreatePullRequest`]: /reference/config-file/steps/create-pull-request
+[`Release`]: /reference/config-file/steps/release/
+[`CreateChangeFile`]: /reference/config-file/steps/create-change-file
 [personal access token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token

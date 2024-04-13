@@ -13,7 +13,11 @@ use super::toml;
 use crate::{
     fs,
     fs::read_to_string,
-    step::releases::{changelog, package::Asset, PackageName},
+    step::releases::{
+        changelog,
+        package::{Asset, ChangelogSectionSource},
+        ChangeType, PackageName,
+    },
 };
 
 /// Represents a single package in `knope.toml`.
@@ -26,7 +30,8 @@ pub struct Package {
     pub(crate) changelog: Option<RelativePathBuf>,
     /// Optional scopes that can be used to filter commits when running [`Step::PrepareRelease`].
     pub(crate) scopes: Option<Vec<String>>,
-    /// Extra sections that should be added to the changelog from custom footers in commit messages.
+    /// Extra sections that should be added to the changelog from custom footers in commit messages
+    /// or change set types.
     pub(crate) extra_changelog_sections: Vec<ChangelogSection>,
     pub(crate) assets: Option<Vec<Asset>>,
     pub(crate) ignore_go_major_versioning: bool,
@@ -243,6 +248,12 @@ impl From<&str> for CommitFooter {
     }
 }
 
+impl From<CommitFooter> for ChangeType {
+    fn from(footer: CommitFooter) -> Self {
+        Self::Custom(ChangelogSectionSource::CommitFooter(footer))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct CustomChangeType(String);
@@ -262,6 +273,31 @@ impl From<String> for CustomChangeType {
 impl From<&str> for CustomChangeType {
     fn from(token: &str) -> Self {
         Self(token.into())
+    }
+}
+
+impl From<CustomChangeType> for String {
+    fn from(custom: CustomChangeType) -> Self {
+        custom.0
+    }
+}
+
+impl From<CustomChangeType> for ChangeType {
+    fn from(custom: CustomChangeType) -> Self {
+        changesets::ChangeType::from(String::from(custom)).into()
+    }
+}
+
+impl From<changesets::ChangeType> for ChangeType {
+    fn from(change_type: changesets::ChangeType) -> Self {
+        match change_type {
+            changesets::ChangeType::Major => Self::Breaking,
+            changesets::ChangeType::Minor => Self::Feature,
+            changesets::ChangeType::Patch => Self::Fix,
+            changesets::ChangeType::Custom(custom) => {
+                Self::Custom(ChangelogSectionSource::CustomChangeType(custom.into()))
+            }
+        }
     }
 }
 

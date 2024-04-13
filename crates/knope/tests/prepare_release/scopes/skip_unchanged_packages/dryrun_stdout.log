@@ -4,7 +4,7 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Fixes
 
-#### Fix for first only
+- Fix for first only
 
 Would add files to git:
   Cargo.toml

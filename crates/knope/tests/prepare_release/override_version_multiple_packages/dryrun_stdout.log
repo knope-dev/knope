@@ -4,7 +4,7 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 Would add files to git:
   Cargo.toml
@@ -15,7 +15,7 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 Would add files to git:
   package.json
@@ -26,7 +26,7 @@ Would add the following to THIRD_CHANGELOG.md:
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 Would add files to git:
   pyproject.toml

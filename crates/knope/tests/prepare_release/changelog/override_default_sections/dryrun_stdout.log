@@ -4,15 +4,15 @@ Would add the following to CHANGELOG.md:
 
 ## 🐣 Broke
 
-### Something you hopefully don't care about
+- Something you hopefully don't care about
 
 ## 🔧 Fixed
 
-### Something you do care about
+- Something you do care about
 
 ## ➕ Added
 
-### Something new
+- Something new
 
 Would add files to git:
   Cargo.toml

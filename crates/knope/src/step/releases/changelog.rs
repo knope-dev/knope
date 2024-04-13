@@ -1,13 +1,12 @@
-use std::{fmt::Display, mem::swap, path::PathBuf, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, mem::swap, path::PathBuf, str::FromStr};
 
-use indexmap::IndexMap;
 use itertools::Itertools;
 use knope_versioning::{GoVersioning, Version};
 use miette::Diagnostic;
 use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
 
-use super::{Change, ChangeType, ChangelogSectionSource, Package, TimeError};
+use super::{Change, Package, TimeError};
 use crate::{dry_run::DryRun, fs, step::releases::package::ChangelogSections};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -179,44 +178,31 @@ impl Release {
         header_level: HeaderLevel,
         additional_tags: Vec<String>,
     ) -> Self {
-        let mut sections: IndexMap<String, Section> = changelog_sections
-            .values()
-            .map(|name| (name.to_string(), Section::new(name.to_string())))
-            .collect();
-        let breaking_source = ChangelogSectionSource::CustomChangeType("major".into());
-        let feature_source = ChangelogSectionSource::CustomChangeType("minor".into());
-        let fix_source = ChangelogSectionSource::CustomChangeType("patch".into());
-
-        for change in changes {
-            let source = match &change.change_type() {
-                ChangeType::Breaking => breaking_source.clone(),
-                ChangeType::Feature => feature_source.clone(),
-                ChangeType::Fix => fix_source.clone(),
-                ChangeType::Custom(source) => source.clone(),
-            };
-            let section = changelog_sections
-                .get(&source)
-                .and_then(|name| sections.get_mut(name.as_ref()));
-            if let Some(section) = section {
-                let summary = change.summary();
-                // Changesets come with a baked in header, replace it with our own
-                let summary: String = summary
-                    .chars()
-                    .skip_while(|it| *it == '#' || *it == ' ')
-                    .collect();
-                if !section.body.is_empty() {
-                    section.body.push_str("\n\n");
+        let sections = changelog_sections
+            .iter()
+            .filter_map(|(section_name, sources)| {
+                let changes = changes
+                    .iter()
+                    .filter_map(|change| {
+                        if sources.contains(&change.change_type()) {
+                            Some(ChangeDescription::from(change))
+                        } else {
+                            None
+                        }
+                    })
+                    .sorted()
+                    .collect_vec();
+                if changes.is_empty() {
+                    None
+                } else {
+                    Some(Section {
+                        title: section_name.to_string(),
+                        body: build_body(changes, header_level),
+                    })
                 }
-                section
-                    .body
-                    .push_str(&format!("{header_level}## {summary}"));
-            }
-        }
-
-        let sections = sections
-            .into_values()
-            .filter(|section| !section.body.is_empty())
+            })
             .collect_vec();
+
         let sections = (!sections.is_empty()).then_some(sections);
         let date = Some(OffsetDateTime::now_utc().date());
         Self {
@@ -267,13 +253,19 @@ impl Release {
     /// ```markdown
     /// ## Breaking changes
     ///
-    /// ### a change
+    /// - a change
+    ///
+    /// ### a complex change
+    ///
+    /// with details
     ///
     /// ## Features
     ///
-    /// ### a feature
+    /// - a feature
     ///
-    /// ### another feature
+    /// ### a complex feature
+    ///
+    /// with details
     /// ```
     ///
     /// If [`Self::header_level`] is [`HeaderLevel::H2`], the body will look like this:
@@ -281,21 +273,25 @@ impl Release {
     /// ```markdown
     /// ### Breaking changes
     ///
-    /// #### a change
+    /// - a change
+    ///
+    /// #### a complex change
+    ///
+    /// with details
     ///
     /// ### Features
     ///
-    /// #### a feature
+    /// - a feature
     ///
-    /// #### another feature
+    /// #### a complex feature
+    ///
+    /// with details
     /// ```
     ///
     /// GitHub releases _always_ use the [`HeaderLevel::H1`] format, so they call [`Self::body_at_h1`]
     /// which is like this function, but with optional conversion.
     pub(crate) fn body(&self) -> Option<String> {
-        let Some(sections) = self.sections.as_ref() else {
-            return None;
-        };
+        let sections = self.sections.as_ref()?;
         let mut res = String::new();
         for section in sections {
             res.push_str(&format!(
@@ -366,6 +362,76 @@ impl Release {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum ChangeDescription {
+    Simple(String),
+    Complex(String, String),
+}
+
+impl Ord for ChangeDescription {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::Simple(_), Self::Complex(_, _)) => Ordering::Less,
+            (Self::Complex(_, _), Self::Simple(_)) => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    }
+}
+
+impl PartialOrd for ChangeDescription {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl From<&Change> for ChangeDescription {
+    fn from(change: &Change) -> Self {
+        match change {
+            Change::ConventionalCommit(commit) => Self::Simple(commit.message.clone()),
+            Change::ChangeSet(changeset) => {
+                let mut lines = changeset
+                    .summary
+                    .trim()
+                    .lines()
+                    .skip_while(|it| it.is_empty());
+                let summary: String = lines
+                    .next()
+                    .unwrap_or_default()
+                    .chars()
+                    .skip_while(|it| *it == '#' || *it == ' ')
+                    .collect();
+                let body: String = lines.skip_while(|it| it.is_empty()).join("\n");
+                if body.is_empty() {
+                    Self::Simple(summary)
+                } else {
+                    Self::Complex(summary, body)
+                }
+            }
+        }
+    }
+}
+
+fn build_body(changes: Vec<ChangeDescription>, header_level: HeaderLevel) -> String {
+    let mut body = String::new();
+    let mut changes = changes.into_iter().peekable();
+    while let Some(change) = changes.next() {
+        match change {
+            ChangeDescription::Simple(summary) => {
+                body.push_str(&format!("- {summary}"));
+            }
+            ChangeDescription::Complex(summary, details) => {
+                body.push_str(&format!("{header_level}## {summary}\n\n{details}"));
+            }
+        }
+        match changes.peek() {
+            Some(ChangeDescription::Simple(_)) => body.push('\n'),
+            Some(ChangeDescription::Complex(_, _)) => body.push_str("\n\n"),
+            None => (),
+        }
+    }
+    body
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod test_parse_title {
@@ -415,6 +481,60 @@ mod test_parse_title {
     }
 }
 
+#[cfg(test)]
+mod test_change_description {
+    use changesets::{PackageChange, UniqueId};
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+    use crate::step::releases::{conventional_commits::ConventionalCommit, ChangeType};
+
+    #[test]
+    fn conventional_commit() {
+        let change = Change::ConventionalCommit(ConventionalCommit {
+            change_type: ChangeType::Feature,
+            original_source: String::new(),
+            message: "a feature".to_string(),
+        });
+        let description = ChangeDescription::from(&change);
+        assert_eq!(
+            description,
+            ChangeDescription::Simple("a feature".to_string())
+        );
+    }
+
+    #[test]
+    fn simple_changeset() {
+        let change = Change::ChangeSet(PackageChange {
+            unique_id: UniqueId::from(""),
+            change_type: changesets::ChangeType::Minor,
+            summary: "# a feature\n\n\n\n".to_string(),
+        });
+        let description = ChangeDescription::from(&change);
+        assert_eq!(
+            description,
+            ChangeDescription::Simple("a feature".to_string())
+        );
+    }
+
+    #[test]
+    fn complex_changeset() {
+        let change = Change::ChangeSet(PackageChange {
+            unique_id: UniqueId::from(""),
+            change_type: changesets::ChangeType::Minor,
+            summary: "# a feature\n\nwith details\n\n- first\n- second".to_string(),
+        });
+        let description = ChangeDescription::from(&change);
+        assert_eq!(
+            description,
+            ChangeDescription::Complex(
+                "a feature".to_string(),
+                "with details\n\n- first\n- second".to_string()
+            )
+        );
+    }
+}
+
 #[derive(Clone, Debug, Diagnostic, Eq, PartialEq, thiserror::Error)]
 pub(crate) enum ParseError {
     #[error("Missing version")]
@@ -442,12 +562,6 @@ pub(crate) struct Section {
 }
 
 impl Section {
-    fn new<Title: Into<String>>(title: Title) -> Self {
-        Self {
-            title: title.into(),
-            body: String::new(),
-        }
-    }
     fn from_lines<'a, 'b, I: Iterator<Item = &'a str>>(
         lines: I,
         header_level: &'b str,

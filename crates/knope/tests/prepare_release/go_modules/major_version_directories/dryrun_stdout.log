@@ -25,7 +25,7 @@ Would add the following to CHANGELOG.md:
 
 ### Fixes
 
-#### A fix
+- A fix
 
 Would add files to git:
   go.mod
@@ -44,7 +44,7 @@ Would add the following to v2/CHANGELOG.md:
 
 ### Features
 
-#### New feature
+- New feature
 
 Would add files to git:
   v2/go.mod

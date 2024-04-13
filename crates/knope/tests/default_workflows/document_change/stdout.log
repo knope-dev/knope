@@ -1,4 +1,4 @@
-Usage: knope document-change [OPTIONS]
+Usage: knope[EXE] document-change [OPTIONS]
 
 Options:
       --dry-run  Pretend to run a workflow, outputting what _would_ happen without actually doing it.

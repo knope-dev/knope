@@ -2,7 +2,7 @@
 
 ### Breaking Changes
 
-#### Breaking change
+- Breaking change
 
 ## 1.1.0 ([DATE])
 

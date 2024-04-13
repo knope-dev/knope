@@ -42,13 +42,10 @@ Would add the following to FIRST_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### A breaking feature
-
-#### A breaking bug fix
-
-#### A breaking change
-
-#### Another breaking change
+- A breaking feature
+- A breaking bug fix
+- A breaking change
+- Another breaking change
 
 #### A breaking changeset
 
@@ -56,11 +53,9 @@ A breaking change for only the first package
 
 ### Features
 
-#### A feature
-
-#### A feature for the first package
-
-#### A feature with a separate breaking change
+- A feature
+- A feature for the first package
+- A feature with a separate breaking change
 
 #### A feature for first, fix for second
 
@@ -68,7 +63,7 @@ And even some details which aren't visible
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 Would add files to git:
   Cargo.toml
@@ -103,23 +98,19 @@ Would add the following to SECOND_CHANGELOG.md:
 
 ### Breaking Changes
 
-#### A breaking feature
-
-#### A breaking bug fix
-
-#### A breaking change
-
-#### Another breaking change
+- A breaking feature
+- A breaking bug fix
+- A breaking change
+- Another breaking change
 
 ### Features
 
-#### A feature
-
-#### A feature with a separate breaking change
+- A feature
+- A feature with a separate breaking change
 
 ### Fixes
 
-#### A bug fix
+- A bug fix
 
 #### A feature for first, fix for second
 

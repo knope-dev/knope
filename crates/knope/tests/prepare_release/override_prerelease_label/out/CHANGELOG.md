@@ -2,7 +2,7 @@
 
 ### Breaking Changes
 
-#### Breaking feature in new RC
+- Breaking feature in new RC
 
 ## 1.1.0
 

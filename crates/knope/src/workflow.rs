@@ -12,6 +12,8 @@ use crate::{state::RunType, step, step::Step, State};
 pub(crate) struct Workflow {
     /// The display name of this Workflow. This is what you'll see when you go to select it.
     pub(crate) name: String,
+    /// The help text for this workflow. When running `knope --help`, this will be displayed.
+    pub(crate) help_text: Option<String>,
     /// A list of [`Step`]s to execute in order, stopping if any step fails.
     pub(crate) steps: Vec<Step>,
 }

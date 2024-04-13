@@ -50,6 +50,15 @@ mod test_package_configs {
         assert!(packages.contains_key("something"));
         assert!(packages.contains_key("blah"));
     }
+
+    #[test]
+    fn single_package_with_help() {
+        let toml_str =
+            format!("[package]{REQUIRED_CONFIG_STUFF}\nhelp_text = \"This is a help text\"");
+        let config: ConfigLoader = toml::from_str(&toml_str).unwrap();
+        assert!(config.package.is_some());
+        assert!(config.packages.is_none());
+    }
 }
 
 /// Config required for steps that interact with Jira.

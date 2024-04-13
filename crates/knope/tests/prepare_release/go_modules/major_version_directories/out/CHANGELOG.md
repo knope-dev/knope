@@ -4,7 +4,7 @@
 
 ### Fixes
 
-#### A fix
+- A fix
 
 ## 1.0.0
 
