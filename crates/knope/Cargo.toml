@@ -34,7 +34,7 @@ inquire = { version = "0.7.4", default-features = false, features = [
   "crossterm",
 ] }
 itertools = "0.12.1"
-knope-versioning = { path = "../knope-versioning", version = "0.0.0", features = [
+knope-versioning = { path = "../knope-versioning", version = "0.0.1", features = [
   "miette",
 ] }
 log = "0.4.21"
