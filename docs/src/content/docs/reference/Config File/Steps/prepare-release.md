@@ -24,6 +24,8 @@ See that step for details on the tagging formats.
 - `allow_empty`: If set to `true`, this step won't fail if there are no changes to release. Defaults to`false`.
 - `prerelease_label`: If set, this step will create a [pre-release version] using the specified label. This can also be set dynamically using the [`--prerelease-label` command line argument].
 - The [`--override-version` command line argument] can use used to override the version calculated by this step.
+- `ignore_conventional_commits`: If set to `true`, this step won't look for [Conventional Commits] (will only consider changesets).
+  Defaults to `false`.
 
 ## Errors
 

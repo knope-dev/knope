@@ -8,6 +8,12 @@ Knope supports a subset of [conventional commits](https://www.conventionalcommit
 a way of encoding changelog & version information into commit messages.
 This document describes how conventional commits work _in Knope_, not the full scope of the larger project.
 
+:::tip
+
+You can disable conventional commits by configuring the [`PrepareRelease`] step.
+
+:::
+
 ## The first line
 
 Every conventional commit must start with a type,
@@ -108,3 +114,4 @@ The "Another breaking change" footer will be in the "Breaking Changes" section o
 The "A note" footer will be in the "Notes" section of the changelog.
 
 [major change]: /reference/concepts/semantic-versioning#major-changes
+[`PrepareRelease`]: /reference/config-file/steps/prepare-release#options
