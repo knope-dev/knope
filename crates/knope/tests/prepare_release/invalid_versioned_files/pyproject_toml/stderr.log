@@ -1,0 +1,5 @@
+Error: pyproject::no_versions (https://knope.tech/reference/config-file/packages/#pyprojecttoml)
+
+  × No versions were found in pyproject.toml
+  help: Make sure [project.version] or [tool.poetry.version] is set.
+

@@ -1,54 +1,28 @@
-[package]
-name = "knope"
-description = "A command line tool for automating common development tasks"
-version = "0.16.0"
-authors = ["Dylan Anthony <contact@dylananthony.com>"]
-edition = "2021"
-license = "MIT"
-repository = "https://github.com/knope-dev/knope"
-homepage = "https://knope.tech"
-documentation = "https://knope.tech"
-keywords = ["semantic-version", "changelog", "changeset", "git", "github"]
-categories = ["command-line-utilities", "development-tools"]
-rust-version = "1.71.1"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-execute = "0.2.13"
-serde = { version = "1.0.197", features = ["derive"] }
-base64 = "0.21.7"
-toml = "0.8.12"
-serde_json = { version = "1.0.114", features = ["preserve_order"] }
-git2 = { version = "0.18.3", default-features = false }
-platform-dirs = "0.3.0"
-git-conventional = "0.12.6"
-ureq = { version = "2.9.6", features = ["json"] }
-http = "1.1.0"
-clap = { version = "4.5.3", features = ["cargo", "string", "env"] }
-itertools = "0.12.1"
-miette = { version = "7.2.0", features = ["fancy"] }
-thiserror = "1.0.58"
-gix = { version = "0.61.1", default-features = false, features = [
-  "max-performance-safe",
-] }
-log = "0.4.21"
-env_logger = "0.11.3"
-indexmap = { version = "2.2.6", features = ["serde"] }
-inquire = { version = "0.7.3", default-features = false, features = [
-  "crossterm",
-] }
-changesets = "0.2.2"
-time = { version = "0.3.34" }
-datta = "0.1.1"
-serde_yaml = "0.9.33"
-enum-iterator = "2.0.0"
-relative-path = { version = "1.9.2", features = ["serde"] }
-
-[dev-dependencies]
-pretty_assertions = "1.4.0"
-snapbox = { version = "0.5.9", features = ["path"] }
-tempfile = "3.10.1"
+[workspace]
+resolver = "2"
+default-members = ["crates/knope"]
+members = ["crates/knope", "crates/knope-versioning"]
 
 [profile.release]
 strip = true
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+warnings = "deny"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "deny"
+
+# cargo-deny handles this
+multiple_crate_versions = "allow"
+
+# Don't panic!
+panic = "deny"
+exit = "deny"
+unimplemented = "deny"
+todo = "deny"
+expect_used = "deny"
+unwrap_used = "deny"
+indexing_slicing = "deny"
+missing_panics_doc = "forbid"

@@ -1,0 +1,40 @@
+Would add the following to Cargo.toml: 2.0.0
+Would add the following to pyproject.toml: 2.0.0
+Would add the following to FIRST_CHANGELOG.md: 
+## 2.0.0 ([DATE])
+
+### Breaking Changes
+
+- New breaking feature
+
+Would add files to git:
+  Cargo.toml
+  pyproject.toml
+  FIRST_CHANGELOG.md
+Would add the following to package.json: 0.5.0
+Would add the following to SECOND_CHANGELOG.md: 
+## 0.5.0 ([DATE])
+
+### Breaking Changes
+
+- New breaking feature
+
+Would add files to git:
+  package.json
+  SECOND_CHANGELOG.md
+Would create a release on GitHub with name first 2.0.0 ([DATE]) and tag first/v2.0.0 and body:
+## Breaking Changes
+
+- New breaking feature
+Would create a release on Gitea [https://codeberg.org] with name first 2.0.0 ([DATE]) and tag first/v2.0.0 and body:
+## Breaking Changes
+
+- New breaking feature
+Would create a release on GitHub with name second 0.5.0 ([DATE]) and tag second/v0.5.0 and body:
+## Breaking Changes
+
+- New breaking feature
+Would create a release on Gitea [https://codeberg.org] with name second 0.5.0 ([DATE]) and tag second/v0.5.0 and body:
+## Breaking Changes
+
+- New breaking feature

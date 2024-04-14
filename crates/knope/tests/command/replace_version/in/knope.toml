@@ -1,0 +1,9 @@
+[[workflows]]
+name = "replace-version"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo blah blah $$$$"
+
+[workflows.steps.variables]
+"$$$$" = "Version"

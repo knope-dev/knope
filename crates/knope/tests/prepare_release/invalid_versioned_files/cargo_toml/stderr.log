@@ -1,0 +1,17 @@
+Error: cargo::deserialize (https://knope.tech/reference/config-file/packages/#cargotoml)
+
+  × Error deserializing Cargo.toml: TOML parse error at line 1, column 1
+  │   |
+...
+  │   | ^
+  │ missing field `package`
+...
+  ╰─▶ TOML parse error at line 1, column 1
+        |
+...
+        | ^
+      missing field `package`
+      
+  help: Knope expects the Cargo.toml file to have `package.version` and
+        `package.name` properties.
+

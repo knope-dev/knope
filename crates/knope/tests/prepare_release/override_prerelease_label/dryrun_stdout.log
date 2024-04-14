@@ -1,0 +1,11 @@
+Would add the following to Cargo.toml: 2.0.0-alpha.0
+Would add the following to CHANGELOG.md: 
+## 2.0.0-alpha.0 ([DATE])
+
+### Breaking Changes
+
+- Breaking feature in new RC
+
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md

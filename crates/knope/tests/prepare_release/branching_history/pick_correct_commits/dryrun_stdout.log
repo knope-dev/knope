@@ -1,0 +1,11 @@
+Would add the following to Cargo.toml: 2.0.1
+Would add the following to CHANGELOG.md: 
+## 2.0.1 ([DATE])
+
+### Fixes
+
+- Another bug
+
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md

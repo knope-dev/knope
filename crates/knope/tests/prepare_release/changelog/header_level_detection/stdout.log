@@ -1,0 +1,25 @@
+Would delete: .changeset/changeset.md
+Would add the following to Cargo.toml: 1.1.0
+Would add the following to CHANGELOG.md: 
+# 1.1.0 ([DATE])
+
+## Features
+
+- We support custom header levels now 🎉
+
+### A title from a changeset
+
+That title up there should be promoted to the correct header level
+
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md
+  .changeset/changeset.md
+Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
+## Features
+
+- We support custom header levels now 🎉
+
+### A title from a changeset
+
+That title up there should be promoted to the correct header level

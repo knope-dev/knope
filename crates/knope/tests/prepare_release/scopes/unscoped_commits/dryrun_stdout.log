@@ -1,0 +1,30 @@
+Would add the following to Cargo.toml: 1.1.0
+Would add the following to FIRST_CHANGELOG.md: 
+## 1.1.0 ([DATE])
+
+### Features
+
+- No-scope feat
+
+### Fixes
+
+- Fix for first only
+
+Would add files to git:
+  Cargo.toml
+  FIRST_CHANGELOG.md
+Would add the following to pyproject.toml: 0.2.0
+Would add the following to SECOND_CHANGELOG.md: 
+## 0.2.0 ([DATE])
+
+### Breaking Changes
+
+- Breaking change for second only
+
+### Features
+
+- No-scope feat
+
+Would add files to git:
+  pyproject.toml
+  SECOND_CHANGELOG.md

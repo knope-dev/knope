@@ -1,0 +1,12 @@
+Would add the following to Cargo.toml: 1.3.0-rc.1
+Would add the following to CHANGELOG.md: 
+## 1.3.0-rc.1 ([DATE])
+
+### Features
+
+- A new feature
+- Another new feature
+
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md
