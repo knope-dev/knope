@@ -29,7 +29,7 @@ gix = { version = "0.62.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 http = "1.1.0"
-indexmap = { version = "2.2.5", features = ["serde"] }
+indexmap = { version = "2.2.6", features = ["serde"] }
 inquire = { version = "0.7.0", default-features = false, features = [
   "crossterm",
 ] }
