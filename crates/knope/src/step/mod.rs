@@ -178,4 +178,7 @@ pub(crate) struct PrepareRelease {
     /// Should this step continue if there are no changes to release? If not, it causes an error.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub(crate) allow_empty: bool,
+    /// If set to true, conventional commits are ignored
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) ignore_conventional_commits: bool,
 }

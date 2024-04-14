@@ -43,33 +43,35 @@ pub(crate) fn prepare_release(
     let PrepareRelease {
         prerelease_label,
         allow_empty,
+        ignore_conventional_commits,
     } = prepare_release;
-    state.packages =
+    let packages = if *ignore_conventional_commits {
+        state.packages
+    } else {
         add_releases_from_conventional_commits(state.packages, &state.all_git_tags, state.verbose)
-            .map_err(Error::from)
-            .and_then(|packages| {
-                changesets::add_releases_from_changeset(
-                    packages,
-                    prerelease_label.is_some(),
-                    &mut dry_run_stdout,
-                )
-                .map_err(Error::from)
+            .map_err(Error::from)?
+    };
+    state.packages = changesets::add_releases_from_changeset(
+        packages,
+        prerelease_label.is_some(),
+        &mut dry_run_stdout,
+    )
+    .map_err(Error::from)
+    .and_then(|packages| {
+        packages
+            .into_iter()
+            .map(|package| {
+                package
+                    .write_release(
+                        prerelease_label,
+                        &state.all_git_tags,
+                        &mut dry_run_stdout,
+                        state.verbose,
+                    )
+                    .map_err(Error::from)
             })
-            .and_then(|packages| {
-                packages
-                    .into_iter()
-                    .map(|package| {
-                        package
-                            .write_release(
-                                prerelease_label,
-                                &state.all_git_tags,
-                                &mut dry_run_stdout,
-                                state.verbose,
-                            )
-                            .map_err(Error::from)
-                    })
-                    .collect()
-            })?;
+            .collect()
+    })?;
 
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
