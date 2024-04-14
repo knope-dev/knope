@@ -16,7 +16,7 @@ Before adding in a new package, you should move the existing package to wherever
 For example, when Knope switched to a monorepo,
 the code for `knope` moved from the root of the repository to `crates/knope`.
 What's important from Knope's perspective is
-where the [`versioned_files`](/reference/config-file/packages#versioned_files) and [`changelog`](/reference/config-file/packages#changelog) are located.
+where the [`versioned_files`](/reference/config-file/packages#versioned_files) and [`changelog`](/reference/config-file/packages#changelog) are.
 
 ## Step 2: Update `knope.toml`
 
@@ -52,5 +52,5 @@ Be sure to replace `<package-name>` with the same thing you put in `knope.toml`.
 
 Now that you have a monorepo set up, you can add in new packages as needed. Create a new `[packages.<package-name>]`
 section in `knope.toml` for each new package. Make sure to also add an initial version tag to each new package,
-like `package-name/v0.0.0` so that conventional commits from before the package's creation won't be added to its
+like `package-name/v0.0.0` so that Knope won't add conventional commits from before the package's creation to its
 first release.
