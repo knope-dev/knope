@@ -1172,7 +1172,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.14.1"
+version = "0.16.1"
 dependencies = [
  "base64",
  "changesets",
