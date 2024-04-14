@@ -10,6 +10,45 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.16.2 (2024-04-14)
+
+### Features
+
+#### Add `get-version` default workflow
+
+For **single-package repositories** with no custom workflows defined,
+there is now a [default workflow](https://knope.tech/reference/default-config/#workflows) called `get-version` that
+prints out the current package version.
+
+If you want similar functionality for multi-package repositories, please add your ideas to [issue #988](https://github.com/knope-dev/knope/issues/988).
+
+Thanks to @BatmanAoD for the suggestion and @alex-way for the implementation!
+
+PR #994 closed #885.
+
+#### Add option to ignore conventional commits
+
+You can now add `ignore_conventional_commits = true` to a [`PrepareRelease` step](https://knope.tech/reference/config-file/steps/prepare-release/)
+to ignore commit messages (and only consider changesets):
+
+```toml
+[[workflows.steps]]
+type = "PrepareRelease"
+ignore_conventional_commits = true
+```
+
+PR #1008 closes #924. Thanks for the suggestion @ematipico!
+
+### Fixes
+
+- Allow omitting the `variables` field for `CreatePullRequest` title and body
+
+### Documentation
+
+#### Created a new recipe for converting a single-package repo into a monorepo
+
+Knope itself is now a monorepo—the process of converting it was documented [here](https:/knope.tech/recipes/convert-to-monorepo).
+
 ## 0.16.1 (2024-03-24)
 
 ### Features
