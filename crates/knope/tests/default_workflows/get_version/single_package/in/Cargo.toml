@@ -1,0 +1,3 @@
+[package]
+name = "single-package-get-version"
+version = "1.23.45"

@@ -1,0 +1,5 @@
+[packages.rust]
+versioned_files = ["Cargo.toml"]
+
+[packages.js]
+versioned_files = ["package.json"]
