@@ -1,4 +1,4 @@
-Usage: knope release [OPTIONS]
+Usage: knope[EXE] release [OPTIONS]
 
 Options:
       --dry-run
