@@ -74,7 +74,7 @@ scopes = ["something-else"]
 When there are no workflows defined in a `knope.toml` file, Knope will use the default workflows.
 Some pieces will differ depending on the configured packages and forges:
 
-```toml title="knope.toml" {"Does not use a $version variable when there are multiple packages": 9-13} {"Moves git push down here and pushes tags if no forges are configured": 18}
+```toml title="knope.toml" {"Does not use a $version variable when there are multiple packages": 11-13} {"Moves git push down here and pushes tags if no forges are configured": 22} {"Omits "get-version" when there are multiple packages": 30-40}
 [[workflows]]
 name = "release"
 
@@ -85,12 +85,13 @@ type = "PrepareRelease"
 type = "Command"
 command = "git commit -m \"chore: prepare release $version\""
 
-[[workflows.steps]]
-type = "Command"
-command = "git push"
 
 [workflows.steps.variables]
 "$version" = "Version"
+
+[[workflows.steps]]
+type = "Command"
+command = "git push"
 
 [[workflows.steps]]
 type = "Release"
@@ -102,6 +103,18 @@ name = "document-change"
 
 [[workflows.steps]]
 type = "CreateChangeFile"
+
+
+[[workflows]]
+name = "get-version"
+help_text = "Get the current version of the project"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo \"$version\""
+
+[[workflows.steps.variables]]
+"$version" = "Version"
 ```
 
 ## Forges
