@@ -1,0 +1,58 @@
+[package]
+name = "knope"
+description = "A command line tool for automating common development tasks"
+version = "0.14.1"
+authors = ["Dylan Anthony <contact@dylananthony.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/knope-dev/knope"
+homepage = "https://knope.tech"
+documentation = "https://knope.tech"
+keywords = ["semantic-version", "changelog", "changeset", "git", "github"]
+categories = ["command-line-utilities", "development-tools"]
+rust-version = "1.71.1"
+readme = "../../README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64 = "0.21.7"
+changesets = "0.2.2"
+clap = { version = "4.5.2", features = ["cargo", "string", "env"] }
+datta = "0.1.1"
+enum-iterator = "2.0.0"
+env_logger = "0.11.3"
+execute = "0.2.13"
+git2 = { version = "0.18.2", default-features = false }
+git-conventional = "0.12.6"
+gix = { version = "0.62.0", default-features = false, features = [
+  "max-performance-safe",
+] }
+http = "1.1.0"
+indexmap = { version = "2.2.5", features = ["serde"] }
+inquire = { version = "0.7.0", default-features = false, features = [
+  "crossterm",
+] }
+itertools = "0.12.1"
+knope-versioning = { path = "../knope-versioning", version = "0.0.0", features = [
+  "miette",
+] }
+log = "0.4.21"
+miette = { version = "7.2.0", features = ["fancy"] }
+platform-dirs = "0.3.0"
+relative-path = { version = "1.9.2", features = ["serde"] }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = { version = "1.0.114", features = ["preserve_order"] }
+serde_yaml = "0.9.32"
+thiserror = "1.0.57"
+time = { version = "0.3.34" }
+toml = "0.8.10"
+ureq = { version = "2.9.6", features = ["json"] }
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+snapbox = { version = "0.5.8", features = ["path"] }
+tempfile = "3.10.1"
+
+[lints]
+workspace = true

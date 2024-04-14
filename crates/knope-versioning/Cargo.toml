@@ -1,0 +1,30 @@
+[package]
+name = "knope-versioning"
+description = "A library for handling all the versioned files supported by Knope"
+version = "0.0.0"
+authors = ["Dylan Anthony <contact@dylananthony.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/knope-dev/knope"
+keywords = ["semantic-version"]
+categories = ["development-tools"]
+rust-version = "1.71.1"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.12.1"
+miette = { version = "7.2.0", optional = true }
+relative-path = { version = "1.9.2", features = ["serde"] }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+serde_yaml = "0.9.32"
+thiserror = "1.0.57"
+toml = "0.8.11"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+
+[lints]
+workspace = true
