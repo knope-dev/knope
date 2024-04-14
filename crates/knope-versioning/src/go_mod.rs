@@ -1,6 +1,5 @@
 use std::{
     fmt::{Debug, Display},
-    path::MAIN_SEPARATOR,
     str::FromStr,
 };
 
@@ -136,7 +135,7 @@ impl GoMod {
                 let prefix = parent_str
                     .strip_suffix(&format!("v{major}"))
                     .unwrap_or(&parent_str);
-                let prefix = prefix.strip_suffix(MAIN_SEPARATOR).unwrap_or(prefix);
+                let prefix = prefix.strip_suffix('/').unwrap_or(prefix);
                 if prefix.is_empty() {
                     None
                 } else {
