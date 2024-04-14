@@ -1,5 +1,0 @@
----
-versioning: minor
----
-
-# Initial release
