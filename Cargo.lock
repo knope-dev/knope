@@ -1172,7 +1172,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "base64",
  "changesets",
@@ -1207,7 +1207,7 @@ dependencies = [
 
 [[package]]
 name = "knope-versioning"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "itertools",
  "miette",
