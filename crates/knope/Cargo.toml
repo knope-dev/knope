@@ -46,7 +46,7 @@ serde_json = { version = "1.0.116", features = ["preserve_order"] }
 serde_yaml = "0.9.32"
 thiserror = "1.0.57"
 time = { version = "0.3.36" }
-toml = "0.8.10"
+toml = "0.8.12"
 ureq = { version = "2.9.6", features = ["json"] }
 
 [dev-dependencies]
