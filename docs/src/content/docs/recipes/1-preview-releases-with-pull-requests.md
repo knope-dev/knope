@@ -232,7 +232,7 @@ release:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4.1.1
-    - uses: actions/download-artifact@v4.1.4
+    - uses: actions/download-artifact@v4.1.5
       with:
         path: artifacts
         merge-multiple: true
@@ -322,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.1.1
-      - uses: actions/download-artifact@v4.1.4
+      - uses: actions/download-artifact@v4.1.5
         with:
           path: artifacts
           merge-multiple: true
