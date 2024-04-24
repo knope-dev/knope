@@ -99,14 +99,6 @@ impl From<ChangeType> for ConventionalRule {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-pub(crate) struct PackageVersion {
-    /// The current version for the package
-    pub(crate) version: Version,
-    /// The package from which the version was derived and that should be bumped.
-    pub(crate) package: Package,
-}
-
 /// The implementation of [`crate::step::Step::BumpVersion`].
 ///
 /// Bumps the version of every configured package using `rule`.

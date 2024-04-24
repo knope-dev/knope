@@ -176,21 +176,17 @@ pub(crate) enum Error {
 mod test_replace_variables {
     use std::fs::write;
 
-    use knope_versioning::{Version, VersionedFile, VersionedFilePath};
+    use knope_versioning::{VersionedFile, VersionedFilePath};
     use pretty_assertions::assert_eq;
     use tempfile::TempDir;
 
     use super::*;
-    use crate::{
-        state,
-        step::{
-            issues::Issue,
-            releases::{
-                changelog::HeaderLevel, conventional_commits::ConventionalCommit,
-                package::ChangelogSections, Change, ChangeType, Package, Release,
-            },
+    use crate::step::{
+        issues::Issue,
+        releases::{
+            changelog::HeaderLevel, conventional_commits::ConventionalCommit,
+            package::ChangelogSections, Change, ChangeType,
         },
-        workflow::Verbose,
     };
 
     fn package() -> (Package, TempDir) {
