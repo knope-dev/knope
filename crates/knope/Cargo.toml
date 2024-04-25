@@ -28,7 +28,7 @@ gix = { version = "0.62.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 indexmap = { version = "2.2.6", features = ["serde"] }
-inquire = { version = "0.7.4", default-features = false, features = [
+inquire = { version = "0.7.5", default-features = false, features = [
   "crossterm",
 ] }
 itertools = "0.12.1"
