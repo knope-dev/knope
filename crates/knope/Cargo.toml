@@ -45,7 +45,7 @@ serde_yaml = "0.9.34"
 thiserror = "1.0.58"
 time = { version = "0.3.36" }
 toml = "0.8.12"
-ureq = { version = "2.9.6", features = ["json"] }
+ureq = { version = "2.9.7", features = ["json"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
