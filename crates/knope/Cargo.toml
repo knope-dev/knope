@@ -20,7 +20,6 @@ base64 = "0.21.7"
 changesets = "0.2.3"
 clap = { version = "4.5.4", features = ["cargo", "string", "env"] }
 datta = "0.1.1"
-enum-iterator = "2.0.0"
 env_logger = "0.11.3"
 execute = "0.2.13"
 git2 = { version = "0.18.3", default-features = false }
@@ -28,7 +27,6 @@ git-conventional = "0.12.6"
 gix = { version = "0.62.0", default-features = false, features = [
   "max-performance-safe",
 ] }
-http = "1.1.0"
 indexmap = { version = "2.2.6", features = ["serde"] }
 inquire = { version = "0.7.4", default-features = false, features = [
   "crossterm",

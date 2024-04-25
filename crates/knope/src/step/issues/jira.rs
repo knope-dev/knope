@@ -102,12 +102,6 @@ pub(crate) enum Error {
     Prompt(#[from] prompt::Error),
 }
 
-#[derive(Serialize, Debug)]
-struct SearchParams {
-    jql: String,
-    fields: Vec<&'static str>,
-}
-
 #[derive(Deserialize, Debug)]
 struct IssueFields {
     summary: String,
@@ -194,9 +188,4 @@ struct GetTransitionResponse {
 struct Transition {
     id: String,
     name: String,
-}
-
-#[derive(Debug, Serialize)]
-struct PostTransitionBody {
-    transition: Transition,
 }
