@@ -39,7 +39,7 @@ log = "0.4.21"
 miette = { version = "7.2.0", features = ["fancy"] }
 platform-dirs = "0.3.0"
 relative-path = { version = "1.9.2", features = ["serde"] }
-serde = { version = "1.0.199", features = ["derive"] }
+serde = { version = "1.0.200", features = ["derive"] }
 serde_json = { version = "1.0.116", features = ["preserve_order"] }
 serde_yaml = "0.9.34"
 thiserror = "1.0.59"
