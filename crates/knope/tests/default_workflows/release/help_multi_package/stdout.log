@@ -7,6 +7,8 @@ Options:
           Override the version set by `BumpVersion` or `PrepareRelease` for multiple packages. Format is like package_name=version, can be set multiple times.
       --prerelease-label <prerelease-label>
           Set the `prerelease_label` attribute of any `PrepareRelease` steps at runtime. [env: KNOPE_PRERELEASE_LABEL=]
+  -y, --assumeyes
+          Automatic yes to prompts. Assume "yes" as answer to all prompts and run non-interactively.
   -v, --verbose
           Print extra information (for debugging)
   -h, --help
