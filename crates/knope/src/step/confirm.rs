@@ -1,7 +1,6 @@
-use inquire::Confirm;
 use miette::Diagnostic;
 
-use crate::{app_config, RunType};
+use crate::{prompt, RunType};
 
 pub(crate) fn confirm(
     mut run_type: RunType,
@@ -21,12 +20,12 @@ pub(crate) fn confirm(
         return Ok(run_type);
     }
 
-    let confirmation = Confirm::new(message).with_default(true).prompt();
+    let confirmation = prompt::confirm(message)?;
 
-    match confirmation {
-        Ok(true) => Ok(run_type),
-        Ok(false) => Err(Error::Confirm),
-        Err(err) => Err(Error::Prompt(err)),
+    if confirmation {
+        Ok(run_type)
+    } else {
+        Err(Error::Confirm)
     }
 }
 
@@ -34,11 +33,9 @@ pub(crate) fn confirm(
 pub(crate) enum Error {
     #[error("User did not confirm")]
     Confirm,
-    #[error(transparent)]
-    Prompt(#[from] inquire::InquireError),
     #[error("Unable to write to stdout: {0}")]
     Stdout(#[from] std::io::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    AppConfig(#[from] app_config::Error),
+    Prompt(#[from] prompt::Error),
 }

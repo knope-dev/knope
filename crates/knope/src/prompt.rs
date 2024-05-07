@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use inquire::{InquireError, Password, Select};
+use inquire::{Confirm, InquireError, Password, Select};
 use miette::{Diagnostic, Result};
 
 pub(crate) fn select<T: Display>(items: Vec<T>, prompt: &str) -> Result<T, Error> {
@@ -11,6 +11,13 @@ pub(crate) fn get_input(prompt: &str) -> Result<String, Error> {
     Password::new(prompt)
         .with_display_toggle_enabled()
         .without_confirmation()
+        .prompt()
+        .map_err(Error)
+}
+
+pub(crate) fn confirm(prompt: &str) -> Result<bool, Error> {
+    Confirm::new(prompt)
+        .with_default(true)
         .prompt()
         .map_err(Error)
 }
