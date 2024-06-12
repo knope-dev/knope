@@ -153,7 +153,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'chore: prepare release')" # Skip merges from releases
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
@@ -231,7 +231,7 @@ release:
   needs: [build-artifacts]
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v4.1.6
+    - uses: actions/checkout@v4.1.7
     - uses: actions/download-artifact@v4.1.7
       with:
         path: artifacts
@@ -283,7 +283,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4.1.7
       - uses: Swatinem/rust-cache@v2.7.3
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
@@ -321,7 +321,7 @@ jobs:
     needs: [build-artifacts]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4.1.7
       - uses: actions/download-artifact@v4.1.7
         with:
           path: artifacts
@@ -337,7 +337,7 @@ jobs:
     needs: [release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.6
+      - uses: actions/checkout@v4.1.7
       - uses: Swatinem/rust-cache@v2.7.3
       - uses: katyo/publish-crates@v2
         with:
