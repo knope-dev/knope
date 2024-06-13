@@ -129,18 +129,18 @@ impl TestCase {
             dry_run
                 .unwrap()
                 .success()
-                .stdout_matches(Data::read_from(&dry_run_stdout_file, None));
+                .stdout_eq(Data::read_from(&dry_run_stdout_file, None));
         } else if dry_run_stderr_file.exists() {
             dry_run
                 .unwrap()
                 .failure()
-                .stderr_matches(Data::read_from(&dry_run_stderr_file, None));
+                .stderr_eq(Data::read_from(&dry_run_stderr_file, None));
         }
 
         let stderr_file = data_path.join("stderr.log");
         if stderr_file.exists() {
             real.failure()
-                .stderr_matches(Data::read_from(&stderr_file, None));
+                .stderr_eq(Data::read_from(&stderr_file, None));
         } else {
             let stdout_file = data_path.join("stdout.log");
             let output = if stdout_file.exists() {
@@ -148,7 +148,7 @@ impl TestCase {
             } else {
                 "".into()
             };
-            real.success().stdout_matches(output);
+            real.success().stdout_eq(output);
         }
 
         let path = working_dir.path();
