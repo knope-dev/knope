@@ -16,7 +16,7 @@ readme = "../../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base64 = "0.21.7"
+base64 = "0.22.1"
 changesets = "0.2.3"
 clap = { version = "4.5.4", features = ["cargo", "string", "env"] }
 datta = "0.1.1"
