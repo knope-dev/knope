@@ -14,7 +14,7 @@ type = "PrepareRelease"
 
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: prepare releases\""
+command = 'git commit -m "chore: prepare releases"'
 
 [[workflows.steps]]
 type = "Release"
