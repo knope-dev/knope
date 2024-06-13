@@ -1,21 +1,21 @@
-use snapbox::{Assert, Substitutions};
+use snapbox::{Assert, Redactions};
 use time::{macros::format_description, OffsetDateTime};
 
 /// Assert that includes [DATE] substitution
 pub fn assert(normalize_paths: bool) -> Assert {
-    let mut substitutions = Substitutions::default();
+    let mut redactions = Redactions::default();
     let time_format = format_description!("[year]-[month]-[day]");
-    substitutions
+    redactions
         .insert(
             "[DATE]",
             OffsetDateTime::now_utc().format(time_format).unwrap(),
         )
         .unwrap();
-    substitutions
+    redactions
         .insert("[EXE]", std::env::consts::EXE_SUFFIX)
         .unwrap();
     Assert::new()
-        .substitutions(substitutions)
+        .redact_with(redactions)
         .action_env("SNAPSHOTS")
         .normalize_paths(normalize_paths)
 }
