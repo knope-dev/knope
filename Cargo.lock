@@ -1277,12 +1277,12 @@ dependencies = [
  "datta",
  "env_logger",
  "execute",
- "git-conventional",
  "git2",
  "gix",
  "indexmap",
  "inquire",
  "itertools",
+ "knope-config",
  "knope-versioning",
  "log",
  "miette",
@@ -1301,9 +1301,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "knope-config"
+version = "0.0.1"
+dependencies = [
+ "knope-versioning",
+ "serde",
+]
+
+[[package]]
 name = "knope-versioning"
 version = "0.0.1"
 dependencies = [
+ "changesets",
+ "git-conventional",
  "itertools",
  "miette",
  "pretty_assertions",

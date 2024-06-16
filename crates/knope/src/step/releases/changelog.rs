@@ -1,13 +1,13 @@
-use std::{cmp::Ordering, fmt::Display, mem::swap, path::PathBuf, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, path::PathBuf, str::FromStr};
 
 use itertools::Itertools;
-use knope_versioning::{GoVersioning, Version};
+use knope_versioning::{changelog::Sections, changes::Change, GoVersioning, Version};
 use miette::Diagnostic;
 use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
 
-use super::{Change, Package, TimeError};
-use crate::{dry_run::DryRun, fs, step::releases::package::ChangelogSections};
+use super::TimeError;
+use crate::{dry_run::DryRun, fs};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Changelog {
@@ -15,7 +15,7 @@ pub(crate) struct Changelog {
     pub(crate) path: PathBuf,
     /// The content that has been written to `path`
     pub(crate) content: String,
-    section_header_level: HeaderLevel,
+    pub(crate) section_header_level: HeaderLevel,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,7 +74,7 @@ impl Changelog {
     pub(crate) fn get_release(
         &self,
         version: &Version,
-        package: Option<knope_versioning::Package>,
+        package: knope_versioning::Package,
         go_versioning: GoVersioning,
     ) -> Result<Option<Release>, ParseError> {
         let section_header_level = self.section_header_level.as_str();
@@ -97,7 +97,7 @@ impl Changelog {
             &format!("{section_header_level}#"),
         ));
         let additional_tags = package
-            .map(|pkg| pkg.set_version(&version, go_versioning).unwrap_or_default())
+            .set_version(&version, go_versioning)
             .unwrap_or_default()
             .into_iter()
             .filter_map(|action| match action {
@@ -114,7 +114,7 @@ impl Changelog {
         }))
     }
 
-    fn add_release(&mut self, release: &Release, dry_run: DryRun) -> Result<(), Error> {
+    pub(crate) fn add_release(&mut self, release: &Release, dry_run: DryRun) -> Result<(), Error> {
         let mut changelog = String::new();
         let mut not_written = true;
         let Some(new_changes) = release.body() else {
@@ -174,7 +174,7 @@ impl Release {
     pub(crate) fn new(
         version: Version,
         changes: &[Change],
-        changelog_sections: &ChangelogSections,
+        changelog_sections: &Sections,
         header_level: HeaderLevel,
         additional_tags: Vec<String>,
     ) -> Self {
@@ -184,7 +184,7 @@ impl Release {
                 let changes = changes
                     .iter()
                     .filter_map(|change| {
-                        if sources.contains(&change.change_type()) {
+                        if sources.contains(&change.change_type) {
                             Some(ChangeDescription::from(change))
                         } else {
                             None
@@ -386,27 +386,22 @@ impl PartialOrd for ChangeDescription {
 
 impl From<&Change> for ChangeDescription {
     fn from(change: &Change) -> Self {
-        match change {
-            Change::ConventionalCommit(commit) => Self::Simple(commit.message.clone()),
-            Change::ChangeSet(changeset) => {
-                let mut lines = changeset
-                    .summary
-                    .trim()
-                    .lines()
-                    .skip_while(|it| it.is_empty());
-                let summary: String = lines
-                    .next()
-                    .unwrap_or_default()
-                    .chars()
-                    .skip_while(|it| *it == '#' || *it == ' ')
-                    .collect();
-                let body: String = lines.skip_while(|it| it.is_empty()).join("\n");
-                if body.is_empty() {
-                    Self::Simple(summary)
-                } else {
-                    Self::Complex(summary, body)
-                }
-            }
+        let mut lines = change
+            .description
+            .trim()
+            .lines()
+            .skip_while(|it| it.is_empty());
+        let summary: String = lines
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .skip_while(|it| *it == '#' || *it == ' ')
+            .collect();
+        let body: String = lines.skip_while(|it| it.is_empty()).join("\n");
+        if body.is_empty() {
+            Self::Simple(summary)
+        } else {
+            Self::Complex(summary, body)
         }
     }
 }
@@ -483,19 +478,18 @@ mod test_parse_title {
 
 #[cfg(test)]
 mod test_change_description {
-    use changesets::{PackageChange, UniqueId};
+    use knope_versioning::changes::{ChangeSource, ChangeType};
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::step::releases::{conventional_commits::ConventionalCommit, ChangeType};
 
     #[test]
     fn conventional_commit() {
-        let change = Change::ConventionalCommit(ConventionalCommit {
+        let change = Change {
             change_type: ChangeType::Feature,
-            original_source: String::new(),
-            message: "a feature".to_string(),
-        });
+            original_source: ChangeSource::ConventionalCommit(String::new()),
+            description: "a feature".to_string(),
+        };
         let description = ChangeDescription::from(&change);
         assert_eq!(
             description,
@@ -505,11 +499,11 @@ mod test_change_description {
 
     #[test]
     fn simple_changeset() {
-        let change = Change::ChangeSet(PackageChange {
-            unique_id: UniqueId::from(""),
-            change_type: changesets::ChangeType::Minor,
-            summary: "# a feature\n\n\n\n".to_string(),
-        });
+        let change = Change {
+            change_type: ChangeType::Feature,
+            original_source: ChangeSource::ConventionalCommit(String::new()),
+            description: "# a feature\n\n\n\n".to_string(),
+        };
         let description = ChangeDescription::from(&change);
         assert_eq!(
             description,
@@ -519,11 +513,11 @@ mod test_change_description {
 
     #[test]
     fn complex_changeset() {
-        let change = Change::ChangeSet(PackageChange {
-            unique_id: UniqueId::from(""),
-            change_type: changesets::ChangeType::Minor,
-            summary: "# a feature\n\nwith details\n\n- first\n- second".to_string(),
-        });
+        let change = Change {
+            original_source: ChangeSource::ConventionalCommit(String::new()),
+            change_type: ChangeType::Feature,
+            description: "# a feature\n\nwith details\n\n- first\n- second".to_string(),
+        };
         let description = ChangeDescription::from(&change);
         assert_eq!(
             description,
@@ -592,31 +586,4 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     TimeError(#[from] TimeError),
-}
-
-impl Package {
-    /// Adds content from `release` to `Self::changelog` if it exists.
-    pub(crate) fn write_changelog(
-        &mut self,
-        version: Version,
-        dry_run: DryRun,
-    ) -> Result<Release, Error> {
-        let mut additional_tags = Vec::new();
-        swap(&mut self.pending_tags, &mut additional_tags);
-        let release = Release::new(
-            version,
-            &self.pending_changes,
-            &self.changelog_sections,
-            self.changelog
-                .as_ref()
-                .map_or(HeaderLevel::H2, |it| it.section_header_level),
-            additional_tags,
-        );
-
-        if let Some(changelog) = self.changelog.as_mut() {
-            changelog.add_release(&release, dry_run)?;
-        }
-
-        Ok(release)
-    }
 }

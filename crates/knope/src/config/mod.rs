@@ -22,10 +22,6 @@ mod toml;
 
 pub(crate) use toml::{GitHub, Gitea, Jira};
 
-pub(crate) use self::package::{
-    ChangeLogSectionName, ChangelogSection, CommitFooter, CustomChangeType,
-};
-
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
 pub(crate) struct Config {

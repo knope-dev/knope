@@ -3,12 +3,15 @@ use std::{
     fmt,
     fmt::Display,
     io::Write,
+    mem::swap,
     ops::Deref,
     path::PathBuf,
 };
 
 use itertools::Itertools;
+use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
+    changes::{Change, ChangeSource},
     GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
@@ -20,17 +23,16 @@ use super::{
     changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
     semver,
     semver::{bump, ConventionalRule},
-    Change, Release, Rule,
+    Release, Rule,
 };
 use crate::{
     config,
-    config::{ChangeLogSectionName, ChangelogSection, CommitFooter, CustomChangeType},
     dry_run::DryRun,
     fs,
     fs::read_to_string,
     integrations::git::{self, add_files},
     step::releases::{
-        changesets::ChangeType,
+        changelog::HeaderLevel,
         semver::UpdatePackageVersionError,
         versioned_file::{VersionFromSource, VersionSource},
     },
@@ -39,11 +41,9 @@ use crate::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
-    pub(crate) files: Option<knope_versioning::Package>,
+    pub(crate) versioning: knope_versioning::Package,
     pub(crate) changelog: Option<Changelog>,
-    pub(crate) changelog_sections: ChangelogSections,
     pub(crate) name: Option<PackageName>,
-    pub(crate) scopes: Option<Vec<String>>,
     pub(crate) pending_changes: Vec<Change>,
     pub(crate) pending_tags: Vec<String>,
     pub(crate) prepared_release: Option<Release>,
@@ -95,22 +95,18 @@ impl Package {
                 );
             }
         }
-        let files = match knope_versioning::Package::new(versioned_files) {
-            Ok(pkg) => Some(pkg),
-            Err(err) => match err {
-                PackageNewError::NoPackages => None,
-                err @ PackageNewError::InconsistentVersions(..) => return Err(err.into()),
-            },
-        };
+        let versioning = knope_versioning::Package::new(
+            versioned_files,
+            convert_to_versioning(package.extra_changelog_sections),
+            package.scopes,
+        )?;
         Ok(Self {
-            files,
+            versioning,
             changelog: package
                 .changelog
                 .map(|path| path.to_path("").try_into())
                 .transpose()?,
-            changelog_sections: package.extra_changelog_sections.into(),
             name: package.name,
-            scopes: package.scopes,
             assets: package.assets,
             go_versioning: if package.ignore_go_major_versioning {
                 GoVersioning::IgnoreMajorRules
@@ -128,13 +124,12 @@ impl Package {
         self.pending_changes
             .iter()
             .map(|change| {
-                let rule = change.change_type().into();
-                let change_source = match change {
-                    Change::ConventionalCommit(_) => "commit",
-                    Change::ChangeSet(_) => "changeset",
-                };
+                let rule = ConventionalRule::from(&change.change_type);
                 if let Verbose::Yes = verbose {
-                    println!("{change_source} {change}\n\timplies rule {rule}");
+                    println!(
+                        "{change_source}\n\timplies rule {rule}",
+                        change_source = change.original_source
+                    );
                 }
                 rule
             })
@@ -193,13 +188,12 @@ impl Package {
 
         Ok(self)
     }
+    // TODO: Use actions for this?
     fn stage_changes_to_git(&self, is_prerelease: bool, dry_run: DryRun) -> Result<(), Error> {
         let changeset_path = PathBuf::from(".changeset");
         let paths = self
-            .files
-            .as_ref()
-            .map(knope_versioning::Package::versioned_files)
-            .unwrap_or_default()
+            .versioning
+            .versioned_files()
             .iter()
             .map(|versioned_file| versioned_file.path().to_path(""))
             .chain(
@@ -210,8 +204,8 @@ impl Package {
             .chain(self.pending_changes.iter().filter_map(|change| {
                 if is_prerelease {
                     None
-                } else if let Change::ChangeSet(change) = change {
-                    Some(changeset_path.join(change.unique_id.to_file_name()))
+                } else if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                    Some(changeset_path.join(unique_id.to_file_name()))
                 } else {
                     None
                 }
@@ -229,6 +223,31 @@ impl Package {
             add_files(&paths).map_err(Error::from)
         }
     }
+
+    /// Adds content from `release` to `Self::changelog` if it exists.
+    pub fn write_changelog(
+        &mut self,
+        version: Version,
+        dry_run: DryRun,
+    ) -> Result<Release, crate::step::releases::changelog::Error> {
+        let mut additional_tags = Vec::new();
+        swap(&mut self.pending_tags, &mut additional_tags);
+        let release = Release::new(
+            version,
+            &self.pending_changes,
+            &self.versioning.changelog_sections,
+            self.changelog
+                .as_ref()
+                .map_or(HeaderLevel::H2, |it| it.section_header_level),
+            additional_tags,
+        );
+
+        if let Some(changelog) = self.changelog.as_mut() {
+            changelog.add_release(&release, dry_run)?;
+        }
+
+        Ok(release)
+    }
 }
 
 #[cfg(test)]
@@ -236,21 +255,23 @@ impl Package {
 impl Package {
     pub(crate) fn default() -> Self {
         Self {
-            files: knope_versioning::Package::new(vec![VersionedFile::new(
-                &knope_versioning::VersionedFilePath::new("Cargo.toml".into()).unwrap(),
-                r#"
+            versioning: knope_versioning::Package::new(
+                vec![VersionedFile::new(
+                    &knope_versioning::VersionedFilePath::new("Cargo.toml".into()).unwrap(),
+                    r#"
                 [package]
                 name = "knope"
                 version = "0.1.0""#
-                    .to_string(),
-                &[""],
+                        .to_string(),
+                    &[""],
+                )
+                .unwrap()],
+                knope_versioning::changelog::Sections::default(),
+                None,
             )
-            .unwrap()])
-            .ok(),
+            .unwrap(),
             changelog: None,
-            changelog_sections: ChangelogSections::default(),
             name: None,
-            scopes: None,
             pending_changes: vec![],
             pending_tags: vec![],
             prepared_release: None,
@@ -321,153 +342,6 @@ impl Borrow<str> for PackageName {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct ChangelogSections(Vec<(ChangeLogSectionName, Vec<ChangeType>)>);
-
-impl ChangelogSections {
-    fn defaults() -> Vec<(ChangeLogSectionName, ChangeType)> {
-        vec![
-            (
-                ChangeLogSectionName::from("Breaking Changes"),
-                ChangeType::Breaking,
-            ),
-            (ChangeLogSectionName::from("Features"), ChangeType::Feature),
-            (ChangeLogSectionName::from("Fixes"), ChangeType::Fix),
-            ("Notes".into(), CommitFooter::from("Changelog-Note").into()),
-        ]
-    }
-
-    pub(crate) fn iter(&self) -> impl Iterator<Item = &(ChangeLogSectionName, Vec<ChangeType>)> {
-        self.0.iter()
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn is_default(&self) -> bool {
-        let defaults = Self::defaults();
-        self.0.iter().enumerate().all(|(index, (name, sources))| {
-            if sources.len() != 1 {
-                return false;
-            }
-            sources.first().is_some_and(|source| {
-                defaults
-                    .get(index)
-                    .is_some_and(|(default_name, default_source)| {
-                        name == default_name && source == default_source
-                    })
-            })
-        })
-    }
-
-    pub(crate) fn footers(&self) -> Vec<CommitFooter> {
-        self.0
-            .iter()
-            .flat_map(|(_, sources)| {
-                sources.iter().filter_map(|source| match source {
-                    ChangeType::Custom(ChangelogSectionSource::CommitFooter(footer)) => {
-                        Some(footer.clone())
-                    }
-                    _ => None,
-                })
-            })
-            .collect()
-    }
-}
-
-impl Default for ChangelogSections {
-    fn default() -> Self {
-        Self(
-            Self::defaults()
-                .into_iter()
-                .map(|(name, source)| (name, vec![source]))
-                .collect(),
-        )
-    }
-}
-
-impl From<Vec<ChangelogSection>> for ChangelogSections {
-    fn from(sections_from_toml: Vec<ChangelogSection>) -> Self {
-        let mut defaults = Self::defaults();
-        let mut sections = Vec::with_capacity(sections_from_toml.len());
-        for ChangelogSection {
-            name,
-            footers,
-            types,
-        } in sections_from_toml
-        {
-            let mut sources = footers
-                .into_iter()
-                .map(ChangeType::from)
-                .chain(types.into_iter().map(ChangeType::from))
-                .collect_vec();
-            defaults.retain(|(_, source)| !sources.contains(source));
-
-            // If there's a duplicate section name, combine it
-            while let Some((index, (_, change_type))) = defaults
-                .iter()
-                .enumerate()
-                .find(|(_, (default_name, _))| default_name == &name)
-            {
-                sources.push(change_type.clone());
-                defaults.remove(index);
-            }
-            sections.push((name, sources));
-        }
-        let defaults = defaults
-            .into_iter()
-            .map(|(name, source)| (name, vec![source]));
-        Self(defaults.into_iter().chain(sections).collect())
-    }
-}
-
-impl From<ChangelogSections> for Vec<ChangelogSection> {
-    fn from(sections: ChangelogSections) -> Self {
-        let defaults = ChangelogSections::defaults();
-        let mut sections = sections.0;
-        sections.retain(|(name, source)| {
-            source.len() != 1
-                || !defaults.iter().any(|(default_name, default_source)| {
-                    default_name == name && source.first().is_some_and(|it| it == default_source)
-                })
-        });
-        sections
-            .into_iter()
-            .map(|(name, sources)| ChangelogSection {
-                name,
-                footers: sources
-                    .iter()
-                    .filter_map(|source| match source {
-                        ChangeType::Custom(ChangelogSectionSource::CommitFooter(footer)) => {
-                            Some(footer.clone())
-                        }
-                        _ => None,
-                    })
-                    .collect(),
-                types: sources
-                    .iter()
-                    .filter_map(|source| match source {
-                        ChangeType::Custom(ChangelogSectionSource::CustomChangeType(
-                            change_type,
-                        )) => Some(change_type.clone()),
-                        ChangeType::Breaking => Some("Breaking Changes".into()),
-                        ChangeType::Feature => Some("Features".into()),
-                        ChangeType::Fix => Some("Fixes".into()),
-                        ChangeType::Custom(ChangelogSectionSource::CommitFooter(_)) => None,
-                    })
-                    .collect(),
-            })
-            .collect()
-    }
-}
-
-impl IntoIterator for ChangelogSections {
-    type Item = (ChangeLogSectionName, Vec<ChangeType>);
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub(crate) struct Asset {
     pub(crate) path: PathBuf,
@@ -493,33 +367,6 @@ impl Asset {
 #[error("No asset name set, and name could not be determined from path {path}")]
 pub(crate) struct AssetNameError {
     path: PathBuf,
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub(crate) enum ChangelogSectionSource {
-    CommitFooter(CommitFooter),
-    CustomChangeType(CustomChangeType),
-}
-
-impl From<CommitFooter> for ChangelogSectionSource {
-    fn from(footer: CommitFooter) -> Self {
-        Self::CommitFooter(footer)
-    }
-}
-
-impl From<CustomChangeType> for ChangelogSectionSource {
-    fn from(change_type: CustomChangeType) -> Self {
-        Self::CustomChangeType(change_type)
-    }
-}
-
-impl Display for ChangelogSectionSource {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CommitFooter(footer) => footer.fmt(f),
-            Self::CustomChangeType(change_type) => change_type.fmt(f),
-        }
-    }
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

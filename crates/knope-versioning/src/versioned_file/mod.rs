@@ -1,5 +1,10 @@
 use std::{fmt::Debug, path::PathBuf};
 
+use cargo::Cargo;
+pub use go_mod::{GoMod, GoVersioning};
+use package_json::PackageJson;
+use pubspec::PubSpec;
+use pyproject::PyProject;
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -8,12 +13,14 @@ use crate::{
         ActionSet,
         ActionSet::{Single, Two},
     },
-    cargo, go_mod,
-    go_mod::{GoMod, GoVersioning},
-    package_json,
-    package_json::PackageJson,
-    pubspec, pyproject, Cargo, PubSpec, PyProject, Version,
+    Version,
 };
+
+pub mod cargo;
+mod go_mod;
+mod package_json;
+mod pubspec;
+mod pyproject;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum VersionedFile {

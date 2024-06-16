@@ -5,23 +5,29 @@ use thiserror::Error;
 
 use crate::{
     action::Action,
-    go_mod::GoVersioning,
-    versioned_file::{SetError, VersionedFile},
+    changelog::Sections as ChangelogSections,
+    versioned_file::{GoVersioning, SetError, VersionedFile},
     Version,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Package {
     versioned_files: Vec<VersionedFile>,
+    pub changelog_sections: ChangelogSections,
+    pub scopes: Option<Vec<String>>,
 }
 
 impl Package {
-    /// Try and combine a bunch of versioned file into one logical package.
+    /// Try and combine a bunch of versioned files into one logical package.
     ///
     /// # Errors
     ///
-    /// There must be at least one versioned file and all files must have the same version.
-    pub fn new(versioned_files: Vec<VersionedFile>) -> Result<Self, NewError> {
+    /// There must be at least one versioned file, and all files must have the same version.
+    pub fn new(
+        versioned_files: Vec<VersionedFile>,
+        changelog_sections: ChangelogSections,
+        scopes: Option<Vec<String>>,
+    ) -> Result<Self, NewError> {
         if let Some(first) = versioned_files.first() {
             if let Some(conflict) = versioned_files
                 .iter()
@@ -32,10 +38,12 @@ impl Package {
                     Box::new(conflict.clone()),
                 ));
             }
-        } else {
-            return Err(NewError::NoPackages);
         }
-        Ok(Self { versioned_files })
+        Ok(Self {
+            versioned_files,
+            changelog_sections,
+            scopes,
+        })
     }
 
     #[must_use]
@@ -44,9 +52,8 @@ impl Package {
     }
 
     #[must_use]
-    #[allow(clippy::indexing_slicing)] // Construction check guarantees there is at least one versioned file
-    pub fn get_version(&self) -> &Version {
-        self.versioned_files[0].version()
+    pub fn get_version(&self) -> Option<&Version> {
+        self.versioned_files.first().map(|file| file.version())
     }
 
     /// Returns the actions that must be taken to set this package to the new version.

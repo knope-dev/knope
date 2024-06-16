@@ -1,7 +1,6 @@
-use std::{collections::BTreeMap, fmt, fmt::Display};
+use std::collections::BTreeMap;
 
-use ::changesets::PackageChange;
-use conventional_commits::{add_releases_from_conventional_commits, ConventionalCommit};
+use conventional_commits::add_releases_from_conventional_commits;
 use itertools::Itertools;
 use knope_versioning::{PreVersion, StableVersion, Version};
 use miette::Diagnostic;
@@ -9,7 +8,7 @@ pub(crate) use non_empty_map::PrereleaseMap;
 
 pub(crate) use self::{
     changelog::Release,
-    changesets::{create_change_file, ChangeType},
+    changesets::create_change_file,
     package::{Package, PackageName},
     semver::{bump_version_and_update_state, Rule},
 };
@@ -134,32 +133,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Parse(#[from] changelog::ParseError),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Change {
-    ConventionalCommit(ConventionalCommit),
-    ChangeSet(PackageChange),
-}
-
-impl Display for Change {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Change::ConventionalCommit(commit) => write!(f, "{commit}"),
-            Change::ChangeSet(change) => {
-                write!(f, "{}", change.unique_id.to_file_name())
-            }
-        }
-    }
-}
-
-impl Change {
-    fn change_type(&self) -> ChangeType {
-        match self {
-            Change::ConventionalCommit(commit) => commit.change_type.clone(),
-            Change::ChangeSet(change) => (&change.change_type).into(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -408,7 +381,7 @@ fn find_prepared_release(
         .map(|changelog| {
             changelog.get_release(
                 version_of_new_release,
-                package.files.clone(),
+                package.versioning.clone(),
                 package.go_versioning,
             )
         })

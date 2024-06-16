@@ -1,15 +1,13 @@
 use std::ops::Not;
 
+use knope_config::changelog_section::ChangelogSection;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::{
-    config::ChangelogSection,
-    step::releases::{changelog, package::Asset},
-};
+use crate::step::releases::{changelog, package::Asset};
 
 /// Represents a single package in `knope.toml`.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]

@@ -1,0 +1,284 @@
+use git_conventional::{Commit, Footer, Type};
+
+use super::{Change, ChangeSource, ChangeType};
+use crate::Package;
+
+/// Try to parse each commit message as a [conventional commit](https://www.conventionalcommits.org/).
+///
+/// # Filtering
+///
+/// 1. If the commit message doesn't follow the conventional commit format, it is ignored.
+/// 2. For non-standard change types, only those included will be considered.
+/// 3. For non-standard footers, only those included will be considered.
+#[must_use]
+pub fn changes_from_commit_messages<Message: AsRef<str>>(
+    commit_messages: &[Message],
+    package: &Package,
+) -> Vec<Change> {
+    commit_messages
+        .iter()
+        .flat_map(|message| changes_from_commit_message(message.as_ref(), package).into_iter())
+        .collect()
+}
+
+fn changes_from_commit_message(commit_message: &str, package: &Package) -> Vec<Change> {
+    let Some(commit) = Commit::parse(commit_message.trim()).ok() else {
+        return Vec::new();
+    };
+    let mut has_breaking_footer = false;
+    let commit_summary = format_commit_summary(&commit);
+
+    if let Some(commit_scope) = commit.scope() {
+        if let Some(scopes) = &package.scopes {
+            if !scopes
+                .iter()
+                .any(|s| s.eq_ignore_ascii_case(commit_scope.as_str()))
+            {
+                return Vec::new();
+            }
+        }
+    }
+
+    let mut changes = Vec::new();
+    for footer in commit.footers() {
+        if footer.breaking() {
+            has_breaking_footer = true;
+        } else if !package.changelog_sections.contains_footer(footer) {
+            continue;
+        }
+        changes.push(Change {
+            change_type: footer.token().into(),
+            description: footer.value().to_string(),
+            original_source: ChangeSource::ConventionalCommit(format_commit_footer(
+                &commit_summary,
+                footer,
+            )),
+        });
+    }
+
+    let commit_description_change_type = if commit.breaking() && !has_breaking_footer {
+        ChangeType::Breaking
+    } else if commit.type_() == Type::FEAT {
+        ChangeType::Feature
+    } else if commit.type_() == Type::FIX {
+        ChangeType::Fix
+    } else {
+        return changes; // The commit description isn't a change itself, only (maybe) footers were.
+    };
+
+    changes.push(Change {
+        change_type: commit_description_change_type,
+        description: commit.description().to_string(),
+        original_source: ChangeSource::ConventionalCommit(commit_summary),
+    });
+
+    changes
+}
+
+fn format_commit_summary(commit: &Commit) -> String {
+    let commit_scope = commit
+        .scope()
+        .map(|s| s.to_string())
+        .map(|it| format!("({it})"))
+        .unwrap_or_default();
+    let bang = if commit.breaking() {
+        commit
+            .footers()
+            .iter()
+            .find(|it| it.breaking())
+            .map_or_else(|| "!", |_| "")
+    } else {
+        ""
+    };
+    format!(
+        "{commit_type}{commit_scope}{bang}: {summary}",
+        commit_type = commit.type_(),
+        summary = commit.description()
+    )
+}
+
+fn format_commit_footer(commit_summary: &str, footer: &Footer) -> String {
+    format!(
+        "{commit_summary}\n\tContaining footer {}{} {}",
+        footer.token(),
+        footer.separator(),
+        footer.value()
+    )
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+    use crate::{
+        changelog::{SectionSource, Sections},
+        changes::ChangeSource,
+    };
+
+    #[test]
+    fn commit_types() {
+        let commits = &[
+            "fix: a bug",
+            "fix!: a breaking bug fix",
+            "feat!: add a feature",
+            "feat: add another feature",
+        ];
+        let package = Package::new(Vec::new(), Sections::default(), None).unwrap();
+        let changes = changes_from_commit_messages(commits, &package);
+        assert_eq!(
+            changes,
+            vec![
+                Change {
+                    change_type: ChangeType::Fix,
+                    description: String::from("a bug"),
+                    original_source: ChangeSource::ConventionalCommit(String::from("fix: a bug")),
+                },
+                Change {
+                    change_type: ChangeType::Breaking,
+                    description: String::from("a breaking bug fix"),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "fix!: a breaking bug fix"
+                    )),
+                },
+                Change {
+                    change_type: ChangeType::Breaking,
+                    description: String::from("add a feature"),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "feat!: add a feature"
+                    )),
+                },
+                Change {
+                    change_type: ChangeType::Feature,
+                    description: String::from("add another feature"),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "feat: add another feature"
+                    )),
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn separate_breaking_messages() {
+        let commits = [
+            "fix: a bug\n\nBREAKING CHANGE: something broke",
+            "feat: a features\n\nBREAKING CHANGE: something else broke",
+        ];
+        let package = Package::new(Vec::new(), Sections::default(), None).unwrap();
+        let changes = changes_from_commit_messages(&commits, &package);
+        assert_eq!(
+            changes,
+            vec![
+                Change {
+                    change_type: ChangeType::Breaking,
+                    description: String::from("something broke"),
+                    original_source: ChangeSource::ConventionalCommit(String::from("fix: a bug\n\tContaining footer BREAKING CHANGE: something broke")),
+                },
+                Change {
+                    change_type: ChangeType::Fix,
+                    description: String::from("a bug"),
+                    original_source: ChangeSource::ConventionalCommit(String::from("fix: a bug")),
+                },
+                Change {
+                    change_type: ChangeType::Breaking,
+                    description: String::from("something else broke"),
+                    original_source: ChangeSource::ConventionalCommit(String::from("feat: a features\n\tContaining footer BREAKING CHANGE: something else broke")),
+                },
+                Change {
+                    change_type: ChangeType::Feature,
+                    description: String::from("a features"),
+                    original_source: ChangeSource::ConventionalCommit(String::from("feat: a features")),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn scopes_used_but_none_defined() {
+        let commits = [
+            "feat(scope)!: Wrong scope breaking change!",
+            "fix: No scope",
+        ];
+        let package = Package::new(Vec::new(), Sections::default(), None).unwrap();
+        let changes = changes_from_commit_messages(&commits, &package);
+        assert_eq!(
+            changes,
+            vec![Change {
+                change_type: ChangeType::Fix,
+                description: String::from("No scope"),
+                original_source: ChangeSource::ConventionalCommit(String::from("fix: No scope")),
+            }]
+        );
+    }
+
+    #[test]
+    fn filter_scopes() {
+        let commits = [
+            "feat(wrong_scope)!: Wrong scope breaking change!",
+            "feat(scope): Scoped feature",
+            "fix: No scope",
+        ];
+        let package = Package::new(
+            Vec::new(),
+            Sections::default(),
+            Some(vec![String::from("scope")]),
+        )
+        .unwrap();
+
+        let changes = changes_from_commit_messages(&commits, &package);
+        assert_eq!(
+            changes,
+            vec![
+                Change {
+                    change_type: ChangeType::Breaking,
+                    description: String::from("First scope breaking change!"),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "feat(first_scope)!: First scope breaking change!"
+                    )),
+                },
+                Change {
+                    change_type: ChangeType::Feature,
+                    description: String::from("Second scope feature"),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "feat(second_scope): Second scope feature"
+                    )),
+                },
+                Change {
+                    change_type: ChangeType::Fix,
+                    description: String::from("No scope"),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "fix: No scope"
+                    )),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn custom_footers() {
+        let commits = ["chore: ignored type\n\nignored-footer: ignored\ncustom-footer: hello"];
+        let mut changelog_sections = Sections::default();
+        changelog_sections.add_section(
+            "custom section".into(),
+            vec![ChangeType::Custom(SectionSource::CommitFooter(
+                "custom-footer".into(),
+            ))],
+        );
+        let package = Package::new(Vec::new(), changelog_sections, None).unwrap();
+        let changes = changes_from_commit_messages(&commits, &package);
+        assert_eq!(
+            changes,
+            vec![Change {
+                change_type: ChangeType::Custom(SectionSource::CommitFooter(
+                    "custom-footer".into()
+                )),
+                description: String::from("hello"),
+                original_source: ChangeSource::ConventionalCommit(String::from(
+                    "chore: ignored type\n\tContaining footer custom-footer: hello"
+                )),
+            }]
+        );
+    }
+}

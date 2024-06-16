@@ -3,9 +3,10 @@ use std::{collections::HashSet, io::Write, path::PathBuf};
 use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
+use knope_versioning::changes::{Change, ChangeSource, ChangeType};
 use miette::Diagnostic;
 
-use super::{package::ChangelogSectionSource, Change, Package};
+use super::Package;
 use crate::{dry_run::DryRun, fs, prompt, state::RunType};
 
 pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
@@ -33,6 +34,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
         .map(|package| {
             let package_name = package.name;
             let change_types = package
+                .versioning
                 .changelog_sections
                 .iter()
                 .flat_map(|(_, sources)| sources.iter().filter_map(ChangeType::to_changeset_type))
@@ -77,60 +79,9 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     Ok(RunType::Real(state))
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub(crate) enum ChangeType {
-    Breaking,
-    Feature,
-    Fix,
-    Custom(ChangelogSectionSource),
-}
-
-impl ChangeType {
-    pub(crate) fn to_changeset_type(&self) -> Option<changesets::ChangeType> {
-        match self {
-            Self::Breaking => Some(changesets::ChangeType::Major),
-            Self::Feature => Some(changesets::ChangeType::Minor),
-            Self::Fix => Some(changesets::ChangeType::Patch),
-            Self::Custom(ChangelogSectionSource::CustomChangeType(custom)) => {
-                Some(changesets::ChangeType::Custom(custom.to_string()))
-            }
-            Self::Custom(ChangelogSectionSource::CommitFooter(_)) => None,
-        }
-    }
-}
-
-impl From<ChangeType> for changesets::ChangeType {
-    fn from(value: ChangeType) -> Self {
-        match value {
-            ChangeType::Breaking => Self::Major,
-            ChangeType::Feature => Self::Minor,
-            ChangeType::Fix => Self::Patch,
-            ChangeType::Custom(custom) => Self::Custom(custom.to_string()),
-        }
-    }
-}
-
-impl From<&changesets::ChangeType> for ChangeType {
-    fn from(value: &changesets::ChangeType) -> Self {
-        match value {
-            changesets::ChangeType::Major => Self::Breaking,
-            changesets::ChangeType::Minor => Self::Feature,
-            changesets::ChangeType::Patch => Self::Fix,
-            changesets::ChangeType::Custom(custom) => Self::Custom(
-                ChangelogSectionSource::CustomChangeType(custom.clone().into()),
-            ),
-        }
-    }
-}
-
-impl From<ChangelogSectionSource> for ChangeType {
-    fn from(source: ChangelogSectionSource) -> Self {
-        Self::Custom(source)
-    }
-}
-
 pub(crate) const DEFAULT_CHANGESET_PACKAGE_NAME: &str = "default";
 
+// TODO: Move some of this to knope_versioning
 pub(crate) fn add_releases_from_changeset(
     packages: Vec<Package>,
     is_prerelease: bool,
@@ -168,7 +119,11 @@ pub(crate) fn add_releases_from_changeset(
                             }
                             changesets_deleted.insert(file_name);
                         }
-                        Change::ChangeSet(change)
+                        Change {
+                            change_type: change.change_type.into(),
+                            description: change.summary,
+                            original_source: ChangeSource::ChangeFile(change.unique_id),
+                        }
                     }));
             }
             package

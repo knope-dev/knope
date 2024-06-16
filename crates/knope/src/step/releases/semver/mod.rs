@@ -1,12 +1,13 @@
 use std::fmt::Display;
 
 use knope_versioning::{
-    Action, GoVersioning, Label, PreVersion, Prerelease, StableVersion, Version,
+    changes::ChangeType, Action, GoVersioning, Label, PreVersion, Prerelease, StableVersion,
+    Version,
 };
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
-use super::{package::Package, ChangeType, CurrentVersions, Prereleases, Release};
+use super::{package::Package, CurrentVersions, Prereleases, Release};
 use crate::{
     dry_run::DryRun,
     fs,
@@ -79,18 +80,8 @@ impl PartialOrd for ConventionalRule {
     }
 }
 
-impl From<changesets::ChangeType> for ConventionalRule {
-    fn from(value: changesets::ChangeType) -> Self {
-        match value {
-            changesets::ChangeType::Minor => Self::Minor,
-            changesets::ChangeType::Major => Self::Major,
-            changesets::ChangeType::Custom(_) | changesets::ChangeType::Patch => Self::Patch,
-        }
-    }
-}
-
-impl From<ChangeType> for ConventionalRule {
-    fn from(value: ChangeType) -> Self {
+impl From<&ChangeType> for ConventionalRule {
+    fn from(value: &ChangeType) -> Self {
         match value {
             ChangeType::Feature => Self::Minor,
             ChangeType::Breaking => Self::Major,
@@ -145,6 +136,8 @@ pub(crate) fn bump_version_and_update_state(
     }
 }
 
+// TODO: Move some of this into knope_versioning
+
 impl Package {
     /// Get the current version of a package determined by the last tag for the package _and_ the
     /// version in versioned files. The version from files takes precedent over version from tag.
@@ -163,7 +156,7 @@ impl Package {
     }
 
     pub(crate) fn version_from_files(&self) -> Option<&Version> {
-        Some(self.files.as_ref()?.get_version())
+        self.versioning.get_version()
     }
 
     /// Consumes a [`Package`], writing it back to the file it came from. Returns the new version
@@ -176,9 +169,6 @@ impl Package {
         dry_run: DryRun,
     ) -> Result<Self, UpdatePackageVersionError> {
         let version_str = version.version.to_string();
-        let Some(files) = self.files.clone() else {
-            return Ok(self);
-        };
         let go_versioning = match &version {
             VersionFromSource {
                 source: VersionSource::OverrideVersion,
@@ -186,7 +176,10 @@ impl Package {
             } => GoVersioning::BumpMajor,
             _ => self.go_versioning,
         };
-        let actions = files.set_version(&version.version, go_versioning)?;
+        let actions = self
+            .versioning
+            .clone()
+            .set_version(&version.version, go_versioning)?;
         for action in actions {
             match action {
                 Action::WriteToFile { path, content } => {

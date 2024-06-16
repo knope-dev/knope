@@ -83,7 +83,7 @@ pub(crate) fn replace_variables(template: Template, state: &State) -> Result<Str
                                     changelog
                                         .get_release(
                                             &version,
-                                            package.files.clone(),
+                                            package.versioning.clone(),
                                             package.go_versioning,
                                         )
                                         .transpose()
@@ -176,18 +176,16 @@ pub(crate) enum Error {
 mod test_replace_variables {
     use std::fs::write;
 
-    use knope_versioning::{VersionedFile, VersionedFilePath};
+    use knope_versioning::{
+        changelog::Sections,
+        changes::{Change, ChangeSource, ChangeType},
+        VersionedFile, VersionedFilePath,
+    };
     use pretty_assertions::assert_eq;
     use tempfile::TempDir;
 
     use super::*;
-    use crate::step::{
-        issues::Issue,
-        releases::{
-            changelog::HeaderLevel, conventional_commits::ConventionalCommit,
-            package::ChangelogSections, Change, ChangeType,
-        },
-    };
+    use crate::step::{issues::Issue, releases::changelog::HeaderLevel};
 
     fn package() -> (Package, TempDir) {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -196,13 +194,17 @@ mod test_replace_variables {
 
         (
             Package {
-                files: knope_versioning::Package::new(vec![VersionedFile::new(
-                    &VersionedFilePath::new("Cargo.toml".into()).unwrap(),
-                    "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
-                    &[""],
+                versioning: knope_versioning::Package::new(
+                    vec![VersionedFile::new(
+                        &VersionedFilePath::new("Cargo.toml".into()).unwrap(),
+                        "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
+                        &[""],
+                    )
+                    .unwrap()],
+                    Sections::default(),
+                    None,
                 )
-                .unwrap()])
-                .ok(),
+                .unwrap(),
                 changelog: Some(changelog.try_into().unwrap()),
                 ..Package::default()
             },
@@ -272,12 +274,12 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
         let mut state = State::new(None, None, None, vec![package().0], Vec::new(), Verbose::No);
         let version = Version::new(1, 2, 3, None);
-        let changes = [Change::ConventionalCommit(ConventionalCommit {
+        let changes = [Change {
             change_type: ChangeType::Feature,
-            message: "Blah".to_string(),
-            original_source: String::new(),
-        })];
-        let changelog_sections = ChangelogSections::default();
+            description: "Blah".to_string(),
+            original_source: ChangeSource::ConventionalCommit(String::new()),
+        }];
+        let changelog_sections = Sections::default();
         state.packages[0].prepared_release = Some(Release::new(
             version.clone(),
             &changes,

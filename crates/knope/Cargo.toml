@@ -23,7 +23,6 @@ datta = "0.1.1"
 env_logger = "0.11.3"
 execute = "0.2.13"
 git2 = { version = "0.18.3", default-features = false }
-git-conventional = "0.12.6"
 gix = { version = "0.63.0", default-features = false, features = [
   "max-performance-safe",
 ] }
@@ -32,6 +31,7 @@ inquire = { version = "0.7.5", default-features = false, features = [
   "crossterm",
 ] }
 itertools = "0.13.0"
+knope-config = { path = "../knope-config", version = "0.0.1"}
 knope-versioning = { path = "../knope-versioning", version = "0.0.1", features = [
   "miette",
 ] }

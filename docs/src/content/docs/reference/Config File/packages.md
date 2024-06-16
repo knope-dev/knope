@@ -94,6 +94,19 @@ For Dart projects, must contain a `version` field:
 version: 1.0.0
 ```
 
+## `.csproj`
+
+Any file ending in `.csproj` is considered a .NET project file, and is expected to have a
+`Project.PropertyGroup.Version` element:
+
+```xml title="MyProject.csproj"
+<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+</Project>
+```
+
 ## `changelog`
 
 The relative path to a Markdown file you'd like to add release notes to.

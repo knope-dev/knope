@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_get_version() {
         let content =
-            include_str!("../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
+            include_str!("../../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
 
         assert_eq!(
             PubSpec::new(RelativePathBuf::new(), content.to_string())
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_set_version() {
         let content =
-            include_str!("../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
+            include_str!("../../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
 
         let action = PubSpec::new(RelativePathBuf::from("blah/blah"), content.to_string())
             .unwrap()

@@ -1,23 +1,18 @@
-use std::{fmt, fmt::Display, ops::Range, path::PathBuf, str::FromStr};
+use std::{ops::Range, path::PathBuf, str::FromStr};
 
 use ::toml::{from_str, Value};
-use git_conventional::FooterToken;
 use itertools::Itertools;
-use knope_versioning::{cargo, VersionedFilePath};
+use knope_config::changelog_section::ChangelogSection;
+use knope_versioning::{versioned_file::cargo, VersionedFilePath};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::toml;
 use crate::{
     fs,
     fs::read_to_string,
-    step::releases::{
-        changelog,
-        package::{Asset, ChangelogSectionSource},
-        ChangeType, PackageName,
-    },
+    step::releases::{changelog, package::Asset, PackageName},
 };
 
 /// Represents a single package in `knope.toml`.
@@ -216,109 +211,3 @@ pub(crate) enum Error {
 }
 
 type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub(crate) struct ChangelogSection {
-    pub(crate) name: ChangeLogSectionName,
-    #[serde(default)]
-    pub(crate) footers: Vec<CommitFooter>,
-    #[serde(default)]
-    pub(crate) types: Vec<CustomChangeType>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct CommitFooter(String);
-
-impl Display for CommitFooter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<FooterToken<'_>> for CommitFooter {
-    fn from(token: FooterToken<'_>) -> Self {
-        Self(token.to_string())
-    }
-}
-
-impl From<&str> for CommitFooter {
-    fn from(token: &str) -> Self {
-        Self(token.into())
-    }
-}
-
-impl From<CommitFooter> for ChangeType {
-    fn from(footer: CommitFooter) -> Self {
-        Self::Custom(ChangelogSectionSource::CommitFooter(footer))
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct CustomChangeType(String);
-
-impl Display for CustomChangeType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<String> for CustomChangeType {
-    fn from(token: String) -> Self {
-        Self(token)
-    }
-}
-
-impl From<&str> for CustomChangeType {
-    fn from(token: &str) -> Self {
-        Self(token.into())
-    }
-}
-
-impl From<CustomChangeType> for String {
-    fn from(custom: CustomChangeType) -> Self {
-        custom.0
-    }
-}
-
-impl From<CustomChangeType> for ChangeType {
-    fn from(custom: CustomChangeType) -> Self {
-        changesets::ChangeType::from(String::from(custom)).into()
-    }
-}
-
-impl From<changesets::ChangeType> for ChangeType {
-    fn from(change_type: changesets::ChangeType) -> Self {
-        match change_type {
-            changesets::ChangeType::Major => Self::Breaking,
-            changesets::ChangeType::Minor => Self::Feature,
-            changesets::ChangeType::Patch => Self::Fix,
-            changesets::ChangeType::Custom(custom) => {
-                Self::Custom(ChangelogSectionSource::CustomChangeType(custom.into()))
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct ChangeLogSectionName(String);
-
-impl Display for ChangeLogSectionName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<&str> for ChangeLogSectionName {
-    fn from(token: &str) -> Self {
-        Self(token.into())
-    }
-}
-
-impl AsRef<str> for ChangeLogSectionName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
