@@ -11,7 +11,7 @@ readme = "README.md"
 
 [dependencies]
 knope-versioning = { path = "../knope-versioning", version = "0.0.1" }
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 
 [lints]
 workspace = true
