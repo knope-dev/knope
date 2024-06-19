@@ -488,7 +488,7 @@ mod test_change_description {
         let change = Change {
             change_type: ChangeType::Feature,
             original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "a feature".to_string(),
+            description: "a feature".into(),
         };
         let description = ChangeDescription::from(&change);
         assert_eq!(
@@ -502,7 +502,7 @@ mod test_change_description {
         let change = Change {
             change_type: ChangeType::Feature,
             original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "# a feature\n\n\n\n".to_string(),
+            description: "# a feature\n\n\n\n".into(),
         };
         let description = ChangeDescription::from(&change);
         assert_eq!(
@@ -516,7 +516,7 @@ mod test_change_description {
         let change = Change {
             original_source: ChangeSource::ConventionalCommit(String::new()),
             change_type: ChangeType::Feature,
-            description: "# a feature\n\nwith details\n\n- first\n- second".to_string(),
+            description: "# a feature\n\nwith details\n\n- first\n- second".into(),
         };
         let description = ChangeDescription::from(&change);
         assert_eq!(

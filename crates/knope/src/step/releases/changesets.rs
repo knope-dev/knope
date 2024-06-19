@@ -91,20 +91,21 @@ pub(crate) fn add_releases_from_changeset(
     if !changeset_path.exists() {
         return Ok(packages);
     }
-    let mut changeset = ChangeSet::from_directory(&changeset_path)?;
+    let releases: Vec<changesets::Release> = ChangeSet::from_directory(&changeset_path)?.into();
     let mut changesets_deleted = HashSet::new();
     Ok(packages
         .into_iter()
         .map(|mut package| {
-            if let Some(release_changes) = changeset.releases.remove(
-                package
-                    .name
-                    .as_deref()
-                    .unwrap_or(DEFAULT_CHANGESET_PACKAGE_NAME),
-            ) {
+            if let Some(release_changes) = releases.iter().find(|release| {
+                release.package_name
+                    == package
+                        .name
+                        .as_deref()
+                        .unwrap_or(DEFAULT_CHANGESET_PACKAGE_NAME)
+            }) {
                 package
                     .pending_changes
-                    .extend(release_changes.changes.into_iter().map(|change| {
+                    .extend(release_changes.changes.clone().into_iter().map(|change| {
                         let file_name = change.unique_id.to_file_name();
                         if !changesets_deleted.contains(&file_name) && !is_prerelease {
                             if let Some(dry_run) = dry_run {

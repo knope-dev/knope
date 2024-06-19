@@ -53,7 +53,7 @@ impl Package {
 
     #[must_use]
     pub fn get_version(&self) -> Option<&Version> {
-        self.versioned_files.first().map(|file| file.version())
+        self.versioned_files.first().map(VersionedFile::version)
     }
 
     /// Returns the actions that must be taken to set this package to the new version.

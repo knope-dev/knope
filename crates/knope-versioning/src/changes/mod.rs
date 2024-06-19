@@ -1,6 +1,6 @@
 #![allow(dead_code)] // TODO: Remove this
 
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use git_conventional::FooterToken;
 
@@ -12,7 +12,7 @@ pub mod conventional_commit;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Change {
     pub change_type: ChangeType,
-    pub description: String,
+    pub description: Arc<str>,
     pub original_source: ChangeSource,
 }
 
@@ -101,7 +101,7 @@ impl From<FooterToken<'_>> for ChangeType {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ChangeSource {
     ConventionalCommit(String),
-    ChangeFile(changesets::UniqueId),
+    ChangeFile(Arc<changesets::UniqueId>),
 }
 
 impl Display for ChangeSource {

@@ -276,7 +276,7 @@ mod test_replace_variables {
         let version = Version::new(1, 2, 3, None);
         let changes = [Change {
             change_type: ChangeType::Feature,
-            description: "Blah".to_string(),
+            description: "Blah".into(),
             original_source: ChangeSource::ConventionalCommit(String::new()),
         }];
         let changelog_sections = Sections::default();
