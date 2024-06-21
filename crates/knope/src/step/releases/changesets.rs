@@ -3,7 +3,7 @@ use std::{collections::HashSet, io::Write, path::PathBuf};
 use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
-use knope_versioning::changes::{Change, ChangeSource, ChangeType};
+use knope_versioning::changes::{ChangeType, CHANGESET_DIR};
 use miette::Diagnostic;
 
 use super::Package;
@@ -63,7 +63,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
         summary,
     };
 
-    let changeset_path = PathBuf::from(".changeset");
+    let changeset_path = PathBuf::from(CHANGESET_DIR);
     if !changeset_path.exists() {
         fs::create_dir(&mut None, &changeset_path)?;
     }
@@ -87,7 +87,7 @@ pub(crate) fn add_releases_from_changeset(
     is_prerelease: bool,
     dry_run: DryRun,
 ) -> Result<Vec<Package>, Error> {
-    let changeset_path = PathBuf::from(".changeset");
+    let changeset_path = PathBuf::from(CHANGESET_DIR);
     if !changeset_path.exists() {
         return Ok(packages);
     }
@@ -120,11 +120,7 @@ pub(crate) fn add_releases_from_changeset(
                             }
                             changesets_deleted.insert(file_name);
                         }
-                        Change {
-                            change_type: change.change_type.into(),
-                            description: change.summary,
-                            original_source: ChangeSource::ChangeFile(change.unique_id),
-                        }
+                        change.into()
                     }));
             }
             package

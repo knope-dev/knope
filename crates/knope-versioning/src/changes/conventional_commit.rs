@@ -1,7 +1,7 @@
 use git_conventional::{Commit, Footer, Type};
 
 use super::{Change, ChangeSource, ChangeType};
-use crate::Package;
+use crate::changelog::Sections;
 
 /// Try to parse each commit message as a [conventional commit](https://www.conventionalcommits.org/).
 ///
@@ -13,15 +13,22 @@ use crate::Package;
 #[must_use]
 pub fn changes_from_commit_messages<Message: AsRef<str>>(
     commit_messages: &[Message],
-    package: &Package,
+    scopes: Option<&Vec<String>>,
+    changelog_sections: &Sections,
 ) -> Vec<Change> {
     commit_messages
         .iter()
-        .flat_map(|message| changes_from_commit_message(message.as_ref(), package).into_iter())
+        .flat_map(|message| {
+            changes_from_commit_message(message.as_ref(), scopes, changelog_sections).into_iter()
+        })
         .collect()
 }
 
-fn changes_from_commit_message(commit_message: &str, package: &Package) -> Vec<Change> {
+fn changes_from_commit_message(
+    commit_message: &str,
+    scopes: Option<&Vec<String>>,
+    changelog_sections: &Sections,
+) -> Vec<Change> {
     let Some(commit) = Commit::parse(commit_message.trim()).ok() else {
         return Vec::new();
     };
@@ -29,7 +36,7 @@ fn changes_from_commit_message(commit_message: &str, package: &Package) -> Vec<C
     let commit_summary = format_commit_summary(&commit);
 
     if let Some(commit_scope) = commit.scope() {
-        if let Some(scopes) = &package.scopes {
+        if let Some(scopes) = scopes {
             if !scopes
                 .iter()
                 .any(|s| s.eq_ignore_ascii_case(commit_scope.as_str()))
@@ -43,7 +50,7 @@ fn changes_from_commit_message(commit_message: &str, package: &Package) -> Vec<C
     for footer in commit.footers() {
         if footer.breaking() {
             has_breaking_footer = true;
-        } else if !package.changelog_sections.contains_footer(footer) {
+        } else if !changelog_sections.contains_footer(footer) {
             continue;
         }
         changes.push(Change {
@@ -125,8 +132,7 @@ mod tests {
             "feat!: add a feature",
             "feat: add another feature",
         ];
-        let package = Package::new(Vec::new(), Sections::default(), None).unwrap();
-        let changes = changes_from_commit_messages(commits, &package);
+        let changes = changes_from_commit_messages(commits, None, &Sections::default());
         assert_eq!(
             changes,
             vec![
@@ -166,8 +172,7 @@ mod tests {
             "fix: a bug\n\nBREAKING CHANGE: something broke",
             "feat: a features\n\nBREAKING CHANGE: something else broke",
         ];
-        let package = Package::new(Vec::new(), Sections::default(), None).unwrap();
-        let changes = changes_from_commit_messages(&commits, &package);
+        let changes = changes_from_commit_messages(&commits, None, &Sections::default());
         assert_eq!(
             changes,
             vec![
@@ -201,8 +206,7 @@ mod tests {
             "feat(scope)!: Wrong scope breaking change!",
             "fix: No scope",
         ];
-        let package = Package::new(Vec::new(), Sections::default(), None).unwrap();
-        let changes = changes_from_commit_messages(&commits, &package);
+        let changes = changes_from_commit_messages(&commits, None, &Sections::default());
         assert_eq!(
             changes,
             vec![
@@ -231,14 +235,12 @@ mod tests {
             "feat(scope): Scoped feature",
             "fix: No scope",
         ];
-        let package = Package::new(
-            Vec::new(),
-            Sections::default(),
-            Some(vec![String::from("scope")]),
-        )
-        .unwrap();
 
-        let changes = changes_from_commit_messages(&commits, &package);
+        let changes = changes_from_commit_messages(
+            &commits,
+            Some(&vec![String::from("scope")]),
+            &Sections::default(),
+        );
         assert_eq!(
             changes,
             vec![
@@ -270,8 +272,7 @@ mod tests {
                 "custom-footer".into(),
             ))],
         );
-        let package = Package::new(Vec::new(), changelog_sections, None).unwrap();
-        let changes = changes_from_commit_messages(&commits, &package);
+        let changes = changes_from_commit_messages(&commits, None, &changelog_sections);
         assert_eq!(
             changes,
             vec![Change {

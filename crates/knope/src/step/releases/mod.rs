@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 
-use conventional_commits::add_releases_from_conventional_commits;
 use itertools::Itertools;
 use knope_versioning::{PreVersion, StableVersion, Version};
 use miette::Diagnostic;
@@ -13,7 +12,10 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
-    integrations::git::{create_tag, get_current_versions_from_tags},
+    integrations::{
+        git,
+        git::{create_tag, get_current_versions_from_tags},
+    },
     step::PrepareRelease,
     workflow::Verbose,
     RunType,
@@ -44,14 +46,27 @@ pub(crate) fn prepare_release(
         allow_empty,
         ignore_conventional_commits,
     } = prepare_release;
-    let packages = if *ignore_conventional_commits {
-        state.packages
-    } else {
-        add_releases_from_conventional_commits(state.packages, &state.all_git_tags, state.verbose)
-            .map_err(Error::from)?
-    };
+    if !ignore_conventional_commits {
+        state.packages = state
+            .packages
+            .into_iter()
+            .map(|mut package| {
+                conventional_commits::get_conventional_commits_after_last_stable_version(
+                    &package.name,
+                    package.versioning.scopes.as_ref(),
+                    &package.versioning.changelog_sections,
+                    state.verbose,
+                    &state.all_git_tags,
+                )
+                .map(|pending_changes| {
+                    package.pending_changes = pending_changes;
+                    package
+                })
+            })
+            .try_collect()?;
+    }
     state.packages = changesets::add_releases_from_changeset(
-        packages,
+        state.packages,
         prerelease_label.is_some(),
         &mut dry_run_stdout,
     )
@@ -114,7 +129,7 @@ pub(crate) enum Error {
     Semver(#[from] semver::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Git(#[from] crate::integrations::git::Error),
+    Git(#[from] git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     ChangeSet(#[from] changesets::Error),
@@ -127,9 +142,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Gitea(#[from] gitea::Error),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    ConventionalCommits(#[from] conventional_commits::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Parse(#[from] changelog::ParseError),

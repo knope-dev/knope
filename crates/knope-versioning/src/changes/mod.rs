@@ -2,10 +2,12 @@
 
 use std::{fmt::Display, sync::Arc};
 
+pub use changeset::CHANGESET_DIR;
 use git_conventional::FooterToken;
 
 use crate::changelog::{CommitFooter, CustomChangeType, SectionSource};
 
+mod changeset;
 pub mod conventional_commit;
 
 /// A change to one or more packages.
@@ -14,6 +16,16 @@ pub struct Change {
     pub change_type: ChangeType,
     pub description: Arc<str>,
     pub original_source: ChangeSource,
+}
+
+impl From<changesets::PackageChange> for Change {
+    fn from(package_change: changesets::PackageChange) -> Self {
+        Self {
+            change_type: package_change.change_type.into(),
+            description: package_change.summary,
+            original_source: ChangeSource::ChangeFile(package_change.unique_id),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

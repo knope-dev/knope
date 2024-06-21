@@ -11,7 +11,7 @@ use std::{
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changes::{Change, ChangeSource},
+    changes::{Change, ChangeSource, CHANGESET_DIR},
     GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
@@ -190,7 +190,7 @@ impl Package {
     }
     // TODO: Use actions for this?
     fn stage_changes_to_git(&self, is_prerelease: bool, dry_run: DryRun) -> Result<(), Error> {
-        let changeset_path = PathBuf::from(".changeset");
+        let changeset_path = PathBuf::from(CHANGESET_DIR);
         let paths = self
             .versioning
             .versioned_files()

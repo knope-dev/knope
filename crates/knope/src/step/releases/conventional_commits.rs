@@ -1,64 +1,38 @@
-use knope_versioning::changes::{conventional_commit::changes_from_commit_messages, Change};
-use miette::Diagnostic;
+use knope_versioning::{
+    changelog::Sections,
+    changes::{conventional_commit::changes_from_commit_messages, Change},
+};
 
-use super::Package;
+use super::PackageName;
 use crate::{
     integrations::git::{self, get_commit_messages_after_tag, get_current_versions_from_tags},
     step::releases::tag_name,
     workflow::Verbose,
 };
 
-fn get_conventional_commits_after_last_stable_version(
-    package: &Package,
+pub(crate) fn get_conventional_commits_after_last_stable_version(
+    package_name: &Option<PackageName>,
+    scopes: Option<&Vec<String>>,
+    changelog_sections: &Sections,
     verbose: Verbose,
     all_tags: &[String],
-) -> Result<Vec<Change>, Error> {
+) -> Result<Vec<Change>, git::Error> {
     if let Verbose::Yes = verbose {
         println!(
             "Getting conventional commits since last release of package {}",
-            package.name.as_deref().unwrap_or_default()
+            package_name.as_deref().unwrap_or_default()
         );
-        if let Some(scopes) = package.versioning.scopes.as_ref() {
+        if let Some(scopes) = scopes {
             println!("Only checking commits with scopes: {scopes:?}");
         }
     }
     let target_version =
-        get_current_versions_from_tags(package.name.as_deref(), verbose, all_tags).stable;
-    let tag = target_version.map(|version| tag_name(&version.into(), &package.name));
+        get_current_versions_from_tags(package_name.as_deref(), verbose, all_tags).stable;
+    let tag = target_version.map(|version| tag_name(&version.into(), package_name));
     let commit_messages = get_commit_messages_after_tag(tag, verbose).map_err(git::Error::from)?;
     Ok(changes_from_commit_messages(
         &commit_messages,
-        &package.versioning,
+        scopes,
+        changelog_sections,
     ))
-}
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
-pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Git(#[from] git::Error),
-}
-
-pub(crate) fn add_releases_from_conventional_commits(
-    packages: Vec<Package>,
-    tags: &[String],
-    verbose: Verbose,
-) -> Result<Vec<Package>, Error> {
-    packages
-        .into_iter()
-        .map(|package| add_release_for_package(package, tags, verbose))
-        .collect()
-}
-
-fn add_release_for_package(
-    mut package: Package,
-    tags: &[String],
-    verbose: Verbose,
-) -> Result<Package, Error> {
-    get_conventional_commits_after_last_stable_version(&package, verbose, tags).map(|commits| {
-        if !commits.is_empty() {
-            package.pending_changes = commits;
-        }
-        package
-    })
 }
