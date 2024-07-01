@@ -171,9 +171,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "changesets"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2cc9a2cd1dfcbaf58c5a8552616ee811323cc614ffa612857b0ff610b5335b0e"
+checksum = "eac5c0ac221baad1201ed27e35f19e0f3cdf061845b4b21f4fb99ca52d98d624"
 
 [[package]]
 name = "clap"
