@@ -61,9 +61,9 @@ pub struct Error {
 }
 
 /// Run a series of [`Step`], each of which updates `state`.
-pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
+pub(crate) fn run(workflow: Workflow, mut state: RunType, assume_yes: bool) -> Result<(), Error> {
     for step in workflow.steps {
-        state = match step.run(state) {
+        state = match step.run(state, assume_yes) {
             Ok(state) => state,
             Err(err) => {
                 return Err(Error {
@@ -90,6 +90,7 @@ pub(crate) fn validate(
                     state: state.clone(),
                     stdout: Box::new(sink()),
                 },
+                false,
             )
             .err()
         })

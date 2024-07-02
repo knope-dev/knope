@@ -1,7 +1,8 @@
 Usage: knope[EXE] document-change [OPTIONS]
 
 Options:
-      --dry-run  Pretend to run a workflow, outputting what _would_ happen without actually doing it.
-  -v, --verbose  Print extra information (for debugging)
-  -h, --help     Print help
-  -V, --version  Print version
+      --dry-run    Pretend to run a workflow, outputting what _would_ happen without actually doing it.
+  -y, --assumeyes  Automatic yes to prompts. Assume "yes" as answer to all prompts and run non-interactively.
+  -v, --verbose    Print extra information (for debugging)
+  -h, --help       Print help
+  -V, --version    Print version

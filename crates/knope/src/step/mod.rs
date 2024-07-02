@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod command;
+pub mod confirm;
 mod create_pull_request;
 pub mod issues;
 pub mod releases;
@@ -95,10 +96,12 @@ pub(crate) enum Step {
         title: Template,
         body: Template,
     },
+    /// Prompt the user to confirm the next step.
+    Confirm { message: String },
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, Error> {
+    pub(crate) fn run(self, run_type: RunType, assume_yes: bool) -> Result<RunType, Error> {
         Ok(match self {
             Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
             Step::TransitionJiraIssue { status } => {
@@ -127,6 +130,7 @@ impl Step {
             Step::CreatePullRequest { base, title, body } => {
                 create_pull_request::run(&base, title, body, run_type)?
             }
+            Step::Confirm { message } => confirm::confirm(run_type, message.as_str(), assume_yes)?,
         })
     }
 
@@ -167,6 +171,9 @@ pub(super) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     CreatePullRequest(#[from] create_pull_request::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Confirm(#[from] confirm::Error),
 }
 
 /// The inner content of a [`Step::PrepareRelease`] step.
