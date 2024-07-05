@@ -117,7 +117,7 @@ jobs:
       - uses: actions/checkout@v4.1.7
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v4.1.7
+      - uses: actions/download-artifact@v4.1.8
         with:
           path: artifacts
           merge-multiple: true
