@@ -104,7 +104,7 @@ jobs:
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.3.3
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -117,7 +117,7 @@ jobs:
       - uses: actions/checkout@v4.1.7
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v4.1.7
+      - uses: actions/download-artifact@v4.1.8
         with:
           path: artifacts
           merge-multiple: true

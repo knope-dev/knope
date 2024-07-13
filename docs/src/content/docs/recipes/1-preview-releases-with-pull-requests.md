@@ -232,7 +232,7 @@ release:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4.1.7
-    - uses: actions/download-artifact@v4.1.7
+    - uses: actions/download-artifact@v4.1.8
       with:
         path: artifacts
         merge-multiple: true
@@ -311,7 +311,7 @@ jobs:
         run: cp target/${{ matrix.target }}/release/knope ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.3.3
+        uses: actions/upload-artifact@v4.3.4
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -322,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.1.7
-      - uses: actions/download-artifact@v4.1.7
+      - uses: actions/download-artifact@v4.1.8
         with:
           path: artifacts
           merge-multiple: true

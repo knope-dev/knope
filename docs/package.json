@@ -12,15 +12,15 @@
     "check-format": "prettier --list-different **/*.{json,md,mdx,mjs}"
   },
   "dependencies": {
-    "@astrojs/check": "^0.7.0",
-    "@astrojs/starlight": "^0.24.0",
+    "@astrojs/check": "^0.8.0",
+    "@astrojs/starlight": "^0.25.0",
     "astro": "^4.0.3",
     "sharp": "^0.33.0",
     "starlight-links-validator": "^0.9.0",
     "typescript": "^5.2.2"
   },
   "devDependencies": {
-    "prettier": "=3.3.2",
+    "prettier": "=3.3.3",
     "prettier-plugin-astro": "^0.14.0"
   },
   "prettier": {
