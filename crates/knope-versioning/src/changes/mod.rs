@@ -1,8 +1,6 @@
-#![allow(dead_code)] // TODO: Remove this
-
 use std::{fmt::Display, sync::Arc};
 
-pub use changeset::CHANGESET_DIR;
+pub use changeset::{CHANGESET_DIR, DEFAULT_PACKAGE_NAME};
 use git_conventional::FooterToken;
 
 use crate::changelog::{CommitFooter, CustomChangeType, SectionSource};

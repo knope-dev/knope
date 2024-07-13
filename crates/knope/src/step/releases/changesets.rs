@@ -3,7 +3,7 @@ use std::{collections::HashSet, io::Write, path::PathBuf};
 use changesets::{ChangeSet, UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
-use knope_versioning::changes::{ChangeType, CHANGESET_DIR};
+use knope_versioning::changes::{ChangeType, CHANGESET_DIR, DEFAULT_PACKAGE_NAME};
 use miette::Diagnostic;
 
 use super::Package;
@@ -79,8 +79,6 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     Ok(RunType::Real(state))
 }
 
-pub(crate) const DEFAULT_CHANGESET_PACKAGE_NAME: &str = "default";
-
 // TODO: Move some of this to knope_versioning
 pub(crate) fn add_releases_from_changeset(
     packages: Vec<Package>,
@@ -97,11 +95,7 @@ pub(crate) fn add_releases_from_changeset(
         .into_iter()
         .map(|mut package| {
             if let Some(release_changes) = releases.iter().find(|release| {
-                release.package_name
-                    == package
-                        .name
-                        .as_deref()
-                        .unwrap_or(DEFAULT_CHANGESET_PACKAGE_NAME)
+                release.package_name == package.name.as_deref().unwrap_or(DEFAULT_PACKAGE_NAME)
             }) {
                 package
                     .pending_changes

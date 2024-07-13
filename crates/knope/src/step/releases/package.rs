@@ -11,7 +11,7 @@ use std::{
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changes::{Change, ChangeSource, CHANGESET_DIR},
+    changes::{Change, ChangeSource, CHANGESET_DIR, DEFAULT_PACKAGE_NAME},
     GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
@@ -20,7 +20,6 @@ use serde::{Deserialize, Serialize};
 use super::{
     changelog,
     changelog::Changelog,
-    changesets::DEFAULT_CHANGESET_PACKAGE_NAME,
     semver,
     semver::{bump, ConventionalRule},
     Release, Rule,
@@ -287,9 +286,7 @@ impl Display for Package {
         write!(
             f,
             "{}",
-            self.name
-                .as_deref()
-                .unwrap_or(DEFAULT_CHANGESET_PACKAGE_NAME)
+            self.name.as_deref().unwrap_or(DEFAULT_PACKAGE_NAME)
         )
     }
 }
@@ -300,7 +297,7 @@ pub(crate) struct PackageName(String);
 
 impl Default for PackageName {
     fn default() -> Self {
-        Self(DEFAULT_CHANGESET_PACKAGE_NAME.to_string())
+        Self(DEFAULT_PACKAGE_NAME.to_string())
     }
 }
 
