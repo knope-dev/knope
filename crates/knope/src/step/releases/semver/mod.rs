@@ -123,9 +123,9 @@ pub(crate) fn bump_version_and_update_state(
                 }
             };
             let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            let additional_tags = package.pending_tags;
-            package.pending_tags = Vec::new();
-            package.prepared_release = Some(Release::empty(version.version, additional_tags));
+            package.prepared_release =
+                Some(Release::empty(version.version, package.pending_actions));
+            package.pending_actions = Vec::new();
             Ok(package)
         })
         .collect::<Result<Vec<Package>, Error>>()?;
@@ -162,7 +162,7 @@ impl Package {
     /// Consumes a [`Package`], writing it back to the file it came from. Returns the new version
     /// that was written. Adds all modified package files to Git.
     ///
-    /// If `dry_run` is `true`, the version will not be written to any files.
+    /// If `dry_run` is `true`, the version won't be written to any files.
     pub(crate) fn write_version(
         mut self,
         version: &VersionFromSource,
@@ -185,7 +185,7 @@ impl Package {
                 Action::WriteToFile { path, content } => {
                     fs::write(dry_run, &version_str, &path.to_path(""), content)?;
                 }
-                Action::AddTag { tag } => self.pending_tags.push(tag),
+                Action::AddTag { .. } => self.pending_actions.push(action),
             }
         }
         Ok(self)

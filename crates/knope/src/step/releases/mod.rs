@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use itertools::Itertools;
-use knope_versioning::{PreVersion, StableVersion, Version};
+use knope_versioning::{Action, PreVersion, StableVersion, Version};
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
 
@@ -333,9 +333,14 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
 
         package_to_release
             .release
-            .additional_tags
+            .actions
             .iter()
-            .filter(|additional_tag| **additional_tag != tag)
+            .filter_map(|action| match action {
+                Action::AddTag {
+                    tag: additional_tag,
+                } if *additional_tag != tag => Some(additional_tag),
+                _ => None,
+            })
             .try_for_each(|additional_tag| create_tag(&mut dry_run_stdout, additional_tag))?;
     }
 

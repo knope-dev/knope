@@ -1,7 +1,7 @@
 use relative_path::RelativePathBuf;
 
 /// Actions to take to finish updating a package
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Action {
     WriteToFile {
         path: RelativePathBuf,

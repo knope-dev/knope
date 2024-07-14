@@ -12,7 +12,7 @@ use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
     changes::{Change, ChangeSource, CHANGESET_DIR, DEFAULT_PACKAGE_NAME},
-    GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
+    Action, GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
@@ -44,7 +44,7 @@ pub(crate) struct Package {
     pub(crate) changelog: Option<Changelog>,
     pub(crate) name: Option<PackageName>,
     pub(crate) pending_changes: Vec<Change>,
-    pub(crate) pending_tags: Vec<String>,
+    pub(crate) pending_actions: Vec<Action>,
     pub(crate) prepared_release: Option<Release>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
@@ -113,7 +113,7 @@ impl Package {
                 GoVersioning::default()
             },
             pending_changes: Vec::new(),
-            pending_tags: Vec::new(),
+            pending_actions: Vec::new(),
             prepared_release: None,
             override_version: None,
         })
@@ -229,8 +229,8 @@ impl Package {
         version: Version,
         dry_run: DryRun,
     ) -> Result<Release, crate::step::releases::changelog::Error> {
-        let mut additional_tags = Vec::new();
-        swap(&mut self.pending_tags, &mut additional_tags);
+        let mut actions = Vec::new();
+        swap(&mut self.pending_actions, &mut actions);
         let release = Release::new(
             version,
             &self.pending_changes,
@@ -238,7 +238,7 @@ impl Package {
             self.changelog
                 .as_ref()
                 .map_or(HeaderLevel::H2, |it| it.section_header_level),
-            additional_tags,
+            actions,
         );
 
         if let Some(changelog) = self.changelog.as_mut() {
@@ -272,7 +272,7 @@ impl Package {
             changelog: None,
             name: None,
             pending_changes: vec![],
-            pending_tags: vec![],
+            pending_actions: vec![],
             prepared_release: None,
             override_version: None,
             assets: None,

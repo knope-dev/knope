@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt::Display, path::PathBuf, str::FromStr};
 
 use itertools::Itertools;
-use knope_versioning::{changelog::Sections, changes::Change, GoVersioning, Version};
+use knope_versioning::{changelog::Sections, changes::Change, Action, GoVersioning, Version};
 use miette::Diagnostic;
 use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
@@ -13,7 +13,7 @@ use crate::{dry_run::DryRun, fs};
 pub(crate) struct Changelog {
     /// The path to the CHANGELOG file
     pub(crate) path: PathBuf,
-    /// The content that has been written to `path`
+    /// The content that's been written to `path`
     pub(crate) content: String,
     pub(crate) section_header_level: HeaderLevel,
 }
@@ -96,21 +96,19 @@ impl Changelog {
             release_sections,
             &format!("{section_header_level}#"),
         ));
-        let additional_tags = package
+        let actions = package
             .set_version(&version, go_versioning)
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|action| match action {
-                knope_versioning::Action::AddTag { tag } => Some(tag),
-                knope_versioning::Action::WriteToFile { .. } => None,
-            })
+            // If the changelog was already written for this release, we don't need to write _any_ files
+            .filter(|action| matches!(action, Action::AddTag { .. }))
             .collect();
         Ok(Some(Release {
             version,
             date,
             sections,
             header_level,
-            additional_tags,
+            actions,
         }))
     }
 
@@ -165,10 +163,8 @@ pub(crate) struct Release {
     ///
     /// Content within is written expecting that the release title will be written at this level
     header_level: HeaderLevel,
-    /// Any tags that should be added for the sake of the versioned files (specifically `go.mod`s)
-    /// This doesn't include the package-level tags, since those will get added by GitHub/Gitea
-    /// sometimes.
-    pub(crate) additional_tags: Vec<String>,
+    /// Actions that should be taken to complete this release
+    pub(crate) actions: Vec<Action>,
 }
 impl Release {
     pub(crate) fn new(
@@ -176,7 +172,7 @@ impl Release {
         changes: &[Change],
         changelog_sections: &Sections,
         header_level: HeaderLevel,
-        additional_tags: Vec<String>,
+        actions: Vec<Action>,
     ) -> Self {
         let sections = changelog_sections
             .iter()
@@ -210,17 +206,17 @@ impl Release {
             date,
             sections,
             header_level,
-            additional_tags,
+            actions,
         }
     }
 
-    pub(crate) fn empty(version: Version, additional_tags: Vec<String>) -> Self {
+    pub(crate) fn empty(version: Version, actions: Vec<Action>) -> Self {
         Self {
             version,
             date: Some(OffsetDateTime::now_utc().date()),
             sections: None,
             header_level: HeaderLevel::H2,
-            additional_tags,
+            actions,
         }
     }
 
