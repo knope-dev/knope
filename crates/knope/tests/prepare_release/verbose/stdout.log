@@ -6,9 +6,6 @@ package.json has version 0.4.6
 Getting conventional commits since last release of package first
 Only checking commits with scopes: ["first"]
 Finding all commits since tag first/v1.2.3
-Getting conventional commits since last release of package second
-Only checking commits with scopes: ["second"]
-Finding all commits since tag second/v0.4.6
 Determining new version for first
 Looking for Git tags matching package name.
 commit feat: A feature
@@ -34,6 +31,9 @@ changeset breaking_change.md
 changeset feature.md
 	implies rule MINOR
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
+Getting conventional commits since last release of package second
+Only checking commits with scopes: ["second"]
+Finding all commits since tag second/v0.4.6
 Determining new version for second
 Looking for Git tags matching package name.
 commit feat: A feature

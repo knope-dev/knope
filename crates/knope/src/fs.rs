@@ -54,6 +54,18 @@ pub(crate) fn read_to_string<P: AsRef<Path> + Into<PathBuf>>(path: P) -> Result<
     })
 }
 
+pub(crate) fn remove_file(dry_run: DryRun, path: &Path) -> Result<(), Error> {
+    if let Some(stdout) = dry_run {
+        writeln!(stdout, "Would delete {}", path.display()).map_err(Error::Stdout)
+    } else {
+        trace!("Removing file {}", path.display());
+        std::fs::remove_file(path).map_err(|source| Error::Remove {
+            path: path.into(),
+            source,
+        })
+    }
+}
+
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
     #[error("Error writing to {path}: {source}")]
@@ -72,6 +84,16 @@ pub(crate) enum Error {
         help("Make sure you have permission to read this file.")
     )]
     Read {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+    #[error("Error removing {path}: {source}")]
+    #[diagnostic(
+        code(fs::remove),
+        help("Make sure you have permission to write to this file.")
+    )]
+    Remove {
         path: PathBuf,
         #[source]
         source: io::Error,

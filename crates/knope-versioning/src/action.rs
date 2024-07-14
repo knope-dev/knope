@@ -7,6 +7,9 @@ pub enum Action {
         path: RelativePathBuf,
         content: String,
     },
+    RemoveFile {
+        path: RelativePathBuf,
+    },
     AddTag {
         tag: String,
     },

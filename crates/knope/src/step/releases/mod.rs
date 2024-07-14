@@ -1,9 +1,14 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, path::PathBuf};
 
+use ::changesets::ChangeSet;
 use itertools::Itertools;
-use knope_versioning::{Action, PreVersion, StableVersion, Version};
+use knope_versioning::{
+    changes::{ChangeSource, CHANGESET_DIR},
+    Action, PreVersion, StableVersion, Version,
+};
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
+use relative_path::RelativePathBuf;
 
 pub(crate) use self::{
     changelog::Release,
@@ -12,6 +17,7 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
+    dry_run::DryRun,
     integrations::{
         git,
         git::{create_tag, get_current_versions_from_tags},
@@ -41,55 +47,32 @@ pub(crate) fn prepare_release(
     if state.packages.is_empty() {
         return Err(package::Error::NoDefinedPackages.into());
     }
-    let PrepareRelease {
-        prerelease_label,
-        allow_empty,
-        ignore_conventional_commits,
-    } = prepare_release;
-    if !ignore_conventional_commits {
-        state.packages = state
-            .packages
-            .into_iter()
-            .map(|mut package| {
-                conventional_commits::get_conventional_commits_after_last_stable_version(
-                    &package.name,
-                    package.versioning.scopes.as_ref(),
-                    &package.versioning.changelog_sections,
-                    state.verbose,
-                    &state.all_git_tags,
-                )
-                .map(|pending_changes| {
-                    package.pending_changes = pending_changes;
-                    package
-                })
-            })
-            .try_collect()?;
-    }
-    state.packages = changesets::add_releases_from_changeset(
-        state.packages,
-        prerelease_label.is_some(),
-        &mut dry_run_stdout,
-    )
-    .map_err(Error::from)
-    .and_then(|packages| {
-        packages
-            .into_iter()
-            .map(|package| {
-                package
-                    .write_release(
-                        prerelease_label,
-                        &state.all_git_tags,
-                        &mut dry_run_stdout,
-                        state.verbose,
-                    )
-                    .map_err(Error::from)
-            })
-            .collect()
-    })?;
+
+    let changeset_path = PathBuf::from(CHANGESET_DIR);
+    let changeset = if changeset_path.exists() {
+        ChangeSet::from_directory(&changeset_path)?.into()
+    } else {
+        Vec::new()
+    };
+
+    state.packages = state
+        .packages
+        .into_iter()
+        .map(|package| {
+            prepare_release_for_package(
+                prepare_release,
+                package,
+                &state.all_git_tags,
+                &changeset,
+                state.verbose,
+                &mut dry_run_stdout,
+            )
+        })
+        .try_collect()?;
 
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
-    } else if !*allow_empty
+    } else if !prepare_release.allow_empty
         && state
             .packages
             .iter()
@@ -101,6 +84,43 @@ pub(crate) fn prepare_release(
     } else {
         Ok(RunType::Real(state))
     }
+}
+
+fn prepare_release_for_package(
+    prepare_release: &PrepareRelease,
+    mut package: Package,
+    all_tags: &[String],
+    changeset: &[::changesets::Release],
+    verbose: Verbose,
+    dry_run: DryRun,
+) -> Result<Package, Error> {
+    let PrepareRelease {
+        prerelease_label,
+        ignore_conventional_commits,
+        ..
+    } = prepare_release;
+
+    let mut changes = Vec::new();
+    if !ignore_conventional_commits {
+        changes = conventional_commits::get_conventional_commits_after_last_stable_version(
+            &package.name,
+            package.versioning.scopes.as_ref(),
+            &package.versioning.changelog_sections,
+            verbose,
+            all_tags,
+        )?;
+    }
+    changes.extend(changesets::changes_from_changesets(&package, changeset));
+    for change in &changes {
+        if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+            package.pending_actions.push(Action::RemoveFile {
+                path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
+            });
+        }
+    }
+    package
+        .write_release(&changes, prerelease_label, all_tags, dry_run, verbose)
+        .map_err(Error::from)
 }
 
 pub(crate) fn bump_version(run_type: RunType, rule: &Rule) -> Result<RunType, Error> {
@@ -145,6 +165,14 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Parse(#[from] changelog::ParseError),
+    #[error(transparent)]
+    #[diagnostic(
+        code(changesets::could_not_read_changeset),
+        help(
+            "This could be a file-system issue or a problem with the formatting of a change file."
+        )
+    )]
+    CouldNotReadChangeSet(#[from] ::changesets::LoadingError),
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

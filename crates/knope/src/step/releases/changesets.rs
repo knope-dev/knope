@@ -1,13 +1,13 @@
-use std::{collections::HashSet, io::Write, path::PathBuf};
+use std::{io::Write, path::PathBuf};
 
-use changesets::{ChangeSet, UniqueId, Versioning};
+use changesets::{UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
-use knope_versioning::changes::{ChangeType, CHANGESET_DIR, DEFAULT_PACKAGE_NAME};
+use knope_versioning::changes::{Change, ChangeType, CHANGESET_DIR, DEFAULT_PACKAGE_NAME};
 use miette::Diagnostic;
 
 use super::Package;
-use crate::{dry_run::DryRun, fs, prompt, state::RunType};
+use crate::{fs, prompt, state::RunType};
 
 pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     let state = match run_type {
@@ -80,58 +80,27 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
 }
 
 // TODO: Move some of this to knope_versioning
-pub(crate) fn add_releases_from_changeset(
-    packages: Vec<Package>,
-    is_prerelease: bool,
-    dry_run: DryRun,
-) -> Result<Vec<Package>, Error> {
-    let changeset_path = PathBuf::from(CHANGESET_DIR);
-    if !changeset_path.exists() {
-        return Ok(packages);
-    }
-    let releases: Vec<changesets::Release> = ChangeSet::from_directory(&changeset_path)?.into();
-    let mut changesets_deleted = HashSet::new();
-    Ok(packages
-        .into_iter()
-        .map(|mut package| {
-            if let Some(release_changes) = releases.iter().find(|release| {
-                release.package_name == package.name.as_deref().unwrap_or(DEFAULT_PACKAGE_NAME)
-            }) {
-                package
-                    .pending_changes
-                    .extend(release_changes.changes.clone().into_iter().map(|change| {
-                        let file_name = change.unique_id.to_file_name();
-                        if !changesets_deleted.contains(&file_name) && !is_prerelease {
-                            if let Some(dry_run) = dry_run {
-                                writeln!(
-                                    dry_run,
-                                    "Would delete: {}",
-                                    changeset_path.join(&file_name).display()
-                                )
-                                .ok(); // Truly not the end of the world if stdio fails, and error handling is hard
-                            } else {
-                                std::fs::remove_file(changeset_path.join(&file_name)).ok();
-                            }
-                            changesets_deleted.insert(file_name);
-                        }
-                        change.into()
-                    }));
-            }
-            package
+pub(crate) fn changes_from_changesets<'a>(
+    package: &'a Package,
+    releases: &'a [changesets::Release],
+) -> impl Iterator<Item = Change> + 'a {
+    releases
+        .iter()
+        .find(|release| {
+            release.package_name == package.name.as_deref().unwrap_or(DEFAULT_PACKAGE_NAME)
         })
-        .collect())
+        .into_iter()
+        .flat_map(|release_changes| {
+            release_changes
+                .changes
+                .clone()
+                .into_iter()
+                .map(Change::from)
+        })
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(
-        code(changesets::could_not_read_changeset),
-        help(
-            "This could be a file-system issue or a problem with the formatting of a change file."
-        )
-    )]
-    CouldNotReadChangeSet(#[from] changesets::LoadingError),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Fs(#[from] fs::Error),

@@ -185,7 +185,7 @@ impl Package {
                 Action::WriteToFile { path, content } => {
                     fs::write(dry_run, &version_str, &path.to_path(""), content)?;
                 }
-                Action::AddTag { .. } => self.pending_actions.push(action),
+                _ => self.pending_actions.push(action),
             }
         }
         Ok(self)

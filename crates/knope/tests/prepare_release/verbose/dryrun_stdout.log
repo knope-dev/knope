@@ -6,11 +6,6 @@ package.json has version 0.4.6
 Getting conventional commits since last release of package first
 Only checking commits with scopes: ["first"]
 Finding all commits since tag first/v1.2.3
-Getting conventional commits since last release of package second
-Only checking commits with scopes: ["second"]
-Finding all commits since tag second/v0.4.6
-Would delete: .changeset/breaking_change.md
-Would delete: .changeset/feature.md
 Determining new version for first
 Looking for Git tags matching package name.
 commit feat: A feature
@@ -66,12 +61,17 @@ And even some details which aren't visible
 
 - A bug fix
 
+Would delete .changeset/breaking_change.md
+Would delete .changeset/feature.md
 Would add files to git:
   Cargo.toml
   pyproject.toml
   FIRST_CHANGELOG.md
   .changeset/breaking_change.md
   .changeset/feature.md
+Getting conventional commits since last release of package second
+Only checking commits with scopes: ["second"]
+Finding all commits since tag second/v0.4.6
 Determining new version for second
 Looking for Git tags matching package name.
 commit feat: A feature
@@ -117,6 +117,7 @@ Would add the following to SECOND_CHANGELOG.md:
 
 And even some details which aren't visible
 
+Would delete .changeset/feature.md
 Would add files to git:
   package.json
   SECOND_CHANGELOG.md

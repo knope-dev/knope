@@ -11,7 +11,7 @@ use std::{
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changes::{Change, ChangeSource, CHANGESET_DIR, DEFAULT_PACKAGE_NAME},
+    changes::{Change, DEFAULT_PACKAGE_NAME},
     Action, GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
@@ -119,13 +119,14 @@ impl Package {
         })
     }
 
-    fn bump_rule(&self, verbose: Verbose) -> ConventionalRule {
-        self.pending_changes
+    fn bump_rule(changes: &[Change], verbose: Verbose) -> ConventionalRule {
+        changes
             .iter()
             .map(|change| {
                 let rule = ConventionalRule::from(&change.change_type);
                 if let Verbose::Yes = verbose {
                     println!(
+                        // TODO: Change this to use `log` or `tracing`, then move this to knope-versioning
                         "{change_source}\n\timplies rule {rule}",
                         change_source = change.original_source
                     );
@@ -138,12 +139,13 @@ impl Package {
 
     pub(crate) fn write_release(
         mut self,
+        changes: &[Change],
         prerelease_label: &Option<Label>,
         git_tags: &[String],
         dry_run: DryRun,
         verbose: Verbose,
     ) -> Result<Self, Error> {
-        if self.pending_changes.is_empty() {
+        if changes.is_empty() {
             return Ok(self);
         }
 
@@ -163,7 +165,7 @@ impl Package {
             }
         } else {
             let versions = self.get_version(verbose, git_tags);
-            let bump_rule = self.bump_rule(verbose);
+            let bump_rule = Self::bump_rule(changes, verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
                     label: pre_label.clone(),
@@ -180,16 +182,21 @@ impl Package {
         };
 
         self = self.write_version(&new_version, dry_run)?;
-        let prepared_release = self.write_changelog(new_version.version, dry_run)?;
+        let prepared_release = self.write_changelog(changes, new_version.version, dry_run)?;
         let is_prerelease = prepared_release.version.is_prerelease();
+        self.stage_changes_to_git(&prepared_release.actions, is_prerelease, dry_run)?;
         self.prepared_release = Some(prepared_release);
-        self.stage_changes_to_git(is_prerelease, dry_run)?;
 
         Ok(self)
     }
+
     // TODO: Use actions for this?
-    fn stage_changes_to_git(&self, is_prerelease: bool, dry_run: DryRun) -> Result<(), Error> {
-        let changeset_path = PathBuf::from(CHANGESET_DIR);
+    fn stage_changes_to_git(
+        &self,
+        actions: &[Action],
+        is_prerelease: bool,
+        dry_run: DryRun,
+    ) -> Result<(), Error> {
         let paths = self
             .versioning
             .versioned_files()
@@ -200,11 +207,12 @@ impl Package {
                     .as_ref()
                     .map(|changelog| changelog.path.clone()),
             )
-            .chain(self.pending_changes.iter().filter_map(|change| {
+            .chain(actions.iter().filter_map(|action| {
                 if is_prerelease {
                     None
-                } else if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
-                    Some(changeset_path.join(unique_id.to_file_name()))
+                } else if let Action::RemoveFile { path } = &action {
+                    let path = path.to_path("");
+                    fs::remove_file(dry_run, path.as_path()).ok().map(|()| path)
                 } else {
                     None
                 }
@@ -226,6 +234,7 @@ impl Package {
     /// Adds content from `release` to `Self::changelog` if it exists.
     pub fn write_changelog(
         &mut self,
+        changes: &[Change],
         version: Version,
         dry_run: DryRun,
     ) -> Result<Release, crate::step::releases::changelog::Error> {
@@ -233,7 +242,7 @@ impl Package {
         swap(&mut self.pending_actions, &mut actions);
         let release = Release::new(
             version,
-            &self.pending_changes,
+            changes,
             &self.versioning.changelog_sections,
             self.changelog
                 .as_ref()
