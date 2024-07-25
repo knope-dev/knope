@@ -537,9 +537,9 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
 name = "git-conventional"
-version = "0.12.6"
+version = "0.12.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8035f7561b84cc80e8ec1c2c18dd14113c8b6e07206db72212403e9a25d2e72d"
+checksum = "8066dc2ef3bd0e2bfb84b4a2b0b04f216ffb97390e09fab0752bf0ba943dacc6"
 dependencies = [
  "doc-comment",
  "unicase",
