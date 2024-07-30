@@ -3,7 +3,10 @@ use std::{fmt::Display, sync::Arc};
 pub use changeset::CHANGESET_DIR;
 use git_conventional::FooterToken;
 
-use crate::changelog::{CommitFooter, CustomChangeType, SectionSource};
+use crate::{
+    changelog::{CommitFooter, CustomChangeType, SectionSource},
+    package,
+};
 
 mod changeset;
 pub mod conventional_commit;
@@ -14,6 +17,19 @@ pub struct Change {
     pub change_type: ChangeType,
     pub description: Arc<str>,
     pub original_source: ChangeSource,
+}
+
+impl Change {
+    pub fn from_changesets<'a>(
+        package_name: &'a package::Name,
+        releases: &'a [changesets::Release],
+    ) -> impl Iterator<Item = Self> + 'a {
+        releases
+            .iter()
+            .find(|release| *package_name == release.package_name)
+            .into_iter()
+            .flat_map(|release_changes| release_changes.changes.clone().into_iter().map(Self::from))
+    }
 }
 
 impl From<changesets::PackageChange> for Change {

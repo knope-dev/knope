@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub mod command;
+pub(crate) mod create_change_file;
 mod create_pull_request;
 pub mod issues;
 pub mod releases;
@@ -123,7 +124,7 @@ impl Step {
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type)?,
             Step::Release => releases::release(run_type)?,
-            Step::CreateChangeFile => releases::create_change_file(run_type)?,
+            Step::CreateChangeFile => create_change_file::run(run_type)?,
             Step::CreatePullRequest { base, title, body } => {
                 create_pull_request::run(&base, title, body, run_type)?
             }
@@ -160,7 +161,7 @@ pub(super) enum Error {
     Git(#[from] git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    ChangeSet(#[from] releases::changesets::Error),
+    ChangeSet(#[from] create_change_file::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Command(#[from] command::Error),

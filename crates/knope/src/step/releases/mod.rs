@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, iter::once, path::PathBuf};
 use ::changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
-    changes::{ChangeSource, CHANGESET_DIR},
+    changes::{Change, ChangeSource, CHANGESET_DIR},
     Action, CreateRelease, PreVersion, ReleaseTag, StableVersion, Version,
 };
 use miette::Diagnostic;
@@ -12,7 +12,6 @@ use relative_path::RelativePathBuf;
 
 pub(crate) use self::{
     changelog::Release,
-    changesets::create_change_file,
     package::Package,
     semver::{bump_version_and_update_state, Rule},
 };
@@ -28,7 +27,6 @@ use crate::{
 };
 
 pub(crate) mod changelog;
-pub(crate) mod changesets;
 pub(crate) mod conventional_commits;
 pub(crate) mod gitea;
 pub(crate) mod github;
@@ -108,7 +106,7 @@ fn prepare_release_for_package(
             all_tags,
         )?;
     }
-    changes.extend(changesets::changes_from_changesets(&package, changeset));
+    changes.extend(Change::from_changesets(package.name(), changeset));
     for change in &changes {
         if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
             package.pending_actions.push(Action::RemoveFile {
@@ -148,9 +146,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Git(#[from] git::Error),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    ChangeSet(#[from] changesets::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Package(#[from] package::Error),
