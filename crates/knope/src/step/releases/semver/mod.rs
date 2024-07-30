@@ -1,17 +1,15 @@
 use std::fmt::Display;
 
 use knope_versioning::{
-    changes::ChangeType, Action, GoVersioning, Label, PreVersion, Prerelease, StableVersion,
-    Version,
+    changes::ChangeType, Label, PreVersion, Prerelease, StableVersion, Version,
 };
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
-use super::{package::Package, CurrentVersions, Prereleases, Release};
+use super::{package::Package, CurrentVersions, Prereleases};
 use crate::{
-    dry_run::DryRun,
     fs,
-    integrations::{git, git::get_current_versions_from_tags},
+    integrations::git,
     step::releases::versioned_file::{VersionFromSource, VersionSource},
     workflow::Verbose,
     RunType,
@@ -113,7 +111,7 @@ pub(crate) fn bump_version_and_update_state(
                 }
             } else {
                 let version = bump(
-                    package.get_version(state.verbose, &state.all_git_tags),
+                    package.get_current_versions(state.verbose, &state.all_git_tags),
                     rule,
                     state.verbose,
                 )?;
@@ -122,73 +120,15 @@ pub(crate) fn bump_version_and_update_state(
                     source: VersionSource::Calculated,
                 }
             };
-            let mut package = package.write_version(&version, &mut dry_run_stdout)?;
-            package.prepared_release =
-                Some(Release::empty(version.version, package.pending_actions));
-            package.pending_actions = Vec::new();
-            Ok(package)
+            package
+                .write_version(version, &mut dry_run_stdout)
+                .map_err(Error::from)
         })
         .collect::<Result<Vec<Package>, Error>>()?;
     if let Some(stdout) = dry_run_stdout {
         Ok(RunType::DryRun { state, stdout })
     } else {
         Ok(RunType::Real(state))
-    }
-}
-
-// TODO: Move some of this into knope_versioning
-
-impl Package {
-    /// Get the current version of a package determined by the last tag for the package _and_ the
-    /// version in versioned files. The version from files takes precedent over version from tag.
-    pub(crate) fn get_version(&self, verbose: Verbose, all_tags: &[String]) -> CurrentVersions {
-        if let Verbose::Yes = verbose {
-            println!("Looking for Git tags matching package name.");
-        }
-        let mut current_versions =
-            get_current_versions_from_tags(self.name.as_deref(), verbose, all_tags);
-
-        if let Some(version_from_files) = self.version_from_files() {
-            current_versions.update_version(version_from_files.clone());
-        }
-
-        current_versions
-    }
-
-    pub(crate) fn version_from_files(&self) -> Option<&Version> {
-        self.versioning.get_version()
-    }
-
-    /// Consumes a [`Package`], writing it back to the file it came from. Returns the new version
-    /// that was written. Adds all modified package files to Git.
-    ///
-    /// If `dry_run` is `true`, the version won't be written to any files.
-    pub(crate) fn write_version(
-        mut self,
-        version: &VersionFromSource,
-        dry_run: DryRun,
-    ) -> Result<Self, UpdatePackageVersionError> {
-        let version_str = version.version.to_string();
-        let go_versioning = match &version {
-            VersionFromSource {
-                source: VersionSource::OverrideVersion,
-                ..
-            } => GoVersioning::BumpMajor,
-            _ => self.go_versioning,
-        };
-        let actions = self
-            .versioning
-            .clone()
-            .set_version(&version.version, go_versioning)?;
-        for action in actions {
-            match action {
-                Action::WriteToFile { path, content } => {
-                    fs::write(dry_run, &version_str, &path.to_path(""), content)?;
-                }
-                _ => self.pending_actions.push(action),
-            }
-        }
-        Ok(self)
     }
 }
 

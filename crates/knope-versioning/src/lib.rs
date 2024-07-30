@@ -1,11 +1,11 @@
 mod action;
 pub mod changelog;
 pub mod changes;
-mod package;
+pub mod package;
 pub mod semver;
 pub mod versioned_file;
 
-pub use action::Action;
+pub use action::{Action, CreateRelease, ReleaseTag};
 pub use package::{NewError as PackageNewError, Package};
 pub use semver::{Label, PreVersion, Prerelease, StableVersion, Version};
 pub use versioned_file::{

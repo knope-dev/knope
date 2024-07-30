@@ -3,6 +3,7 @@ use std::{fmt::Display, path::Path};
 use knope_versioning::Version;
 
 /// A version and where it came from.
+#[derive(Clone)]
 pub(crate) struct VersionFromSource {
     pub(crate) version: Version,
     pub(crate) source: VersionSource,

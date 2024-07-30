@@ -1,7 +1,6 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     env::current_dir,
-    path::PathBuf,
     str::FromStr,
 };
 
@@ -11,6 +10,7 @@ use itertools::Itertools;
 use knope_versioning::Version;
 use log::error;
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 
 use crate::{
     dry_run::DryRun,
@@ -387,13 +387,17 @@ mod test_branch_name_from_issue {
 }
 
 /// Add some files to Git to be committed later.
-pub(crate) fn add_files(file_names: &[PathBuf]) -> Result<(), Error> {
+pub(crate) fn add_files(file_names: &[&RelativePathBuf]) -> Result<(), Error> {
     if file_names.is_empty() {
         return Ok(());
     }
     let repo = Repository::open(".").map_err(ErrorKind::OpenRepo)?;
     let mut index = repo.index()?;
-    index.add_all(file_names, IndexAddOption::DEFAULT, None)?;
+    index.add_all(
+        file_names.iter().map(|rel_path| rel_path.to_path("")),
+        IndexAddOption::DEFAULT,
+        None,
+    )?;
     index.write().map_err(Error::from)
 }
 
@@ -404,7 +408,7 @@ pub(crate) fn add_files(file_names: &[PathBuf]) -> Result<(), Error> {
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
 pub(crate) fn get_commit_messages_after_tag(
-    tag: Option<String>,
+    tag: Option<&str>,
     verbose: Verbose,
 ) -> Result<Vec<String>, Error> {
     let repo = gix::open(".")?;

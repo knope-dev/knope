@@ -3,7 +3,7 @@ use std::{ops::Range, path::PathBuf, str::FromStr};
 use ::toml::{from_str, Value};
 use itertools::Itertools;
 use knope_config::changelog_section::ChangelogSection;
-use knope_versioning::{versioned_file::cargo, VersionedFilePath};
+use knope_versioning::{package, versioned_file::cargo, VersionedFilePath};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
@@ -12,13 +12,13 @@ use super::toml;
 use crate::{
     fs,
     fs::read_to_string,
-    step::releases::{changelog, package::Asset, PackageName},
+    step::releases::{changelog, package::Asset},
 };
 
 /// Represents a single package in `knope.toml`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Package {
-    pub(crate) name: Option<PackageName>,
+    pub(crate) name: package::Name,
     /// The files which define the current version of the package.
     pub(crate) versioned_files: Vec<VersionedFilePath>,
     /// The path to the `CHANGELOG.md` file (if any) to be updated when running [`Step::PrepareRelease`].
@@ -94,7 +94,7 @@ impl Package {
                 from_str::<cargo::Toml>(&member_contents)
                     .map_err(|err| CargoWorkspaceError::Toml(err, member_path.as_path()))
                     .map(|cargo| Self {
-                        name: Some(PackageName::from(cargo.package.name.clone())),
+                        name: package::Name::from(cargo.package.name.clone()),
                         versioned_files: vec![member_path],
                         scopes: Some(vec![cargo.package.name]),
                         ..Self::default()
@@ -104,7 +104,7 @@ impl Package {
     }
 
     pub(crate) fn from_toml(
-        name: Option<PackageName>,
+        name: package::Name,
         package: toml::Package,
         source_code: &str,
     ) -> std::result::Result<Self, VersionedFileError> {

@@ -15,8 +15,8 @@ pub(super) fn run(
     run_type: RunType,
 ) -> Result<RunType, Error> {
     let (mut state, mut dry_run) = run_type.decompose();
-    let title = replace_variables(title, &state)?;
-    let body = replace_variables(body, &state)?;
+    let title = replace_variables(title, &mut state)?;
+    let body = replace_variables(body, &mut state)?;
 
     if state.github_config.is_none() && state.gitea_config.is_none() {
         return Err(Error::NotConfigured);

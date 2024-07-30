@@ -3,6 +3,7 @@ use std::path::Path;
 use ::toml::{from_str, to_string, Spanned};
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_versioning::package::Name;
 use miette::{Diagnostic, IntoDiagnostic, Result, SourceSpan};
 pub(crate) use package::Package;
 use serde::Serialize;
@@ -113,14 +114,14 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                 }
             }
             (Some(package), None) => vec![Package::from_toml(
-                None,
+                Name::Default,
                 package.into_inner(),
                 &source_code,
             )?],
             (None, Some(packages)) => packages
                 .into_iter()
                 .map(|(name, spanned)| {
-                    Package::from_toml(Some(name), spanned.into_inner(), &source_code)
+                    Package::from_toml(Name::Custom(name), spanned.into_inner(), &source_code)
                 })
                 .try_collect()?,
             (None, None) => Vec::new(),

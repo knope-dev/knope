@@ -1,18 +1,10 @@
-use std::{
-    borrow::{Borrow, Cow},
-    fmt,
-    fmt::Display,
-    io::Write,
-    mem::swap,
-    ops::Deref,
-    path::PathBuf,
-};
+use std::{fmt, fmt::Display, io::Write, path::PathBuf};
 
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changes::{Change, DEFAULT_PACKAGE_NAME},
-    Action, GoVersioning, Label, PackageNewError, Version, VersionedFile, VersionedFileError,
+    changes::Change, package::Name, Action, CreateRelease, GoVersioning, Label, PackageNewError,
+    Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
@@ -22,14 +14,14 @@ use super::{
     changelog::Changelog,
     semver,
     semver::{bump, ConventionalRule},
-    Release, Rule,
+    CurrentVersions, Release, Rule,
 };
 use crate::{
     config,
     dry_run::DryRun,
     fs,
     fs::read_to_string,
-    integrations::git::{self, add_files},
+    integrations::git::{self, add_files, get_current_versions_from_tags},
     step::releases::{
         changelog::HeaderLevel,
         semver::UpdatePackageVersionError,
@@ -40,12 +32,11 @@ use crate::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
+    pub(crate) version: Option<Version>,
     pub(crate) versioning: knope_versioning::Package,
     pub(crate) changelog: Option<Changelog>,
-    pub(crate) name: Option<PackageName>,
     pub(crate) pending_changes: Vec<Change>,
     pub(crate) pending_actions: Vec<Action>,
-    pub(crate) prepared_release: Option<Release>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
     pub(crate) assets: Option<Vec<Asset>>,
@@ -65,13 +56,48 @@ impl Package {
         Ok(packages)
     }
 
+    pub(crate) fn name(&self) -> &Name {
+        &self.versioning.name
+    }
+
+    pub(crate) fn get_version(
+        &mut self,
+        verbose: Verbose,
+        all_tags: &[String],
+    ) -> Option<&Version> {
+        if self.version.is_none() {
+            self.version = self.get_current_versions(verbose, all_tags).into_latest();
+        }
+        self.version.as_ref()
+    }
+
+    /// Get the current version of a package determined by the last tag for the package _and_ the
+    /// version in versioned files. The version from files takes precedent over version from tag.
+    pub(crate) fn get_current_versions(
+        &self,
+        verbose: Verbose,
+        all_tags: &[String],
+    ) -> CurrentVersions {
+        if let Verbose::Yes = verbose {
+            println!("Looking for Git tags matching package name.");
+        }
+        let mut current_versions =
+            get_current_versions_from_tags(self.name().as_custom(), verbose, all_tags);
+
+        if let Some(version_from_files) = self.versioning.get_version() {
+            current_versions.update_version(version_from_files.clone());
+        }
+
+        current_versions
+    }
+
     fn validate(
         package: config::Package,
         git_tags: &[String],
         verbose: Verbose,
     ) -> Result<Self, Error> {
         if verbose == Verbose::Yes {
-            if let Some(package_name) = &package.name {
+            if let Name::Custom(package_name) = &package.name {
                 println!("Loading package {package_name}");
             } else {
                 println!("Loading package");
@@ -95,17 +121,14 @@ impl Package {
             }
         }
         let versioning = knope_versioning::Package::new(
+            package.name,
             versioned_files,
             convert_to_versioning(package.extra_changelog_sections),
             package.scopes,
         )?;
         Ok(Self {
             versioning,
-            changelog: package
-                .changelog
-                .map(|path| path.to_path("").try_into())
-                .transpose()?,
-            name: package.name,
+            changelog: package.changelog.map(TryInto::try_into).transpose()?,
             assets: package.assets,
             go_versioning: if package.ignore_go_major_versioning {
                 GoVersioning::IgnoreMajorRules
@@ -114,8 +137,8 @@ impl Package {
             },
             pending_changes: Vec::new(),
             pending_actions: Vec::new(),
-            prepared_release: None,
             override_version: None,
+            version: None,
         })
     }
 
@@ -150,7 +173,7 @@ impl Package {
         }
 
         if let Verbose::Yes = verbose {
-            if let Some(package_name) = &self.name {
+            if let Name::Custom(package_name) = &self.versioning.name {
                 println!("Determining new version for {package_name}");
             }
         }
@@ -164,7 +187,7 @@ impl Package {
                 source: VersionSource::OverrideVersion,
             }
         } else {
-            let versions = self.get_version(verbose, git_tags);
+            let versions = self.get_current_versions(verbose, git_tags);
             let bump_rule = Self::bump_rule(changes, verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
@@ -181,38 +204,63 @@ impl Package {
             }
         };
 
-        self = self.write_version(&new_version, dry_run)?;
-        let prepared_release = self.write_changelog(changes, new_version.version, dry_run)?;
-        let is_prerelease = prepared_release.version.is_prerelease();
-        self.stage_changes_to_git(&prepared_release.actions, is_prerelease, dry_run)?;
-        self.prepared_release = Some(prepared_release);
+        let is_prerelease = new_version.version.is_prerelease();
+        self = self
+            .write_version(new_version.clone(), dry_run)?
+            .write_changelog(changes, new_version.version, dry_run)?;
+        self.stage_changes_to_git(is_prerelease, dry_run)?;
 
         Ok(self)
     }
 
-    // TODO: Use actions for this?
-    fn stage_changes_to_git(
-        &self,
-        actions: &[Action],
-        is_prerelease: bool,
+    /// Consumes a [`Package`], writing it back to the file it came from. Returns the new version
+    /// that was written. Adds all modified package files to Git.
+    ///
+    /// If `dry_run` is `true`, the version won't be written to any files.
+    pub(crate) fn write_version(
+        mut self,
+        version: VersionFromSource,
         dry_run: DryRun,
-    ) -> Result<(), Error> {
+    ) -> Result<Self, UpdatePackageVersionError> {
+        let version_str = version.version.to_string();
+        let go_versioning = match &version {
+            VersionFromSource {
+                source: VersionSource::OverrideVersion,
+                ..
+            } => GoVersioning::BumpMajor,
+            _ => self.go_versioning,
+        };
+        let actions = self
+            .versioning
+            .clone()
+            .set_version(&version.version, go_versioning)?;
+        self.version = Some(version.version);
+        for action in actions {
+            match action {
+                Action::WriteToFile { path, content } => {
+                    fs::write(dry_run, &version_str, &path.to_path(""), content)?;
+                }
+                _ => self.pending_actions.push(action),
+            }
+        }
+        Ok(self)
+    }
+
+    // TODO: Use actions for files being written to instead of versioned_file + changelog
+    fn stage_changes_to_git(&self, is_prerelease: bool, dry_run: DryRun) -> Result<(), Error> {
         let paths = self
             .versioning
             .versioned_files()
             .iter()
-            .map(|versioned_file| versioned_file.path().to_path(""))
-            .chain(
-                self.changelog
-                    .as_ref()
-                    .map(|changelog| changelog.path.clone()),
-            )
-            .chain(actions.iter().filter_map(|action| {
+            .map(VersionedFile::path)
+            .chain(self.changelog.as_ref().map(|changelog| &changelog.path))
+            .chain(self.pending_actions.iter().filter_map(|action| {
                 if is_prerelease {
                     None
                 } else if let Action::RemoveFile { path } = &action {
-                    let path = path.to_path("");
-                    fs::remove_file(dry_run, path.as_path()).ok().map(|()| path)
+                    fs::remove_file(dry_run, &path.to_path(""))
+                        .ok()
+                        .map(|()| path)
                 } else {
                     None
                 }
@@ -223,7 +271,7 @@ impl Package {
         } else if let Some(stdio) = dry_run {
             writeln!(stdio, "Would add files to git:").map_err(fs::Error::Stdout)?;
             for path in &paths {
-                writeln!(stdio, "  {}", path.display()).map_err(fs::Error::Stdout)?;
+                writeln!(stdio, "  {path}").map_err(fs::Error::Stdout)?;
             }
             Ok(())
         } else {
@@ -232,29 +280,46 @@ impl Package {
     }
 
     /// Adds content from `release` to `Self::changelog` if it exists.
+    /// TODO: Use actions instead of this function
     pub fn write_changelog(
-        &mut self,
+        mut self,
         changes: &[Change],
         version: Version,
         dry_run: DryRun,
-    ) -> Result<Release, crate::step::releases::changelog::Error> {
-        let mut actions = Vec::new();
-        swap(&mut self.pending_actions, &mut actions);
+    ) -> Result<Self, crate::step::releases::changelog::Error> {
+        let release_header_level = self
+            .changelog
+            .as_ref()
+            .map_or(HeaderLevel::H1, |changelog| changelog.release_header_level);
         let release = Release::new(
-            version,
+            &version,
             changes,
             &self.versioning.changelog_sections,
-            self.changelog
-                .as_ref()
-                .map_or(HeaderLevel::H2, |it| it.section_header_level),
-            actions,
+            release_header_level,
+        )?;
+
+        self.changelog = if let Some(changelog) = self.changelog {
+            let (changelog, new_changes) = changelog.with_release(&release);
+
+            fs::write(
+                dry_run,
+                &format!("\n{new_changes}\n"),
+                &changelog.path.to_path(""),
+                &changelog.content,
+            )?;
+
+            Some(changelog)
+        } else {
+            None
+        };
+        self.pending_actions.insert(
+            0,
+            Action::CreateRelease(CreateRelease {
+                version,
+                notes: release.body_at_h1(),
+            }),
         );
-
-        if let Some(changelog) = self.changelog.as_mut() {
-            changelog.add_release(&release, dry_run)?;
-        }
-
-        Ok(release)
+        Ok(self)
     }
 }
 
@@ -264,6 +329,7 @@ impl Package {
     pub(crate) fn default() -> Self {
         Self {
             versioning: knope_versioning::Package::new(
+                Name::Default,
                 vec![VersionedFile::new(
                     &knope_versioning::VersionedFilePath::new("Cargo.toml".into()).unwrap(),
                     r#"
@@ -279,72 +345,20 @@ impl Package {
             )
             .unwrap(),
             changelog: None,
-            name: None,
             pending_changes: vec![],
             pending_actions: vec![],
-            prepared_release: None,
             override_version: None,
             assets: None,
             go_versioning: GoVersioning::default(),
+            version: None,
         }
     }
 }
 
+/// So we can use it in an interactive select
 impl Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.name.as_deref().unwrap_or(DEFAULT_PACKAGE_NAME)
-        )
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct PackageName(String);
-
-impl Default for PackageName {
-    fn default() -> Self {
-        Self(DEFAULT_PACKAGE_NAME.to_string())
-    }
-}
-
-impl Display for PackageName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-impl Deref for PackageName {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<&str> for PackageName {
-    fn from(name: &str) -> Self {
-        Self(name.to_string())
-    }
-}
-
-impl From<String> for PackageName {
-    fn from(name: String) -> Self {
-        Self(name)
-    }
-}
-
-impl From<Cow<'_, str>> for PackageName {
-    fn from(name: Cow<str>) -> Self {
-        Self(name.into_owned())
-    }
-}
-
-impl Borrow<str> for PackageName {
-    fn borrow(&self) -> &str {
-        &self.0
+        write!(f, "{}", self.name())
     }
 }
 

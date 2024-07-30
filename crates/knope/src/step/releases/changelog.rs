@@ -1,21 +1,22 @@
-use std::{cmp::Ordering, fmt::Display, path::PathBuf, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 use itertools::Itertools;
-use knope_versioning::{changelog::Sections, changes::Change, Action, GoVersioning, Version};
+use knope_versioning::{changelog::Sections, changes::Change, Version};
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use thiserror::Error;
 use time::{macros::format_description, Date, OffsetDateTime};
 
 use super::TimeError;
-use crate::{dry_run::DryRun, fs};
+use crate::fs;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Changelog {
     /// The path to the CHANGELOG file
-    pub(crate) path: PathBuf,
+    pub(crate) path: RelativePathBuf,
     /// The content that's been written to `path`
     pub(crate) content: String,
-    pub(crate) section_header_level: HeaderLevel,
+    pub(crate) release_header_level: HeaderLevel,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -39,16 +40,17 @@ impl Display for HeaderLevel {
     }
 }
 
-impl TryFrom<PathBuf> for Changelog {
+impl TryFrom<RelativePathBuf> for Changelog {
     type Error = Error;
 
-    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        let content = if path.exists() {
-            fs::read_to_string(&path)?
+    fn try_from(path: RelativePathBuf) -> Result<Self, Self::Error> {
+        let path_buf = path.to_path("");
+        let content = if path_buf.exists() {
+            fs::read_to_string(path_buf)?
         } else {
             String::new()
         };
-        let section_header_level = content
+        let release_header_level = content
             .lines()
             .filter(|line| line.starts_with('#'))
             .nth(1)
@@ -65,115 +67,186 @@ impl TryFrom<PathBuf> for Changelog {
         Ok(Self {
             path,
             content,
-            section_header_level,
+            release_header_level,
         })
     }
 }
 
 impl Changelog {
-    pub(crate) fn get_release(
-        &self,
-        version: &Version,
-        package: knope_versioning::Package,
-        go_versioning: GoVersioning,
-    ) -> Result<Option<Release>, ParseError> {
-        let section_header_level = self.section_header_level.as_str();
-        let expected_header_start = format!("{section_header_level} {version}");
-        let mut content_starting_with_first_release = self
-            .content
-            .lines()
-            .skip_while(|line| !line.starts_with(&expected_header_start));
-
-        let Some(title) = content_starting_with_first_release.next().map(String::from) else {
-            return Ok(None);
-        };
-        let (header_level, version, date) = Release::parse_title(&title)?;
-
-        let release_sections = content_starting_with_first_release.take_while(
-            |line| !line.starts_with(&format!("{section_header_level} ")), // Next version
+    /// Find a release matching `version`, if any, within the changelog.
+    pub(crate) fn get_release(&self, version: &Version) -> Option<Release> {
+        let expected_header_start = format!(
+            "{release_header_level} {version}",
+            release_header_level = self.release_header_level
         );
-        let sections = Some(Section::from_lines(
-            release_sections,
-            &format!("{section_header_level}#"),
-        ));
-        let actions = package
-            .set_version(&version, go_versioning)
-            .unwrap_or_default()
-            .into_iter()
-            // If the changelog was already written for this release, we don't need to write _any_ files
-            .filter(|action| matches!(action, Action::AddTag { .. }))
-            .collect();
-        Ok(Some(Release {
-            version,
-            date,
-            sections,
-            header_level,
-            actions,
-        }))
+
+        let mut lines = self.content.lines();
+        let title = loop {
+            let line = lines.next()?;
+            if !line.starts_with(&expected_header_start) {
+                continue;
+            }
+            let Ok((header_level, title_version, _)) = parse_title(line) else {
+                continue;
+            };
+            if header_level == self.release_header_level && *version == title_version {
+                break line.to_string();
+            }
+        };
+        let body = lines
+            .take_while(|line| {
+                !line.starts_with(&format!(
+                    // Next version
+                    "{release_header_level} ",
+                    release_header_level = self.release_header_level
+                ))
+            })
+            .join("\n");
+        (!body.is_empty()).then_some(Release {
+            title,
+            body,
+            header_level: self.release_header_level,
+        })
     }
 
-    pub(crate) fn add_release(&mut self, release: &Release, dry_run: DryRun) -> Result<(), Error> {
-        let mut changelog = String::new();
+    /// Update `self.content` with the new release.
+    pub(crate) fn with_release(mut self, release: &Release) -> (Self, String) {
         let mut not_written = true;
-        let Some(new_changes) = release.body() else {
-            return Ok(());
-        };
         let new_changes = format!(
-            "{title}\n\n{new_changes}",
-            title = release.title(true, true)?,
+            "{title}\n\n{body}",
+            title = release.title,
+            body = release.body
         );
+        let mut new_content = String::with_capacity(self.content.len() + new_changes.len());
 
         for line in self.content.lines() {
-            if not_written && Release::parse_title(line).is_ok() {
+            if not_written && parse_title(line).is_ok() {
                 // Insert new changes before the next release in the changelog
-                changelog.push_str(&new_changes);
-                changelog.push_str("\n\n");
+                new_content.push_str(&new_changes);
+                new_content.push_str("\n\n");
                 not_written = false;
             }
-            changelog.push_str(line);
-            changelog.push('\n');
+            new_content.push_str(line);
+            new_content.push('\n');
         }
 
         if not_written {
-            changelog.push_str(&new_changes);
+            new_content.push_str(&new_changes);
         }
 
-        if (self.content.ends_with('\n') || self.content.is_empty()) && !changelog.ends_with('\n') {
+        if (self.content.ends_with('\n') || self.content.is_empty()) && !new_content.ends_with('\n')
+        {
             // Preserve white space at end of file
-            changelog.push('\n');
+            new_content.push('\n');
         }
 
-        self.content = changelog;
-        fs::write(
-            dry_run,
-            &format!("\n{new_changes}\n"),
-            &self.path,
-            &self.content,
-        )
-        .map_err(Error::Fs)
+        self.content = new_content;
+        (self, new_changes)
     }
 }
 
+fn parse_title(title: &str) -> Result<(HeaderLevel, Version, Option<Date>), ParseError> {
+    let mut parts = title.split_ascii_whitespace();
+    let header_level = match parts.next() {
+        Some("##") => HeaderLevel::H2,
+        Some("#") => HeaderLevel::H1,
+        _ => return Err(ParseError::HeaderLevel),
+    };
+    let version = parts.next().ok_or(ParseError::MissingVersion)?;
+    let version = Version::from_str(version).map_err(|_| ParseError::MissingVersion)?;
+    let mut date = None;
+    for part in parts {
+        let part = part.trim_start_matches('(').trim_end_matches(')');
+        date = Date::parse(part, format_description!("[year]-[month]-[day]")).ok();
+        if date.is_some() {
+            break;
+        }
+    }
+    Ok((header_level, version, date))
+}
+
+fn reduce_header_level(line: &str) -> &str {
+    if line.starts_with("##") {
+        #[allow(clippy::indexing_slicing)] // Just checked len above
+        &line[1..] // Reduce header level by one
+    } else {
+        line
+    }
+}
+
+/// The Markdown body for this release.
+///
+/// Since [`Self::header_level`] refers to the header level
+/// of the title, each section in this body is one level lower. More concretely, if
+/// [`Self::header_level`] is [`HeaderLevel::H1`], the body will look like this:
+///
+/// ```markdown
+/// ## Breaking changes
+///
+/// - a change
+///
+/// ### a complex change
+///
+/// with details
+///
+/// ## Features
+///
+/// - a feature
+///
+/// ### a complex feature
+///
+/// with details
+/// ```
+///
+/// If [`Self::header_level`] is [`HeaderLevel::H2`], the body will look like this:
+///
+/// ```markdown
+/// ### Breaking changes
+///
+/// - a change
+///
+/// #### a complex change
+///
+/// with details
+///
+/// ### Features
+///
+/// - a feature
+///
+/// #### a complex feature
+///
+/// with details
+/// ```
+///
+/// GitHub releases _always_ use the [`HeaderLevel::H1`] format, so they call [`Self::body_at_h1`]
+/// which is like this function, but with optional conversion.
+pub(crate) fn sections_to_markdown<T: Iterator<Item = Section>>(
+    header_level: HeaderLevel,
+    sections: T,
+) -> String {
+    let mut res = String::new();
+    for Section { title, body } in sections {
+        res.push_str(&format!("\n\n{header_level}# {title}\n\n{body}",));
+    }
+    let res = res.trim().to_string();
+    res.trim().to_string()
+}
+
+/// The details of a single release (version) within a changelog.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Release {
-    pub(crate) version: Version,
-    pub(crate) date: Option<Date>,
-    pub(crate) sections: Option<Vec<Section>>,
-    /// The expected header level of the release title (# or ##).
-    ///
-    /// Content within is written expecting that the release title will be written at this level
+    pub(crate) title: String,
+    pub(crate) body: String,
     header_level: HeaderLevel,
-    /// Actions that should be taken to complete this release
-    pub(crate) actions: Vec<Action>,
 }
+
 impl Release {
     pub(crate) fn new(
-        version: Version,
+        version: &Version,
         changes: &[Change],
         changelog_sections: &Sections,
-        header_level: HeaderLevel,
-        actions: Vec<Action>,
-    ) -> Self {
+        release_header_level: HeaderLevel,
+    ) -> Result<Self, TimeError> {
         let sections = changelog_sections
             .iter()
             .filter_map(|(section_name, sources)| {
@@ -193,169 +266,49 @@ impl Release {
                 } else {
                     Some(Section {
                         title: section_name.to_string(),
-                        body: build_body(changes, header_level),
+                        body: build_body(changes, release_header_level),
                     })
                 }
             })
             .collect_vec();
 
-        let sections = (!sections.is_empty()).then_some(sections);
-        let date = Some(OffsetDateTime::now_utc().date());
-        Self {
-            version,
-            date,
-            sections,
-            header_level,
-            actions,
-        }
+        Ok(Self {
+            title: release_title(version, Some(release_header_level), true)?,
+            body: sections_to_markdown(release_header_level, sections.iter().cloned()),
+            header_level: release_header_level,
+        })
     }
 
-    pub(crate) fn empty(version: Version, actions: Vec<Action>) -> Self {
-        Self {
-            version,
-            date: Some(OffsetDateTime::now_utc().date()),
-            sections: None,
-            header_level: HeaderLevel::H2,
-            actions,
+    pub(crate) fn body_at_h1(self) -> String {
+        match self.header_level {
+            HeaderLevel::H1 => self.body,
+            HeaderLevel::H2 => self.body.lines().map(reduce_header_level).join("\n"),
         }
     }
+}
 
-    fn parse_title(title: &str) -> Result<(HeaderLevel, Version, Option<Date>), ParseError> {
-        let mut parts = title.split_ascii_whitespace();
-        let header_level = match parts.next() {
-            Some("##") => HeaderLevel::H2,
-            Some("#") => HeaderLevel::H1,
-            _ => return Err(ParseError::HeaderLevel),
-        };
-        let version = parts.next().ok_or(ParseError::MissingVersion)?;
-        let version = Version::from_str(version).map_err(|_| ParseError::MissingVersion)?;
-        let mut date = None;
-        for part in parts {
-            let part = part.trim_start_matches('(').trim_end_matches(')');
-            date = Date::parse(part, format_description!("[year]-[month]-[day]")).ok();
-            if date.is_some() {
-                break;
-            }
-        }
-        Ok((header_level, version, date))
-    }
-
-    /// The Markdown body for this release.
-    ///
-    /// Since [`Self::header_level`] refers to the header level
-    /// of the title, each section in this body is one level lower. More concretely, if
-    /// [`Self::header_level`] is [`HeaderLevel::H1`], the body will look like this:
-    ///
-    /// ```markdown
-    /// ## Breaking changes
-    ///
-    /// - a change
-    ///
-    /// ### a complex change
-    ///
-    /// with details
-    ///
-    /// ## Features
-    ///
-    /// - a feature
-    ///
-    /// ### a complex feature
-    ///
-    /// with details
-    /// ```
-    ///
-    /// If [`Self::header_level`] is [`HeaderLevel::H2`], the body will look like this:
-    ///
-    /// ```markdown
-    /// ### Breaking changes
-    ///
-    /// - a change
-    ///
-    /// #### a complex change
-    ///
-    /// with details
-    ///
-    /// ### Features
-    ///
-    /// - a feature
-    ///
-    /// #### a complex feature
-    ///
-    /// with details
-    /// ```
-    ///
-    /// GitHub releases _always_ use the [`HeaderLevel::H1`] format, so they call [`Self::body_at_h1`]
-    /// which is like this function, but with optional conversion.
-    pub(crate) fn body(&self) -> Option<String> {
-        let sections = self.sections.as_ref()?;
-        let mut res = String::new();
-        for section in sections {
-            res.push_str(&format!(
-                "\n\n{header_level}# {title}\n\n{body}",
-                header_level = self.header_level,
-                title = section.title,
-                body = section.body
-            ));
-        }
-        let res = res.trim().to_string();
-        Some(res.trim().to_string())
-    }
-
-    /// Like [`Self::body`], but if this release is not [`HeaderValue::H1`], the body is modified
-    /// to be at that level (so sections are `##` and subsections are `###`).
-    pub(crate) fn body_at_h1(&self) -> Option<String> {
-        if self.header_level == HeaderLevel::H1 {
-            return self.body();
-        }
-        let mut adjusted = self.clone();
-        adjusted.header_level = HeaderLevel::H1;
-        adjusted.sections = adjusted.sections.map(|sections| {
-            sections
-                .into_iter()
-                .map(|mut section| {
-                    section.body = section
-                        .body
-                        .lines()
-                        .map(|line| {
-                            if line.starts_with("##") {
-                                #[allow(clippy::indexing_slicing)] // Just checked len above
-                                &line[1..] // Reduce header level by one
-                            } else {
-                                line
-                            }
-                        })
-                        .collect_vec()
-                        .join("\n");
-                    section
-                })
-                .collect()
-        });
-        adjusted.body()
-    }
-
-    /// The title of the release, which is either the version number or the version number and date.
-    ///
-    /// If `markdown` is true, the title will be formatted as a Markdown header using `self.header_level`
-    pub(crate) fn title(&self, markdown: bool, add_date: bool) -> Result<String, TimeError> {
-        let mut title = if markdown {
-            format!("{} ", self.header_level.as_str())
-        } else {
-            String::new()
-        };
-        title.push_str(&self.version.to_string());
-        let mut date = self.date;
-        if add_date {
-            date = date.or_else(|| Some(OffsetDateTime::now_utc().date()));
-        }
-        if let Some(date) = &date {
-            let format = format_description!("[year]-[month]-[day]");
-            let date_str = date.format(&format)?;
-            title.push_str(" (");
-            title.push_str(&date_str);
-            title.push(')');
-        };
-        Ok(title)
-    }
+/// Create the title of a new release.
+///
+/// If a `markdown_header` is passed, the title will be formatted as a Markdown header.
+pub(crate) fn release_title(
+    version: &Version,
+    markdown_header: Option<HeaderLevel>,
+    add_date: bool,
+) -> Result<String, TimeError> {
+    let mut title = if let Some(markdown_header) = markdown_header {
+        format!("{} ", markdown_header.as_str())
+    } else {
+        String::new()
+    };
+    title.push_str(&version.to_string());
+    if add_date {
+        let format = format_description!("[year]-[month]-[day]");
+        let date_str = OffsetDateTime::now_utc().date().format(&format)?;
+        title.push_str(" (");
+        title.push_str(&date_str);
+        title.push(')');
+    };
+    Ok(title)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -428,46 +381,46 @@ fn build_body(changes: Vec<ChangeDescription>, header_level: HeaderLevel) -> Str
 mod test_parse_title {
     use time::macros::date;
 
-    use super::Release;
+    use super::*;
 
     #[test]
     fn no_date() {
         let title = "## 0.1.2";
-        let (header_level, version, date) = Release::parse_title(title).unwrap();
-        assert_eq!(header_level, super::HeaderLevel::H2);
-        assert_eq!(version, super::Version::new(0, 1, 2, None));
+        let (header_level, version, date) = parse_title(title).unwrap();
+        assert_eq!(header_level, HeaderLevel::H2);
+        assert_eq!(version, Version::new(0, 1, 2, None));
         assert!(date.is_none());
     }
 
     #[test]
     fn with_date() {
         let title = "## 0.1.2 (2023-05-02)";
-        let (header_level, version, date) = Release::parse_title(title).unwrap();
-        assert_eq!(header_level, super::HeaderLevel::H2);
-        assert_eq!(version, super::Version::new(0, 1, 2, None));
+        let (header_level, version, date) = parse_title(title).unwrap();
+        assert_eq!(header_level, HeaderLevel::H2);
+        assert_eq!(version, Version::new(0, 1, 2, None));
         assert_eq!(date, Some(date!(2023 - 05 - 02)));
     }
 
     #[test]
     fn no_version() {
         let title = "## 2023-05-02";
-        let result = Release::parse_title(title);
+        let result = parse_title(title);
         assert!(result.is_err());
     }
 
     #[test]
     fn bad_version() {
         let title = "## sad";
-        let result = Release::parse_title(title);
+        let result = parse_title(title);
         assert!(result.is_err());
     }
 
     #[test]
     fn h1() {
         let title = "# 0.1.2 (2023-05-02)";
-        let (header_level, version, date) = Release::parse_title(title).unwrap();
-        assert_eq!(header_level, super::HeaderLevel::H1);
-        assert_eq!(version, super::Version::new(0, 1, 2, None));
+        let (header_level, version, date) = parse_title(title).unwrap();
+        assert_eq!(header_level, HeaderLevel::H1);
+        assert_eq!(version, Version::new(0, 1, 2, None));
         assert_eq!(date, Some(date!(2023 - 05 - 02)));
     }
 }
@@ -549,29 +502,6 @@ pub(crate) struct Section {
     title: String,
     /// The Markdown body of the section including any headers.
     body: String,
-}
-
-impl Section {
-    fn from_lines<'a, 'b, I: Iterator<Item = &'a str>>(
-        lines: I,
-        header_level: &'b str,
-    ) -> Vec<Self> {
-        let mut sections = Vec::new();
-        let mut lines = lines.peekable();
-        let header_start = format!("{header_level} ");
-        while let Some(line) = lines.next() {
-            if line.starts_with(&header_start) {
-                let title = line.trim_start_matches(&header_start).trim().to_string();
-                let body = lines
-                    .peeking_take_while(|line| !line.starts_with(&header_start))
-                    .map(str::trim)
-                    .join("\n");
-                let body = body.trim().to_string();
-                sections.push(Self { title, body });
-            }
-        }
-        sections
-    }
 }
 
 #[derive(Debug, Diagnostic, Error)]

@@ -1,10 +1,10 @@
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{collections::BTreeMap, iter::once, path::PathBuf};
 
 use ::changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
     changes::{ChangeSource, CHANGESET_DIR},
-    Action, PreVersion, StableVersion, Version,
+    Action, CreateRelease, PreVersion, ReleaseTag, StableVersion, Version,
 };
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
@@ -13,7 +13,7 @@ use relative_path::RelativePathBuf;
 pub(crate) use self::{
     changelog::Release,
     changesets::create_change_file,
-    package::{Package, PackageName},
+    package::Package,
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
@@ -76,9 +76,7 @@ pub(crate) fn prepare_release(
         && state
             .packages
             .iter()
-            .filter(|package| package.prepared_release.is_some())
-            .count()
-            == 0
+            .all(|package| package.pending_actions.is_empty())
     {
         Err(Error::NoRelease)
     } else {
@@ -103,7 +101,7 @@ fn prepare_release_for_package(
     let mut changes = Vec::new();
     if !ignore_conventional_commits {
         changes = conventional_commits::get_conventional_commits_after_last_stable_version(
-            &package.name,
+            &package.versioning.name,
             package.versioning.scopes.as_ref(),
             &package.versioning.changelog_sections,
             verbose,
@@ -295,58 +293,67 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
 
     let mut releases = state
         .packages
-        .iter_mut()
-        .filter_map(|package| {
-            package
-                .prepared_release
-                .take()
-                .map(|release| PackageWithRelease {
-                    package: package.clone(),
-                    release,
-                })
-        })
+        .iter()
+        .filter(|package| !package.pending_actions.is_empty())
         .collect_vec();
 
     if releases.is_empty() {
         releases = state
             .packages
-            .iter()
-            .map(|package| {
-                find_prepared_release(package, state.verbose, &state.all_git_tags).map(|release| {
-                    release.map(|release| PackageWithRelease {
-                        package: package.clone(),
-                        release,
-                    })
-                })
+            .iter_mut()
+            .filter_map(|package| {
+                let release = find_prepared_release(package, state.verbose, &state.all_git_tags)?;
+                package.pending_actions = package
+                    .versioning
+                    .clone()
+                    .set_version(&release.version, package.go_versioning)
+                    .unwrap_or_default()
+                    .into_iter()
+                    // If the changelog was already written for this release, we don't need to write _any_ files
+                    .filter(|action| matches!(action, Action::AddTag { .. }))
+                    .chain(once(Action::CreateRelease(release)))
+                    .rev()
+                    .collect();
+                Some(&*package)
             })
-            .filter_map_ok(|stuff| stuff)
-            .try_collect()?;
+            .collect();
     }
 
     let github_config = state.github_config.clone();
     let gitea_config = state.gitea_config.clone();
-    for package_to_release in releases {
-        let tag = tag_name(
-            &package_to_release.release.version,
-            &package_to_release.package.name,
-        );
-
+    for (package, action) in releases.iter().flat_map(|package| {
+        package
+            .pending_actions
+            .iter()
+            .map(move |action| (package, action))
+    }) {
+        let release = match action {
+            Action::AddTag { tag } => {
+                if !ReleaseTag::is_release_tag(tag, package.name()) {
+                    create_tag(&mut dry_run_stdout, tag)?;
+                }
+                continue;
+            }
+            Action::CreateRelease(release) => release,
+            _ => continue,
+        };
+        let tag = ReleaseTag::new(&release.version, package.name());
         if let Some(github_config) = github_config.as_ref() {
             state.github = github::release(
-                package_to_release.package.name.as_ref(),
-                &package_to_release.release,
+                package.name(),
+                release,
                 state.github,
                 github_config,
                 &mut dry_run_stdout,
-                package_to_release.package.assets.as_ref(),
+                package.assets.as_ref(),
                 &tag,
             )?;
         }
 
         if let Some(ref gitea_config) = gitea_config {
             state.gitea = gitea::release(
-                package_to_release.package.name.as_ref(),
-                &package_to_release.release,
+                package.name(),
+                release,
                 state.gitea,
                 gitea_config,
                 &mut dry_run_stdout,
@@ -356,20 +363,8 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
 
         // if neither is present, we fall back to just creating a tag
         if github_config.is_none() && gitea_config.is_none() {
-            create_tag(&mut dry_run_stdout, &tag)?;
+            create_tag(&mut dry_run_stdout, tag.as_str())?;
         }
-
-        package_to_release
-            .release
-            .actions
-            .iter()
-            .filter_map(|action| match action {
-                Action::AddTag {
-                    tag: additional_tag,
-                } if *additional_tag != tag => Some(additional_tag),
-                _ => None,
-            })
-            .try_for_each(|additional_tag| create_tag(&mut dry_run_stdout, additional_tag))?;
     }
 
     if let Some(stdout) = dry_run_stdout {
@@ -379,58 +374,33 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
     }
 }
 
-/// The tag that a particular version should have for a particular package
-pub(crate) fn tag_name(version: &Version, package_name: &Option<PackageName>) -> String {
-    let prefix = tag_prefix(package_name);
-    format!("{prefix}{version}")
-}
-
-/// The prefix for tags for a particular package
-fn tag_prefix(package_name: &Option<PackageName>) -> String {
-    package_name
-        .as_ref()
-        .map_or_else(|| "v".to_string(), |name| format!("{name}/v"))
-}
-
-struct PackageWithRelease {
-    package: Package,
-    release: Release,
-}
-
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
 fn find_prepared_release(
-    package: &Package,
+    package: &mut Package,
     verbose: Verbose,
     all_tags: &[String],
-) -> Result<Option<Release>, Error> {
-    let Some(current_version) = package.version_from_files() else {
-        return Ok(None);
-    };
+) -> Option<CreateRelease> {
+    let current_version = package.get_version(verbose, all_tags)?.clone();
     if let Verbose::Yes = verbose {
         println!("Searching for last package tag to determine if there's a release to release");
     }
     let last_tag = CurrentVersions::into_latest(get_current_versions_from_tags(
-        package.name.as_deref(),
+        package.name().as_custom(),
         verbose,
         all_tags,
     ));
     let version_of_new_release = match last_tag {
-        Some(last_tag) if last_tag != *current_version => current_version,
+        Some(last_tag) if last_tag != current_version => current_version,
         None => current_version,
-        _ => return Ok(None),
+        _ => return None,
     };
     package
         .changelog
         .as_ref()
-        .map(|changelog| {
-            changelog.get_release(
-                version_of_new_release,
-                package.versioning.clone(),
-                package.go_versioning,
-            )
+        .and_then(|changelog| changelog.get_release(&version_of_new_release))
+        .map(|release| CreateRelease {
+            version: version_of_new_release,
+            notes: release.body_at_h1(),
         })
-        .transpose()
-        .map(Option::flatten)
-        .map_err(Error::from)
 }

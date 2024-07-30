@@ -2,17 +2,14 @@ use std::{io::stdout, str::FromStr};
 
 use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
 use itertools::Itertools;
-use knope_versioning::Version;
+use knope_versioning::{package, Version};
 use miette::{miette, Result};
 
 use crate::{
     config::{Config, ConfigSource},
     integrations::git::all_tags_on_branch,
     state::{RunType, State},
-    step::{
-        releases::{Package, PackageName},
-        Step,
-    },
+    step::{releases::Package, Step},
     workflow::{Verbose, Workflow},
 };
 
@@ -222,12 +219,7 @@ fn create_state(
         for package in &mut packages {
             let override_index = overrides
                 .iter()
-                .find_position(|version_override| {
-                    package
-                        .name
-                        .as_ref()
-                        .is_some_and(|name| *name == version_override.package)
-                })
+                .find_position(|version_override| *package.name() == version_override.package)
                 .map(|(index, _)| index);
 
             let version = override_index
@@ -254,7 +246,7 @@ fn create_state(
 
 #[derive(Clone, Debug)]
 struct VersionOverride {
-    package: PackageName,
+    package: package::Name,
     version: Version,
 }
 

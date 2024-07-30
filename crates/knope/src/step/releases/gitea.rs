@@ -1,30 +1,32 @@
+use knope_versioning::{package, CreateRelease, ReleaseTag};
 use miette::{diagnostic, Diagnostic};
 
-use super::{PackageName, Release, TimeError};
-use crate::{config, dry_run::DryRun, integrations::gitea as api, state};
+use super::TimeError;
+use crate::{
+    config, dry_run::DryRun, integrations::gitea as api, state,
+    step::releases::changelog::release_title,
+};
 
 pub(crate) fn release(
-    package_name: Option<&PackageName>,
-    release: &Release,
+    package_name: &package::Name,
+    release: &CreateRelease,
     gitea_state: state::Gitea,
     gitea_config: &config::Gitea,
     dry_run_stdout: DryRun,
-    tag: &str,
+    tag: &ReleaseTag,
 ) -> Result<state::Gitea, Error> {
     let version = &release.version;
-    let mut name = if let Some(package_name) = package_name {
+    let mut name = if let package::Name::Custom(package_name) = package_name {
         format!("{package_name} ")
     } else {
         String::new()
     };
-    name.push_str(&release.title(false, true)?);
-
-    let body = release.body_at_h1().map(|body| body.trim().to_string());
+    name.push_str(&release_title(version, None, true)?);
 
     api::create_release(
         &name,
-        tag,
-        body.as_deref(),
+        tag.as_str(),
+        release.notes.trim(),
         version.is_prerelease(),
         gitea_state,
         gitea_config,

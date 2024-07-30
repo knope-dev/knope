@@ -1,6 +1,6 @@
 use std::{fmt::Display, sync::Arc};
 
-pub use changeset::{CHANGESET_DIR, DEFAULT_PACKAGE_NAME};
+pub use changeset::CHANGESET_DIR;
 use git_conventional::FooterToken;
 
 use crate::changelog::{CommitFooter, CustomChangeType, SectionSource};

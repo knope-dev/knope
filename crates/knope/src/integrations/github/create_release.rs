@@ -17,7 +17,7 @@ use crate::{
 pub(crate) fn create_release(
     name: &str,
     tag_name: &str,
-    body: Option<&str>,
+    body: &str,
     prerelease: bool,
     github_state: state::GitHub,
     github_config: &config::GitHub,

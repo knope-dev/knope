@@ -3,7 +3,7 @@ use std::{io::Write, path::PathBuf};
 use changesets::{UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
-use knope_versioning::changes::{Change, ChangeType, CHANGESET_DIR, DEFAULT_PACKAGE_NAME};
+use knope_versioning::changes::{Change, ChangeType, CHANGESET_DIR};
 use miette::Diagnostic;
 
 use super::Package;
@@ -19,27 +19,27 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
     };
 
     let packages = if state.packages.len() == 1 {
-        state.packages.clone()
+        state.packages.iter().collect()
     } else {
         MultiSelect::new(
             "Which packages does this change affect?",
-            state.packages.clone(),
+            state.packages.iter().collect(),
         )
         .prompt()
         .map_err(prompt::Error::from)?
     };
 
     let versioning = packages
-        .into_iter()
+        .iter()
         .map(|package| {
-            let package_name = package.name;
+            let package_name = package.name();
             let change_types = package
                 .versioning
                 .changelog_sections
                 .iter()
                 .flat_map(|(_, sources)| sources.iter().filter_map(ChangeType::to_changeset_type))
                 .collect_vec();
-            let prompt = if let Some(package_name) = package_name.as_ref() {
+            let prompt = if let Some(package_name) = package_name.as_custom() {
                 format!("What type of change is this for {package_name}?")
             } else {
                 "What type of change is this?".to_string()
@@ -48,7 +48,7 @@ pub(crate) fn create_change_file(run_type: RunType) -> Result<RunType, Error> {
                 .prompt()
                 .map_err(prompt::Error::from)
                 .map_err(Error::from)
-                .map(|change_type| (package_name.unwrap_or_default().to_string(), change_type))
+                .map(|change_type| (package_name.to_string(), change_type))
         })
         .collect::<Result<Versioning, Error>>()?;
     let summary = inquire::Text::new("What is a short summary of this change?")
@@ -86,9 +86,7 @@ pub(crate) fn changes_from_changesets<'a>(
 ) -> impl Iterator<Item = Change> + 'a {
     releases
         .iter()
-        .find(|release| {
-            release.package_name == package.name.as_deref().unwrap_or(DEFAULT_PACKAGE_NAME)
-        })
+        .find(|release| *package.name() == release.package_name)
         .into_iter()
         .flat_map(|release_changes| {
             release_changes
