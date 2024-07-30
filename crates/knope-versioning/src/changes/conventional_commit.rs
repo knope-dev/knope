@@ -10,18 +10,14 @@ use crate::changelog::Sections;
 /// 1. If the commit message doesn't follow the conventional commit format, it is ignored.
 /// 2. For non-standard change types, only those included will be considered.
 /// 3. For non-standard footers, only those included will be considered.
-#[must_use]
-pub fn changes_from_commit_messages<Message: AsRef<str>>(
-    commit_messages: &[Message],
-    scopes: Option<&Vec<String>>,
-    changelog_sections: &Sections,
-) -> Vec<Change> {
-    commit_messages
-        .iter()
-        .flat_map(|message| {
-            changes_from_commit_message(message.as_ref(), scopes, changelog_sections).into_iter()
-        })
-        .collect()
+pub(crate) fn changes_from_commit_messages<'a, Message: AsRef<str>>(
+    commit_messages: &'a [Message],
+    scopes: Option<&'a Vec<String>>,
+    changelog_sections: &'a Sections,
+) -> impl Iterator<Item = Change> + 'a {
+    commit_messages.iter().flat_map(move |message| {
+        changes_from_commit_message(message.as_ref(), scopes, changelog_sections).into_iter()
+    })
 }
 
 fn changes_from_commit_message(
@@ -116,6 +112,7 @@ fn format_commit_footer(commit_summary: &str, footer: &Footer) -> String {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use itertools::Itertools;
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -132,7 +129,8 @@ mod tests {
             "feat!: add a feature",
             "feat: add another feature",
         ];
-        let changes = changes_from_commit_messages(commits, None, &Sections::default());
+        let changes =
+            changes_from_commit_messages(commits, None, &Sections::default()).collect_vec();
         assert_eq!(
             changes,
             vec![
@@ -172,7 +170,8 @@ mod tests {
             "fix: a bug\n\nBREAKING CHANGE: something broke",
             "feat: a features\n\nBREAKING CHANGE: something else broke",
         ];
-        let changes = changes_from_commit_messages(&commits, None, &Sections::default());
+        let changes =
+            changes_from_commit_messages(&commits, None, &Sections::default()).collect_vec();
         assert_eq!(
             changes,
             vec![
@@ -206,7 +205,8 @@ mod tests {
             "feat(scope)!: Wrong scope breaking change!",
             "fix: No scope",
         ];
-        let changes = changes_from_commit_messages(&commits, None, &Sections::default());
+        let changes =
+            changes_from_commit_messages(&commits, None, &Sections::default()).collect_vec();
         assert_eq!(
             changes,
             vec![
@@ -240,7 +240,8 @@ mod tests {
             &commits,
             Some(&vec![String::from("scope")]),
             &Sections::default(),
-        );
+        )
+        .collect_vec();
         assert_eq!(
             changes,
             vec![
@@ -272,7 +273,8 @@ mod tests {
                 "custom-footer".into(),
             ))],
         );
-        let changes = changes_from_commit_messages(&commits, None, &changelog_sections);
+        let changes =
+            changes_from_commit_messages(&commits, None, &changelog_sections).collect_vec();
         assert_eq!(
             changes,
             vec![Change {

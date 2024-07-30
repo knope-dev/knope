@@ -5,6 +5,7 @@ use std::{
     ops::Deref,
 };
 
+use changesets::Release;
 use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
@@ -14,6 +15,7 @@ use thiserror::Error;
 use crate::{
     action::Action,
     changelog::Sections as ChangelogSections,
+    changes::{conventional_commit::changes_from_commit_messages, Change},
     versioned_file::{GoVersioning, SetError, VersionedFile},
     Version,
 };
@@ -83,6 +85,17 @@ impl Package {
             .into_iter()
             .map(|f| f.set_version(new_version, go_versioning))
             .process_results(|iter| iter.flatten().collect())
+    }
+
+    #[must_use]
+    pub fn get_changes(&self, changeset: &[Release], commit_messages: &[String]) -> Vec<Change> {
+        changes_from_commit_messages(
+            commit_messages,
+            self.scopes.as_ref(),
+            &self.changelog_sections,
+        )
+        .chain(Change::from_changesets(&self.name, changeset))
+        .collect()
     }
 }
 

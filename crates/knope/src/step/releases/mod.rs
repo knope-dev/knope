@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, iter::once, path::PathBuf};
 use ::changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
-    changes::{Change, ChangeSource, CHANGESET_DIR},
+    changes::{ChangeSource, CHANGESET_DIR},
     Action, CreateRelease, PreVersion, ReleaseTag, StableVersion, Version,
 };
 use miette::Diagnostic;
@@ -96,17 +96,17 @@ fn prepare_release_for_package(
         ..
     } = prepare_release;
 
-    let mut changes = Vec::new();
-    if !ignore_conventional_commits {
-        changes = conventional_commits::get_conventional_commits_after_last_stable_version(
+    let commit_messages = if *ignore_conventional_commits {
+        Vec::new()
+    } else {
+        conventional_commits::get_conventional_commits_after_last_stable_version(
             &package.versioning.name,
             package.versioning.scopes.as_ref(),
-            &package.versioning.changelog_sections,
             verbose,
             all_tags,
-        )?;
-    }
-    changes.extend(Change::from_changesets(package.name(), changeset));
+        )?
+    };
+    let changes = package.versioning.get_changes(changeset, &commit_messages);
     for change in &changes {
         if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
             package.pending_actions.push(Action::RemoveFile {
