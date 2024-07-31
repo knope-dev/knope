@@ -3,8 +3,8 @@ use std::{fmt, fmt::Display, io::Write, path::PathBuf};
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changes::Change, package::Name, Action, CreateRelease, GoVersioning, Label, PackageNewError,
-    Version, VersionedFile, VersionedFileError,
+    changes::Change, package::Name, Action, CreateRelease, GoVersioning, PackageNewError, Version,
+    VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
@@ -197,19 +197,7 @@ impl Package {
         self.pending_actions = self.versioning.apply_changes(&changes);
         // TODO: .filter_map(// apply non-release ones).collect();
 
-        self.write_release(&changes, prerelease_label, all_tags, dry_run, verbose)
-            .map_err(Error::from)
-    }
-
-    fn write_release(
-        mut self,
-        changes: &[Change],
-        prerelease_label: &Option<Label>,
-        git_tags: &[String],
-        dry_run: DryRun,
-        verbose: Verbose,
-    ) -> Result<Self, Error> {
-        let versions = self.get_version(verbose, git_tags).clone();
+        let versions = self.get_version(verbose, all_tags).clone();
         let new_version = if let Some(version) = self.override_version.take() {
             if let Verbose::Yes = verbose {
                 println!("Using overridden version {version}");
@@ -219,7 +207,7 @@ impl Package {
                 source: VersionSource::OverrideVersion,
             }
         } else {
-            let bump_rule = Self::bump_rule(changes, verbose);
+            let bump_rule = Self::bump_rule(&changes, verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
                     label: pre_label.clone(),
@@ -238,7 +226,7 @@ impl Package {
         let is_prerelease = new_version.version.is_prerelease();
         self = self
             .write_version(versions, new_version.clone(), dry_run)?
-            .write_changelog(changes, new_version.version, dry_run)?;
+            .write_changelog(&changes, new_version.version, dry_run)?;
         self.stage_changes_to_git(is_prerelease, dry_run)?;
 
         Ok(self)
