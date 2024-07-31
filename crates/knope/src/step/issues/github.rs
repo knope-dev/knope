@@ -1,4 +1,5 @@
 use miette::Diagnostic;
+use tracing::info;
 use ureq::Agent;
 
 use super::Issue;
@@ -30,45 +31,35 @@ struct ResponseIssue {
     title: String,
 }
 
-pub(crate) fn select_issue(labels: Option<&[String]>, run_type: RunType) -> Result<RunType, Error> {
-    match run_type {
-        RunType::DryRun {
-            mut state,
-            mut stdout,
-        } => {
+pub(crate) fn select_issue(
+    labels: Option<&[String]>,
+    state: RunType<State>,
+) -> Result<RunType<State>, Error> {
+    match state {
+        RunType::DryRun(mut state) => {
             if state.github_config.is_none() {
                 return Err(Error::NotConfigured);
             }
             if let Some(labels) = labels {
-                writeln!(
-                    stdout,
+                info!(
                     "Would query configured GitHub instance for issues with labels {}",
                     labels.join(", ")
-                )
-                .map_err(Error::Stdout)?;
+                );
             } else {
-                writeln!(
-                    stdout,
-                    "Would query configured GitHub instance for issues with any labels"
-                )
-                .map_err(Error::Stdout)?;
+                info!("Would query configured GitHub instance for issues with any labels");
             }
-            writeln!(
-                stdout,
-                "Would prompt user to select an issue and move workflow to IssueSelected state."
-            )
-            .map_err(Error::Stdout)?;
+            info!("Would prompt user to select an issue and move workflow to IssueSelected state.");
             state.issue = state::Issue::Selected(Issue {
                 key: String::from("123"),
                 summary: String::from("Test issue"),
             });
-            Ok(RunType::DryRun { state, stdout })
+            Ok(RunType::DryRun(state))
         }
         RunType::Real(state) => {
             let github_config = state.github_config.as_ref().ok_or(Error::NotConfigured)?;
             let (github, issues) = list_issues(github_config, state.github, labels)?;
             let issue = select(issues, "Select an Issue")?;
-            println!("Selected item : {}", &issue);
+            info!("Selected item : {}", &issue);
             Ok(RunType::Real(State {
                 github,
                 issue: state::Issue::Selected(issue),
@@ -97,8 +88,6 @@ pub(crate) enum Error {
         source: Box<ureq::Error>,
         context: &'static str,
     },
-    #[error("Could not write to stdout")]
-    Stdout(std::io::Error),
     #[error("I/O error encountered when communicating with GitHub: {0}")]
     #[diagnostic(code(issues::github::api_io), help("Check your network connection"))]
     ApiIo(std::io::Error),

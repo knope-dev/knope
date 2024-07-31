@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::sink};
+use std::fmt::Debug;
 
 use itertools::Itertools;
 use miette::Diagnostic;
@@ -27,22 +27,6 @@ impl Workflow {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Verbose {
-    Yes,
-    No,
-}
-
-impl From<bool> for Verbose {
-    fn from(verbose: bool) -> Self {
-        if verbose {
-            Verbose::Yes
-        } else {
-            Verbose::No
-        }
-    }
-}
-
 /// A collection of errors from running with the `--validate` option.
 #[derive(Debug, Error, Diagnostic)]
 #[error("There are problems with the defined workflows")]
@@ -61,7 +45,7 @@ pub struct Error {
 }
 
 /// Run a series of [`Step`], each of which updates `state`.
-pub(crate) fn run(workflow: Workflow, mut state: RunType) -> Result<(), Error> {
+pub(crate) fn run(workflow: Workflow, mut state: RunType<State>) -> Result<(), Error> {
     for step in workflow.steps {
         state = match step.run(state) {
             Ok(state) => state,
@@ -83,16 +67,7 @@ pub(crate) fn validate(
 ) -> Result<(), ValidationErrorCollection> {
     let errors = workflows
         .into_iter()
-        .filter_map(|workflow| {
-            run(
-                workflow,
-                RunType::DryRun {
-                    state: state.clone(),
-                    stdout: Box::new(sink()),
-                },
-            )
-            .err()
-        })
+        .filter_map(|workflow| run(workflow, RunType::DryRun(state.clone())).err())
         .collect_vec();
 
     if errors.is_empty() {

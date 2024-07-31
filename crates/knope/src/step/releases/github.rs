@@ -3,16 +3,15 @@ use miette::{diagnostic, Diagnostic};
 
 use super::{package::Asset, TimeError};
 use crate::{
-    config::GitHub, dry_run::DryRun, integrations::github as api, state,
+    config::GitHub, integrations::github as api, state, state::RunType,
     step::releases::changelog::release_title,
 };
 
 pub(crate) fn release(
     package_name: &package::Name,
     release: &CreateRelease,
-    github_state: state::GitHub,
+    github_state: RunType<state::GitHub>,
     github_config: &GitHub,
-    dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
     tag: &ReleaseTag,
 ) -> Result<state::GitHub, Error> {
@@ -31,7 +30,6 @@ pub(crate) fn release(
         version.is_prerelease(),
         github_state,
         github_config,
-        dry_run_stdout,
         assets,
     )
     .map_err(Error::from)

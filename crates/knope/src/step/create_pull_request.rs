@@ -2,19 +2,18 @@ use miette::Diagnostic;
 
 use crate::{
     integrations::{gitea, github},
-    state::RunType,
+    state::{RunType, State},
     variables,
     variables::{replace_variables, Template},
-    workflow::Verbose,
 };
 
 pub(super) fn run(
     base: &str,
     title: Template,
     body: Template,
-    run_type: RunType,
-) -> Result<RunType, Error> {
-    let (mut state, mut dry_run) = run_type.decompose();
+    state: RunType<State>,
+) -> Result<RunType<State>, Error> {
+    let (run_type, mut state) = state.take();
     let title = replace_variables(title, &mut state)?;
     let body = replace_variables(body, &mut state)?;
 
@@ -27,10 +26,8 @@ pub(super) fn run(
             &title,
             &body,
             base,
-            state.github,
+            run_type.of(state.github),
             github_config,
-            &mut dry_run,
-            Verbose::Yes,
         )?;
     }
 
@@ -39,13 +36,11 @@ pub(super) fn run(
             &title,
             &body,
             base,
-            state.gitea,
+            run_type.of(state.gitea),
             gitea_config,
-            &mut dry_run,
-            Verbose::Yes,
         )?;
     }
-    Ok(RunType::recompose(state, dry_run))
+    Ok(run_type.of(state))
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

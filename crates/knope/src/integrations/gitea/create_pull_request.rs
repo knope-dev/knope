@@ -1,37 +1,34 @@
 use miette::Diagnostic;
 use serde_json::json;
+use tracing::{debug, info};
 use ureq::Agent;
 
 use super::initialize_state;
 use crate::{
     app_config, config,
-    dry_run::DryRun,
     integrations::{git, ureq_err_to_string, PullRequest},
     state,
-    workflow::Verbose,
+    state::RunType,
 };
 
 pub(crate) fn create_or_update_pull_request(
     title: &str,
     body: &str,
     base: &str,
-    state: state::Gitea,
+    state: RunType<state::Gitea>,
     config: &config::Gitea,
-    dry_run: DryRun,
-    verbose: Verbose,
 ) -> Result<state::Gitea, Error> {
     let branch_ref = git::current_branch()?;
     let current_branch = branch_ref.split('/').last().ok_or(Error::GitRef)?;
-    if let Some(stdout) = dry_run {
-        writeln!(
-            stdout,
-            "Would create or update a pull request from {current_branch} to {base}:"
-        )
-        .map_err(Error::Stdout)?;
-        writeln!(stdout, "\tTitle: {title}").map_err(Error::Stdout)?;
-        writeln!(stdout, "\tBody: {body}").map_err(Error::Stdout)?;
-        return Ok(state);
-    }
+    let state = match state {
+        RunType::DryRun(state) => {
+            info!("Would create or update a pull request from {current_branch} to {base}:");
+            info!("\tTitle: {title}");
+            info!("\tBody: {body}");
+            return Ok(state);
+        }
+        RunType::Real(state) => state,
+    };
     let (token, agent) = initialize_state(&config.host, state)?;
 
     let existing_pulls: Vec<PullRequest> = agent
@@ -59,25 +56,12 @@ pub(crate) fn create_or_update_pull_request(
 
     // Update the existing PR
     if let Some(pr) = existing_pulls.first() {
-        if let Verbose::Yes = verbose {
-            println!("Updating existing pull request: {}", pr.url);
-        }
+        debug!("Updating existing pull request: {}", pr.url);
         update_pull_request(&agent, config, &token, pr.number, title, body)?;
     // Create a new PR
     } else {
-        if let Verbose::Yes = verbose {
-            println!("No matching existing pull request found, creating a new one.");
-        }
-        create_pull_request(
-            &agent,
-            config,
-            &token,
-            verbose,
-            base,
-            current_branch,
-            title,
-            body,
-        )?;
+        debug!("No matching existing pull request found, creating a new one.");
+        create_pull_request(&agent, config, &token, base, current_branch, title, body)?;
     }
 
     Ok(state::Gitea::Initialized { token, agent })
@@ -107,12 +91,10 @@ fn update_pull_request(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn create_pull_request(
     agent: &Agent,
     config: &config::Gitea,
     token: &str,
-    verbose: Verbose,
     base: &str,
     head: &str,
     title: &str,
@@ -140,9 +122,7 @@ fn create_pull_request(
             host: config.host.clone(),
         })?;
 
-    if let Verbose::Yes = verbose {
-        println!("Created new pull request: {pr_url}", pr_url = new_pr.url);
-    }
+    debug!("Created new pull request: {pr_url}", pr_url = new_pr.url);
     Ok(())
 }
 
@@ -184,6 +164,4 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     AppConfig(#[from] app_config::Error),
-    #[error("Error writing to stdout: {0}")]
-    Stdout(#[source] std::io::Error),
 }

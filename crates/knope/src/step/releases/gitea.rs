@@ -3,16 +3,15 @@ use miette::{diagnostic, Diagnostic};
 
 use super::TimeError;
 use crate::{
-    config, dry_run::DryRun, integrations::gitea as api, state,
+    config, integrations::gitea as api, state, state::RunType,
     step::releases::changelog::release_title,
 };
 
 pub(crate) fn release(
     package_name: &package::Name,
     release: &CreateRelease,
-    gitea_state: state::Gitea,
+    gitea_state: RunType<state::Gitea>,
     gitea_config: &config::Gitea,
-    dry_run_stdout: DryRun,
     tag: &ReleaseTag,
 ) -> Result<state::Gitea, Error> {
     let version = &release.version;
@@ -30,7 +29,6 @@ pub(crate) fn release(
         version.is_prerelease(),
         gitea_state,
         gitea_config,
-        dry_run_stdout,
     )
     .map_err(Error::from)
 }

@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::{
     integrations::git,
     prompt,
-    state::RunType,
+    state::{RunType, State},
     variables::{Template, Variable},
 };
 
@@ -98,34 +98,35 @@ pub(crate) enum Step {
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, Error> {
+    pub(crate) fn run(self, state: RunType<State>) -> Result<RunType<State>, Error> {
         Ok(match self {
-            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
-            Step::TransitionJiraIssue { status } => {
-                issues::jira::transition_issue(&status, run_type)?
-            }
+            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, state)?,
+            Step::TransitionJiraIssue { status } => issues::jira::transition_issue(&status, state)?,
             Step::SelectGitHubIssue { labels } => {
-                issues::github::select_issue(labels.as_deref(), run_type)?
+                issues::github::select_issue(labels.as_deref(), state)?
             }
             Step::SelectGiteaIssue { labels } => {
-                issues::gitea::select_issue(labels.as_deref(), run_type)?
+                issues::gitea::select_issue(labels.as_deref(), state)?
             }
-            Step::SwitchBranches => git::switch_branches(run_type)?,
-            Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
-            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule)?,
+            Step::SwitchBranches => git::switch_branches(state)?,
+            Step::RebaseBranch { to } => {
+                git::rebase_branch(&state.of(to))?;
+                state
+            }
+            Step::BumpVersion(rule) => releases::bump_version(state, &rule)?,
             Step::Command {
                 command,
                 variables,
                 shell,
-            } => command::run_command(run_type, command, shell.is_some_and(|it| it), variables)?,
+            } => command::run_command(state, command, shell.is_some_and(|it| it), variables)?,
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(run_type, &prepare_release)?
+                releases::prepare_release(state, &prepare_release)?
             }
-            Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type)?,
-            Step::Release => releases::release(run_type)?,
-            Step::CreateChangeFile => create_change_file::run(run_type)?,
+            Step::SelectIssueFromBranch => git::select_issue_from_current_branch(state)?,
+            Step::Release => releases::release(state)?,
+            Step::CreateChangeFile => create_change_file::run(state)?,
             Step::CreatePullRequest { base, title, body } => {
-                create_pull_request::run(&base, title, body, run_type)?
+                create_pull_request::run(&base, title, body, state)?
             }
         })
     }

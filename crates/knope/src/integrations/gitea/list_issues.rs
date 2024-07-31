@@ -81,8 +81,6 @@ pub(crate) enum Error {
         activity: &'static str,
         host: String,
     },
-    #[error("Could not write to stdout")]
-    Stdout(#[from] std::io::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),

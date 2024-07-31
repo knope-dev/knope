@@ -1,3 +1,5 @@
+use tracing::info;
+
 use super::Issue;
 pub(crate) use crate::integrations::gitea::ListIssuesError as Error;
 use crate::{
@@ -8,44 +10,37 @@ use crate::{
 
 pub(crate) fn select_issue(
     labels: Option<&[String]>,
-    run_type: RunType,
-) -> Result<RunType, ListIssuesError> {
-    match run_type {
-        RunType::DryRun { state, .. } if state.gitea_config.is_none() => {
+    state: RunType<State>,
+) -> Result<RunType<State>, ListIssuesError> {
+    match state {
+        RunType::DryRun(state) if state.gitea_config.is_none() => {
             Err(ListIssuesError::NotConfigured)
         }
-        RunType::DryRun {
-            mut state,
-            mut stdout,
-        } => {
+        RunType::DryRun(mut state) => {
             if let Some(labels) = labels {
-                writeln!(
-                    stdout,
+                info!(
                     "Would query configured Gitea instance for issues with labels {}",
                     labels.join(", ")
-                )?;
+                );
             } else {
-                writeln!(
-                    stdout,
-                    "Would query configured Gitea instance for issues with any labels"
-                )?;
+                info!("Would query configured Gitea instance for issues with any labels");
             }
 
-            writeln!(stdout, "Would prompt user to select an issue")?;
+            info!("Would prompt user to select an issue");
 
             state.issue = state::Issue::Selected(Issue {
                 key: String::from("123"),
                 summary: String::from("Test issue"),
             });
 
-            Ok(RunType::DryRun { state, stdout })
+            Ok(RunType::DryRun(state))
         }
 
         RunType::Real(state) => {
             let config = state.gitea_config;
             let (gitea, issues) = list_issues(&config, state.gitea, labels)?;
             let issue = prompt::select(issues, "Select an Issue")?;
-            println!("Selected item: {issue}");
+            info!("Selected item: {issue}");
             Ok(RunType::Real(State {
                 gitea,
                 gitea_config: config,

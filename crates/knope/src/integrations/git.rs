@@ -10,43 +10,42 @@ use itertools::Itertools;
 use knope_versioning::Version;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
+use tracing::{debug, info};
 
 use crate::{
-    dry_run::DryRun,
     fs, prompt,
     prompt::select,
     state,
+    state::State,
     step::{issues::Issue, releases::CurrentVersions},
-    workflow::Verbose,
     RunType,
 };
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
-pub(crate) fn switch_branches(run_type: RunType) -> Result<RunType, Error> {
-    let (state, dry_run_stdout) = run_type.decompose();
+pub(crate) fn switch_branches(state: RunType<State>) -> Result<RunType<State>, Error> {
+    let (state, dry_run) = match state {
+        RunType::DryRun(state) => (state, true),
+        RunType::Real(state) => (state, false),
+    };
     let issue = match &state.issue {
         state::Issue::Initial => return Err(ErrorKind::NoIssueSelected.into()),
         state::Issue::Selected(issue) => issue,
     };
     let new_branch_name = branch_name_from_issue(issue);
-    if let Some(mut stdout) = dry_run_stdout {
-        writeln!(
-            stdout,
-            "Would switch to or create a branch named {new_branch_name}"
-        )
-        .map_err(fs::Error::Stdout)?;
-        return Ok(RunType::DryRun { state, stdout });
+    if dry_run {
+        info!("Would switch to or create a branch named {new_branch_name}");
+        return Ok(RunType::DryRun(state));
     }
 
     let repo = Repository::open(".").map_err(ErrorKind::OpenRepo)?;
     let branches = get_all_branches(&repo)?;
 
     if let Ok(existing) = repo.find_branch(&new_branch_name, BranchType::Local) {
-        println!("Found existing branch named {new_branch_name}, switching to it.");
+        info!("Found existing branch named {new_branch_name}, switching to it.");
         switch_to_branch(&repo, &existing)?;
     } else {
-        println!("Creating a new branch called {new_branch_name}");
+        info!("Creating a new branch called {new_branch_name}");
         let branch = select_branch(branches, "Which branch do you want to base off of?")?;
         let new_branch = create_branch(&repo, &new_branch_name, &branch)?;
         switch_to_branch(&repo, &new_branch)?;
@@ -172,11 +171,14 @@ enum ErrorKind {
 }
 
 /// Rebase the current branch onto the selected one.
-pub(crate) fn rebase_branch(to: &str, mut run_type: RunType) -> Result<RunType, Error> {
-    if let RunType::DryRun { stdout, .. } = &mut run_type {
-        writeln!(stdout, "Would rebase current branch onto {to}").map_err(fs::Error::Stdout)?;
-        return Ok(run_type);
-    }
+pub(crate) fn rebase_branch(to: &RunType<String>) -> Result<(), Error> {
+    let to = match to {
+        RunType::DryRun(to) => {
+            info!("Would rebase current branch onto {to}");
+            return Ok(());
+        }
+        RunType::Real(to) => to,
+    };
 
     let repo = Repository::open(".").map_err(ErrorKind::OpenRepo)?;
     let head = repo.head()?;
@@ -187,28 +189,23 @@ pub(crate) fn rebase_branch(to: &str, mut run_type: RunType) -> Result<RunType, 
     repo.rebase(Some(&target), None, Some(&source), None)?
         .finish(None)?;
 
-    println!("Rebased current branch onto {to}");
+    info!("Rebased current branch onto {to}");
     switch_to_branch(&repo, &target_branch)?;
-    println!("Switched to branch {to}, don't forget to push!");
-    Ok(run_type)
+    info!("Switched to branch {to}, don't forget to push!");
+    Ok(())
 }
 
-pub(crate) fn select_issue_from_current_branch(run_type: RunType) -> Result<RunType, Error> {
-    match run_type {
-        RunType::DryRun {
-            mut state,
-            mut stdout,
-        } => {
-            writeln!(
-                stdout,
-                "Would attempt to parse current branch name to select current issue"
-            )
-            .map_err(fs::Error::Stdout)?;
+pub(crate) fn select_issue_from_current_branch(
+    state: RunType<State>,
+) -> Result<RunType<State>, Error> {
+    match state {
+        RunType::DryRun(mut state) => {
+            info!("Would attempt to parse current branch name to select current issue");
             state.issue = state::Issue::Selected(Issue {
                 key: String::from("123"),
                 summary: String::from("Fake Issue"),
             });
-            Ok(RunType::DryRun { state, stdout })
+            Ok(RunType::DryRun(state))
         }
         RunType::Real(mut state) => {
             let current_branch = current_branch()?;
@@ -241,7 +238,7 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, Error> {
 
     let issue_key = parts.pop_front().ok_or(ErrorKind::BadGitBranchName)?;
     if let Ok(github_issue) = usize::from_str(issue_key) {
-        println!("Auto-selecting issue {github_issue} from ref {ref_name}");
+        info!("Auto-selecting issue {github_issue} from ref {ref_name}");
         return Ok(Issue {
             key: github_issue.to_string(),
             summary: parts.iter().join("-"),
@@ -254,7 +251,7 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, Error> {
         .ok_or(ErrorKind::BadGitBranchName)?
         .or(Err(ErrorKind::BadGitBranchName))?;
     let jira_issue = format!("{project_key}-{issue_number}");
-    println!("Auto-selecting issue {jira_issue} from ref {ref_name}");
+    info!("Auto-selecting issue {jira_issue} from ref {ref_name}");
     return Ok(Issue {
         key: jira_issue,
         summary: parts.iter().join("-"),
@@ -406,17 +403,12 @@ pub(crate) fn add_files(file_names: &[&RelativePathBuf]) -> Result<(), Error> {
 /// means that there could be paths which jump _behind_ the target tag... and we want to exclude
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
-pub(crate) fn get_commit_messages_after_tag(
-    tag: Option<&str>,
-    verbose: Verbose,
-) -> Result<Vec<String>, Error> {
+pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<String>, Error> {
     let repo = gix::open(".")?;
-    if let Verbose::Yes = verbose {
-        if let Some(tag) = &tag {
-            println!("Finding all commits since tag {tag}");
-        } else {
-            println!("Finding ALL commits");
-        }
+    if let Some(tag) = &tag {
+        debug!("Finding all commits since tag {tag}");
+    } else {
+        debug!("Finding ALL commits");
     }
     let commits_to_exclude = tag
         .map(|tag| format!("refs/tags/{tag}"))
@@ -461,25 +453,28 @@ pub(crate) fn get_commit_messages_after_tag(
     Ok(reverse_commits)
 }
 
-pub(crate) fn create_tag(dry_run: DryRun, name: &str) -> Result<(), Error> {
-    if let Some(stdout) = dry_run {
-        return writeln!(stdout, "Would create Git tag {name}")
-            .map_err(fs::Error::Stdout)
-            .map_err(Error::from);
+pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
+    match name {
+        RunType::DryRun(name) => {
+            info!("Would create Git tag {name}");
+            Ok(())
+        }
+        RunType::Real(name) => {
+            let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
+            let head = repo.head_commit()?;
+            repo.tag(
+                name,
+                head.id,
+                Kind::Commit,
+                repo.committer()
+                    .transpose()
+                    .map_err(|_| ErrorKind::NoCommitter)?,
+                "",
+                PreviousValue::Any,
+            )?;
+            Ok(())
+        }
     }
-    let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
-    let head = repo.head_commit()?;
-    repo.tag(
-        name,
-        head.id,
-        Kind::Commit,
-        repo.committer()
-            .transpose()
-            .map_err(|_| ErrorKind::NoCommitter)?,
-        "",
-        PreviousValue::Any,
-    )?;
-    Ok(())
 }
 
 /// Get the (relevant) current versions from a slice of Git tags.
@@ -491,7 +486,6 @@ pub(crate) fn create_tag(dry_run: DryRun, name: &str) -> Result<(), Error> {
 /// - `all_tags`: All tags in the repository.
 pub(crate) fn get_current_versions_from_tags(
     prefix: Option<&str>,
-    verbose: Verbose,
     all_tags: &[String],
 ) -> CurrentVersions {
     let pattern = prefix
@@ -502,10 +496,8 @@ pub(crate) fn get_current_versions_from_tags(
         .filter(|tag| tag.starts_with(&pattern))
         .peekable();
 
-    if let Verbose::Yes = verbose {
-        if tags.peek().is_none() {
-            println!("No tags found matching pattern {pattern}");
-        }
+    if tags.peek().is_none() {
+        debug!("No tags found matching pattern {pattern}");
     }
 
     let mut current_versions = CurrentVersions::default();
@@ -524,7 +516,7 @@ pub(crate) fn get_current_versions_from_tags(
 }
 
 /// Get all tags on the current branch.
-pub(crate) fn all_tags_on_branch(verbose: Verbose) -> Result<Vec<String>, Error> {
+pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
     let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
     let mut all_tags: HashMap<ObjectId, Vec<String>> = HashMap::new();
     for (id, tag) in repo
@@ -558,13 +550,11 @@ pub(crate) fn all_tags_on_branch(verbose: Verbose) -> Result<Vec<String>, Error>
             tags.extend(tag);
         }
     }
-    if let Verbose::Yes = verbose {
-        if !all_tags.is_empty() {
-            println!(
-                "Skipping relevant tags that are not on the current branch: {tags}",
-                tags = all_tags.values().flatten().join(", ")
-            );
-        }
+    if !all_tags.is_empty() {
+        debug!(
+            "Skipping relevant tags that are not on the current branch: {tags}",
+            tags = all_tags.values().flatten().join(", ")
+        );
     }
     Ok(tags)
 }

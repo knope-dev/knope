@@ -23,6 +23,8 @@ mod toml;
 
 pub(crate) use toml::{GitHub, Gitea, Jira};
 
+use crate::fs::WriteType;
+
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
 pub(crate) struct Config {
@@ -91,7 +93,11 @@ impl Config {
         #[allow(clippy::unwrap_used)] // because serde is annoying... I know it will serialize
         let serialized = to_string(&config).unwrap();
 
-        fs::write(&mut None, "", Path::new(Config::CONFIG_PATH), serialized).into_diagnostic()
+        fs::write(
+            WriteType::Real::<String, String>(serialized),
+            Path::new(Config::CONFIG_PATH),
+        )
+        .into_diagnostic()
     }
 }
 

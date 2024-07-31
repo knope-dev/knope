@@ -48,7 +48,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                     first_package(state)?
                 };
                 let version = package
-                    .get_version(state.verbose, &state.all_git_tags)
+                    .get_version(&state.all_git_tags)
                     .clone()
                     .into_latest()
                     .ok_or(Error::NoCurrentVersion)?;
@@ -71,7 +71,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                     template = template.replace(&var_name, body);
                 } else {
                     let version = package
-                        .get_version(state.verbose, &state.all_git_tags)
+                        .get_version(&state.all_git_tags)
                         .clone()
                         .into_latest()
                         .ok_or(Error::NoCurrentVersion)?
@@ -160,7 +160,7 @@ mod test_replace_variables {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::{step::issues::Issue, workflow::Verbose};
+    use crate::step::issues::Issue;
 
     fn package() -> (Package, TempDir) {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -199,7 +199,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let mut state = State::new(None, None, None, vec![package().0], Vec::new(), Verbose::No);
+        let mut state = State::new(None, None, None, vec![package().0], Vec::new());
         let version = Version::new(1, 2, 3, None);
         state.packages[0].pending_actions = vec![Action::CreateRelease(CreateRelease {
             version: version.clone(),
@@ -237,7 +237,6 @@ mod test_replace_variables {
             issue: state::Issue::Selected(issue),
             packages: Vec::new(),
             all_git_tags: Vec::new(),
-            verbose: Verbose::No,
         };
 
         let result = replace_variables(
@@ -257,7 +256,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
-        let mut state = State::new(None, None, None, vec![package().0], Vec::new(), Verbose::No);
+        let mut state = State::new(None, None, None, vec![package().0], Vec::new());
         let version = Version::new(1, 2, 3, None);
         let changelog_entry = "some content being put in the changelog";
         state.packages[0].pending_actions = vec![Action::CreateRelease(CreateRelease {

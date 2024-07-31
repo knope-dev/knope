@@ -1,9 +1,10 @@
-use std::{io::stdout, str::FromStr};
+use std::str::FromStr;
 
 use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
 use itertools::Itertools;
 use knope_versioning::{package, Version};
 use miette::{miette, Result};
+use tracing::info;
 use tracing_subscriber::{
     filter::{filter_fn, LevelFilter},
     layer::SubscriberExt,
@@ -16,12 +17,11 @@ use crate::{
     integrations::git::all_tags_on_branch,
     state::{RunType, State},
     step::{releases::Package, Step},
-    workflow::{Verbose, Workflow},
+    workflow::Workflow,
 };
 
 mod app_config;
 mod config;
-mod dry_run;
 mod fs;
 mod integrations;
 mod prompt;
@@ -44,22 +44,33 @@ pub fn main() -> Result<()> {
     let mut matches = build_cli(&config).get_matches();
 
     let mut config = config.into_inner();
-    let verbose = matches.get_flag(VERBOSE).into();
-    let level_filter = match verbose {
-        Verbose::Yes => LevelFilter::DEBUG,
-        Verbose::No => LevelFilter::INFO,
+    let verbose: bool = matches.get_flag(VERBOSE);
+    let level_filter = if verbose {
+        LevelFilter::DEBUG
+    } else {
+        LevelFilter::INFO
     };
+    let validate = *matches
+        .try_get_one("validate")
+        .ok()
+        .flatten()
+        .unwrap_or(&false);
 
     tracing_subscriber::registry()
         .with(level_filter)
         .with(
             tracing_subscriber::fmt::layer()
-                .with_filter(filter_fn(|metadata| metadata.target().starts_with("knope"))),
+                .with_target(false)
+                .without_time()
+                .with_level(false)
+                .with_filter(filter_fn(move |metadata| {
+                    !validate && metadata.target().starts_with("knope")
+                })),
         )
         .init();
 
     if let Ok(Some(true)) = matches.try_get_one("generate") {
-        println!("Generating a knope.toml file");
+        info!("Generating a knope.toml file");
         let config = config::generate()?;
         return config.write_out();
     }
@@ -70,7 +81,7 @@ pub fn main() -> Result<()> {
         return if upgraded {
             config.write_out()
         } else {
-            println!("Nothing to upgrade");
+            info!("Nothing to upgrade");
             Ok(())
         };
     }
@@ -87,9 +98,9 @@ pub fn main() -> Result<()> {
             })
     });
 
-    let (state, workflows) = create_state(config, sub_matches.as_mut(), verbose)?;
+    let (state, workflows) = create_state(config, sub_matches.as_mut())?;
 
-    if let Ok(Some(true)) = matches.try_get_one("validate") {
+    if validate {
         workflow::validate(workflows, state)?;
         return Ok(());
     }
@@ -103,10 +114,7 @@ pub fn main() -> Result<()> {
         .ok_or_else(|| miette!("No workflow named {}", subcommand))?;
 
     let state = if matches.get_flag("dry-run") {
-        RunType::DryRun {
-            state,
-            stdout: Box::new(stdout()),
-        }
+        RunType::DryRun(state)
     } else {
         RunType::Real(state)
     };
@@ -199,7 +207,6 @@ fn build_cli(config: &ConfigSource) -> Command {
 fn create_state(
     config: Config,
     mut sub_matches: Option<&mut ArgMatches>,
-    verbose: Verbose,
 ) -> Result<(State, Vec<Workflow>)> {
     let Config {
         packages,
@@ -212,9 +219,9 @@ fn create_state(
         // Don't mess with Git if there aren't any packages defined
         Vec::new()
     } else {
-        all_tags_on_branch(verbose).unwrap_or_default()
+        all_tags_on_branch().unwrap_or_default()
     };
-    let mut packages = Package::load(packages, &git_tags, verbose)?;
+    let mut packages = Package::load(packages, &git_tags)?;
     if let Some(version_override) = sub_matches
         .as_deref_mut()
         .and_then(|matches| matches.try_remove_one::<Version>(OVERRIDE_ONE_VERSION).ok())
@@ -258,7 +265,7 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, gitea, packages, git_tags, verbose);
+    let state = State::new(jira, github, gitea, packages, git_tags);
     Ok((state, workflows))
 }
 

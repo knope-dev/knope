@@ -1,9 +1,8 @@
-use std::io::Write;
+use std::fmt::Debug;
 
 use crate::{
     config,
     step::{issues, releases},
-    workflow::Verbose,
 };
 
 /// The current state of the workflow. Every [`crate::Step`] has a chance to transform the state.
@@ -16,7 +15,6 @@ pub(crate) struct State {
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
     pub(crate) packages: Vec<releases::Package>,
-    pub(crate) verbose: Verbose,
     pub(crate) all_git_tags: Vec<String>,
 }
 
@@ -28,7 +26,6 @@ impl State {
         gitea_config: Option<config::Gitea>,
         packages: Vec<releases::Package>,
         all_git_tags: Vec<String>,
-        verbose: Verbose,
     ) -> Self {
         State {
             jira_config,
@@ -38,37 +35,34 @@ impl State {
             github_config,
             issue: Issue::Initial,
             packages,
-            verbose,
             all_git_tags,
         }
     }
 }
 
 /// The type of state—an outer enum to make sure that dry-runs are handled appropriately.
-pub(crate) enum RunType {
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum RunType<T> {
     /// Signifies that this is a dry run of a workflow. No I/O should happen—just pretend to run the
     /// workflow and output the results.
-    DryRun {
-        state: State,
-        stdout: Box<dyn Write>,
-    },
+    DryRun(T),
     /// This is a real run of a workflow, actually do the thing.
-    Real(State),
+    Real(T),
 }
 
-impl RunType {
-    pub(crate) fn decompose(self) -> (State, Option<Box<dyn Write>>) {
+impl<T> RunType<T> {
+    #[must_use]
+    pub(crate) fn of<R>(&self, new_value: R) -> RunType<R> {
         match self {
-            RunType::DryRun { state, stdout } => (state, Some(stdout)),
-            RunType::Real(state) => (state, None),
+            RunType::DryRun(_) => RunType::DryRun(new_value),
+            RunType::Real(_) => RunType::Real(new_value),
         }
     }
 
-    pub(crate) fn recompose(state: State, dry_run: Option<Box<dyn Write>>) -> Self {
-        if let Some(stdout) = dry_run {
-            RunType::DryRun { state, stdout }
-        } else {
-            RunType::Real(state)
+    pub(crate) fn take(self) -> (RunType<()>, T) {
+        match self {
+            RunType::DryRun(inner) => (RunType::DryRun(()), inner),
+            RunType::Real(inner) => (RunType::Real(()), inner),
         }
     }
 }

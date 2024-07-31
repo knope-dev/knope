@@ -7,6 +7,7 @@ use knope_versioning::{
 };
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
+use tracing::debug;
 
 pub(crate) use self::{
     changelog::Release,
@@ -18,8 +19,8 @@ use crate::{
         git,
         git::{create_tag, get_current_versions_from_tags},
     },
+    state::State,
     step::PrepareRelease,
-    workflow::Verbose,
     RunType,
 };
 
@@ -32,12 +33,12 @@ pub(crate) mod semver;
 pub(crate) mod versioned_file;
 
 pub(crate) fn prepare_release(
-    run_type: RunType,
+    state: RunType<State>,
     prepare_release: &PrepareRelease,
-) -> Result<RunType, Error> {
-    let (mut state, mut dry_run_stdout) = match run_type {
-        RunType::DryRun { state, stdout } => (state, Some(stdout)),
-        RunType::Real(state) => (state, None),
+) -> Result<RunType<State>, Error> {
+    let (mut state, dry_run) = match state {
+        RunType::DryRun(state) => (state, true),
+        RunType::Real(state) => (state, false),
     };
     if state.packages.is_empty() {
         return Err(package::Error::NoDefinedPackages.into());
@@ -54,18 +55,12 @@ pub(crate) fn prepare_release(
         .packages
         .into_iter()
         .map(|package| {
-            package.prepare_release(
-                prepare_release,
-                &state.all_git_tags,
-                &changeset,
-                state.verbose,
-                &mut dry_run_stdout,
-            )
+            package.prepare_release(prepare_release, &state.all_git_tags, &changeset, dry_run)
         })
         .try_collect()?;
 
-    if let Some(stdout) = dry_run_stdout {
-        Ok(RunType::DryRun { state, stdout })
+    if dry_run {
+        Ok(RunType::DryRun(state))
     } else if !prepare_release.allow_empty
         && state
             .packages
@@ -78,8 +73,8 @@ pub(crate) fn prepare_release(
     }
 }
 
-pub(crate) fn bump_version(run_type: RunType, rule: &Rule) -> Result<RunType, Error> {
-    bump_version_and_update_state(run_type, rule).map_err(Error::from)
+pub(crate) fn bump_version(state: RunType<State>, rule: &Rule) -> Result<RunType<State>, Error> {
+    bump_version_and_update_state(state, rule).map_err(Error::from)
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -242,8 +237,8 @@ impl From<Version> for CurrentVersions {
 /// Create a release for the package.
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
-pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
-    let (mut state, mut dry_run_stdout) = run_type.decompose();
+pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
+    let (run_type, mut state) = state.take();
 
     let mut releases = state
         .packages
@@ -256,7 +251,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
             .packages
             .iter_mut()
             .filter_map(|package| {
-                let release = find_prepared_release(package, state.verbose, &state.all_git_tags)?;
+                let release = find_prepared_release(package, &state.all_git_tags)?;
                 package.pending_actions = package
                     .versioning
                     .clone()
@@ -273,8 +268,8 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
             .collect();
     }
 
-    let github_config = state.github_config.clone();
-    let gitea_config = state.gitea_config.clone();
+    let github_config = state.github_config.as_ref();
+    let gitea_config = state.gitea_config.as_ref();
     for (package, action) in releases.iter().flat_map(|package| {
         package
             .pending_actions
@@ -284,7 +279,7 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
         let release = match action {
             Action::AddTag { tag } => {
                 if !ReleaseTag::is_release_tag(tag, package.name()) {
-                    create_tag(&mut dry_run_stdout, tag)?;
+                    create_tag(run_type.of(tag.as_str()))?;
                 }
                 continue;
             }
@@ -292,59 +287,43 @@ pub(crate) fn release(run_type: RunType) -> Result<RunType, Error> {
             _ => continue,
         };
         let tag = ReleaseTag::new(&release.version, package.name());
-        if let Some(github_config) = github_config.as_ref() {
+        if let Some(github_config) = github_config {
             state.github = github::release(
                 package.name(),
                 release,
-                state.github,
+                run_type.of(state.github),
                 github_config,
-                &mut dry_run_stdout,
                 package.assets.as_ref(),
                 &tag,
             )?;
         }
 
-        if let Some(ref gitea_config) = gitea_config {
+        if let Some(gitea_config) = gitea_config {
             state.gitea = gitea::release(
                 package.name(),
                 release,
-                state.gitea,
+                run_type.of(state.gitea),
                 gitea_config,
-                &mut dry_run_stdout,
                 &tag,
             )?;
         }
 
         // if neither is present, we fall back to just creating a tag
         if github_config.is_none() && gitea_config.is_none() {
-            create_tag(&mut dry_run_stdout, tag.as_str())?;
+            create_tag(run_type.of(tag.as_str()))?;
         }
     }
 
-    if let Some(stdout) = dry_run_stdout {
-        Ok(RunType::DryRun { stdout, state })
-    } else {
-        Ok(RunType::Real(state))
-    }
+    Ok(run_type.of(state))
 }
 
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
-fn find_prepared_release(
-    package: &mut Package,
-    verbose: Verbose,
-    all_tags: &[String],
-) -> Option<CreateRelease> {
-    let current_version = package
-        .get_version(verbose, all_tags)
-        .clone()
-        .into_latest()?;
-    if let Verbose::Yes = verbose {
-        println!("Searching for last package tag to determine if there's a release to release");
-    }
+fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<CreateRelease> {
+    let current_version = package.get_version(all_tags).clone().into_latest()?;
+    debug!("Searching for last package tag to determine if there's a release to release");
     let last_tag = CurrentVersions::into_latest(get_current_versions_from_tags(
         package.name().as_custom(),
-        verbose,
         all_tags,
     ));
     let version_of_new_release = match last_tag {

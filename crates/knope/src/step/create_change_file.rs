@@ -1,18 +1,22 @@
-use std::{io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 use changesets::{UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
 use knope_versioning::changes::{ChangeType, CHANGESET_DIR};
 use miette::Diagnostic;
+use tracing::info;
 
-use crate::{fs, prompt, state::RunType};
+use crate::{
+    fs, prompt,
+    state::{RunType, State},
+};
 
-pub(crate) fn run(run_type: RunType) -> Result<RunType, Error> {
-    let state = match run_type {
-        RunType::DryRun { state, mut stdout } => {
-            write!(&mut stdout, "Would create a new change file").map_err(fs::Error::Stdout)?;
-            return Ok(RunType::DryRun { state, stdout });
+pub(crate) fn run(state: RunType<State>) -> Result<RunType<State>, Error> {
+    let state = match state {
+        RunType::DryRun(state) => {
+            info!("Would create a new change file");
+            return Ok(RunType::DryRun(state));
         }
         RunType::Real(state) => state,
     };
@@ -64,7 +68,7 @@ pub(crate) fn run(run_type: RunType) -> Result<RunType, Error> {
 
     let changeset_path = PathBuf::from(CHANGESET_DIR);
     if !changeset_path.exists() {
-        fs::create_dir(&mut None, &changeset_path)?;
+        fs::create_dir(RunType::Real(&changeset_path))?;
     }
     change
         .write_to_directory(&changeset_path)
