@@ -6,9 +6,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use log::trace;
 use miette::Diagnostic;
 use thiserror::Error;
+use tracing::trace;
 
 use crate::dry_run::DryRun;
 

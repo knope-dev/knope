@@ -8,7 +8,6 @@ use git2::{build::CheckoutBuilder, Branch, BranchType, IndexAddOption, Repositor
 use gix::{object::Kind, refs::transaction::PreviousValue, ObjectId};
 use itertools::Itertools;
 use knope_versioning::Version;
-use log::error;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 

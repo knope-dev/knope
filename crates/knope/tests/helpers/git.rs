@@ -1,7 +1,7 @@
 use std::{path::Path, process::Command};
 
 use itertools::Itertools;
-use log::debug;
+use tracing::debug;
 
 /// Create a Git repo in `path` with some fake config.
 pub fn init(path: &Path) {

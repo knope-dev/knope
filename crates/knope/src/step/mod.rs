@@ -1,6 +1,5 @@
 use indexmap::IndexMap;
 use knope_versioning::Label;
-use log::error;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

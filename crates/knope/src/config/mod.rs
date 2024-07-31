@@ -40,13 +40,13 @@ pub(crate) struct Config {
 impl Config {
     const CONFIG_PATH: &'static str = "knope.toml";
 
-    /// Create a Config from a TOML file or load the default config via `generate`
+    /// Create a `Config` from a TOML file or load the default config via `generate`
     ///
     /// ## Errors
-    /// 1. Cannot parse file contents into a Config
+    /// 1. Can't parse file contents into a Config
     pub(crate) fn load() -> Result<ConfigSource, Error> {
         let Ok(source_code) = fs::read_to_string(Self::CONFIG_PATH) else {
-            log::debug!("No `knope.toml` found, using default config");
+            tracing::debug!("No `knope.toml` found, using default config");
             return Ok(ConfigSource::Default(generate()?));
         };
 
