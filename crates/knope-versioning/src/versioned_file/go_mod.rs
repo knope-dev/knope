@@ -150,6 +150,7 @@ impl GoMod {
             Action::WriteToFile {
                 path: self.path,
                 content: new_content,
+                diff: new_version.to_string(),
             },
             Action::AddTag { tag },
         ])

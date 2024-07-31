@@ -8,6 +8,7 @@ pub enum Action {
     WriteToFile {
         path: RelativePathBuf,
         content: String,
+        diff: String,
     },
     RemoveFile {
         path: RelativePathBuf,

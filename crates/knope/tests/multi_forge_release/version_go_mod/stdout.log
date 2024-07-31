@@ -11,6 +11,7 @@ Would add files to git:
   Cargo.toml
   go/go.mod
   CHANGELOG.md
+Would create Git tag go/v1.1.0
 Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
 ## Features
 
@@ -19,4 +20,3 @@ Would create a release on Gitea [https://codeberg.org] with name 1.1.0 ([DATE]) 
 ## Features
 
 - New feature
-Would create Git tag go/v1.1.0

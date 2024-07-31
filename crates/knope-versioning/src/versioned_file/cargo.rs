@@ -56,6 +56,7 @@ impl Cargo {
         Action::WriteToFile {
             path: self.path,
             content: self.raw_toml,
+            diff: version_str,
         }
     }
 }
@@ -117,6 +118,7 @@ mod tests {
         let expected = Action::WriteToFile {
             path: RelativePathBuf::from("beep/boop"),
             content: expected,
+            diff: new_version.to_string(),
         };
         let new = new.set_version(&Version::from_str(new_version).unwrap());
 

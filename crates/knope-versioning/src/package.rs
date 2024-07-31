@@ -107,6 +107,7 @@ impl Package {
             .iter()
             .filter_map(|change| {
                 if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                    // TODO: Don't remove for prereleases!
                     Some(Action::RemoveFile {
                         path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
                     })

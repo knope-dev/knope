@@ -12,7 +12,10 @@ use crate::{
     fs,
     integrations::git,
     state::State,
-    step::releases::versioned_file::{VersionFromSource, VersionSource},
+    step::releases::{
+        package::execute_prepare_actions,
+        versioned_file::{VersionFromSource, VersionSource},
+    },
     RunType,
 };
 
@@ -96,10 +99,7 @@ pub(crate) fn bump_version_and_update_state(
     state: RunType<State>,
     rule: &Rule,
 ) -> Result<RunType<State>, Error> {
-    let (mut state, dry_run) = match state {
-        RunType::DryRun(state) => (state, true),
-        RunType::Real(state) => (state, false),
-    };
+    let (run_type, mut state) = state.take();
 
     state.packages = state
         .packages
@@ -118,28 +118,16 @@ pub(crate) fn bump_version_and_update_state(
                     source: VersionSource::Calculated,
                 }
             };
-            package
-                .write_version(current, version, dry_run)
-                .map_err(Error::from)
+            let is_prerelease = version.version.is_prerelease();
+            let (actions, new_version) = package.write_version(current, version)?;
+            package.version = Some(new_version);
+            package.pending_actions =
+                execute_prepare_actions(run_type.of(actions), is_prerelease, false)?;
+            Ok(package)
         })
         .collect::<Result<Vec<Package>, Error>>()?;
-    if dry_run {
-        Ok(RunType::DryRun(state))
-    } else {
-        Ok(RunType::Real(state))
-    }
+    Ok(run_type.of(state))
 }
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
-pub(crate) enum UpdatePackageVersionError {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    KnopeVersioning(#[from] knope_versioning::SetError),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Fs(#[from] fs::Error),
-}
-
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
     #[error(transparent)]
@@ -150,7 +138,10 @@ pub(crate) enum Error {
     Git(#[from] git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UpdatePackageVersion(#[from] UpdatePackageVersionError),
+    UpdatePackageVersion(#[from] knope_versioning::SetError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

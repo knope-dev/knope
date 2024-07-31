@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, iter::once, path::PathBuf};
 
-use ::changesets::ChangeSet;
+use changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
     changes::CHANGESET_DIR, Action, CreateRelease, PreVersion, ReleaseTag, StableVersion, Version,
@@ -15,6 +15,7 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
+    fs,
     integrations::{
         git,
         git::{create_tag, get_current_versions_from_tags},
@@ -36,10 +37,7 @@ pub(crate) fn prepare_release(
     state: RunType<State>,
     prepare_release: &PrepareRelease,
 ) -> Result<RunType<State>, Error> {
-    let (mut state, dry_run) = match state {
-        RunType::DryRun(state) => (state, true),
-        RunType::Real(state) => (state, false),
-    };
+    let (run_type, mut state) = state.take();
     if state.packages.is_empty() {
         return Err(package::Error::NoDefinedPackages.into());
     }
@@ -55,21 +53,24 @@ pub(crate) fn prepare_release(
         .packages
         .into_iter()
         .map(|package| {
-            package.prepare_release(prepare_release, &state.all_git_tags, &changeset, dry_run)
+            package.prepare_release(run_type, prepare_release, &state.all_git_tags, &changeset)
         })
         .try_collect()?;
 
-    if dry_run {
-        Ok(RunType::DryRun(state))
-    } else if !prepare_release.allow_empty
-        && state
-            .packages
-            .iter()
-            .all(|package| package.pending_actions.is_empty())
-    {
-        Err(Error::NoRelease)
-    } else {
-        Ok(RunType::Real(state))
+    match run_type {
+        RunType::DryRun(()) => Ok(RunType::DryRun(state)),
+        RunType::Real(()) => {
+            if !prepare_release.allow_empty
+                && state
+                    .packages
+                    .iter()
+                    .all(|package| package.pending_actions.is_empty())
+            {
+                Err(Error::NoRelease)
+            } else {
+                Ok(RunType::Real(state))
+            }
+        }
     }
 }
 
@@ -119,7 +120,10 @@ pub(crate) enum Error {
             "This could be a file-system issue or a problem with the formatting of a change file."
         )
     )]
-    CouldNotReadChangeSet(#[from] ::changesets::LoadingError),
+    CouldNotReadChangeSet(#[from] changesets::LoadingError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Fs(#[from] fs::Error),
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

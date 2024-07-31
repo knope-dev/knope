@@ -3,10 +3,11 @@ use std::{fmt, fmt::Display, path::PathBuf};
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changes::Change, package::Name, Action, CreateRelease, GoVersioning, PackageNewError, Version,
-    VersionedFile, VersionedFileError,
+    changelog::Sections, changes::Change, package::Name, Action, CreateRelease, GoVersioning,
+    PackageNewError, Version, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
@@ -25,7 +26,6 @@ use crate::{
     step::{
         releases::{
             changelog::HeaderLevel,
-            semver::UpdatePackageVersionError,
             versioned_file::{VersionFromSource, VersionSource},
         },
         PrepareRelease,
@@ -142,10 +142,10 @@ impl Package {
 
     pub(crate) fn prepare_release(
         mut self,
+        run_type: RunType<()>,
         prepare_release: &PrepareRelease,
         all_tags: &[String],
         changeset: &[changesets::Release],
-        dry_run: bool,
     ) -> Result<Package, Error> {
         let PrepareRelease {
             prerelease_label,
@@ -172,8 +172,7 @@ impl Package {
             debug!("Determining new version for {package_name}");
         }
 
-        self.pending_actions = self.versioning.apply_changes(&changes);
-        // TODO: .filter_map(// apply non-release ones).collect();
+        let mut pending_actions = self.versioning.apply_changes(&changes);
 
         let versions = self.get_version(all_tags).clone();
         let new_version = if let Some(version) = self.override_version.take() {
@@ -199,11 +198,21 @@ impl Package {
             }
         };
 
+        let (actions, current_versions) = self.write_version(versions, new_version.clone())?;
+        pending_actions.extend(actions);
+        self.version = Some(current_versions);
         let is_prerelease = new_version.version.is_prerelease();
-        self = self
-            .write_version(versions, new_version.clone(), dry_run)?
-            .write_changelog(&changes, new_version.version, dry_run)?;
-        self.stage_changes_to_git(is_prerelease, dry_run)?;
+        let (actions, changelog) = make_release(
+            self.changelog,
+            &self.versioning.changelog_sections,
+            &changes,
+            new_version.version,
+        )?;
+        pending_actions.extend(actions);
+        self.changelog = changelog;
+
+        self.pending_actions =
+            execute_prepare_actions(run_type.of(pending_actions), is_prerelease, true)?;
 
         Ok(self)
     }
@@ -213,12 +222,10 @@ impl Package {
     ///
     /// If `dry_run` is `true`, the version won't be written to any files.
     pub(crate) fn write_version(
-        mut self,
+        &self,
         mut current_versions: CurrentVersions,
         new_version: VersionFromSource,
-        dry_run: bool,
-    ) -> Result<Self, UpdatePackageVersionError> {
-        let version_str = new_version.version.to_string();
+    ) -> Result<(Vec<Action>, CurrentVersions), knope_versioning::SetError> {
         let go_versioning = match &new_version {
             VersionFromSource {
                 source: VersionSource::OverrideVersion,
@@ -226,106 +233,105 @@ impl Package {
             } => GoVersioning::BumpMajor,
             _ => self.go_versioning,
         };
-        let actions = self
-            .versioning
+        self.versioning
             .clone()
-            .set_version(&new_version.version, go_versioning)?;
-        current_versions.update_version(new_version.version);
-        self.version = Some(current_versions);
-        for action in actions {
-            match action {
-                Action::WriteToFile { path, content } => {
-                    let write_type = if dry_run {
-                        WriteType::DryRun(&version_str)
-                    } else {
-                        WriteType::Real(content)
-                    };
-                    fs::write(write_type, &path.to_path(""))?;
+            .set_version(&new_version.version, go_versioning)
+            .map(|actions| {
+                current_versions.update_version(new_version.version);
+                (actions, current_versions)
+            })
+    }
+}
+
+/// Adds content from `release` to `Self::changelog` if it exists.
+fn make_release(
+    mut changelog: Option<Changelog>,
+    changelog_sections: &Sections,
+    changes: &[Change],
+    version: Version,
+) -> Result<(Vec<Action>, Option<Changelog>), crate::step::releases::changelog::Error> {
+    let release_header_level = changelog
+        .as_ref()
+        .map_or(HeaderLevel::H1, |changelog| changelog.release_header_level);
+    let release = Release::new(&version, changes, changelog_sections, release_header_level)?;
+    let mut pending_actions = Vec::new();
+
+    changelog = if let Some(changelog) = changelog {
+        let (changelog, new_changes) = changelog.with_release(&release);
+        pending_actions.push(Action::WriteToFile {
+            path: changelog.path.clone(),
+            content: changelog.content.clone(),
+            diff: format!("\n{new_changes}\n"),
+        });
+        Some(changelog)
+    } else {
+        None
+    };
+    pending_actions.push(Action::CreateRelease(CreateRelease {
+        version,
+        notes: release.body_at_h1(),
+    }));
+    Ok((pending_actions, changelog))
+}
+
+pub(crate) fn execute_prepare_actions(
+    actions: RunType<Vec<Action>>,
+    is_prerelease: bool,
+    stage_to_git: bool,
+) -> Result<Vec<Action>, git::Error> {
+    let (run_type, actions) = actions.take();
+    let mut remainder = Vec::with_capacity(actions.len());
+    let mut paths_to_stage = Vec::with_capacity(actions.len());
+    for action in actions {
+        match action {
+            Action::WriteToFile {
+                path,
+                content,
+                diff,
+            } => {
+                // TODO: What if two packages wanted to write to the same file? Like changelog?
+                let write_type = match run_type {
+                    RunType::DryRun(()) => WriteType::DryRun(diff),
+                    RunType::Real(()) => WriteType::Real(content),
+                };
+                fs::write(write_type, &path.to_path(""))?;
+                paths_to_stage.push(path);
+            }
+            Action::RemoveFile { path } => {
+                if is_prerelease {
+                    continue; // Don't remove changesets for prereleases
                 }
-                _ => self.pending_actions.push(action),
+                // Ignore errors since we remove changesets per-package
+                fs::remove_file(run_type.of(&path.to_path(""))).ok();
+                paths_to_stage.push(path);
+            }
+            Action::AddTag { .. } | Action::CreateRelease(_) => {
+                remainder.push(action);
             }
         }
-        Ok(self)
     }
+    if stage_to_git {
+        stage_changes_to_git(run_type.of(&paths_to_stage))?;
+    }
+    Ok(remainder)
+}
 
-    // TODO: Use actions for files being written to instead of versioned_file + changelog
-    fn stage_changes_to_git(&self, is_prerelease: bool, dry_run: bool) -> Result<(), Error> {
-        let paths = self
-            .versioning
-            .versioned_files()
-            .iter()
-            .map(VersionedFile::path)
-            .chain(self.changelog.as_ref().map(|changelog| &changelog.path))
-            .chain(self.pending_actions.iter().filter_map(|action| {
-                if is_prerelease {
-                    None
-                } else if let Action::RemoveFile { path } = &action {
-                    if dry_run {
-                        fs::remove_file(RunType::DryRun(&path.to_path("")))
-                    } else {
-                        fs::remove_file(RunType::Real(&path.to_path("")))
-                    }
-                    .ok()
-                    .map(|()| path)
-                } else {
-                    None
-                }
-            }))
-            .collect_vec();
-        if paths.is_empty() {
-            Ok(())
-        } else if dry_run {
+fn stage_changes_to_git(paths: RunType<&[RelativePathBuf]>) -> Result<(), git::Error> {
+    match paths {
+        RunType::DryRun(paths) => {
             info!("Would add files to git:");
-            for path in &paths {
+            for path in paths {
                 info!("  {path}");
             }
             Ok(())
-        } else {
-            add_files(&paths).map_err(Error::from)
         }
-    }
-
-    /// Adds content from `release` to `Self::changelog` if it exists.
-    /// TODO: Use actions instead of this function
-    fn write_changelog(
-        mut self,
-        changes: &[Change],
-        version: Version,
-        dry_run: bool,
-    ) -> Result<Self, crate::step::releases::changelog::Error> {
-        let release_header_level = self
-            .changelog
-            .as_ref()
-            .map_or(HeaderLevel::H1, |changelog| changelog.release_header_level);
-        let release = Release::new(
-            &version,
-            changes,
-            &self.versioning.changelog_sections,
-            release_header_level,
-        )?;
-
-        self.changelog = if let Some(changelog) = self.changelog {
-            let (changelog, new_changes) = changelog.with_release(&release);
-
-            let write_type = if dry_run {
-                WriteType::DryRun(format!("\n{new_changes}\n"))
+        RunType::Real(paths) => {
+            if paths.is_empty() {
+                Ok(())
             } else {
-                WriteType::Real(&changelog.content)
-            };
-            fs::write(write_type, &changelog.path.to_path(""))?;
-
-            Some(changelog)
-        } else {
-            None
-        };
-        self.pending_actions.insert(
-            0,
-            Action::CreateRelease(CreateRelease {
-                version,
-                notes: release.body_at_h1(),
-            }),
-        );
-        Ok(self)
+                add_files(paths)
+            }
+        }
     }
 }
 
@@ -346,7 +352,7 @@ impl Package {
                     &[""],
                 )
                 .unwrap()],
-                knope_versioning::changelog::Sections::default(),
+                Sections::default(),
                 None,
             )
             .unwrap(),
@@ -430,7 +436,7 @@ pub(crate) enum Error {
     VersionedFile(#[from] VersionedFileError),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UpdatePackageVersion(#[from] UpdatePackageVersionError),
+    UpdatePackageVersion(#[from] knope_versioning::SetError),
     #[error(transparent)]
     #[diagnostic(transparent)]
     New(#[from] PackageNewError),

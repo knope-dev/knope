@@ -50,9 +50,9 @@ Would add files to git:
   v2/go.mod
   sub_dir/v2/go.mod
   v2/CHANGELOG.md
-Would create Git tag v1/v1.0.1
 Would create Git tag v1.0.1
 Would create Git tag sub_dir/v1.0.1
-Would create Git tag v2/v2.1.0
+Would create Git tag v1/v1.0.1
 Would create Git tag v2.1.0
 Would create Git tag sub_dir/v2.1.0
+Would create Git tag v2/v2.1.0

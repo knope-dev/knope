@@ -58,6 +58,7 @@ impl PubSpec {
         Ok(Action::WriteToFile {
             path: self.path,
             content: new_content,
+            diff: new_version.to_string(),
         })
     }
 }
@@ -121,6 +122,7 @@ mod tests {
         let expected = Action::WriteToFile {
             path: RelativePathBuf::from("blah/blah"),
             content: expected_content,
+            diff: "1.2.3-rc.4".to_string(),
         };
         assert_eq!(expected, action);
     }

@@ -1,3 +1,4 @@
+Would delete .changeset/a_new_feature.md
 Would add the following to Cargo.toml: 1.1.0
 Would add the following to CHANGELOG.md: 
 ## 1.1.0 ([DATE])
@@ -6,8 +7,7 @@ Would add the following to CHANGELOG.md:
 
 - A new feature
 
-Would delete .changeset/a_new_feature.md
 Would add files to git:
+  .changeset/a_new_feature.md
   Cargo.toml
   CHANGELOG.md
-  .changeset/a_new_feature.md

@@ -383,7 +383,7 @@ mod test_branch_name_from_issue {
 }
 
 /// Add some files to Git to be committed later.
-pub(crate) fn add_files(file_names: &[&RelativePathBuf]) -> Result<(), Error> {
+pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
     if file_names.is_empty() {
         return Ok(());
     }
