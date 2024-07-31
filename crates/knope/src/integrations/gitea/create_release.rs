@@ -9,7 +9,6 @@ use crate::{
     state::RunType,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn create_release(
     name: &str,
     tag_name: &str,
