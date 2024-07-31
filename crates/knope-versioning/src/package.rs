@@ -9,13 +9,16 @@ use changesets::Release;
 use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
     action::Action,
     changelog::Sections as ChangelogSections,
-    changes::{conventional_commit::changes_from_commit_messages, Change},
+    changes::{
+        conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
+    },
     versioned_file::{GoVersioning, SetError, VersionedFile},
     Version,
 };
@@ -96,6 +99,22 @@ impl Package {
         )
         .chain(Change::from_changesets(&self.name, changeset))
         .collect()
+    }
+
+    #[must_use]
+    pub fn apply_changes(&self, changes: &[Change]) -> Vec<Action> {
+        changes
+            .iter()
+            .filter_map(|change| {
+                if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                    Some(Action::RemoveFile {
+                        path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
 

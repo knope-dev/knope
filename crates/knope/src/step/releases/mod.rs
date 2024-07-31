@@ -3,12 +3,10 @@ use std::{collections::BTreeMap, iter::once, path::PathBuf};
 use ::changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
-    changes::{ChangeSource, CHANGESET_DIR},
-    Action, CreateRelease, PreVersion, ReleaseTag, StableVersion, Version,
+    changes::CHANGESET_DIR, Action, CreateRelease, PreVersion, ReleaseTag, StableVersion, Version,
 };
 use miette::Diagnostic;
 pub(crate) use non_empty_map::PrereleaseMap;
-use relative_path::RelativePathBuf;
 
 pub(crate) use self::{
     changelog::Release,
@@ -16,7 +14,6 @@ pub(crate) use self::{
     semver::{bump_version_and_update_state, Rule},
 };
 use crate::{
-    dry_run::DryRun,
     integrations::{
         git,
         git::{create_tag, get_current_versions_from_tags},
@@ -57,9 +54,8 @@ pub(crate) fn prepare_release(
         .packages
         .into_iter()
         .map(|package| {
-            prepare_release_for_package(
+            package.prepare_release(
                 prepare_release,
-                package,
                 &state.all_git_tags,
                 &changeset,
                 state.verbose,
@@ -80,43 +76,6 @@ pub(crate) fn prepare_release(
     } else {
         Ok(RunType::Real(state))
     }
-}
-
-fn prepare_release_for_package(
-    prepare_release: &PrepareRelease,
-    mut package: Package,
-    all_tags: &[String],
-    changeset: &[::changesets::Release],
-    verbose: Verbose,
-    dry_run: DryRun,
-) -> Result<Package, Error> {
-    let PrepareRelease {
-        prerelease_label,
-        ignore_conventional_commits,
-        ..
-    } = prepare_release;
-
-    let commit_messages = if *ignore_conventional_commits {
-        Vec::new()
-    } else {
-        conventional_commits::get_conventional_commits_after_last_stable_version(
-            &package.versioning.name,
-            package.versioning.scopes.as_ref(),
-            verbose,
-            all_tags,
-        )?
-    };
-    let changes = package.versioning.get_changes(changeset, &commit_messages);
-    for change in &changes {
-        if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
-            package.pending_actions.push(Action::RemoveFile {
-                path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
-            });
-        }
-    }
-    package
-        .write_release(&changes, prerelease_label, all_tags, dry_run, verbose)
-        .map_err(Error::from)
 }
 
 pub(crate) fn bump_version(run_type: RunType, rule: &Rule) -> Result<RunType, Error> {
@@ -376,7 +335,10 @@ fn find_prepared_release(
     verbose: Verbose,
     all_tags: &[String],
 ) -> Option<CreateRelease> {
-    let current_version = package.get_version(verbose, all_tags)?.clone();
+    let current_version = package
+        .get_version(verbose, all_tags)
+        .clone()
+        .into_latest()?;
     if let Verbose::Yes = verbose {
         println!("Searching for last package tag to determine if there's a release to release");
     }

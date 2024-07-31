@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     changelog,
     changelog::Changelog,
-    semver,
+    conventional_commits, semver,
     semver::{bump, ConventionalRule},
     CurrentVersions, Release, Rule,
 };
@@ -22,17 +22,20 @@ use crate::{
     fs,
     fs::read_to_string,
     integrations::git::{self, add_files, get_current_versions_from_tags},
-    step::releases::{
-        changelog::HeaderLevel,
-        semver::UpdatePackageVersionError,
-        versioned_file::{VersionFromSource, VersionSource},
+    step::{
+        releases::{
+            changelog::HeaderLevel,
+            semver::UpdatePackageVersionError,
+            versioned_file::{VersionFromSource, VersionSource},
+        },
+        PrepareRelease,
     },
     workflow::Verbose,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
-    pub(crate) version: Option<Version>,
+    pub(crate) version: Option<CurrentVersions>,
     pub(crate) versioning: knope_versioning::Package,
     pub(crate) changelog: Option<Changelog>,
     pub(crate) pending_changes: Vec<Change>,
@@ -60,35 +63,30 @@ impl Package {
         &self.versioning.name
     }
 
+    /// Get the current version of a package determined by the last tag for the package _and_ the
+    /// version in versioned files. The version from files takes precedent over version from tag.
+    ///
+    /// This is cached, so anything that mutates version is expected to update it here as well!
     pub(crate) fn get_version(
         &mut self,
         verbose: Verbose,
         all_tags: &[String],
-    ) -> Option<&Version> {
+    ) -> &CurrentVersions {
         if self.version.is_none() {
-            self.version = self.get_current_versions(verbose, all_tags).into_latest();
-        }
-        self.version.as_ref()
-    }
+            if let Verbose::Yes = verbose {
+                println!("Looking for Git tags matching package name.");
+            }
+            let mut current_versions =
+                get_current_versions_from_tags(self.name().as_custom(), verbose, all_tags);
 
-    /// Get the current version of a package determined by the last tag for the package _and_ the
-    /// version in versioned files. The version from files takes precedent over version from tag.
-    pub(crate) fn get_current_versions(
-        &self,
-        verbose: Verbose,
-        all_tags: &[String],
-    ) -> CurrentVersions {
-        if let Verbose::Yes = verbose {
-            println!("Looking for Git tags matching package name.");
-        }
-        let mut current_versions =
-            get_current_versions_from_tags(self.name().as_custom(), verbose, all_tags);
+            if let Some(version_from_files) = self.versioning.get_version() {
+                current_versions.update_version(version_from_files.clone());
+            }
 
-        if let Some(version_from_files) = self.versioning.get_version() {
-            current_versions.update_version(version_from_files.clone());
+            self.version = Some(current_versions);
         }
-
-        current_versions
+        #[allow(clippy::unwrap_used)] // This was just inserted up above!
+        self.version.as_ref().unwrap()
     }
 
     fn validate(
@@ -160,14 +158,32 @@ impl Package {
             .unwrap_or_default()
     }
 
-    pub(crate) fn write_release(
+    pub(crate) fn prepare_release(
         mut self,
-        changes: &[Change],
-        prerelease_label: &Option<Label>,
-        git_tags: &[String],
-        dry_run: DryRun,
+        prepare_release: &PrepareRelease,
+        all_tags: &[String],
+        changeset: &[changesets::Release],
         verbose: Verbose,
-    ) -> Result<Self, Error> {
+        dry_run: DryRun,
+    ) -> Result<Package, Error> {
+        let PrepareRelease {
+            prerelease_label,
+            ignore_conventional_commits,
+            ..
+        } = prepare_release;
+
+        let commit_messages = if *ignore_conventional_commits {
+            Vec::new()
+        } else {
+            conventional_commits::get_conventional_commits_after_last_stable_version(
+                &self.versioning.name,
+                self.versioning.scopes.as_ref(),
+                verbose,
+                all_tags,
+            )?
+        };
+        let changes = self.versioning.get_changes(changeset, &commit_messages);
+
         if changes.is_empty() {
             return Ok(self);
         }
@@ -178,6 +194,22 @@ impl Package {
             }
         }
 
+        self.pending_actions = self.versioning.apply_changes(&changes);
+        // TODO: .filter_map(// apply non-release ones).collect();
+
+        self.write_release(&changes, prerelease_label, all_tags, dry_run, verbose)
+            .map_err(Error::from)
+    }
+
+    fn write_release(
+        mut self,
+        changes: &[Change],
+        prerelease_label: &Option<Label>,
+        git_tags: &[String],
+        dry_run: DryRun,
+        verbose: Verbose,
+    ) -> Result<Self, Error> {
+        let versions = self.get_version(verbose, git_tags).clone();
         let new_version = if let Some(version) = self.override_version.take() {
             if let Verbose::Yes = verbose {
                 println!("Using overridden version {version}");
@@ -187,7 +219,6 @@ impl Package {
                 source: VersionSource::OverrideVersion,
             }
         } else {
-            let versions = self.get_current_versions(verbose, git_tags);
             let bump_rule = Self::bump_rule(changes, verbose);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
@@ -197,7 +228,7 @@ impl Package {
             } else {
                 bump_rule.into()
             };
-            let version = bump(versions, &rule, verbose)?;
+            let version = bump(versions.clone(), &rule, verbose)?;
             VersionFromSource {
                 version,
                 source: VersionSource::Calculated,
@@ -206,7 +237,7 @@ impl Package {
 
         let is_prerelease = new_version.version.is_prerelease();
         self = self
-            .write_version(new_version.clone(), dry_run)?
+            .write_version(versions, new_version.clone(), dry_run)?
             .write_changelog(changes, new_version.version, dry_run)?;
         self.stage_changes_to_git(is_prerelease, dry_run)?;
 
@@ -219,11 +250,12 @@ impl Package {
     /// If `dry_run` is `true`, the version won't be written to any files.
     pub(crate) fn write_version(
         mut self,
-        version: VersionFromSource,
+        mut current_versions: CurrentVersions,
+        new_version: VersionFromSource,
         dry_run: DryRun,
     ) -> Result<Self, UpdatePackageVersionError> {
-        let version_str = version.version.to_string();
-        let go_versioning = match &version {
+        let version_str = new_version.version.to_string();
+        let go_versioning = match &new_version {
             VersionFromSource {
                 source: VersionSource::OverrideVersion,
                 ..
@@ -233,8 +265,9 @@ impl Package {
         let actions = self
             .versioning
             .clone()
-            .set_version(&version.version, go_versioning)?;
-        self.version = Some(version.version);
+            .set_version(&new_version.version, go_versioning)?;
+        current_versions.update_version(new_version.version);
+        self.version = Some(current_versions);
         for action in actions {
             match action {
                 Action::WriteToFile { path, content } => {
@@ -281,7 +314,7 @@ impl Package {
 
     /// Adds content from `release` to `Self::changelog` if it exists.
     /// TODO: Use actions instead of this function
-    pub fn write_changelog(
+    fn write_changelog(
         mut self,
         changes: &[Change],
         version: Version,

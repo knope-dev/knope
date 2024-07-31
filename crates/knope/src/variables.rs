@@ -49,6 +49,8 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 };
                 let version = package
                     .get_version(state.verbose, &state.all_git_tags)
+                    .clone()
+                    .into_latest()
                     .ok_or(Error::NoCurrentVersion)?;
                 template = template.replace(&var_name, &version.to_string());
                 package_cache = Some(package);
@@ -70,6 +72,8 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 } else {
                     let version = package
                         .get_version(state.verbose, &state.all_git_tags)
+                        .clone()
+                        .into_latest()
                         .ok_or(Error::NoCurrentVersion)?
                         .clone();
                     let release = package

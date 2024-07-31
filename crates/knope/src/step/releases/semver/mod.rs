@@ -103,25 +103,24 @@ pub(crate) fn bump_version_and_update_state(
     state.packages = state
         .packages
         .into_iter()
-        .map(|package| {
+        .map(|mut package| {
+            let current = package
+                .get_version(state.verbose, &state.all_git_tags)
+                .clone();
             let version = if let Some(version) = package.override_version.clone() {
                 VersionFromSource {
                     version,
                     source: VersionSource::OverrideVersion,
                 }
             } else {
-                let version = bump(
-                    package.get_current_versions(state.verbose, &state.all_git_tags),
-                    rule,
-                    state.verbose,
-                )?;
+                let version = bump(current.clone(), rule, state.verbose)?;
                 VersionFromSource {
                     version,
                     source: VersionSource::Calculated,
                 }
             };
             package
-                .write_version(version, &mut dry_run_stdout)
+                .write_version(current, version, &mut dry_run_stdout)
                 .map_err(Error::from)
         })
         .collect::<Result<Vec<Package>, Error>>()?;
