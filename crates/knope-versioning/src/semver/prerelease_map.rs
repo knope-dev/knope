@@ -29,8 +29,4 @@ impl PrereleaseMap {
     pub(crate) fn get(&self, key: &Label) -> Option<&Prerelease> {
         self.0.get(key)
     }
-
-    pub(crate) fn remove(mut self, key: &Label) -> Option<Prerelease> {
-        self.0.remove(key)
-    }
 }

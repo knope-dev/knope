@@ -4,6 +4,7 @@ use changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
     changes::CHANGESET_DIR,
+    package::Bump,
     semver::{PackageVersions, Rule},
     Action, CreateRelease, ReleaseTag,
 };
@@ -142,7 +143,7 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
                 package.pending_actions = package
                     .versioning
                     .clone()
-                    .set_version(&release.version, package.go_versioning)
+                    .bump_version(Bump::Manual(release.version.clone()), package.go_versioning)
                     .unwrap_or_default()
                     .into_iter()
                     // If the changelog was already written for this release, we don't need to write _any_ files
@@ -207,7 +208,7 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
 fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<CreateRelease> {
-    let current_version = package.get_version(all_tags).clone().into_latest();
+    let current_version = package.versioning.versions.clone().into_latest();
     debug!("Searching for last package tag to determine if there's a release to release");
     let last_tag = PackageVersions::from_tags(package.name().as_custom(), all_tags).into_latest();
     if last_tag == current_version {

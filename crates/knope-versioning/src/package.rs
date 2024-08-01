@@ -1,7 +1,7 @@
 use std::{
     borrow::{Borrow, Cow},
     fmt,
-    fmt::Display,
+    fmt::{Debug, Display},
     ops::Deref,
 };
 
@@ -12,6 +12,7 @@ use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::debug;
 
 use crate::{
     action::Action,
@@ -19,14 +20,15 @@ use crate::{
     changes::{
         conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
     },
-    semver::Version,
+    semver::{PackageVersions, PreReleaseNotFound, Rule, Version},
     versioned_file::{GoVersioning, SetError, VersionedFile},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Package {
     pub name: Name,
-    versioned_files: Vec<VersionedFile>,
+    pub versions: PackageVersions,
+    versioned_files: Option<Vec<VersionedFile>>,
     pub changelog_sections: ChangelogSections,
     pub scopes: Option<Vec<String>>,
 }
@@ -37,8 +39,9 @@ impl Package {
     /// # Errors
     ///
     /// There must be at least one versioned file, and all files must have the same version.
-    pub fn new(
+    pub fn new<S: AsRef<str> + Debug>(
         name: Name,
+        git_tags: &[S],
         versioned_files: Vec<VersionedFile>,
         changelog_sections: ChangelogSections,
         scopes: Option<Vec<String>>,
@@ -54,40 +57,57 @@ impl Package {
                 ));
             }
         }
+        debug!("Looking for Git tags matching package name.");
+        let mut versions = PackageVersions::from_tags(name.as_custom(), git_tags);
+
+        if let Some(version_from_files) = versioned_files.first().map(VersionedFile::version) {
+            versions.update_version(version_from_files.clone());
+        }
+
         Ok(Self {
             name,
-            versioned_files,
+            versions,
+            versioned_files: Some(versioned_files),
             changelog_sections,
             scopes,
         })
     }
 
-    #[must_use]
-    pub fn versioned_files(&self) -> &[VersionedFile] {
-        &self.versioned_files
-    }
-
-    #[must_use]
-    pub fn get_version(&self) -> Option<&Version> {
-        self.versioned_files.first().map(VersionedFile::version)
-    }
-
-    /// Returns the actions that must be taken to set this package to the new version.
+    /// Returns the actions that must be taken to set this package to the new version, along
+    /// with the version it was set to.
+    ///
+    /// The version can either be calculated from a semver rule or specified manually.
     ///
     /// # Errors
     ///
     /// If the file is a `go.mod`, there are rules about what versions are allowed.
     ///
     /// If serialization of some sort fails, which is a bug, then this will return an error.
-    pub fn set_version(
-        self,
-        new_version: &Version,
+    ///
+    /// If the [`Rule::Release`] is specified, but there is no current prerelease, that's an
+    /// error too.
+    pub fn bump_version(
+        &mut self,
+        bump: Bump,
         go_versioning: GoVersioning,
-    ) -> Result<Vec<Action>, SetError> {
-        self.versioned_files
+    ) -> Result<Vec<Action>, BumpError> {
+        let Some(versioned_files) = self.versioned_files.take() else {
+            return Err(BumpError::PackageAlreadyBumped);
+        };
+        match bump {
+            Bump::Manual(version) => {
+                self.versions.update_version(version);
+            }
+            Bump::Rule(rule) => {
+                self.versions.bump(rule)?;
+            }
+        };
+        let version = self.versions.clone().into_latest();
+        versioned_files
             .into_iter()
-            .map(|f| f.set_version(new_version, go_versioning))
+            .map(|f| f.set_version(&version, go_versioning))
             .process_results(|iter| iter.flatten().collect())
+            .map_err(BumpError::SetError)
     }
 
     #[must_use]
@@ -216,4 +236,29 @@ impl PartialEq<String> for Name {
     fn eq(&self, str: &String) -> bool {
         str == self.as_ref()
     }
+}
+
+pub enum Bump {
+    Manual(Version),
+    Rule(Rule),
+}
+
+#[derive(Debug, Error)]
+#[cfg_attr(feature = "miette", derive(Diagnostic))]
+pub enum BumpError {
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    SetError(#[from] SetError),
+    #[error(transparent)]
+    PreReleaseNotFound(#[from] PreReleaseNotFound),
+    #[error("Package version has already been updated")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code = "knope_versioning::package_already_bumped",
+            url = "https://knope.tech/reference/concepts/package/#version",
+            help = "You can only run a single BumpVersion or PrepareRelease step per workflow"
+        )
+    )]
+    PackageAlreadyBumped,
 }

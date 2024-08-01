@@ -1,4 +1,5 @@
 use knope_versioning::{
+    package::{Bump, BumpError},
     semver::{PreReleaseNotFound, Rule},
     GoVersioning,
 };
@@ -22,15 +23,14 @@ pub(crate) fn bump_version_and_update_state(
         .packages
         .into_iter()
         .map(|mut package| {
-            let current = package.take_version(&state.all_git_tags);
-            let (version, go_versioning) = if let Some(version) = package.override_version.clone() {
-                (version, GoVersioning::BumpMajor)
+            let (bump, go_versioning) = if let Some(version) = package.override_version.clone() {
+                (Bump::Manual(version), GoVersioning::BumpMajor)
             } else {
-                let version = current.bump(rule)?;
-                (version, package.go_versioning)
+                (Bump::Rule(rule.clone()), package.go_versioning)
             };
+            let actions = package.versioning.bump_version(bump, go_versioning)?;
+            let version = package.versioning.versions.clone().into_latest();
             let is_prerelease = version.is_prerelease();
-            let actions = package.write_version(version, go_versioning)?;
             package.pending_actions =
                 execute_prepare_actions(run_type.of(actions), is_prerelease, false)?;
             Ok(package)
@@ -47,7 +47,7 @@ pub(crate) enum Error {
     Git(#[from] git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UpdatePackageVersion(#[from] knope_versioning::SetError),
+    UpdatePackageVersion(#[from] BumpError),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Fs(#[from] fs::Error),

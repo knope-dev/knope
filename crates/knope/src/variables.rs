@@ -42,20 +42,17 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
     for (var_name, var_type) in variables {
         match var_type {
             Variable::Version => {
-                let mut package = if let Some(package) = package_cache.take() {
+                let package = if let Some(package) = package_cache.take() {
                     package
                 } else {
                     first_package(state)?
                 };
-                let version = package
-                    .get_version(&state.all_git_tags)
-                    .clone()
-                    .into_latest();
+                let version = package.versioning.versions.clone().into_latest();
                 template = template.replace(&var_name, &version.to_string());
                 package_cache = Some(package);
             }
             Variable::ChangelogEntry => {
-                let mut package = if let Some(package) = package_cache.take() {
+                let package = if let Some(package) = package_cache.take() {
                     package
                 } else {
                     first_package(state)?
@@ -69,10 +66,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 }) {
                     template = template.replace(&var_name, body);
                 } else {
-                    let version = package
-                        .get_version(&state.all_git_tags)
-                        .clone()
-                        .into_latest();
+                    let version = package.versioning.versions.clone().into_latest();
                     let release = package
                         .changelog
                         .as_ref()
@@ -162,6 +156,7 @@ mod test_replace_variables {
             Package {
                 versioning: knope_versioning::Package::new(
                     Name::Default,
+                    &[""],
                     vec![VersionedFile::new(
                         &VersionedFilePath::new("Cargo.toml".into()).unwrap(),
                         "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
@@ -193,7 +188,7 @@ mod test_replace_variables {
         let mut state = State::new(None, None, None, vec![package().0], Vec::new());
         let version = Version::new(1, 2, 3, None);
         let package_versions = version.clone().into();
-        state.packages[0].version = Some(package_versions);
+        state.packages[0].versioning.versions = package_versions;
 
         let result = replace_variables(
             Template {
