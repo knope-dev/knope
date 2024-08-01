@@ -1,16 +1,12 @@
-use knope_versioning::semver::{PreReleaseNotFound, Rule};
+use knope_versioning::{
+    semver::{PreReleaseNotFound, Rule},
+    GoVersioning,
+};
 use miette::Diagnostic;
 
 use super::package::Package;
 use crate::{
-    fs,
-    integrations::git,
-    state::State,
-    step::releases::{
-        package::execute_prepare_actions,
-        versioned_file::{VersionFromSource, VersionSource},
-    },
-    RunType,
+    fs, integrations::git, state::State, step::releases::package::execute_prepare_actions, RunType,
 };
 
 /// The implementation of [`crate::step::Step::BumpVersion`].
@@ -27,20 +23,14 @@ pub(crate) fn bump_version_and_update_state(
         .into_iter()
         .map(|mut package| {
             let current = package.take_version(&state.all_git_tags);
-            let version = if let Some(version) = package.override_version.clone() {
-                VersionFromSource {
-                    version,
-                    source: VersionSource::OverrideVersion,
-                }
+            let (version, go_versioning) = if let Some(version) = package.override_version.clone() {
+                (version, GoVersioning::BumpMajor)
             } else {
                 let version = current.bump(rule)?;
-                VersionFromSource {
-                    version,
-                    source: VersionSource::Calculated,
-                }
+                (version, package.go_versioning)
             };
-            let is_prerelease = version.version.is_prerelease();
-            let actions = package.write_version(version)?;
+            let is_prerelease = version.is_prerelease();
+            let actions = package.write_version(version, go_versioning)?;
             package.pending_actions =
                 execute_prepare_actions(run_type.of(actions), is_prerelease, false)?;
             Ok(package)

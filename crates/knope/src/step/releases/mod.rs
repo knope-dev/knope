@@ -27,7 +27,6 @@ pub(crate) mod gitea;
 pub(crate) mod github;
 pub(crate) mod package;
 pub(crate) mod semver;
-pub(crate) mod versioned_file;
 
 pub(crate) fn prepare_release(
     state: RunType<State>,

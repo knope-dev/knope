@@ -20,13 +20,7 @@ use crate::{
     fs::{read_to_string, WriteType},
     integrations::git::{self, add_files},
     state::RunType,
-    step::{
-        releases::{
-            changelog::HeaderLevel,
-            versioned_file::{VersionFromSource, VersionSource},
-        },
-        PrepareRelease,
-    },
+    step::{releases::changelog::HeaderLevel, PrepareRelease},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -161,12 +155,9 @@ impl Package {
         let mut pending_actions = self.versioning.apply_changes(&changes);
 
         let versions = self.take_version(all_tags);
-        let new_version = if let Some(version) = self.override_version.take() {
+        let (new_version, go_versioning) = if let Some(version) = self.override_version.take() {
             debug!("Using overridden version {version}");
-            VersionFromSource {
-                version,
-                source: VersionSource::OverrideVersion,
-            }
+            (version, GoVersioning::BumpMajor)
         } else {
             let stable_rule = StableRule::from(&changes);
             let rule = if let Some(pre_label) = prerelease_label {
@@ -178,20 +169,17 @@ impl Package {
                 stable_rule.into()
             };
             let version = versions.clone().bump(&rule)?;
-            VersionFromSource {
-                version,
-                source: VersionSource::Calculated,
-            }
+            (version, self.go_versioning)
         };
 
-        let actions = self.write_version(new_version.clone())?;
+        let actions = self.write_version(new_version.clone(), go_versioning)?;
         pending_actions.extend(actions);
-        let is_prerelease = new_version.version.is_prerelease();
+        let is_prerelease = new_version.is_prerelease();
         let (actions, changelog) = make_release(
             self.changelog,
             &self.versioning.changelog_sections,
             &changes,
-            new_version.version,
+            new_version,
         )?;
         pending_actions.extend(actions);
         self.changelog = changelog;
@@ -208,20 +196,14 @@ impl Package {
     /// If `dry_run` is `true`, the version won't be written to any files.
     pub(crate) fn write_version(
         &mut self,
-        new_version: VersionFromSource,
+        version: Version,
+        go_versioning: GoVersioning,
     ) -> Result<Vec<Action>, knope_versioning::SetError> {
-        let go_versioning = match &new_version {
-            VersionFromSource {
-                source: VersionSource::OverrideVersion,
-                ..
-            } => GoVersioning::BumpMajor,
-            _ => self.go_versioning,
-        };
         let actions = self
             .versioning
             .clone()
-            .set_version(&new_version.version, go_versioning)?;
-        self.version = Some(new_version.version.into());
+            .set_version(&version, go_versioning)?;
+        self.version = Some(version.into());
         Ok(actions)
     }
 }
