@@ -1,6 +1,6 @@
 use std::{fmt::Display, path::Path};
 
-use knope_versioning::Version;
+use knope_versioning::semver::Version;
 
 /// A version and where it came from.
 #[derive(Clone)]

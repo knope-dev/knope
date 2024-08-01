@@ -1,6 +1,6 @@
 use relative_path::RelativePathBuf;
 
-use crate::{package, Version};
+use crate::{package, semver::Version};
 
 /// Actions to take to finish updating a package
 #[derive(Clone, Debug, Eq, PartialEq)]

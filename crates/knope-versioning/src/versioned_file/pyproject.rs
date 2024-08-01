@@ -7,7 +7,7 @@ use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::{action::Action, Version};
+use crate::{action::Action, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyProject {

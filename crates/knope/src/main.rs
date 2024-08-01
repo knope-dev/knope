@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
 use itertools::Itertools;
-use knope_versioning::{package, Version};
+use knope_versioning::{package, semver::Version};
 use miette::{miette, Result};
 use tracing::info;
 use tracing_subscriber::{

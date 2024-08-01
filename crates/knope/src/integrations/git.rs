@@ -7,19 +7,11 @@ use std::{
 use git2::{build::CheckoutBuilder, Branch, BranchType, IndexAddOption, Repository};
 use gix::{object::Kind, refs::transaction::PreviousValue, ObjectId};
 use itertools::Itertools;
-use knope_versioning::Version;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::{debug, info};
 
-use crate::{
-    fs, prompt,
-    prompt::select,
-    state,
-    state::State,
-    step::{issues::Issue, releases::CurrentVersions},
-    RunType,
-};
+use crate::{fs, prompt, prompt::select, state, state::State, step::issues::Issue, RunType};
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
@@ -475,44 +467,6 @@ pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
             Ok(())
         }
     }
-}
-
-/// Get the (relevant) current versions from a slice of Git tags.
-/// Doesn't interface with Git directly.
-///
-/// ## Parameters
-/// - `prefix`: Only tag names starting with this string will be considered.
-/// - `verbose`: Whether to print extra information.
-/// - `all_tags`: All tags in the repository.
-pub(crate) fn get_current_versions_from_tags(
-    prefix: Option<&str>,
-    all_tags: &[String],
-) -> CurrentVersions {
-    let pattern = prefix
-        .as_ref()
-        .map_or_else(|| String::from("v"), |prefix| format!("{prefix}/v"));
-    let mut tags = all_tags
-        .iter()
-        .filter(|tag| tag.starts_with(&pattern))
-        .peekable();
-
-    if tags.peek().is_none() {
-        debug!("No tags found matching pattern {pattern}");
-    }
-
-    let mut current_versions = CurrentVersions::default();
-    for tag in tags {
-        let version_string = tag.replace(&pattern, "");
-        if let Ok(version) = Version::from_str(version_string.as_str()) {
-            let is_stable = !version.is_prerelease();
-            current_versions.update_version(version);
-            if is_stable {
-                break; // Only prereleases newer than the last stable version are relevant
-            }
-        }
-    }
-
-    current_versions
 }
 
 /// Get all tags on the current branch.

@@ -13,7 +13,7 @@ use crate::{
         ActionSet,
         ActionSet::{Single, Two},
     },
-    Version,
+    semver::Version,
 };
 
 pub mod cargo;

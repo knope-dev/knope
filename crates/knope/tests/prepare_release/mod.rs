@@ -5,7 +5,7 @@ mod changelog;
 mod changesets;
 mod enable_prerelease;
 mod go_modules;
-mod hande_pre_versions_that_are_too_new;
+mod handel_pre_versions_that_are_too_new;
 mod ignore_conventional_commits;
 mod inconsistent_versions;
 mod invalid_versioned_files;

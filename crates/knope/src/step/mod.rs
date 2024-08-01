@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use knope_versioning::Label;
+use knope_versioning::semver::{Label, Rule};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -63,7 +63,7 @@ pub(crate) enum Step {
     },
     /// Bump the version of the project in any supported formats found using a
     /// [Semantic Versioning](https://semver.org) rule.
-    BumpVersion(releases::Rule),
+    BumpVersion(Rule),
     /// Run a command in your current shell after optionally replacing some variables.
     Command {
         /// The command to run, with any variable keys you wish to replace.
@@ -76,7 +76,7 @@ pub(crate) enum Step {
         shell: Option<bool>,
     },
     /// This will look through all commits since the last tag and parse any
-    /// [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will
+    /// [Stable Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will
     /// then bump the project version (depending on the rule determined from the commits) and add
     /// a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/)
     /// format.

@@ -2,7 +2,13 @@ use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
+pub use package_versions::{PackageVersions, PreReleaseNotFound};
+pub use rule::{Rule, Stable as StableRule};
 use serde::{Deserialize, Serialize};
+
+mod package_versions;
+mod prerelease_map;
+mod rule;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Version {
@@ -65,14 +71,14 @@ impl Serialize for Version {
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct StableVersion {
-    pub major: u64,
+    pub(crate) major: u64,
     pub(crate) minor: u64,
     pub(crate) patch: u64,
 }
 
 impl StableVersion {
     #[must_use]
-    pub const fn increment_major(self) -> Self {
+    pub(crate) const fn increment_major(self) -> Self {
         Self {
             major: self.major + 1,
             minor: 0,
@@ -81,7 +87,7 @@ impl StableVersion {
     }
 
     #[must_use]
-    pub const fn increment_minor(self) -> Self {
+    pub(crate) const fn increment_minor(self) -> Self {
         Self {
             major: self.major,
             minor: self.minor + 1,
@@ -90,7 +96,7 @@ impl StableVersion {
     }
 
     #[must_use]
-    pub const fn increment_patch(self) -> Self {
+    pub(crate) const fn increment_patch(self) -> Self {
         Self {
             major: self.major,
             minor: self.minor,

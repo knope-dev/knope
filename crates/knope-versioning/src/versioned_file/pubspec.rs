@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_yaml::{from_str, to_string, Mapping, Value};
 use thiserror::Error;
 
-use crate::{action::Action, semver, Version};
+use crate::{
+    action::Action,
+    semver::{self, Version},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PubSpec {

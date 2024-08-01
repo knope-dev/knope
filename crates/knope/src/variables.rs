@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use knope_versioning::{Action, CreateRelease, Version};
+use knope_versioning::{semver::Version, Action, CreateRelease};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -50,8 +50,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 let version = package
                     .get_version(&state.all_git_tags)
                     .clone()
-                    .into_latest()
-                    .ok_or(Error::NoCurrentVersion)?;
+                    .into_latest();
                 template = template.replace(&var_name, &version.to_string());
                 package_cache = Some(package);
             }
@@ -73,9 +72,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                     let version = package
                         .get_version(&state.all_git_tags)
                         .clone()
-                        .into_latest()
-                        .ok_or(Error::NoCurrentVersion)?
-                        .clone();
+                        .into_latest();
                     let release = package
                         .changelog
                         .as_ref()
@@ -120,12 +117,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Package(#[from] package::Error),
-    #[error("Could not determine the current version of the package")]
-    #[diagnostic(
-        code(variables::no_current_version),
-        url("https://knope.tech/reference/concepts/package#version")
-    )]
-    NoCurrentVersion,
     #[error("Could not find a changelog entry for version {0}")]
     #[diagnostic(
         code(variables::no_changelog_entry),
@@ -201,10 +192,8 @@ mod test_replace_variables {
         variables.insert("$$".to_string(), Variable::Version);
         let mut state = State::new(None, None, None, vec![package().0], Vec::new());
         let version = Version::new(1, 2, 3, None);
-        state.packages[0].pending_actions = vec![Action::CreateRelease(CreateRelease {
-            version: version.clone(),
-            notes: String::new(),
-        })];
+        let package_versions = version.clone().into();
+        state.packages[0].version = Some(package_versions);
 
         let result = replace_variables(
             Template {

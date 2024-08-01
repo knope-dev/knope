@@ -3,25 +3,22 @@ use std::{fmt, fmt::Display, path::PathBuf};
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changelog::Sections, changes::Change, package::Name, Action, CreateRelease, GoVersioning,
-    PackageNewError, Version, VersionedFile, VersionedFileError,
+    changelog::Sections,
+    changes::Change,
+    package::Name,
+    semver::{PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
+    Action, CreateRelease, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-use super::{
-    changelog,
-    changelog::Changelog,
-    conventional_commits, semver,
-    semver::{bump, ConventionalRule},
-    CurrentVersions, Release, Rule,
-};
+use super::{changelog, changelog::Changelog, conventional_commits, semver, Release};
 use crate::{
     config, fs,
     fs::{read_to_string, WriteType},
-    integrations::git::{self, add_files, get_current_versions_from_tags},
+    integrations::git::{self, add_files},
     state::RunType,
     step::{
         releases::{
@@ -34,7 +31,7 @@ use crate::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
-    pub(crate) version: Option<CurrentVersions>,
+    pub(crate) version: Option<PackageVersions>,
     pub(crate) versioning: knope_versioning::Package,
     pub(crate) changelog: Option<Changelog>,
     pub(crate) pending_changes: Vec<Change>,
@@ -65,20 +62,25 @@ impl Package {
     /// version in versioned files. The version from files takes precedent over version from tag.
     ///
     /// This is cached, so anything that mutates version is expected to update it here as well!
-    pub(crate) fn get_version(&mut self, all_tags: &[String]) -> &CurrentVersions {
+    pub(crate) fn get_version(&mut self, all_tags: &[String]) -> &PackageVersions {
         if self.version.is_none() {
             debug!("Looking for Git tags matching package name.");
-            let mut current_versions =
-                get_current_versions_from_tags(self.name().as_custom(), all_tags);
+            let mut versions = PackageVersions::from_tags(self.name().as_custom(), all_tags);
 
             if let Some(version_from_files) = self.versioning.get_version() {
-                current_versions.update_version(version_from_files.clone());
+                versions.update_version(version_from_files.clone());
             }
 
-            self.version = Some(current_versions);
+            self.version = Some(versions);
         }
         #[allow(clippy::unwrap_used)] // This was just inserted up above!
         self.version.as_ref().unwrap()
+    }
+
+    /// Like [`Self::get_version`], but removes from (or never stores in) cache.
+    pub(crate) fn take_version(&mut self, all_tags: &[String]) -> PackageVersions {
+        self.get_version(all_tags);
+        self.version.take().unwrap_or_default()
     }
 
     fn validate(package: config::Package, git_tags: &[String]) -> Result<Self, Error> {
@@ -124,22 +126,6 @@ impl Package {
         })
     }
 
-    fn bump_rule(changes: &[Change]) -> ConventionalRule {
-        changes
-            .iter()
-            .map(|change| {
-                let rule = ConventionalRule::from(&change.change_type);
-                debug!(
-                    // TODO: move this to knope-versioning
-                    "{change_source}\n\timplies rule {rule}",
-                    change_source = change.original_source
-                );
-                rule
-            })
-            .max()
-            .unwrap_or_default()
-    }
-
     pub(crate) fn prepare_release(
         mut self,
         run_type: RunType<()>,
@@ -174,7 +160,7 @@ impl Package {
 
         let mut pending_actions = self.versioning.apply_changes(&changes);
 
-        let versions = self.get_version(all_tags).clone();
+        let versions = self.take_version(all_tags);
         let new_version = if let Some(version) = self.override_version.take() {
             debug!("Using overridden version {version}");
             VersionFromSource {
@@ -182,25 +168,24 @@ impl Package {
                 source: VersionSource::OverrideVersion,
             }
         } else {
-            let bump_rule = Self::bump_rule(&changes);
+            let stable_rule = StableRule::from(&changes);
             let rule = if let Some(pre_label) = prerelease_label {
                 Rule::Pre {
                     label: pre_label.clone(),
-                    stable_rule: bump_rule,
+                    stable_rule,
                 }
             } else {
-                bump_rule.into()
+                stable_rule.into()
             };
-            let version = bump(versions.clone(), &rule)?;
+            let version = versions.clone().bump(&rule)?;
             VersionFromSource {
                 version,
                 source: VersionSource::Calculated,
             }
         };
 
-        let (actions, current_versions) = self.write_version(versions, new_version.clone())?;
+        let actions = self.write_version(new_version.clone())?;
         pending_actions.extend(actions);
-        self.version = Some(current_versions);
         let is_prerelease = new_version.version.is_prerelease();
         let (actions, changelog) = make_release(
             self.changelog,
@@ -222,10 +207,9 @@ impl Package {
     ///
     /// If `dry_run` is `true`, the version won't be written to any files.
     pub(crate) fn write_version(
-        &self,
-        mut current_versions: CurrentVersions,
+        &mut self,
         new_version: VersionFromSource,
-    ) -> Result<(Vec<Action>, CurrentVersions), knope_versioning::SetError> {
+    ) -> Result<Vec<Action>, knope_versioning::SetError> {
         let go_versioning = match &new_version {
             VersionFromSource {
                 source: VersionSource::OverrideVersion,
@@ -233,13 +217,12 @@ impl Package {
             } => GoVersioning::BumpMajor,
             _ => self.go_versioning,
         };
-        self.versioning
+        let actions = self
+            .versioning
             .clone()
-            .set_version(&new_version.version, go_versioning)
-            .map(|actions| {
-                current_versions.update_version(new_version.version);
-                (actions, current_versions)
-            })
+            .set_version(&new_version.version, go_versioning)?;
+        self.version = Some(new_version.version.into());
+        Ok(actions)
     }
 }
 
@@ -416,8 +399,7 @@ pub(crate) enum Error {
     #[diagnostic(transparent)]
     Semver(#[from] semver::Error),
     #[error(transparent)]
-    #[diagnostic(transparent)]
-    InvalidPreReleaseVersion(#[from] semver::InvalidPreReleaseVersion),
+    PreReleaseNotFound(#[from] PreReleaseNotFound),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Fs(#[from] fs::Error),

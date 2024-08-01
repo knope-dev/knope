@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt::Display, str::FromStr};
 
 use itertools::Itertools;
-use knope_versioning::{changelog::Sections, changes::Change, Version};
+use knope_versioning::{changelog::Sections, changes::Change, semver::Version};
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use thiserror::Error;

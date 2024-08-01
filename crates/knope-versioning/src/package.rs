@@ -19,8 +19,8 @@ use crate::{
     changes::{
         conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
     },
+    semver::Version,
     versioned_file::{GoVersioning, SetError, VersionedFile},
-    Version,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]

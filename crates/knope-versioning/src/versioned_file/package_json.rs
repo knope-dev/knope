@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use thiserror::Error;
 
-use crate::{action::Action, Version};
+use crate::{action::Action, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackageJson {

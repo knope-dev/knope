@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 default-members = ["crates/knope"]
-members = ["crates/knope", "crates/knope-config", "crates/knope-versioning"]
+members = ["crates/knope-config", "crates/knope-versioning", "crates/knope"]
 
 [profile.release]
 strip = true
