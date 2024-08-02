@@ -266,13 +266,12 @@ mod tests {
     #[test]
     fn custom_footers() {
         let commits = ["chore: ignored type\n\nignored-footer: ignored\ncustom-footer: hello"];
-        let mut changelog_sections = Sections::default();
-        changelog_sections.add_section(
+        let changelog_sections = Sections(vec![(
             "custom section".into(),
             vec![ChangeType::Custom(SectionSource::CommitFooter(
                 "custom-footer".into(),
             ))],
-        );
+        )]);
         let changes =
             changes_from_commit_messages(&commits, None, &changelog_sections).collect_vec();
         assert_eq!(

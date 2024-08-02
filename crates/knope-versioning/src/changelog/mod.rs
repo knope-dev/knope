@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TODO: Remove this
-
 use std::{fmt, fmt::Display};
 
 use git_conventional::FooterToken;
@@ -7,7 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::changes::ChangeType;
 
-// TODO: Rename this to Entry? What is this exactly?
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum SectionSource {
     CommitFooter(CommitFooter),
@@ -107,10 +104,6 @@ impl Sections {
         ]
     }
 
-    pub(crate) fn add_section(&mut self, name: SectionName, change_types: Vec<ChangeType>) {
-        self.0.push((name, change_types));
-    }
-
     pub fn iter(&self) -> impl Iterator<Item = &(SectionName, Vec<ChangeType>)> {
         self.0.iter()
     }
@@ -130,19 +123,6 @@ impl Sections {
                     })
             })
         })
-    }
-
-    // TODO: get rid of this?
-    pub(crate) fn footers(&self) -> Vec<CommitFooter> {
-        self.0
-            .iter()
-            .flat_map(|(_, sources)| {
-                sources.iter().filter_map(|source| match source {
-                    ChangeType::Custom(SectionSource::CommitFooter(footer)) => Some(footer.clone()),
-                    _ => None,
-                })
-            })
-            .collect()
     }
 
     pub(crate) fn contains_footer(&self, footer: &git_conventional::Footer) -> bool {
