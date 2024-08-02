@@ -29,10 +29,7 @@ pub(crate) fn bump_version_and_update_state(
                 (Bump::Rule(rule.clone()), package.go_versioning)
             };
             let actions = package.versioning.bump_version(bump, go_versioning)?;
-            let version = package.versioning.versions.clone().into_latest();
-            let is_prerelease = version.is_prerelease();
-            package.pending_actions =
-                execute_prepare_actions(run_type.of(actions), is_prerelease, false)?;
+            package.pending_actions = execute_prepare_actions(run_type.of(actions), false)?;
             Ok(package)
         })
         .collect::<Result<Vec<Package>, Error>>()?;

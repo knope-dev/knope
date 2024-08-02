@@ -121,7 +121,14 @@ impl Package {
         .collect()
     }
 
-    /// Apply changes to the package
+    /// Apply changes to the package, updating the internal version and returning the list of
+    /// actions to take to complete the changes.
+    ///
+    /// # Errors
+    ///
+    /// If the file is a `go.mod`, there are rules about what versions are allowed.
+    ///
+    /// If serialization of some sort fails, which is a bug, then this will return an error.
     pub fn apply_changes(
         &mut self,
         changes: &[Change],

@@ -132,7 +132,6 @@ impl Package {
 
         let mut pending_actions = self.versioning.apply_changes(&changes, change_config)?;
         let new_version = self.versioning.versions.clone().into_latest();
-        let is_prerelease = new_version.is_prerelease();
         let (actions, changelog) = make_release(
             self.changelog,
             &self.versioning.changelog_sections,
@@ -142,8 +141,7 @@ impl Package {
         pending_actions.extend(actions);
         self.changelog = changelog;
 
-        self.pending_actions =
-            execute_prepare_actions(run_type.of(pending_actions), is_prerelease, true)?;
+        self.pending_actions = execute_prepare_actions(run_type.of(pending_actions), true)?;
 
         Ok(self)
     }
@@ -182,7 +180,6 @@ fn make_release(
 
 pub(crate) fn execute_prepare_actions(
     actions: RunType<Vec<Action>>,
-    is_prerelease: bool,
     stage_to_git: bool,
 ) -> Result<Vec<Action>, git::Error> {
     let (run_type, actions) = actions.take();
@@ -204,9 +201,6 @@ pub(crate) fn execute_prepare_actions(
                 paths_to_stage.push(path);
             }
             Action::RemoveFile { path } => {
-                if is_prerelease {
-                    continue; // Don't remove changesets for prereleases
-                }
                 // Ignore errors since we remove changesets per-package
                 fs::remove_file(run_type.of(&path.to_path(""))).ok();
                 paths_to_stage.push(path);
