@@ -138,7 +138,9 @@ mod test_replace_variables {
     use std::{env::current_dir, fs::write};
 
     use knope_versioning::{
-        changelog::Sections, package::Name, Action, CreateRelease, VersionedFile, VersionedFilePath,
+        package::Name,
+        release_notes::{ReleaseNotes, Sections},
+        Action, CreateRelease, VersionedFile, VersionedFilePath,
     };
     use pretty_assertions::assert_eq;
     use relative_path::PathExt;
@@ -163,7 +165,9 @@ mod test_replace_variables {
                         &[""],
                     )
                     .unwrap()],
-                    Sections::default(),
+                    ReleaseNotes {
+                        sections: Sections::default(),
+                    },
                     None,
                 )
                 .unwrap(),

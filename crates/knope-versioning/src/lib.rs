@@ -1,7 +1,7 @@
 mod action;
-pub mod changelog;
 pub mod changes;
 pub mod package;
+pub mod release_notes;
 pub mod semver;
 pub mod versioned_file;
 

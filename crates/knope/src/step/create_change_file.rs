@@ -38,7 +38,8 @@ pub(crate) fn run(state: RunType<State>) -> Result<RunType<State>, Error> {
             let package_name = package.name();
             let change_types = package
                 .versioning
-                .changelog_sections
+                .release_notes
+                .sections
                 .iter()
                 .flat_map(|(_, sources)| sources.iter().filter_map(ChangeType::to_changeset_type))
                 .collect_vec();

@@ -16,10 +16,10 @@ use tracing::debug;
 
 use crate::{
     action::Action,
-    changelog::Sections as ChangelogSections,
     changes::{
         conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
     },
+    release_notes::ReleaseNotes,
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
     versioned_file::{GoVersioning, SetError, VersionedFile},
 };
@@ -29,7 +29,7 @@ pub struct Package {
     pub name: Name,
     pub versions: PackageVersions,
     versioned_files: Option<Vec<VersionedFile>>,
-    pub changelog_sections: ChangelogSections,
+    pub release_notes: ReleaseNotes,
     pub scopes: Option<Vec<String>>,
 }
 
@@ -43,7 +43,7 @@ impl Package {
         name: Name,
         git_tags: &[S],
         versioned_files: Vec<VersionedFile>,
-        changelog_sections: ChangelogSections,
+        release_notes: ReleaseNotes,
         scopes: Option<Vec<String>>,
     ) -> Result<Self, NewError> {
         if let Some(first) = versioned_files.first() {
@@ -68,7 +68,7 @@ impl Package {
             name,
             versions,
             versioned_files: Some(versioned_files),
-            changelog_sections,
+            release_notes,
             scopes,
         })
     }
@@ -115,7 +115,7 @@ impl Package {
         changes_from_commit_messages(
             commit_messages,
             self.scopes.as_ref(),
-            &self.changelog_sections,
+            &self.release_notes.sections,
         )
         .chain(Change::from_changesets(&self.name, changeset))
         .collect()

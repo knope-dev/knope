@@ -4,8 +4,8 @@ pub use changeset::CHANGESET_DIR;
 use git_conventional::FooterToken;
 
 use crate::{
-    changelog::{CommitFooter, CustomChangeType, SectionSource},
     package,
+    release_notes::{CommitFooter, CustomChangeType, SectionSource},
 };
 
 mod changeset;

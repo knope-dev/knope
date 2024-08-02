@@ -5,6 +5,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::changes::ChangeType;
 
+/// Defines how release notes are handled for a package.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReleaseNotes {
+    pub sections: Sections,
+}
+
+/// Where a custom release section comes from, for example, the custom change type "extra" in
+/// a change file might correspond to a section called "Extras" in the changelog.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum SectionSource {
     CommitFooter(CommitFooter),

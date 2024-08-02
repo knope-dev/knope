@@ -3,9 +3,9 @@ use std::{fmt, fmt::Display, path::PathBuf};
 use itertools::Itertools;
 use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
-    changelog::Sections,
     changes::Change,
     package::{BumpError, ChangeConfig, Name},
+    release_notes::{ReleaseNotes, Sections},
     semver::Version,
     Action, CreateRelease, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
 };
@@ -76,7 +76,9 @@ impl Package {
             package.name,
             git_tags,
             versioned_files,
-            convert_to_versioning(package.extra_changelog_sections),
+            ReleaseNotes {
+                sections: convert_to_versioning(package.extra_changelog_sections),
+            },
             package.scopes,
         )?;
         Ok(Self {
@@ -134,7 +136,7 @@ impl Package {
         let new_version = self.versioning.versions.clone().into_latest();
         let (actions, changelog) = make_release(
             self.changelog,
-            &self.versioning.changelog_sections,
+            &self.versioning.release_notes.sections,
             &changes,
             new_version,
         )?;
@@ -253,7 +255,9 @@ impl Package {
                     &[""],
                 )
                 .unwrap()],
-                Sections::default(),
+                ReleaseNotes {
+                    sections: Sections::default(),
+                },
                 None,
             )
             .unwrap(),

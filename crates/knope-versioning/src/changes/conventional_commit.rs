@@ -1,7 +1,7 @@
 use git_conventional::{Commit, Footer, Type};
 
 use super::{Change, ChangeSource, ChangeType};
-use crate::changelog::Sections;
+use crate::release_notes::Sections;
 
 /// Try to parse each commit message as a [conventional commit](https://www.conventionalcommits.org/).
 ///
@@ -117,8 +117,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        changelog::{SectionSource, Sections},
         changes::ChangeSource,
+        release_notes::{SectionSource, Sections},
     };
 
     #[test]
