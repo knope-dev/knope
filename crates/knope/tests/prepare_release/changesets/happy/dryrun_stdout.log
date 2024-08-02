@@ -1,8 +1,8 @@
+Would add the following to Cargo.toml: 2.0.0
+Would add the following to pyproject.toml: 2.0.0
 Would delete .changeset/a_complex_feature.md
 Would delete .changeset/breaking_change.md
 Would delete .changeset/simple_feature.md
-Would add the following to Cargo.toml: 2.0.0
-Would add the following to pyproject.toml: 2.0.0
 Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
@@ -24,11 +24,11 @@ println!("This format is nicer to read");
 ```
 
 Would add files to git:
+  Cargo.toml
+  pyproject.toml
   .changeset/a_complex_feature.md
   .changeset/breaking_change.md
   .changeset/simple_feature.md
-  Cargo.toml
-  pyproject.toml
   FIRST_CHANGELOG.md
 Would add the following to package.json: 0.4.7
 Would add the following to SECOND_CHANGELOG.md: 

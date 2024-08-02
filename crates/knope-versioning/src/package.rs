@@ -20,7 +20,7 @@ use crate::{
     changes::{
         conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
     },
-    semver::{PackageVersions, PreReleaseNotFound, Rule, Version},
+    semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
     versioned_file::{GoVersioning, SetError, VersionedFile},
 };
 
@@ -121,22 +121,61 @@ impl Package {
         .collect()
     }
 
-    #[must_use]
-    pub fn apply_changes(&self, changes: &[Change]) -> Vec<Action> {
-        changes
-            .iter()
-            .filter_map(|change| {
-                if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
-                    // TODO: Don't remove for prereleases!
+    /// Apply changes to the package
+    pub fn apply_changes(
+        &mut self,
+        changes: &[Change],
+        config: ChangeConfig,
+    ) -> Result<Vec<Action>, BumpError> {
+        if let Name::Custom(package_name) = &self.name {
+            debug!("Determining new version for {package_name}");
+        }
+
+        let mut actions = match config {
+            ChangeConfig::Force(version) => {
+                debug!("Using overridden version {version}");
+                self.bump_version(Bump::Manual(version), GoVersioning::BumpMajor)?
+            }
+            ChangeConfig::Calculate {
+                prerelease_label,
+                go_versioning,
+            } => {
+                let stable_rule = StableRule::from(changes);
+                let rule = if let Some(pre_label) = prerelease_label {
+                    Rule::Pre {
+                        label: pre_label.clone(),
+                        stable_rule,
+                    }
+                } else {
+                    stable_rule.into()
+                };
+                self.bump_version(Bump::Rule(rule), go_versioning)?
+            }
+        };
+        let pre_release = self.versions.latest_is_prerelease();
+        actions.extend(changes.iter().filter_map(|change| {
+            if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                if pre_release {
+                    None
+                } else {
                     Some(Action::RemoveFile {
                         path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
                     })
-                } else {
-                    None
                 }
-            })
-            .collect()
+            } else {
+                None
+            }
+        }));
+        Ok(actions)
     }
+}
+
+pub enum ChangeConfig {
+    Force(Version),
+    Calculate {
+        prerelease_label: Option<Label>,
+        go_versioning: GoVersioning,
+    },
 }
 
 #[derive(Debug, Error)]

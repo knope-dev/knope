@@ -5,8 +5,8 @@ use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
     changelog::Sections,
     changes::Change,
-    package::{Bump, BumpError, Name},
-    semver::{Rule, StableRule, Version},
+    package::{BumpError, ChangeConfig, Name},
+    semver::Version,
     Action, CreateRelease, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
@@ -122,30 +122,15 @@ impl Package {
             return Ok(self);
         }
 
-        if let Name::Custom(package_name) = &self.versioning.name {
-            debug!("Determining new version for {package_name}");
-        }
-
-        let mut pending_actions = self.versioning.apply_changes(&changes);
-
-        let (bump, go_versioning) = if let Some(version) = self.override_version.take() {
-            debug!("Using overridden version {version}");
-            (Bump::Manual(version), GoVersioning::BumpMajor)
-        } else {
-            let stable_rule = StableRule::from(&changes);
-            let rule = if let Some(pre_label) = prerelease_label {
-                Rule::Pre {
-                    label: pre_label.clone(),
-                    stable_rule,
-                }
-            } else {
-                stable_rule.into()
-            };
-            (Bump::Rule(rule), self.go_versioning)
+        let change_config = match self.override_version.take() {
+            Some(version) => ChangeConfig::Force(version),
+            None => ChangeConfig::Calculate {
+                prerelease_label: prerelease_label.clone(),
+                go_versioning: self.go_versioning,
+            },
         };
 
-        let actions = self.versioning.bump_version(bump, go_versioning)?;
-        pending_actions.extend(actions);
+        let mut pending_actions = self.versioning.apply_changes(&changes, change_config)?;
         let new_version = self.versioning.versions.clone().into_latest();
         let is_prerelease = new_version.is_prerelease();
         let (actions, changelog) = make_release(

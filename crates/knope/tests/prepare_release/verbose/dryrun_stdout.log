@@ -32,10 +32,10 @@ changeset breaking_change.md
 changeset feature.md
 	implies rule MINOR
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
-Would delete .changeset/breaking_change.md
-Would delete .changeset/feature.md
 Would add the following to Cargo.toml: 2.0.0
 Would add the following to pyproject.toml: 2.0.0
+Would delete .changeset/breaking_change.md
+Would delete .changeset/feature.md
 Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
@@ -65,10 +65,10 @@ And even some details which aren't visible
 - A bug fix
 
 Would add files to git:
-  .changeset/breaking_change.md
-  .changeset/feature.md
   Cargo.toml
   pyproject.toml
+  .changeset/breaking_change.md
+  .changeset/feature.md
   FIRST_CHANGELOG.md
 Getting conventional commits since last release of package second
 Only checking commits with scopes: ["second"]
@@ -93,8 +93,8 @@ commit feat: A feature with a separate breaking change
 changeset feature.md
 	implies rule PATCH
 Rule is MAJOR, but major component is 0. Bumping minor component from 0.4.6 to 0.5.0
-Would delete .changeset/feature.md
 Would add the following to package.json: 0.5.0
+Would delete .changeset/feature.md
 Would add the following to SECOND_CHANGELOG.md: 
 ## 0.5.0 ([DATE])
 
@@ -119,6 +119,6 @@ Would add the following to SECOND_CHANGELOG.md:
 And even some details which aren't visible
 
 Would add files to git:
-  .changeset/feature.md
   package.json
+  .changeset/feature.md
   SECOND_CHANGELOG.md

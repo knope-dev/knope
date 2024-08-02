@@ -113,6 +113,10 @@ impl PackageVersions {
         }
     }
 
+    pub(crate) fn latest_is_prerelease(&self) -> bool {
+        !self.prereleases.is_empty()
+    }
+
     /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.
     ///
     /// # Versions 0.x
