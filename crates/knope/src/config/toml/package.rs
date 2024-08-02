@@ -1,13 +1,11 @@
 use std::ops::Not;
 
 use knope_config::changelog_section::ChangelogSection;
-use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use toml::Spanned;
 
-use crate::step::releases::{changelog, package::Asset};
+use crate::step::releases::package::Asset;
 
 /// Represents a single package in `knope.toml`.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
@@ -42,11 +40,4 @@ impl From<crate::config::Package> for Package {
             ignore_go_major_versioning: package.ignore_go_major_versioning,
         }
     }
-}
-
-#[derive(Debug, Diagnostic, Error)]
-pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Changelog(#[from] changelog::Error),
 }

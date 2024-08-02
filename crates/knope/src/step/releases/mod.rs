@@ -5,15 +5,14 @@ use itertools::Itertools;
 use knope_versioning::{
     changes::CHANGESET_DIR,
     package::Bump,
+    release_notes,
     semver::{PackageVersions, Rule},
     Action, CreateRelease, ReleaseTag,
 };
 use miette::Diagnostic;
 use tracing::debug;
 
-pub(crate) use self::{
-    changelog::Release, package::Package, semver::bump_version_and_update_state,
-};
+pub(crate) use self::{package::Package, semver::bump_version_and_update_state};
 use crate::{
     fs,
     integrations::{git, git::create_tag},
@@ -75,14 +74,6 @@ pub(crate) fn bump_version(state: RunType<State>, rule: &Rule) -> Result<RunType
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
-#[error("Failed to format current time")]
-#[diagnostic(
-    code(releases::time_format),
-    help("This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope")
-)]
-pub(crate) struct TimeError(#[from] time::error::Format);
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
     #[error("No packages are ready to release")]
     #[diagnostic(
@@ -108,7 +99,7 @@ pub(crate) enum Error {
     Gitea(#[from] gitea::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Parse(#[from] changelog::ParseError),
+    Parse(#[from] release_notes::ParseError),
     #[error(transparent)]
     #[diagnostic(
         code(changesets::could_not_read_changeset),

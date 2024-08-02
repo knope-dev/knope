@@ -126,9 +126,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     SemVer(#[from] semver::Error),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    ChangelogParse(#[from] crate::step::releases::changelog::ParseError),
 }
 
 #[cfg(test)]
@@ -147,7 +144,7 @@ mod test_replace_variables {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::step::issues::Issue;
+    use crate::step::{issues::Issue, releases::changelog::load_changelog};
 
     fn package() -> (Package, TempDir) {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -172,11 +169,7 @@ mod test_replace_variables {
                 )
                 .unwrap(),
                 changelog: Some(
-                    changelog
-                        .relative_to(current_dir().unwrap())
-                        .unwrap()
-                        .try_into()
-                        .unwrap(),
+                    load_changelog(changelog.relative_to(current_dir().unwrap()).unwrap()).unwrap(),
                 ),
                 ..Package::default()
             },

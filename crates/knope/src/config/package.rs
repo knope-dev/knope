@@ -9,11 +9,7 @@ use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
 
 use super::toml;
-use crate::{
-    fs,
-    fs::read_to_string,
-    step::releases::{changelog, package::Asset},
-};
+use crate::{fs, fs::read_to_string, step::releases::package::Asset};
 
 /// Represents a single package in `knope.toml`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -202,9 +198,6 @@ pub(crate) enum CargoWorkspaceError {
 
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Changelog(#[from] changelog::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     CargoWorkspace(#[from] CargoWorkspaceError),

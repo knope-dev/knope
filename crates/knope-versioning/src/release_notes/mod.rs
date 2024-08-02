@@ -1,5 +1,8 @@
+mod changelog;
+
 use std::{fmt, fmt::Display};
 
+pub use changelog::*;
 use git_conventional::FooterToken;
 use serde::{Deserialize, Serialize};
 

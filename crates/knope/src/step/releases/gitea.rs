@@ -1,11 +1,11 @@
-use knope_versioning::{package, CreateRelease, ReleaseTag};
+use knope_versioning::{
+    package,
+    release_notes::{release_title, TimeError},
+    CreateRelease, ReleaseTag,
+};
 use miette::{diagnostic, Diagnostic};
 
-use super::TimeError;
-use crate::{
-    config, integrations::gitea as api, state, state::RunType,
-    step::releases::changelog::release_title,
-};
+use crate::{config, integrations::gitea as api, state, state::RunType};
 
 pub(crate) fn release(
     package_name: &package::Name,

@@ -5,7 +5,7 @@ use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
     changes::Change,
     package::{BumpError, ChangeConfig, Name},
-    release_notes::{ReleaseNotes, Sections},
+    release_notes::{Changelog, HeaderLevel, Release, ReleaseNotes, Sections, TimeError},
     semver::Version,
     Action, CreateRelease, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
 };
@@ -14,13 +14,13 @@ use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
-use super::{changelog, changelog::Changelog, conventional_commits, semver, Release};
+use super::{conventional_commits, semver};
 use crate::{
     config, fs,
     fs::{read_to_string, WriteType},
     integrations::git::{self, add_files},
     state::RunType,
-    step::{releases::changelog::HeaderLevel, PrepareRelease},
+    step::{releases::changelog::load_changelog, PrepareRelease},
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -83,7 +83,7 @@ impl Package {
         )?;
         Ok(Self {
             versioning,
-            changelog: package.changelog.map(TryInto::try_into).transpose()?,
+            changelog: package.changelog.map(load_changelog).transpose()?,
             assets: package.assets,
             go_versioning: if package.ignore_go_major_versioning {
                 GoVersioning::IgnoreMajorRules
@@ -155,7 +155,7 @@ fn make_release(
     changelog_sections: &Sections,
     changes: &[Change],
     version: Version,
-) -> Result<(Vec<Action>, Option<Changelog>), crate::step::releases::changelog::Error> {
+) -> Result<(Vec<Action>, Option<Changelog>), TimeError> {
     let release_header_level = changelog
         .as_ref()
         .map_or(HeaderLevel::H1, |changelog| changelog.release_header_level);
@@ -309,7 +309,7 @@ pub(crate) struct AssetNameError {
 pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Changelog(#[from] changelog::Error),
+    Time(#[from] TimeError),
     #[error("Could not serialize generated TOML")]
     #[diagnostic(
         code(releases::package::could_not_serialize_toml),

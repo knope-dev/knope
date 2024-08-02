@@ -21,6 +21,7 @@ pub enum Action {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CreateRelease {
+    // TODO: this should have the title in it...
     pub version: Version,
     pub notes: String,
 }

@@ -41,7 +41,6 @@ serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_yaml = { workspace = true }
 thiserror = { workspace = true }
-time = { version = "0.3.36" }
 toml = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = "0.3.18"
@@ -51,6 +50,7 @@ ureq = { version = "2.9.6", features = ["json"] }
 pretty_assertions = "1.4.0"
 snapbox = { version = "0.6.0", features = ["path"] }
 tempfile = "3.10.1"
+time = { version = "0.3.36" }
 
 [lints]
 workspace = true
