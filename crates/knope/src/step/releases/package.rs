@@ -5,9 +5,9 @@ use knope_config::changelog_section::convert_to_versioning;
 use knope_versioning::{
     changes::Change,
     package::{BumpError, ChangeConfig, Name},
-    release_notes::{Changelog, HeaderLevel, Release, ReleaseNotes, Sections, TimeError},
+    release_notes::{ReleaseNotes, TimeError},
     semver::Version,
-    Action, CreateRelease, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
+    Action, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -133,14 +133,10 @@ impl Package {
 
         let mut pending_actions = self.versioning.apply_changes(&changes, change_config)?;
         let new_version = self.versioning.versions.clone().into_latest();
-        let (actions, changelog) = make_release(
-            self.versioning.release_notes.changelog,
-            &self.versioning.release_notes.sections,
-            &changes,
-            new_version,
-        )?;
+        let (actions, release_notes) =
+            make_release(self.versioning.release_notes, &changes, new_version)?;
         pending_actions.extend(actions);
-        self.versioning.release_notes.changelog = changelog;
+        self.versioning.release_notes = release_notes;
 
         self.pending_actions = execute_prepare_actions(run_type.of(pending_actions), true)?;
 
@@ -150,18 +146,15 @@ impl Package {
 
 /// Adds content from `release` to `Self::changelog` if it exists.
 fn make_release(
-    mut changelog: Option<Changelog>,
-    changelog_sections: &Sections,
+    mut release_notes: ReleaseNotes,
     changes: &[Change],
     version: Version,
-) -> Result<(Vec<Action>, Option<Changelog>), TimeError> {
-    let release_header_level = changelog
-        .as_ref()
-        .map_or(HeaderLevel::H1, |changelog| changelog.release_header_level);
-    let release = Release::new(&version, changes, changelog_sections, release_header_level)?;
+) -> Result<(Vec<Action>, ReleaseNotes), TimeError> {
+    let release = release_notes.create_release(version, changes)?;
     let mut pending_actions = Vec::new();
 
-    changelog = if let Some(changelog) = changelog {
+    let changelog = if let Some(changelog) = release_notes.changelog {
+        // TODO: Move this into knope-versioning
         let (changelog, new_changes) = changelog.with_release(&release);
         pending_actions.push(Action::WriteToFile {
             path: changelog.path.clone(),
@@ -172,11 +165,9 @@ fn make_release(
     } else {
         None
     };
-    pending_actions.push(Action::CreateRelease(CreateRelease {
-        version,
-        notes: release.body_at_h1(),
-    }));
-    Ok((pending_actions, changelog))
+    pending_actions.push(Action::CreateRelease(release));
+    release_notes.changelog = changelog;
+    Ok((pending_actions, release_notes))
 }
 
 pub(crate) fn execute_prepare_actions(
@@ -255,7 +246,7 @@ impl Package {
                 )
                 .unwrap()],
                 ReleaseNotes {
-                    sections: Sections::default(),
+                    sections: knope_versioning::release_notes::Sections::default(),
                     changelog: None,
                 },
                 None,

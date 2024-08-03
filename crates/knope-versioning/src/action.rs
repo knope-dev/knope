@@ -1,6 +1,6 @@
 use relative_path::RelativePathBuf;
 
-use crate::{package, semver::Version};
+use crate::{package, release_notes::Release, semver::Version};
 
 /// Actions to take to finish updating a package
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -16,14 +16,7 @@ pub enum Action {
     AddTag {
         tag: String,
     },
-    CreateRelease(CreateRelease),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CreateRelease {
-    // TODO: this should have the title in it...
-    pub version: Version,
-    pub notes: String,
+    CreateRelease(Release),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

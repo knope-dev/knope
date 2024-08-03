@@ -1,11 +1,11 @@
-use std::{cmp::Ordering, fmt::Display, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
 use itertools::Itertools;
 use relative_path::RelativePathBuf;
 use thiserror::Error;
-use time::{macros::format_description, Date, OffsetDateTime};
+use time::{macros::format_description, Date};
 
-use crate::{changes::Change, release_notes::Sections, semver::Version};
+use crate::{release_notes::Release, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Changelog {
@@ -13,6 +13,7 @@ pub struct Changelog {
     pub path: RelativePathBuf,
     /// The content that's been written to `path`
     pub content: String,
+    /// The header level of the title of each release (the version + date)
     pub release_header_level: HeaderLevel,
 }
 
@@ -47,7 +48,7 @@ impl Changelog {
         );
 
         let mut lines = self.content.lines();
-        let title = loop {
+        let (title, version) = loop {
             let line = lines.next()?;
             if !line.starts_with(&expected_header_start) {
                 continue;
@@ -56,10 +57,14 @@ impl Changelog {
                 continue;
             };
             if header_level == self.release_header_level && *version == title_version {
-                break line.to_string();
+                break (
+                    // Release titles should not be markdown formatted
+                    line.trim_start_matches('#').trim().to_string(),
+                    title_version,
+                );
             }
         };
-        let body = lines
+        let notes = lines
             .take_while(|line| {
                 !line.starts_with(&format!(
                     // Next version
@@ -67,11 +72,15 @@ impl Changelog {
                     release_header_level = self.release_header_level
                 ))
             })
+            .map(|line| match self.release_header_level {
+                HeaderLevel::H1 => line,
+                HeaderLevel::H2 => reduce_header_level(line),
+            })
             .join("\n");
-        (!body.is_empty()).then_some(Release {
+        (!notes.is_empty()).then_some(Release {
             title,
-            body,
-            header_level: self.release_header_level,
+            version,
+            notes,
         })
     }
 
@@ -80,9 +89,21 @@ impl Changelog {
     pub fn with_release(mut self, release: &Release) -> (Self, String) {
         let mut not_written = true;
         let new_changes = format!(
-            "{title}\n\n{body}",
+            "{header_level} {title}\n\n{body}",
+            header_level = self.release_header_level,
             title = release.title,
-            body = release.body
+            body = release
+                .notes
+                .lines()
+                .map(|line| {
+                    // Release notes are at H1, we need to format them properly for this changelog
+                    if line.starts_with('#') && self.release_header_level == HeaderLevel::H2 {
+                        format!("#{line}")
+                    } else {
+                        line.to_string()
+                    }
+                })
+                .join("\n")
         );
         let mut new_content = String::with_capacity(self.content.len() + new_changes.len());
 
@@ -141,217 +162,6 @@ fn reduce_header_level(line: &str) -> &str {
     }
 }
 
-/// The Markdown body for this release.
-///
-/// Since [`Self::header_level`] refers to the header level
-/// of the title, each section in this body is one level lower. More concretely, if
-/// [`Self::header_level`] is [`HeaderLevel::H1`], the body will look like this:
-///
-/// ```markdown
-/// ## Breaking changes
-///
-/// - a change
-///
-/// ### a complex change
-///
-/// with details
-///
-/// ## Features
-///
-/// - a feature
-///
-/// ### a complex feature
-///
-/// with details
-/// ```
-///
-/// If [`Self::header_level`] is [`HeaderLevel::H2`], the body will look like this:
-///
-/// ```markdown
-/// ### Breaking changes
-///
-/// - a change
-///
-/// #### a complex change
-///
-/// with details
-///
-/// ### Features
-///
-/// - a feature
-///
-/// #### a complex feature
-///
-/// with details
-/// ```
-///
-/// GitHub releases _always_ use the [`HeaderLevel::H1`] format, so they call [`Self::body_at_h1`]
-/// which is like this function, but with optional conversion.
-pub fn sections_to_markdown<T: Iterator<Item = Section>>(
-    header_level: HeaderLevel,
-    sections: T,
-) -> String {
-    let mut res = String::new();
-    for Section { title, body } in sections {
-        res.push_str(&format!("\n\n{header_level}# {title}\n\n{body}",));
-    }
-    let res = res.trim().to_string();
-    res.trim().to_string()
-}
-
-/// The details of a single release (version) within a changelog.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Release {
-    pub title: String,
-    pub body: String,
-    header_level: HeaderLevel,
-}
-
-impl Release {
-    /// Create new release notes for use in changelogs / forges.
-    ///
-    /// # Errors
-    ///
-    /// If the current date cannot be formatted
-    pub fn new(
-        version: &Version,
-        changes: &[Change],
-        changelog_sections: &Sections,
-        release_header_level: HeaderLevel,
-    ) -> Result<Self, TimeError> {
-        let sections = changelog_sections
-            .iter()
-            .filter_map(|(section_name, sources)| {
-                let changes = changes
-                    .iter()
-                    .filter_map(|change| {
-                        if sources.contains(&change.change_type) {
-                            Some(ChangeDescription::from(change))
-                        } else {
-                            None
-                        }
-                    })
-                    .sorted()
-                    .collect_vec();
-                if changes.is_empty() {
-                    None
-                } else {
-                    Some(Section {
-                        title: section_name.to_string(),
-                        body: build_body(changes, release_header_level),
-                    })
-                }
-            })
-            .collect_vec();
-
-        Ok(Self {
-            title: release_title(version, Some(release_header_level), true)?,
-            body: sections_to_markdown(release_header_level, sections.iter().cloned()),
-            header_level: release_header_level,
-        })
-    }
-
-    pub fn body_at_h1(self) -> String {
-        match self.header_level {
-            HeaderLevel::H1 => self.body,
-            HeaderLevel::H2 => self.body.lines().map(reduce_header_level).join("\n"),
-        }
-    }
-}
-
-/// Create the title of a new release.
-///
-/// If a `markdown_header` is passed, the title will be formatted as a Markdown header.
-///
-/// # Errors
-///
-/// If the current date can't be formatted
-pub fn release_title(
-    version: &Version,
-    markdown_header: Option<HeaderLevel>,
-    add_date: bool,
-) -> Result<String, TimeError> {
-    let mut title = if let Some(markdown_header) = markdown_header {
-        format!("{} ", markdown_header.as_str())
-    } else {
-        String::new()
-    };
-    title.push_str(&version.to_string());
-    if add_date {
-        let format = format_description!("[year]-[month]-[day]");
-        let date_str = OffsetDateTime::now_utc().date().format(&format)?;
-        title.push_str(" (");
-        title.push_str(&date_str);
-        title.push(')');
-    };
-    Ok(title)
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum ChangeDescription {
-    Simple(String),
-    Complex(String, String),
-}
-
-impl Ord for ChangeDescription {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Self::Simple(_), Self::Complex(_, _)) => Ordering::Less,
-            (Self::Complex(_, _), Self::Simple(_)) => Ordering::Greater,
-            _ => Ordering::Equal,
-        }
-    }
-}
-
-impl PartialOrd for ChangeDescription {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl From<&Change> for ChangeDescription {
-    fn from(change: &Change) -> Self {
-        let mut lines = change
-            .description
-            .trim()
-            .lines()
-            .skip_while(|it| it.is_empty());
-        let summary: String = lines
-            .next()
-            .unwrap_or_default()
-            .chars()
-            .skip_while(|it| *it == '#' || *it == ' ')
-            .collect();
-        let body: String = lines.skip_while(|it| it.is_empty()).join("\n");
-        if body.is_empty() {
-            Self::Simple(summary)
-        } else {
-            Self::Complex(summary, body)
-        }
-    }
-}
-
-fn build_body(changes: Vec<ChangeDescription>, header_level: HeaderLevel) -> String {
-    let mut body = String::new();
-    let mut changes = changes.into_iter().peekable();
-    while let Some(change) = changes.next() {
-        match change {
-            ChangeDescription::Simple(summary) => {
-                body.push_str(&format!("- {summary}"));
-            }
-            ChangeDescription::Complex(summary, details) => {
-                body.push_str(&format!("{header_level}## {summary}\n\n{details}"));
-            }
-        }
-        match changes.peek() {
-            Some(ChangeDescription::Simple(_)) => body.push('\n'),
-            Some(ChangeDescription::Complex(_, _)) => body.push_str("\n\n"),
-            None => (),
-        }
-    }
-    body
-}
-
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod test_parse_title {
@@ -401,59 +211,6 @@ mod test_parse_title {
     }
 }
 
-#[cfg(test)]
-mod test_change_description {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-    use crate::changes::{ChangeSource, ChangeType};
-
-    #[test]
-    fn conventional_commit() {
-        let change = Change {
-            change_type: ChangeType::Feature,
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "a feature".into(),
-        };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Simple("a feature".to_string())
-        );
-    }
-
-    #[test]
-    fn simple_changeset() {
-        let change = Change {
-            change_type: ChangeType::Feature,
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "# a feature\n\n\n\n".into(),
-        };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Simple("a feature".to_string())
-        );
-    }
-
-    #[test]
-    fn complex_changeset() {
-        let change = Change {
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            change_type: ChangeType::Feature,
-            description: "# a feature\n\nwith details\n\n- first\n- second".into(),
-        };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Complex(
-                "a feature".to_string(),
-                "with details\n\n- first\n- second".to_string()
-            )
-        );
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum ParseError {
@@ -482,16 +239,7 @@ pub enum ParseError {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Section {
     /// The title of the section _without_ any header level (e.g., "Breaking changes" not "### Breaking changes")
-    title: String,
+    pub(crate) title: String,
     /// The Markdown body of the section including any headers.
-    body: String,
+    pub(crate) body: String,
 }
-
-#[derive(Debug, thiserror::Error)]
-#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
-#[error("Failed to format current time")]
-#[cfg_attr(feature = "miette", diagnostic(
-    code(release_notes::time_format),
-    help("This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope")
-))]
-pub struct TimeError(#[from] time::error::Format);

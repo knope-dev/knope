@@ -1,16 +1,12 @@
-use knope_versioning::{
-    package,
-    release_notes::{release_title, TimeError},
-    CreateRelease, ReleaseTag,
-};
-use miette::{diagnostic, Diagnostic};
+pub(crate) use api::CreateReleaseError as Error;
+use knope_versioning::{package, release_notes::Release, ReleaseTag};
 
 use super::package::Asset;
 use crate::{config::GitHub, integrations::github as api, state, state::RunType};
 
 pub(crate) fn release(
     package_name: &package::Name,
-    release: &CreateRelease,
+    release: &Release,
     github_state: RunType<state::GitHub>,
     github_config: &GitHub,
     assets: Option<&Vec<Asset>>,
@@ -22,7 +18,7 @@ pub(crate) fn release(
     } else {
         String::new()
     };
-    name.push_str(&release_title(version, None, true)?);
+    name.push_str(&release.title);
 
     api::create_release(
         &name,
@@ -33,15 +29,4 @@ pub(crate) fn release(
         github_config,
         assets,
     )
-    .map_err(Error::from)
-}
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
-pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Api(#[from] api::CreateReleaseError),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    TimeError(#[from] TimeError),
 }

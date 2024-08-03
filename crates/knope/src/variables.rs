@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use knope_versioning::{semver::Version, Action, CreateRelease};
+use knope_versioning::{release_notes::Release, semver::Version, Action};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -58,8 +58,8 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                     first_package(state)?
                 };
                 if let Some(body) = package.pending_actions.iter().find_map(|action| {
-                    if let Action::CreateRelease(CreateRelease { notes, .. }) = action {
-                        Some(notes)
+                    if let Action::CreateRelease(Release { notes, .. }) = action {
+                        Some(notes) // TODO: convert this to changelog style?
                     } else {
                         None
                     }
@@ -74,7 +74,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                         .as_ref()
                         .and_then(|changelog| changelog.get_release(&version))
                         .ok_or_else(|| Error::NoChangelogEntry(version))?;
-                    template = template.replace(&var_name, &release.body);
+                    template = template.replace(&var_name, &release.notes);
                 }
                 package_cache = Some(package);
             }
@@ -139,7 +139,7 @@ mod test_replace_variables {
     use knope_versioning::{
         package::Name,
         release_notes::{ReleaseNotes, Sections},
-        Action, CreateRelease, VersionedFile, VersionedFilePath,
+        Action, VersionedFile, VersionedFilePath,
     };
     use pretty_assertions::assert_eq;
     use relative_path::PathExt;
@@ -243,8 +243,9 @@ mod test_replace_variables {
         let mut state = State::new(None, None, None, vec![package().0], Vec::new());
         let version = Version::new(1, 2, 3, None);
         let changelog_entry = "some content being put in the changelog";
-        state.packages[0].pending_actions = vec![Action::CreateRelease(CreateRelease {
+        state.packages[0].pending_actions = vec![Action::CreateRelease(Release {
             version: version.clone(),
+            title: "title".to_string(),
             notes: changelog_entry.to_string(),
         })];
 

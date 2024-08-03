@@ -5,9 +5,9 @@ use itertools::Itertools;
 use knope_versioning::{
     changes::CHANGESET_DIR,
     package::Bump,
-    release_notes,
+    release_notes::Release,
     semver::{PackageVersions, Rule},
-    Action, CreateRelease, ReleaseTag,
+    Action, ReleaseTag,
 };
 use miette::Diagnostic;
 use tracing::debug;
@@ -97,9 +97,6 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Gitea(#[from] gitea::Error),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Parse(#[from] release_notes::ParseError),
     #[error(transparent)]
     #[diagnostic(
         code(changesets::could_not_read_changeset),
@@ -198,7 +195,7 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
 
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
-fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<CreateRelease> {
+fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<Release> {
     let current_version = package.versioning.versions.clone().into_latest();
     debug!("Searching for last package tag to determine if there's a release to release");
     let last_tag = PackageVersions::from_tags(package.name().as_custom(), all_tags).into_latest();
@@ -211,8 +208,4 @@ fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<C
         .changelog
         .as_ref()
         .and_then(|changelog| changelog.get_release(&current_version))
-        .map(|release| CreateRelease {
-            version: current_version,
-            notes: release.body_at_h1(),
-        })
 }
