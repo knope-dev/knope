@@ -206,6 +206,8 @@ fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<C
         return None;
     }
     package
+        .versioning
+        .release_notes
         .changelog
         .as_ref()
         .and_then(|changelog| changelog.get_release(&current_version))

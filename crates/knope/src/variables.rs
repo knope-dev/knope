@@ -68,6 +68,8 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 } else {
                     let version = package.versioning.versions.clone().into_latest();
                     let release = package
+                        .versioning
+                        .release_notes
                         .changelog
                         .as_ref()
                         .and_then(|changelog| changelog.get_release(&version))
@@ -164,13 +166,14 @@ mod test_replace_variables {
                     .unwrap()],
                     ReleaseNotes {
                         sections: Sections::default(),
+                        changelog: Some(
+                            load_changelog(changelog.relative_to(current_dir().unwrap()).unwrap())
+                                .unwrap(),
+                        ),
                     },
                     None,
                 )
                 .unwrap(),
-                changelog: Some(
-                    load_changelog(changelog.relative_to(current_dir().unwrap()).unwrap()).unwrap(),
-                ),
                 ..Package::default()
             },
             temp_dir,

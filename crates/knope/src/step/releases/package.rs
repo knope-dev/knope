@@ -26,7 +26,6 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Package {
     pub(crate) versioning: knope_versioning::Package,
-    pub(crate) changelog: Option<Changelog>,
     pub(crate) pending_changes: Vec<Change>,
     pub(crate) pending_actions: Vec<Action>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
@@ -78,12 +77,12 @@ impl Package {
             versioned_files,
             ReleaseNotes {
                 sections: convert_to_versioning(package.extra_changelog_sections),
+                changelog: package.changelog.map(load_changelog).transpose()?,
             },
             package.scopes,
         )?;
         Ok(Self {
             versioning,
-            changelog: package.changelog.map(load_changelog).transpose()?,
             assets: package.assets,
             go_versioning: if package.ignore_go_major_versioning {
                 GoVersioning::IgnoreMajorRules
@@ -135,13 +134,13 @@ impl Package {
         let mut pending_actions = self.versioning.apply_changes(&changes, change_config)?;
         let new_version = self.versioning.versions.clone().into_latest();
         let (actions, changelog) = make_release(
-            self.changelog,
+            self.versioning.release_notes.changelog,
             &self.versioning.release_notes.sections,
             &changes,
             new_version,
         )?;
         pending_actions.extend(actions);
-        self.changelog = changelog;
+        self.versioning.release_notes.changelog = changelog;
 
         self.pending_actions = execute_prepare_actions(run_type.of(pending_actions), true)?;
 
@@ -257,11 +256,11 @@ impl Package {
                 .unwrap()],
                 ReleaseNotes {
                     sections: Sections::default(),
+                    changelog: None,
                 },
                 None,
             )
             .unwrap(),
-            changelog: None,
             pending_changes: vec![],
             pending_actions: vec![],
             override_version: None,

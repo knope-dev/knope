@@ -12,6 +12,7 @@ use crate::changes::ChangeType;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReleaseNotes {
     pub sections: Sections,
+    pub changelog: Option<Changelog>,
 }
 
 /// Where a custom release section comes from, for example, the custom change type "extra" in
