@@ -1,7 +1,7 @@
-use std::{fmt, fmt::Display, path::PathBuf};
+use std::{fmt, fmt::Display};
 
 use itertools::Itertools;
-use knope_config::changelog_section::convert_to_versioning;
+use knope_config::{changelog_section::convert_to_versioning, Asset};
 use knope_versioning::{
     changes::Change,
     package::{BumpError, ChangeConfig, Name},
@@ -11,7 +11,6 @@ use knope_versioning::{
 };
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
-use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 
 use super::{conventional_commits, semver};
@@ -266,33 +265,6 @@ impl Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name())
     }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub(crate) struct Asset {
-    pub(crate) path: PathBuf,
-    name: Option<String>,
-}
-
-impl Asset {
-    pub(crate) fn name(&self) -> Result<String, AssetNameError> {
-        if let Some(name) = &self.name {
-            Ok(name.clone())
-        } else {
-            self.path
-                .file_name()
-                .ok_or(AssetNameError {
-                    path: self.path.clone(),
-                })
-                .map(|name| name.to_string_lossy().into_owned())
-        }
-    }
-}
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
-#[error("No asset name set, and name could not be determined from path {path}")]
-pub(crate) struct AssetNameError {
-    path: PathBuf,
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

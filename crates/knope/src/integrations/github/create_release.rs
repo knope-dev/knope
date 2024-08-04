@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-
 use datta::UriTemplate;
+use knope_config::{Asset, AssetNameError};
 use miette::Diagnostic;
+use relative_path::RelativePathBuf;
 use tracing::info;
 
 use crate::{
@@ -11,7 +11,6 @@ use crate::{
     },
     state,
     state::RunType,
-    step::releases::package::{Asset, AssetNameError},
 };
 
 pub(crate) fn create_release(
@@ -60,11 +59,12 @@ pub(crate) fn create_release(
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
         for asset in assets {
-            let file =
-                std::fs::read(&asset.path).map_err(|source| Error::CouldNotReadAssetFile {
+            let file = std::fs::read(&asset.path.to_path("")).map_err(|source| {
+                Error::CouldNotReadAssetFile {
                     path: asset.path.clone(),
                     source,
-                })?;
+                }
+            })?;
             let asset_name = asset.name()?;
             let upload_url = upload_template.set("name", asset_name.as_str()).build();
             agent
@@ -118,7 +118,7 @@ fn github_release_dry_run(
         info!("Would upload assets to GitHub:");
         for asset in assets {
             let asset_name = asset.name()?;
-            info!("- {asset_name} from {path}", path = asset.path.display(),);
+            info!("- {asset_name} from {path}", path = asset.path);
         }
     }
     Ok(())
@@ -134,7 +134,7 @@ pub(crate) enum Error {
     help("This could be a permissions issue or the file may not exist relative to the current working directory.")
     )]
     CouldNotReadAssetFile {
-        path: PathBuf,
+        path: RelativePathBuf,
         source: std::io::Error,
     },
     #[error(transparent)]

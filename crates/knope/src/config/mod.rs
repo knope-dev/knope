@@ -69,16 +69,19 @@ impl Config {
         #[derive(Serialize)]
         struct SimpleConfig {
             #[serde(skip_serializing_if = "Option::is_none")]
-            package: Option<toml::Package>,
+            package: Option<knope_config::Package>,
             #[serde(skip_serializing_if = "Vec::is_empty")]
-            packages: Vec<toml::Package>,
+            packages: Vec<knope_config::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
             gitea: Option<Gitea>,
         }
 
         let (package, packages) = if self.packages.len() < 2 {
-            (self.packages.pop().map(toml::Package::from), Vec::new())
+            (
+                self.packages.pop().map(knope_config::Package::from),
+                Vec::new(),
+            )
         } else {
             (None, self.packages.into_iter().map(Package::into).collect())
         };

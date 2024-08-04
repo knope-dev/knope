@@ -1,15 +1,14 @@
 use std::{ops::Range, path::PathBuf, str::FromStr};
 
-use ::toml::{from_str, Value};
+use ::toml::{from_str, Spanned, Value};
 use itertools::Itertools;
-use knope_config::changelog_section::ChangelogSection;
+use knope_config::{Asset, ChangelogSection};
 use knope_versioning::{package, versioned_file::cargo, VersionedFilePath};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
 
-use super::toml;
-use crate::{fs, fs::read_to_string, step::releases::package::Asset};
+use crate::{fs, fs::read_to_string};
 
 /// Represents a single package in `knope.toml`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -101,10 +100,10 @@ impl Package {
 
     pub(crate) fn from_toml(
         name: package::Name,
-        package: toml::Package,
+        package: knope_config::Package,
         source_code: &str,
     ) -> std::result::Result<Self, VersionedFileError> {
-        let toml::Package {
+        let knope_config::Package {
             versioned_files,
             changelog,
             scopes,
@@ -145,6 +144,23 @@ impl Package {
             assets,
             ignore_go_major_versioning,
         })
+    }
+}
+
+impl From<Package> for knope_config::Package {
+    fn from(package: Package) -> Self {
+        Self {
+            versioned_files: package
+                .versioned_files
+                .iter()
+                .map(|it| Spanned::new(0..0, it.as_path()))
+                .collect(),
+            changelog: package.changelog,
+            scopes: package.scopes,
+            extra_changelog_sections: package.extra_changelog_sections,
+            assets: package.assets,
+            ignore_go_major_versioning: package.ignore_go_major_versioning,
+        }
     }
 }
 

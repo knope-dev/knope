@@ -1,9 +1,9 @@
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_config::Package;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
 
-use super::package::Package;
 use crate::workflow::Workflow;
 
 /// Loads a `crate::Config` from a TOML file with as much span information as possible for better

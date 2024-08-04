@@ -1,7 +1,7 @@
 pub(crate) use api::CreateReleaseError as Error;
+use knope_config::Asset;
 use knope_versioning::{package, release_notes::Release, ReleaseTag};
 
-use super::package::Asset;
 use crate::{config::GitHub, integrations::github as api, state, state::RunType};
 
 pub(crate) fn release(
