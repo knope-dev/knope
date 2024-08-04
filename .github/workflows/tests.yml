@@ -31,12 +31,16 @@ jobs:
           gh release download "v${BINSTALL_VERSION}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-unknown-linux-musl.tgz"
           tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
           cp cargo-binstall $HOME/.cargo/bin
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Install cargo-binstall
         if: matrix.os == 'windows-latest'
         run: |
           gh release download "v${BINSTALL_VERSION}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-pc-windows-msvc.zip"
           unzip cargo-binstall-x86_64-pc-windows-msvc.zip
           cp cargo-binstall.exe $HOME/.cargo/bin
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Install nightly toolchain (for formatting)
         if: matrix.os == 'ubuntu-latest'
