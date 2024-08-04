@@ -17,7 +17,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4.1.7
-
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         if: matrix.os == 'ubuntu-latest'
@@ -36,7 +35,7 @@ jobs:
       - name: Install cargo-binstall
         if: matrix.os == 'windows-latest'
         run: |
-          gh release download "v${BINSTALL_VERSION}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-pc-windows-msvc.zip"
+          gh release download "v${{ env.BINSTALL_VERSION }}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-pc-windows-msvc.zip"
           unzip cargo-binstall-x86_64-pc-windows-msvc.zip
           cp cargo-binstall.exe $HOME/.cargo/bin
         env:
