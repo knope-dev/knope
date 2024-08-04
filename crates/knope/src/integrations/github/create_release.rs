@@ -59,7 +59,7 @@ pub(crate) fn create_release(
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
         for asset in assets {
-            let file = std::fs::read(&asset.path.to_path("")).map_err(|source| {
+            let file = std::fs::read(asset.path.to_path("")).map_err(|source| {
                 Error::CouldNotReadAssetFile {
                     path: asset.path.clone(),
                     source,
