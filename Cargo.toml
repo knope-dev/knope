@@ -23,8 +23,8 @@ unsafe_code = "forbid"
 warnings = "deny"
 
 [workspace.lints.clippy]
-all = "deny"
-pedantic = "deny"
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
 
 # cargo-deny handles this
 multiple_crate_versions = "allow"
