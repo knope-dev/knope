@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use relative_path::RelativePathBuf;
 
 use crate::{package, release_notes::Release, semver::Version};
@@ -32,13 +34,13 @@ impl ReleaseTag {
 
     #[must_use]
     pub fn is_release_tag(val: &str, package_name: &package::Name) -> bool {
-        // TODO: check for version component?
-        val.starts_with(&Self::tag_prefix(package_name))
+        let tag_prefix = Self::tag_prefix(package_name);
+        val.strip_prefix(&tag_prefix)
+            .and_then(|version_str| Version::from_str(version_str).ok())
+            .is_some()
     }
 
     /// The prefix for tags for a particular package
-    ///
-    /// TODO: Is this used anywhere other than `new`?
     fn tag_prefix(package_name: &package::Name) -> String {
         package_name
             .as_custom()

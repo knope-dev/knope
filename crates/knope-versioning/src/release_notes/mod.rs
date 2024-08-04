@@ -151,8 +151,7 @@ fn build_body(changes: Vec<ChangeDescription>) -> String {
 /// # Errors
 ///
 /// If the current date can't be formatted
-/// TODO: does this need to be pub?
-pub fn release_title(version: &Version) -> Result<String, TimeError> {
+fn release_title(version: &Version) -> Result<String, TimeError> {
     let format = format_description!("[year]-[month]-[day]");
     let date_str = OffsetDateTime::now_utc().date().format(&format)?;
     Ok(format!("{version} ({date_str})"))
