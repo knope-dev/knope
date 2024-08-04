@@ -34,6 +34,7 @@
       "description": "Update cargo-binstall in GitHub Actions",
       "customType": "regex",
       "datasourceTemplate": "crate",
+      "depNameTemplate": "cargo-binstall",
       "fileMatch": [
         "^\\.github/workflows/.*\\.yml$"
       ],
