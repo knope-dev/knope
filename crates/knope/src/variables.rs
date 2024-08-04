@@ -134,50 +134,43 @@ pub(crate) enum Error {
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::indexing_slicing)]
 mod test_replace_variables {
-    use std::{env::current_dir, fs::write};
-
     use knope_versioning::{
         package::Name,
-        release_notes::{ReleaseNotes, Sections},
+        release_notes::{Changelog, HeaderLevel, ReleaseNotes, Sections},
         Action, VersionedFile, VersionedFilePath,
     };
     use pretty_assertions::assert_eq;
-    use relative_path::PathExt;
-    use tempfile::TempDir;
+    use relative_path::RelativePathBuf;
 
     use super::*;
-    use crate::step::{issues::Issue, releases::changelog::load_changelog};
+    use crate::step::issues::Issue;
 
-    fn package() -> (Package, TempDir) {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let changelog = temp_dir.path().join("CHANGELOG.md");
-        write(&changelog, "").unwrap();
+    fn package() -> Package {
+        let changelog = Changelog {
+            path: RelativePathBuf::default(),
+            content: String::new(),
+            release_header_level: HeaderLevel::H1,
+        };
 
-        (
-            Package {
-                versioning: knope_versioning::Package::new(
-                    Name::Default,
+        Package {
+            versioning: knope_versioning::Package::new(
+                Name::Default,
+                &[""],
+                vec![VersionedFile::new(
+                    &VersionedFilePath::new("Cargo.toml".into()).unwrap(),
+                    "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
                     &[""],
-                    vec![VersionedFile::new(
-                        &VersionedFilePath::new("Cargo.toml".into()).unwrap(),
-                        "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
-                        &[""],
-                    )
-                    .unwrap()],
-                    ReleaseNotes {
-                        sections: Sections::default(),
-                        changelog: Some(
-                            load_changelog(changelog.relative_to(current_dir().unwrap()).unwrap())
-                                .unwrap(),
-                        ),
-                    },
-                    None,
                 )
-                .unwrap(),
-                ..Package::default()
-            },
-            temp_dir,
-        )
+                .unwrap()],
+                ReleaseNotes {
+                    sections: Sections::default(),
+                    changelog: Some(changelog),
+                },
+                None,
+            )
+            .unwrap(),
+            ..Package::default()
+        }
     }
 
     #[test]
@@ -185,7 +178,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let mut state = State::new(None, None, None, vec![package().0], Vec::new());
+        let mut state = State::new(None, None, None, vec![package()], Vec::new());
         let version = Version::new(1, 2, 3, None);
         let package_versions = version.clone().into();
         state.packages[0].versioning.versions = package_versions;
@@ -240,7 +233,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
-        let mut state = State::new(None, None, None, vec![package().0], Vec::new());
+        let mut state = State::new(None, None, None, vec![package()], Vec::new());
         let version = Version::new(1, 2, 3, None);
         let changelog_entry = "some content being put in the changelog";
         state.packages[0].pending_actions = vec![Action::CreateRelease(Release {
