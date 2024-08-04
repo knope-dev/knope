@@ -10,6 +10,32 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.17.0 (2024-08-04)
+
+### Breaking Changes
+
+#### Forge date now matches CHANGELOG date
+
+If you prepare a release and generate a changelog Markdown file in one workflow, then create a forge release in a
+separate workflow, the forge release date will now match the changelog date (if any). Previously, the forge release got
+the current date (at the time of running the workflow).
+
+#### Match scope-filtering behavior to docs
+
+The docs state, in regard to a `package.scopes` config, "if not defined, Knope will consider all scopes."
+
+This is the intended behavior, but wasn't true until now. The actual behavior, for multi-package repos, was that if
+_any_ package had scopes defined, _all_ would start filtering scopes.
+
+This has been corrected, packages are now more independent in their scope filtering behavior.
+
+#### Properly use case insensitivity when checking conventional commits
+
+Per the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/#specification) all units of a
+conventional commit are case-insensitive.
+Until now, Knope was treating commit footers and scopes as case-sensitive. This has been corrected, which may result
+in different behavior for some projects.
+
 ## 0.16.2 (2024-04-14)
 
 ### Features

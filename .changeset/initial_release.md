@@ -1,5 +1,0 @@
----
-config: minor
----
-
-# Initial release
