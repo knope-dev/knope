@@ -59,7 +59,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 };
                 if let Some(body) = package.pending_actions.iter().find_map(|action| {
                     if let Action::CreateRelease(Release { notes, .. }) = action {
-                        Some(notes) // TODO: convert this to changelog style?
+                        Some(notes)
                     } else {
                         None
                     }

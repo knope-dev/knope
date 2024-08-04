@@ -235,11 +235,3 @@ pub enum ParseError {
     )]
     HeaderLevel,
 }
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Section {
-    /// The title of the section _without_ any header level (e.g., "Breaking changes" not "### Breaking changes")
-    pub(crate) title: String,
-    /// The Markdown body of the section including any headers.
-    pub(crate) body: String,
-}

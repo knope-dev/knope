@@ -6,7 +6,7 @@ use itertools::Itertools;
 pub use release::Release;
 use time::{macros::format_description, OffsetDateTime};
 
-use crate::{changes::Change, release_notes::changelog::Section, semver::Version, Action};
+use crate::{changes::Change, semver::Version, Action};
 
 mod changelog;
 mod config;
@@ -30,36 +30,27 @@ impl ReleaseNotes {
         version: Version,
         changes: &[Change],
     ) -> Result<Vec<Action>, TimeError> {
-        let sections = self
-            .sections
-            .iter()
-            .filter_map(|(section_name, sources)| {
-                let changes = changes
-                    .iter()
-                    .filter_map(|change| {
-                        if sources.contains(&change.change_type) {
-                            Some(ChangeDescription::from(change))
-                        } else {
-                            None
-                        }
-                    })
-                    .sorted()
-                    .collect_vec();
-                if changes.is_empty() {
-                    None
-                } else {
-                    Some(Section {
-                        // TODO: remove this struct?
-                        title: section_name.to_string(),
-                        body: build_body(changes),
-                    })
-                }
-            })
-            .collect_vec();
         let mut notes = String::new();
-        for Section { title, body } in sections {
-            notes.push_str(&format!("\n\n## {title}\n\n{body}",));
+        for (section_name, sources) in self.sections.iter() {
+            let changes = changes
+                .iter()
+                .filter_map(|change| {
+                    if sources.contains(&change.change_type) {
+                        Some(ChangeDescription::from(change))
+                    } else {
+                        None
+                    }
+                })
+                .sorted()
+                .collect_vec();
+            if !changes.is_empty() {
+                notes.push_str("\n\n## ");
+                notes.push_str(section_name.as_ref());
+                notes.push_str("\n\n");
+                notes.push_str(&build_body(changes));
+            }
         }
+
         let notes = notes.trim().to_string();
         let release = Release {
             title: release_title(&version)?,
@@ -67,7 +58,7 @@ impl ReleaseNotes {
             notes,
         };
 
-        let mut pending_actions = Vec::new();
+        let mut pending_actions = Vec::with_capacity(2);
         if let Some(changelog) = self.changelog.as_mut() {
             let new_changes = changelog.with_release(&release);
             pending_actions.push(Action::WriteToFile {
