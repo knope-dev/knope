@@ -31,9 +31,7 @@ inquire = { version = "0.7.5", default-features = false, features = [
 ] }
 itertools = { workspace = true }
 knope-config = { path = "../knope-config", version = "0.0.1" }
-knope-versioning = { workspace = true, features = [
-  "miette",
-] }
+knope-versioning = { workspace = true, features = ["miette"] }
 miette = { workspace = true, features = ["fancy"] }
 platform-dirs = "0.3.0"
 relative-path = { workspace = true }
