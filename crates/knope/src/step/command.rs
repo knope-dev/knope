@@ -1,7 +1,9 @@
 use indexmap::IndexMap;
 use miette::Diagnostic;
+use tracing::info;
 
 use crate::{
+    state::State,
     variables,
     variables::{replace_variables, Template, Variable},
     RunType,
@@ -10,27 +12,24 @@ use crate::{
 /// Run the command string `command` in the current shell after replacing the keys of `variables`
 /// with the values that the [`Variable`]s represent.
 pub(crate) fn run_command(
-    mut run_type: RunType,
+    state: RunType<State>,
     mut command: String,
     shell: bool,
     variables: Option<IndexMap<String, Variable>>,
-) -> Result<RunType, Error> {
-    let (state, dry_run_stdout) = match &mut run_type {
-        RunType::DryRun { state, stdout } => (state, Some(stdout)),
-        RunType::Real(state) => (state, None),
-    };
+) -> Result<RunType<State>, Error> {
+    let (run_type, mut state) = state.take();
     if let Some(variables) = variables {
         command = replace_variables(
             Template {
                 template: command,
                 variables,
             },
-            state,
+            &mut state,
         )?;
     }
-    if let Some(stdout) = dry_run_stdout {
-        writeln!(stdout, "Would run {command}")?;
-        return Ok(run_type);
+    if let RunType::DryRun(()) = run_type {
+        info!("Would run {command}");
+        return Ok(run_type.of(state));
     }
     let status = if shell {
         execute::shell(command).status()?
@@ -38,7 +37,7 @@ pub(crate) fn run_command(
         execute::command(command).status()?
     };
     if status.success() {
-        return Ok(run_type);
+        return Ok(run_type.of(state));
     }
     Err(Error::Command(status))
 }
@@ -64,20 +63,13 @@ pub(crate) enum Error {
 mod test_run_command {
 
     use super::*;
-    use crate::{workflow::Verbose, State};
+    use crate::State;
 
     #[test]
     fn test() {
         let command = "echo \"hello\"";
         let result = run_command(
-            RunType::Real(State::new(
-                None,
-                None,
-                None,
-                Vec::new(),
-                Vec::new(),
-                Verbose::No,
-            )),
+            RunType::Real(State::new(None, None, None, Vec::new(), Vec::new())),
             command.to_string(),
             false,
             None,
@@ -86,14 +78,7 @@ mod test_run_command {
         assert!(result.is_ok());
 
         let result = run_command(
-            RunType::Real(State::new(
-                None,
-                None,
-                None,
-                Vec::new(),
-                Vec::new(),
-                Verbose::No,
-            )),
+            RunType::Real(State::new(None, None, None, Vec::new(), Vec::new())),
             String::from("exit 1"),
             false,
             None,

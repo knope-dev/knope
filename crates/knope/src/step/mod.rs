@@ -1,6 +1,5 @@
 use indexmap::IndexMap;
-use knope_versioning::Label;
-use log::error;
+use knope_versioning::semver::{Label, Rule};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -8,11 +7,12 @@ use thiserror::Error;
 use crate::{
     integrations::git,
     prompt,
-    state::RunType,
+    state::{RunType, State},
     variables::{Template, Variable},
 };
 
 pub mod command;
+pub(crate) mod create_change_file;
 mod create_pull_request;
 pub mod issues;
 pub mod releases;
@@ -63,7 +63,7 @@ pub(crate) enum Step {
     },
     /// Bump the version of the project in any supported formats found using a
     /// [Semantic Versioning](https://semver.org) rule.
-    BumpVersion(releases::Rule),
+    BumpVersion(Rule),
     /// Run a command in your current shell after optionally replacing some variables.
     Command {
         /// The command to run, with any variable keys you wish to replace.
@@ -76,7 +76,7 @@ pub(crate) enum Step {
         shell: Option<bool>,
     },
     /// This will look through all commits since the last tag and parse any
-    /// [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will
+    /// [Stable Commits](https://www.conventionalcommits.org/en/v1.0.0/) it finds. It will
     /// then bump the project version (depending on the rule determined from the commits) and add
     /// a new Changelog entry using the [Keep A Changelog](https://keepachangelog.com/en/1.0.0/)
     /// format.
@@ -98,34 +98,35 @@ pub(crate) enum Step {
 }
 
 impl Step {
-    pub(crate) fn run(self, run_type: RunType) -> Result<RunType, Error> {
+    pub(crate) fn run(self, state: RunType<State>) -> Result<RunType<State>, Error> {
         Ok(match self {
-            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, run_type)?,
-            Step::TransitionJiraIssue { status } => {
-                issues::jira::transition_issue(&status, run_type)?
-            }
+            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, state)?,
+            Step::TransitionJiraIssue { status } => issues::jira::transition_issue(&status, state)?,
             Step::SelectGitHubIssue { labels } => {
-                issues::github::select_issue(labels.as_deref(), run_type)?
+                issues::github::select_issue(labels.as_deref(), state)?
             }
             Step::SelectGiteaIssue { labels } => {
-                issues::gitea::select_issue(labels.as_deref(), run_type)?
+                issues::gitea::select_issue(labels.as_deref(), state)?
             }
-            Step::SwitchBranches => git::switch_branches(run_type)?,
-            Step::RebaseBranch { to } => git::rebase_branch(&to, run_type)?,
-            Step::BumpVersion(rule) => releases::bump_version(run_type, &rule)?,
+            Step::SwitchBranches => git::switch_branches(state)?,
+            Step::RebaseBranch { to } => {
+                git::rebase_branch(&state.of(to))?;
+                state
+            }
+            Step::BumpVersion(rule) => releases::bump_version(state, &rule)?,
             Step::Command {
                 command,
                 variables,
                 shell,
-            } => command::run_command(run_type, command, shell.is_some_and(|it| it), variables)?,
+            } => command::run_command(state, command, shell.is_some_and(|it| it), variables)?,
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(run_type, &prepare_release)?
+                releases::prepare_release(state, &prepare_release)?
             }
-            Step::SelectIssueFromBranch => git::select_issue_from_current_branch(run_type)?,
-            Step::Release => releases::release(run_type)?,
-            Step::CreateChangeFile => releases::create_change_file(run_type)?,
+            Step::SelectIssueFromBranch => git::select_issue_from_current_branch(state)?,
+            Step::Release => releases::release(state)?,
+            Step::CreateChangeFile => create_change_file::run(state)?,
             Step::CreatePullRequest { base, title, body } => {
-                create_pull_request::run(&base, title, body, run_type)?
+                create_pull_request::run(&base, title, body, state)?
             }
         })
     }
@@ -160,7 +161,7 @@ pub(super) enum Error {
     Git(#[from] git::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    ChangeSet(#[from] releases::changesets::Error),
+    ChangeSet(#[from] create_change_file::Error),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Command(#[from] command::Error),

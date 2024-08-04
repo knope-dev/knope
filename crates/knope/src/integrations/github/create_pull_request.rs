@@ -1,35 +1,32 @@
 use miette::Diagnostic;
 use serde_json::json;
+use tracing::{debug, info};
 use ureq::Agent;
 
 use crate::{
     app_config, config,
-    dry_run::DryRun,
     integrations::{git, github::initialize_state, ureq_err_to_string, PullRequest},
     state,
-    workflow::Verbose,
+    state::RunType,
 };
 
 pub(crate) fn create_or_update_pull_request(
     title: &str,
     body: &str,
     base: &str,
-    state: state::GitHub,
+    state: RunType<state::GitHub>,
     config: &config::GitHub,
-    dry_run: DryRun,
-    verbose: Verbose,
 ) -> Result<state::GitHub, Error> {
     let current_branch = git::current_branch()?;
-    if let Some(stdout) = dry_run {
-        writeln!(
-            stdout,
-            "Would create or update a pull request from {current_branch} to {base}:"
-        )
-        .map_err(Error::Stdout)?;
-        writeln!(stdout, "\tTitle: {title}").map_err(Error::Stdout)?;
-        writeln!(stdout, "\tBody: {body}").map_err(Error::Stdout)?;
-        return Ok(state);
-    }
+    let state = match state {
+        RunType::DryRun(state) => {
+            info!("Would create or update a pull request from {current_branch} to {base}:");
+            info!("\tTitle: {title}");
+            info!("\tBody: {body}");
+            return Ok(state);
+        }
+        RunType::Real(state) => state,
+    };
 
     let (token, agent) = initialize_state(state)?;
     let config::GitHub { owner, repo } = config;
@@ -53,14 +50,10 @@ pub(crate) fn create_or_update_pull_request(
             activity: "fetching existing pull requests",
         })?;
     let agent = if let Some(existing) = existing_pulls.first() {
-        if let Verbose::Yes = verbose {
-            println!("Updating existing pull request: {}", existing.url);
-        }
+        debug!("Updating existing pull request: {}", existing.url);
         update_pull_request(&existing.url, title, body, &authorization_header, agent)
     } else {
-        if let Verbose::Yes = verbose {
-            println!("No matching existing pull request found, creating a new one.");
-        }
+        debug!("No matching existing pull request found, creating a new one.");
         create_pull_request(
             &base_url,
             title,
@@ -69,7 +62,6 @@ pub(crate) fn create_or_update_pull_request(
             &current_branch,
             &authorization_header,
             agent,
-            verbose,
         )
     }?;
     Ok(state::GitHub::Initialized { token, agent })
@@ -97,7 +89,6 @@ fn update_pull_request(
     Ok(agent)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn create_pull_request(
     url: &str,
     title: &str,
@@ -106,7 +97,6 @@ fn create_pull_request(
     current_branch: &str,
     auth_header: &str,
     agent: Agent,
-    verbose: Verbose,
 ) -> Result<Agent, Error> {
     let response = agent
         .post(url)
@@ -122,16 +112,14 @@ fn create_pull_request(
             err: ureq_err_to_string(source),
             activity: "creating pull request".to_string(),
         })?;
-    if let Verbose::Yes = verbose {
-        let json_data = response
-            .into_json::<serde_json::Value>()
-            .map_err(|source| Error::ApiResponse {
-                source,
-                activity: "creating pull request",
-            })?;
-        if let Some(new_pr_url) = json_data.get("url") {
-            println!("Created new pull request: {new_pr_url}");
-        }
+    let json_data = response
+        .into_json::<serde_json::Value>()
+        .map_err(|source| Error::ApiResponse {
+            source,
+            activity: "creating pull request",
+        })?;
+    if let Some(new_pr_url) = json_data.get("url") {
+        debug!("Created new pull request: {new_pr_url}");
     }
     Ok(agent)
 }
@@ -163,6 +151,4 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     AppConfig(#[from] app_config::Error),
-    #[error("Error writing to stdout: {0}")]
-    Stdout(#[source] std::io::Error),
 }

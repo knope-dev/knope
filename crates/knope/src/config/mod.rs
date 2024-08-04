@@ -3,6 +3,7 @@ use std::path::Path;
 use ::toml::{from_str, to_string, Spanned};
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_versioning::package::Name;
 use miette::{Diagnostic, IntoDiagnostic, Result, SourceSpan};
 pub(crate) use package::Package;
 use serde::Serialize;
@@ -22,9 +23,7 @@ mod toml;
 
 pub(crate) use toml::{GitHub, Gitea, Jira};
 
-pub(crate) use self::package::{
-    ChangeLogSectionName, ChangelogSection, CommitFooter, CustomChangeType,
-};
+use crate::fs::WriteType;
 
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
@@ -43,13 +42,13 @@ pub(crate) struct Config {
 impl Config {
     const CONFIG_PATH: &'static str = "knope.toml";
 
-    /// Create a Config from a TOML file or load the default config via `generate`
+    /// Create a `Config` from a TOML file or load the default config via `generate`
     ///
     /// ## Errors
-    /// 1. Cannot parse file contents into a Config
+    /// 1. Can't parse file contents into a Config
     pub(crate) fn load() -> Result<ConfigSource, Error> {
         let Ok(source_code) = fs::read_to_string(Self::CONFIG_PATH) else {
-            log::debug!("No `knope.toml` found, using default config");
+            tracing::debug!("No `knope.toml` found, using default config");
             return Ok(ConfigSource::Default(generate()?));
         };
 
@@ -70,16 +69,19 @@ impl Config {
         #[derive(Serialize)]
         struct SimpleConfig {
             #[serde(skip_serializing_if = "Option::is_none")]
-            package: Option<toml::Package>,
+            package: Option<knope_config::Package>,
             #[serde(skip_serializing_if = "Vec::is_empty")]
-            packages: Vec<toml::Package>,
+            packages: Vec<knope_config::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
             gitea: Option<Gitea>,
         }
 
         let (package, packages) = if self.packages.len() < 2 {
-            (self.packages.pop().map(toml::Package::from), Vec::new())
+            (
+                self.packages.pop().map(knope_config::Package::from),
+                Vec::new(),
+            )
         } else {
             (None, self.packages.into_iter().map(Package::into).collect())
         };
@@ -94,7 +96,11 @@ impl Config {
         #[allow(clippy::unwrap_used)] // because serde is annoying... I know it will serialize
         let serialized = to_string(&config).unwrap();
 
-        fs::write(&mut None, "", Path::new(Config::CONFIG_PATH), serialized).into_diagnostic()
+        fs::write(
+            WriteType::Real::<String, String>(serialized),
+            Path::new(Config::CONFIG_PATH),
+        )
+        .into_diagnostic()
     }
 }
 
@@ -117,14 +123,14 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                 }
             }
             (Some(package), None) => vec![Package::from_toml(
-                None,
+                Name::Default,
                 package.into_inner(),
                 &source_code,
             )?],
             (None, Some(packages)) => packages
                 .into_iter()
                 .map(|(name, spanned)| {
-                    Package::from_toml(Some(name), spanned.into_inner(), &source_code)
+                    Package::from_toml(Name::Custom(name), spanned.into_inner(), &source_code)
                 })
                 .try_collect()?,
             (None, None) => Vec::new(),

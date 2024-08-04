@@ -1,46 +1,32 @@
-use miette::{diagnostic, Diagnostic};
+pub(crate) use api::CreateReleaseError as Error;
+use knope_config::Asset;
+use knope_versioning::{package, release_notes::Release, ReleaseTag};
 
-use super::{package::Asset, PackageName, Release, TimeError};
-use crate::{config::GitHub, dry_run::DryRun, integrations::github as api, state};
+use crate::{config::GitHub, integrations::github as api, state, state::RunType};
 
 pub(crate) fn release(
-    package_name: Option<&PackageName>,
+    package_name: &package::Name,
     release: &Release,
-    github_state: state::GitHub,
+    github_state: RunType<state::GitHub>,
     github_config: &GitHub,
-    dry_run_stdout: DryRun,
     assets: Option<&Vec<Asset>>,
-    tag: &str,
+    tag: &ReleaseTag,
 ) -> Result<state::GitHub, Error> {
     let version = &release.version;
-    let mut name = if let Some(package_name) = package_name {
+    let mut name = if let package::Name::Custom(package_name) = package_name {
         format!("{package_name} ")
     } else {
         String::new()
     };
-    name.push_str(&release.title(false, true)?);
-
-    let body = release.body_at_h1().map(|body| body.trim().to_string());
+    name.push_str(&release.title);
 
     api::create_release(
         &name,
-        tag,
-        body.as_deref(),
+        tag.as_str(),
+        release.notes.trim(),
         version.is_prerelease(),
         github_state,
         github_config,
-        dry_run_stdout,
         assets,
     )
-    .map_err(Error::from)
-}
-
-#[derive(Debug, Diagnostic, thiserror::Error)]
-pub(crate) enum Error {
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    Api(#[from] api::CreateReleaseError),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    TimeError(#[from] TimeError),
 }

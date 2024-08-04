@@ -7,7 +7,7 @@ use serde::Deserialize;
 use thiserror::Error;
 use toml::Spanned;
 
-use crate::{action::Action, Version};
+use crate::{action::Action, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyProject {
@@ -53,6 +53,7 @@ impl PyProject {
         Action::WriteToFile {
             path: self.path,
             content: self.raw_toml,
+            diff: version_str,
         }
     }
 }
@@ -262,6 +263,7 @@ mod tests {
         "#
             .to_string(),
             path: RelativePathBuf::from("beep/boop"),
+            diff: "1.2.3-rc.4".to_string(),
         };
         assert_eq!(action, expected);
     }

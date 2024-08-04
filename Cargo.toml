@@ -1,10 +1,22 @@
 [workspace]
 resolver = "2"
 default-members = ["crates/knope"]
-members = ["crates/knope", "crates/knope-versioning"]
+members = ["crates/knope-config", "crates/knope-versioning", "crates/knope"]
 
 [profile.release]
 strip = true
+
+[workspace.dependencies]
+changesets = { version = "0.3.0" }
+itertools = "0.13.0"
+miette = "7.2.0"
+relative-path = { version = "1.9.3", features = ["serde"] }
+serde = { version = "1.0.200", features = ["derive"] }
+serde_json = "1.0.116"
+serde_yaml = "0.9.34"
+thiserror = "1.0.59"
+toml = "0.8.12"
+tracing = "0.1.40"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -26,3 +38,7 @@ expect_used = "deny"
 unwrap_used = "deny"
 indexing_slicing = "deny"
 missing_panics_doc = "forbid"
+
+# Use `tracing`, not print
+print_stdout = "deny"
+print_stderr = "deny"

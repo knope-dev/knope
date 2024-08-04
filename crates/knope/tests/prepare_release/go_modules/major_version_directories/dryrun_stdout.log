@@ -1,20 +1,18 @@
 Loading package v1
 go.mod has version 1.0.0
 sub_dir/go.mod has version 1.0.0
+Looking for Git tags matching package name.
+No tags found matching pattern v1/v
 Loading package v2
 v2/go.mod has version 2.0.0
 sub_dir/v2/go.mod has version 2.0.0
+Looking for Git tags matching package name.
+No tags found matching pattern v2/v
 Getting conventional commits since last release of package v1
 Only checking commits with scopes: ["v1"]
 No tags found matching pattern v1/v
 Finding ALL commits
-Getting conventional commits since last release of package v2
-Only checking commits with scopes: ["v2"]
-No tags found matching pattern v2/v
-Finding ALL commits
 Determining new version for v1
-Looking for Git tags matching package name.
-No tags found matching pattern v1/v
 commit fix(v1): A fix
 	implies rule PATCH
 Using PATCH rule to bump from 1.0.0 to 1.0.1
@@ -31,9 +29,11 @@ Would add files to git:
   go.mod
   sub_dir/go.mod
   CHANGELOG.md
-Determining new version for v2
-Looking for Git tags matching package name.
+Getting conventional commits since last release of package v2
+Only checking commits with scopes: ["v2"]
 No tags found matching pattern v2/v
+Finding ALL commits
+Determining new version for v2
 commit feat(v2): New feature
 	implies rule MINOR
 Using MINOR rule to bump from 2.0.0 to 2.1.0
@@ -50,9 +50,9 @@ Would add files to git:
   v2/go.mod
   sub_dir/v2/go.mod
   v2/CHANGELOG.md
-Would create Git tag v1/v1.0.1
 Would create Git tag v1.0.1
 Would create Git tag sub_dir/v1.0.1
-Would create Git tag v2/v2.1.0
+Would create Git tag v1/v1.0.1
 Would create Git tag v2.1.0
 Would create Git tag sub_dir/v2.1.0
+Would create Git tag v2/v2.1.0

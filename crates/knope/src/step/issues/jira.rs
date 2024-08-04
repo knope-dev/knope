@@ -1,6 +1,7 @@
 use base64::{prelude::BASE64_STANDARD as base64, Engine};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use super::Issue;
 use crate::{
@@ -10,55 +11,49 @@ use crate::{
     prompt,
     prompt::select,
     state,
-    state::RunType,
+    state::{RunType, State},
 };
 
-pub(crate) fn select_issue(status: &str, run_type: RunType) -> Result<RunType, Error> {
-    let (mut state, dry_run_stdout) = run_type.decompose();
+pub(crate) fn select_issue(status: &str, state: RunType<State>) -> Result<RunType<State>, Error> {
+    let (run_type, mut state) = state.take();
     let jira_config = state.jira_config.as_ref().ok_or(Error::NotConfigured)?;
 
-    if let Some(mut stdout) = dry_run_stdout {
-        writeln!(
-            stdout,
-            "Would query configured Jira instance for issues with status {status}"
-        )?;
-        writeln!(
-            stdout,
-            "Would prompt user to select an issue and move workflow to IssueSelected state."
-        )?;
+    if let RunType::DryRun(()) = run_type {
+        info!("Would query configured Jira instance for issues with status {status}");
+        info!("Would prompt user to select an issue and move workflow to IssueSelected state.");
         state.issue = state::Issue::Selected(Issue {
             key: "FAKE-123".to_string(),
             summary: "Test issue".to_string(),
         });
-        return Ok(RunType::DryRun { state, stdout });
+        return Ok(RunType::DryRun(state));
     }
 
     let issues = get_issues(jira_config, status)?;
     let issue = select(issues, "Select an Issue")?;
-    println!("Selected item : {}", &issue);
+    info!("Selected item : {}", &issue);
     state.issue = state::Issue::Selected(issue);
     Ok(RunType::Real(state))
 }
 
-pub(crate) fn transition_issue(status: &str, run_type: RunType) -> Result<RunType, Error> {
-    let (state, dry_run_stdout) = run_type.decompose();
+pub(crate) fn transition_issue(
+    status: &str,
+    state: RunType<State>,
+) -> Result<RunType<State>, Error> {
+    let (run_type, state) = state.take();
     let issue = match &state.issue {
         state::Issue::Selected(issue) => issue,
         state::Issue::Initial => return Err(Error::NoIssueSelected),
     };
     let jira_config = state.jira_config.as_ref().ok_or(Error::NotConfigured)?;
 
-    if let Some(mut stdout) = dry_run_stdout {
-        writeln!(
-            stdout,
-            "Would transition currently selected issue to status {status}"
-        )?;
-        return Ok(RunType::DryRun { state, stdout });
+    if let RunType::DryRun(()) = run_type {
+        info!("Would transition currently selected issue to status {status}");
+        return Ok(RunType::DryRun(state));
     }
 
     run_transition(jira_config, &issue.key, status)?;
     let key = &issue.key;
-    println!("{key} transitioned to {status}");
+    info!("{key} transitioned to {status}");
     Ok(RunType::Real(state))
 }
 
@@ -71,8 +66,8 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/jira/")
     )]
     NotConfigured,
-    #[error("Unable to write to stdout: {0}")]
-    Stdout(#[from] std::io::Error),
+    #[error("Error communicating with API")]
+    Io(#[from] std::io::Error),
     #[error("Problem communicating with Jira while {activity}: {inner}")]
     Api {
         activity: &'static str,

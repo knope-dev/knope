@@ -19,6 +19,10 @@ path = "artifacts/knope-aarch64-apple-darwin.tgz"
 versioned_files = ["crates/knope-versioning/Cargo.toml"]
 changelog = "crates/knope-versioning/CHANGELOG.md"
 
+[packages.config]
+versioned_files = ["crates/knope-config/Cargo.toml"]
+changelog = "crates/knope-config/CHANGELOG.md"
+
 [[workflows]]
 name = "prepare-release"
 

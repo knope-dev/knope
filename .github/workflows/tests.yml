@@ -9,13 +9,14 @@ on:
 jobs:
   checks:
     name: Run Checks
+    env:
+      BINSTALL_VERSION: 1.8.0
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4.1.7
-
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         if: matrix.os == 'ubuntu-latest'
@@ -23,7 +24,22 @@ jobs:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: docs/package-lock.json
-      - uses: cargo-bins/cargo-binstall@main
+      - name: Install cargo-binstall
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          gh release download "v${BINSTALL_VERSION}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-unknown-linux-musl.tgz"
+          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
+          cp cargo-binstall $HOME/.cargo/bin
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Install cargo-binstall
+        if: matrix.os == 'windows-latest'
+        run: |
+          gh release download "v${{ env.BINSTALL_VERSION }}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-pc-windows-msvc.zip"
+          unzip cargo-binstall-x86_64-pc-windows-msvc.zip
+          cp cargo-binstall.exe $HOME/.cargo/bin
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Install nightly toolchain (for formatting)
         if: matrix.os == 'ubuntu-latest'

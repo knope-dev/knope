@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use serde_yaml::{from_str, to_string, Mapping, Value};
 use thiserror::Error;
 
-use crate::{action::Action, semver, Version};
+use crate::{
+    action::Action,
+    semver::{self, Version},
+};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PubSpec {
@@ -58,6 +61,7 @@ impl PubSpec {
         Ok(Action::WriteToFile {
             path: self.path,
             content: new_content,
+            diff: new_version.to_string(),
         })
     }
 }
@@ -97,7 +101,7 @@ mod tests {
     #[test]
     fn test_get_version() {
         let content =
-            include_str!("../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
+            include_str!("../../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
 
         assert_eq!(
             PubSpec::new(RelativePathBuf::new(), content.to_string())
@@ -110,7 +114,7 @@ mod tests {
     #[test]
     fn test_set_version() {
         let content =
-            include_str!("../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
+            include_str!("../../../knope/tests/prepare_release/pubspec_yaml/in/pubspec.yaml");
 
         let action = PubSpec::new(RelativePathBuf::from("blah/blah"), content.to_string())
             .unwrap()
@@ -121,6 +125,7 @@ mod tests {
         let expected = Action::WriteToFile {
             path: RelativePathBuf::from("blah/blah"),
             content: expected_content,
+            diff: "1.2.3-rc.4".to_string(),
         };
         assert_eq!(expected, action);
     }

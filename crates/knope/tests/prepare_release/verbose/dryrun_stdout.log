@@ -1,17 +1,14 @@
 Loading package first
 Cargo.toml has version 1.2.3
 pyproject.toml has version 1.2.3
+Looking for Git tags matching package name.
 Loading package second
 package.json has version 0.4.6
+Looking for Git tags matching package name.
 Getting conventional commits since last release of package first
 Only checking commits with scopes: ["first"]
 Finding all commits since tag first/v1.2.3
-Getting conventional commits since last release of package second
-Finding all commits since tag second/v0.4.6
-Would delete: .changeset/breaking_change.md
-Would delete: .changeset/feature.md
 Determining new version for first
-Looking for Git tags matching package name.
 commit feat: A feature
 	implies rule MINOR
 commit feat!: A breaking feature
@@ -37,6 +34,8 @@ changeset feature.md
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
 Would add the following to Cargo.toml: 2.0.0
 Would add the following to pyproject.toml: 2.0.0
+Would delete .changeset/breaking_change.md
+Would delete .changeset/feature.md
 Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 
@@ -68,11 +67,13 @@ And even some details which aren't visible
 Would add files to git:
   Cargo.toml
   pyproject.toml
-  FIRST_CHANGELOG.md
   .changeset/breaking_change.md
   .changeset/feature.md
+  FIRST_CHANGELOG.md
+Getting conventional commits since last release of package second
+Only checking commits with scopes: ["second"]
+Finding all commits since tag second/v0.4.6
 Determining new version for second
-Looking for Git tags matching package name.
 commit feat: A feature
 	implies rule MINOR
 commit feat!: A breaking feature
@@ -93,6 +94,7 @@ changeset feature.md
 	implies rule PATCH
 Rule is MAJOR, but major component is 0. Bumping minor component from 0.4.6 to 0.5.0
 Would add the following to package.json: 0.5.0
+Would delete .changeset/feature.md
 Would add the following to SECOND_CHANGELOG.md: 
 ## 0.5.0 ([DATE])
 
@@ -118,5 +120,5 @@ And even some details which aren't visible
 
 Would add files to git:
   package.json
-  SECOND_CHANGELOG.md
   .changeset/feature.md
+  SECOND_CHANGELOG.md

@@ -25,13 +25,8 @@ struct CreateReleaseInput<'a> {
 }
 
 impl<'a> CreateReleaseInput<'a> {
-    fn new(
-        tag_name: &'a str,
-        name: &'a str,
-        body: Option<&'a str>,
-        prerelease: bool,
-        draft: bool,
-    ) -> Self {
+    fn new(tag_name: &'a str, name: &'a str, body: &'a str, prerelease: bool, draft: bool) -> Self {
+        let body = if body.is_empty() { None } else { Some(body) };
         Self {
             generate_release_notes: body.is_none(),
             tag_name,

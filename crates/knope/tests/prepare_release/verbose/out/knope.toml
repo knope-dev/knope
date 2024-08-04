@@ -6,6 +6,7 @@ scopes = ["first"]
 [packages.second]
 versioned_files = ["package.json"]
 changelog = "SECOND_CHANGELOG.md"
+scopes = ["second"]
 
 [[workflows]]
 name = "release"

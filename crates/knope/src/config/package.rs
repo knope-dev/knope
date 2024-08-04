@@ -1,29 +1,19 @@
-use std::{fmt, fmt::Display, ops::Range, path::PathBuf, str::FromStr};
+use std::{ops::Range, path::PathBuf, str::FromStr};
 
-use ::toml::{from_str, Value};
-use git_conventional::FooterToken;
+use ::toml::{from_str, Spanned, Value};
 use itertools::Itertools;
-use knope_versioning::{cargo, VersionedFilePath};
+use knope_config::{Asset, ChangelogSection};
+use knope_versioning::{package, versioned_file::cargo, VersionedFilePath};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::toml;
-use crate::{
-    fs,
-    fs::read_to_string,
-    step::releases::{
-        changelog,
-        package::{Asset, ChangelogSectionSource},
-        ChangeType, PackageName,
-    },
-};
+use crate::{fs, fs::read_to_string};
 
 /// Represents a single package in `knope.toml`.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Package {
-    pub(crate) name: Option<PackageName>,
+    pub(crate) name: package::Name,
     /// The files which define the current version of the package.
     pub(crate) versioned_files: Vec<VersionedFilePath>,
     /// The path to the `CHANGELOG.md` file (if any) to be updated when running [`Step::PrepareRelease`].
@@ -99,7 +89,7 @@ impl Package {
                 from_str::<cargo::Toml>(&member_contents)
                     .map_err(|err| CargoWorkspaceError::Toml(err, member_path.as_path()))
                     .map(|cargo| Self {
-                        name: Some(PackageName::from(cargo.package.name.clone())),
+                        name: package::Name::from(cargo.package.name.clone()),
                         versioned_files: vec![member_path],
                         scopes: Some(vec![cargo.package.name]),
                         ..Self::default()
@@ -109,11 +99,11 @@ impl Package {
     }
 
     pub(crate) fn from_toml(
-        name: Option<PackageName>,
-        package: toml::Package,
+        name: package::Name,
+        package: knope_config::Package,
         source_code: &str,
     ) -> std::result::Result<Self, VersionedFileError> {
-        let toml::Package {
+        let knope_config::Package {
             versioned_files,
             changelog,
             scopes,
@@ -154,6 +144,23 @@ impl Package {
             assets,
             ignore_go_major_versioning,
         })
+    }
+}
+
+impl From<Package> for knope_config::Package {
+    fn from(package: Package) -> Self {
+        Self {
+            versioned_files: package
+                .versioned_files
+                .iter()
+                .map(|it| Spanned::new(0..0, it.as_path()))
+                .collect(),
+            changelog: package.changelog,
+            scopes: package.scopes,
+            extra_changelog_sections: package.extra_changelog_sections,
+            assets: package.assets,
+            ignore_go_major_versioning: package.ignore_go_major_versioning,
+        }
     }
 }
 
@@ -209,116 +216,7 @@ pub(crate) enum CargoWorkspaceError {
 pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
-    Changelog(#[from] changelog::Error),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
     CargoWorkspace(#[from] CargoWorkspaceError),
 }
 
 type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub(crate) struct ChangelogSection {
-    pub(crate) name: ChangeLogSectionName,
-    #[serde(default)]
-    pub(crate) footers: Vec<CommitFooter>,
-    #[serde(default)]
-    pub(crate) types: Vec<CustomChangeType>,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct CommitFooter(String);
-
-impl Display for CommitFooter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<FooterToken<'_>> for CommitFooter {
-    fn from(token: FooterToken<'_>) -> Self {
-        Self(token.to_string())
-    }
-}
-
-impl From<&str> for CommitFooter {
-    fn from(token: &str) -> Self {
-        Self(token.into())
-    }
-}
-
-impl From<CommitFooter> for ChangeType {
-    fn from(footer: CommitFooter) -> Self {
-        Self::Custom(ChangelogSectionSource::CommitFooter(footer))
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct CustomChangeType(String);
-
-impl Display for CustomChangeType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<String> for CustomChangeType {
-    fn from(token: String) -> Self {
-        Self(token)
-    }
-}
-
-impl From<&str> for CustomChangeType {
-    fn from(token: &str) -> Self {
-        Self(token.into())
-    }
-}
-
-impl From<CustomChangeType> for String {
-    fn from(custom: CustomChangeType) -> Self {
-        custom.0
-    }
-}
-
-impl From<CustomChangeType> for ChangeType {
-    fn from(custom: CustomChangeType) -> Self {
-        changesets::ChangeType::from(String::from(custom)).into()
-    }
-}
-
-impl From<changesets::ChangeType> for ChangeType {
-    fn from(change_type: changesets::ChangeType) -> Self {
-        match change_type {
-            changesets::ChangeType::Major => Self::Breaking,
-            changesets::ChangeType::Minor => Self::Feature,
-            changesets::ChangeType::Patch => Self::Fix,
-            changesets::ChangeType::Custom(custom) => {
-                Self::Custom(ChangelogSectionSource::CustomChangeType(custom.into()))
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-#[serde(transparent)]
-pub(crate) struct ChangeLogSectionName(String);
-
-impl Display for ChangeLogSectionName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<&str> for ChangeLogSectionName {
-    fn from(token: &str) -> Self {
-        Self(token.into())
-    }
-}
-
-impl AsRef<str> for ChangeLogSectionName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}

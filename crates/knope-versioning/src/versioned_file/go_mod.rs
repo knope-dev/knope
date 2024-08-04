@@ -8,7 +8,7 @@ use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
 
-use crate::{action::Action, Version};
+use crate::{action::Action, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GoMod {
@@ -150,6 +150,7 @@ impl GoMod {
             Action::WriteToFile {
                 path: self.path,
                 content: new_content,
+                diff: new_version.to_string(),
             },
             Action::AddTag { tag },
         ])

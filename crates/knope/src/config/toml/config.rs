@@ -1,17 +1,17 @@
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_config::Package;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
 
-use super::package::Package;
-use crate::{step::releases::package::PackageName, workflow::Workflow};
+use crate::workflow::Workflow;
 
 /// Loads a `crate::Config` from a TOML file with as much span information as possible for better
 /// error messages.
 #[derive(Debug, Deserialize)]
 pub(crate) struct ConfigLoader {
     pub(crate) package: Option<Spanned<Package>>,
-    pub(crate) packages: Option<IndexMap<PackageName, Spanned<Package>>>,
+    pub(crate) packages: Option<IndexMap<String, Spanned<Package>>>,
     /// The list of defined workflows that are selectable
     pub(crate) workflows: Option<Spanned<Vec<Spanned<Workflow>>>>,
     /// Optional configuration for Jira

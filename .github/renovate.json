@@ -6,7 +6,9 @@
     ":automergeStableNonMajor"
   ],
   "platformAutomerge": true,
-  "lockFileMaintenance": { "enabled": true },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "groupName": "Astro",
@@ -26,6 +28,17 @@
       ],
       "matchStrings": [
         "uses: (?<depName>.+)@(?<currentValue>.+)"
+      ]
+    },
+    {
+      "description": "Update cargo-binstall in GitHub Actions",
+      "customType": "regex",
+      "datasourceTemplate": "crate",
+      "fileMatch": [
+        "^\\.github/workflows/.*\\.yml$"
+      ],
+      "matchStrings": [
+        "BINSTALL_VERSION: (?<currentValue>.+)"
       ]
     }
   ]
