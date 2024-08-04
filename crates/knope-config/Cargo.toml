@@ -1,7 +1,7 @@
 [package]
 name = "knope-config"
 description = "A library for handling common configuration of Knope"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["Dylan Anthony <contact@dylananthony.com>"]
 edition = "2021"
 license = "MIT"
@@ -10,7 +10,7 @@ rust-version = "1.71.1"
 readme = "README.md"
 
 [dependencies]
-knope-versioning = { path = "../knope-versioning", version = "0.0.1" }
+knope-versioning = { workspace = true }
 relative-path = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
