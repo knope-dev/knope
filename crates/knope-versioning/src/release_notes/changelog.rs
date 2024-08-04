@@ -84,9 +84,9 @@ impl Changelog {
         })
     }
 
-    /// Update `self.content` with the new release.
+    /// Update `self.content` with the new release, return the diff being applied.
     #[must_use]
-    pub fn with_release(mut self, release: &Release) -> (Self, String) {
+    pub fn with_release(&mut self, release: &Release) -> String {
         let mut not_written = true;
         let new_changes = format!(
             "{header_level} {title}\n\n{body}",
@@ -129,7 +129,7 @@ impl Changelog {
         }
 
         self.content = new_content;
-        (self, new_changes)
+        new_changes
     }
 }
 

@@ -6,7 +6,7 @@ use itertools::Itertools;
 pub use release::Release;
 use time::{macros::format_description, OffsetDateTime};
 
-use crate::{changes::Change, release_notes::changelog::Section, semver::Version};
+use crate::{changes::Change, release_notes::changelog::Section, semver::Version, Action};
 
 mod changelog;
 mod config;
@@ -26,10 +26,10 @@ impl ReleaseNotes {
     ///
     /// If the current date can't be formatted
     pub fn create_release(
-        &self,
+        &mut self,
         version: Version,
         changes: &[Change],
-    ) -> Result<Release, TimeError> {
+    ) -> Result<Vec<Action>, TimeError> {
         let sections = self
             .sections
             .iter()
@@ -61,11 +61,23 @@ impl ReleaseNotes {
             notes.push_str(&format!("\n\n## {title}\n\n{body}",));
         }
         let notes = notes.trim().to_string();
-        Ok(Release {
+        let release = Release {
             title: release_title(&version)?,
             version,
             notes,
-        })
+        };
+
+        let mut pending_actions = Vec::new();
+        if let Some(changelog) = self.changelog.as_mut() {
+            let new_changes = changelog.with_release(&release);
+            pending_actions.push(Action::WriteToFile {
+                path: changelog.path.clone(),
+                content: changelog.content.clone(),
+                diff: format!("\n{new_changes}\n"),
+            });
+        };
+        pending_actions.push(Action::CreateRelease(release));
+        Ok(pending_actions)
     }
 }
 

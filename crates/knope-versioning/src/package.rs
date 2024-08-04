@@ -19,7 +19,7 @@ use crate::{
     changes::{
         conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
     },
-    release_notes::ReleaseNotes,
+    release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
     versioned_file::{GoVersioning, SetError, VersionedFile},
 };
@@ -159,10 +159,10 @@ impl Package {
                 self.bump_version(Bump::Rule(rule), go_versioning)?
             }
         };
-        let pre_release = self.versions.latest_is_prerelease();
+        let version = self.versions.clone().into_latest();
         actions.extend(changes.iter().filter_map(|change| {
             if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
-                if pre_release {
+                if version.is_prerelease() {
                     None
                 } else {
                     Some(Action::RemoveFile {
@@ -173,6 +173,9 @@ impl Package {
                 None
             }
         }));
+
+        actions.extend(self.release_notes.create_release(version, changes)?);
+
         Ok(actions)
     }
 }
@@ -307,4 +310,7 @@ pub enum BumpError {
         )
     )]
     PackageAlreadyBumped,
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    Time(#[from] TimeError),
 }

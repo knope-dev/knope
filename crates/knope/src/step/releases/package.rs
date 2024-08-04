@@ -130,43 +130,12 @@ impl Package {
             },
         };
 
-        let mut pending_actions = self.versioning.apply_changes(&changes, change_config)?;
-        let new_version = self.versioning.versions.clone().into_latest();
-        let (actions, release_notes) =
-            make_release(self.versioning.release_notes, &changes, new_version)?;
-        pending_actions.extend(actions);
-        self.versioning.release_notes = release_notes;
+        let pending_actions = self.versioning.apply_changes(&changes, change_config)?;
 
         self.pending_actions = execute_prepare_actions(run_type.of(pending_actions), true)?;
 
         Ok(self)
     }
-}
-
-/// Adds content from `release` to `Self::changelog` if it exists.
-fn make_release(
-    mut release_notes: ReleaseNotes,
-    changes: &[Change],
-    version: Version,
-) -> Result<(Vec<Action>, ReleaseNotes), TimeError> {
-    let release = release_notes.create_release(version, changes)?;
-    let mut pending_actions = Vec::new();
-
-    let changelog = if let Some(changelog) = release_notes.changelog {
-        // TODO: Move this into knope-versioning
-        let (changelog, new_changes) = changelog.with_release(&release);
-        pending_actions.push(Action::WriteToFile {
-            path: changelog.path.clone(),
-            content: changelog.content.clone(),
-            diff: format!("\n{new_changes}\n"),
-        });
-        Some(changelog)
-    } else {
-        None
-    };
-    pending_actions.push(Action::CreateRelease(release));
-    release_notes.changelog = changelog;
-    Ok((pending_actions, release_notes))
 }
 
 pub(crate) fn execute_prepare_actions(
@@ -183,7 +152,6 @@ pub(crate) fn execute_prepare_actions(
                 content,
                 diff,
             } => {
-                // TODO: What if two packages wanted to write to the same file? Like changelog?
                 let write_type = match run_type {
                     RunType::DryRun(()) => WriteType::DryRun(diff),
                     RunType::Real(()) => WriteType::Real(content),
