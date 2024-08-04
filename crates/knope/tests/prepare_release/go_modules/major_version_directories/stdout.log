@@ -11,7 +11,7 @@ No tags found matching pattern v2/v
 Getting conventional commits since last release of package v1
 Only checking commits with scopes: ["v1"]
 No tags found matching pattern v1/v
-Finding ALL commits
+Tag v1/v0.0.0 not found, using ALL commits
 Determining new version for v1
 commit fix(v1): A fix
 	implies rule PATCH
@@ -19,7 +19,7 @@ Using PATCH rule to bump from 1.0.0 to 1.0.1
 Getting conventional commits since last release of package v2
 Only checking commits with scopes: ["v2"]
 No tags found matching pattern v2/v
-Finding ALL commits
+Tag v2/v0.0.0 not found, using ALL commits
 Determining new version for v2
 commit feat(v2): New feature
 	implies rule MINOR

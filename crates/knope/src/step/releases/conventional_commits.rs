@@ -1,8 +1,4 @@
-use knope_versioning::{
-    package,
-    semver::{PackageVersions, StableVersion},
-    ReleaseTag,
-};
+use knope_versioning::{package, semver::PackageVersions, ReleaseTag};
 use tracing::debug;
 
 use crate::integrations::git::{self, get_commit_messages_after_tag};
@@ -20,11 +16,7 @@ pub(crate) fn get_conventional_commits_after_last_stable_version(
         debug!("Only checking commits with scopes: {scopes:?}");
     }
     let target_version = PackageVersions::from_tags(package_name.as_custom(), all_tags).stable();
-    let tag = if target_version == StableVersion::default() {
-        None
-    } else {
-        Some(ReleaseTag::new(&target_version.into(), package_name))
-    };
+    let tag = ReleaseTag::new(&target_version.into(), package_name);
 
-    get_commit_messages_after_tag(tag.as_ref().map(ReleaseTag::as_str)).map_err(git::Error::from)
+    get_commit_messages_after_tag(tag.as_str()).map_err(git::Error::from)
 }
