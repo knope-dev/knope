@@ -10,7 +10,7 @@ rust-version = "1.71.1"
 readme = "README.md"
 
 [dependencies]
-knope-versioning = { path = "../knope-versioning", version = "0.0.1" }
+knope-versioning = { workspace = true }
 relative-path = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
