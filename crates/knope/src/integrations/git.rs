@@ -142,16 +142,6 @@ enum ErrorKind {
         help("A Git tag could not be created for the release.")
     )]
     CreateTagError(#[from] gix::tag::Error),
-    #[error("Could not find reference {reference}: {source}")]
-    #[diagnostic(
-        code(releases::git::find_reference),
-        help("Please check that the reference exists.")
-    )]
-    FindReference {
-        reference: String,
-        #[source]
-        source: gix::reference::find::existing::Error,
-    },
     #[error("Could not peel oid: {0}")]
     #[diagnostic(
         code(releases::git::peel_oid),
@@ -395,24 +385,16 @@ pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
 /// means that there could be paths which jump _behind_ the target tag... and we want to exclude
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
-pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<String>, Error> {
+pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Error> {
     let repo = gix::open(".")?;
-    if let Some(tag) = &tag {
-        debug!("Finding all commits since tag {tag}");
+
+    let reference = repo.find_reference(&format!("refs/tags/{tag}")).ok();
+    if reference.is_some() {
+        debug!("Using commits since tag {tag}");
     } else {
-        debug!("Finding ALL commits");
+        debug!("Tag {tag} not found, using ALL commits");
     }
-    let commits_to_exclude = tag
-        .map(|tag| format!("refs/tags/{tag}"))
-        .as_ref()
-        .map(|reference| {
-            repo.find_reference(reference)
-                .map_err(|err| ErrorKind::FindReference {
-                    reference: reference.clone(),
-                    source: err,
-                })
-        })
-        .transpose()?
+    let commits_to_exclude = reference
         .map(gix::Reference::into_fully_peeled_id)
         .transpose()?
         .and_then(|tag_oid| repo.find_object(tag_oid).ok().map(gix::Object::into_commit))
