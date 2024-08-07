@@ -1,9 +1,3 @@
-## 0.2.0 (2024-08-07)
-
-### Breaking Changes
-
-- Move HeaderLevel to internal, parse with Changelog::new
-
 ## 0.1.0 (2024-08-04)
 
 ### Breaking Changes
