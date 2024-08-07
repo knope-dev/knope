@@ -311,7 +311,7 @@ jobs:
         run: cp target/${{ matrix.target }}/release/knope ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.3.5
+        uses: actions/upload-artifact@v4.3.6
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
