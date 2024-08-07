@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-pub use changelog::{Changelog, HeaderLevel};
+pub use changelog::Changelog;
 pub use config::{CommitFooter, CustomChangeType, SectionName, SectionSource, Sections};
 use itertools::Itertools;
 pub use release::Release;

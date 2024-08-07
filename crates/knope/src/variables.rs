@@ -136,7 +136,7 @@ pub(crate) enum Error {
 mod test_replace_variables {
     use knope_versioning::{
         package::Name,
-        release_notes::{Changelog, HeaderLevel, ReleaseNotes, Sections},
+        release_notes::{Changelog, ReleaseNotes, Sections},
         Action, VersionedFile, VersionedFilePath,
     };
     use pretty_assertions::assert_eq;
@@ -146,11 +146,7 @@ mod test_replace_variables {
     use crate::step::issues::Issue;
 
     fn package() -> Package {
-        let changelog = Changelog {
-            path: RelativePathBuf::default(),
-            content: String::new(),
-            release_header_level: HeaderLevel::H1,
-        };
+        let changelog = Changelog::new(RelativePathBuf::default(), String::new());
 
         Package {
             versioning: knope_versioning::Package::new(

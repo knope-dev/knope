@@ -14,11 +14,11 @@ pub struct Changelog {
     /// The content that's been written to `path`
     pub content: String,
     /// The header level of the title of each release (the version + date)
-    pub release_header_level: HeaderLevel,
+    release_header_level: HeaderLevel,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum HeaderLevel {
+enum HeaderLevel {
     H1,
     H2,
 }
@@ -39,6 +39,29 @@ impl Display for HeaderLevel {
 }
 
 impl Changelog {
+    #[must_use]
+    pub fn new(path: RelativePathBuf, content: String) -> Self {
+        let release_header_level = content
+            .lines()
+            .filter(|line| line.starts_with('#'))
+            .nth(1)
+            .and_then(|header| {
+                if header.starts_with("##") {
+                    Some(HeaderLevel::H2)
+                } else if header.starts_with('#') {
+                    Some(HeaderLevel::H1)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(HeaderLevel::H2);
+        Changelog {
+            path,
+            content,
+            release_header_level,
+        }
+    }
+
     /// Find a release matching `version`, if any, within the changelog.
     #[must_use]
     pub fn get_release(&self, version: &Version) -> Option<Release> {
