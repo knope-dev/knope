@@ -1,3 +1,13 @@
+## 0.2.0 (2024-08-10)
+
+### Breaking Changes
+
+- Move HeaderLevel to internal, parse with Changelog::new
+
+### Features
+
+- `impl From<ReleaseTag> for String`
+
 ## 0.1.0 (2024-08-04)
 
 ### Breaking Changes
