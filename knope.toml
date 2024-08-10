@@ -71,3 +71,6 @@ type = "CreateChangeFile"
 [github]
 owner = "knope-dev"
 repo = "knope"
+
+[bot.releases]
+enabled = true
