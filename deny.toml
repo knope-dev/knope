@@ -111,7 +111,7 @@ skip = [
 # by default infinite
 skip-tree = [
   { name = "bitflags", version = "1", depth = 1 },       # crossterm, inquire, redox_syscall, etc. all use this
-  { name = "windows-sys", version = "0.48", depth = 5 }, # ring & mio need to update
+  { name = "windows-sys", version = "0.48", depth = 5 }, # crossterm via inquire, terminal_size via miette
 ]
 
 # This section is considered when running `cargo deny check sources`.
