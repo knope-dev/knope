@@ -1,13 +1,12 @@
-name: Release
+name: Finish Knope release
 
 on:
-  pull_request:
-    types: [ closed ]
-    branches: [ main ]
+  release:
+    types: [ created ]
 
 jobs:
   build-artifacts:
-    if:  github.head_ref == 'release' && github.event.pull_request.merged == true
+    if: github.event.release.draft
     strategy:
       fail-fast: false
       matrix:
@@ -75,19 +74,10 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "release"
-      - run: cargo run -- release
+      - name: Upload artifacts to release
+        run: |
+          cd artifacts
+          gh release upload ${{ github.event.release.tag_name }} *
+          gh release edit ${{ github.event.release.tag_name }} --draft=false
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
-
-  publish-crate:
-    needs: [release]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4.1.7
-      - uses: Swatinem/rust-cache@v2
-      - uses: katyo/publish-crates@v2
-        with:
-          registry-token: ${{ secrets.CARGO_TOKEN }}
