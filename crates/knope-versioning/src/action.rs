@@ -54,6 +54,12 @@ impl ReleaseTag {
     }
 }
 
+impl From<ReleaseTag> for String {
+    fn from(tag: ReleaseTag) -> Self {
+        tag.0
+    }
+}
+
 pub(crate) enum ActionSet {
     Single(Action),
     Two([Action; 2]),
