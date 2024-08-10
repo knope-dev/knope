@@ -4,10 +4,11 @@ on:
   pull_request:
     types: [ closed ]
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   publish-crates:
-    if:  github.head_ref == 'knope/release' && github.event.pull_request.merged == true
+    if:  (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.1.7
@@ -15,3 +16,4 @@ jobs:
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}
+          check-repo: false
