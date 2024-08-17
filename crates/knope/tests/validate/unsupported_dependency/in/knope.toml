@@ -1,0 +1,4 @@
+[package]
+versioned_files = [
+    { path = "package.json", dependency = "blah" }
+]

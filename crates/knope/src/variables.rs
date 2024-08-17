@@ -153,7 +153,7 @@ mod test_replace_variables {
                 Name::Default,
                 &[""],
                 vec![VersionedFile::new(
-                    &VersionedFilePath::new("Cargo.toml".into()).unwrap(),
+                    VersionedFilePath::new("Cargo.toml".into(), None).unwrap(),
                     "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
                     &[""],
                 )

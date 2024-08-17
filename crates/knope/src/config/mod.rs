@@ -70,8 +70,8 @@ impl Config {
         struct SimpleConfig {
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<knope_config::Package>,
-            #[serde(skip_serializing_if = "Vec::is_empty")]
-            packages: Vec<knope_config::Package>,
+            #[serde(skip_serializing_if = "IndexMap::is_empty")]
+            packages: IndexMap<String, knope_config::Package>,
             workflows: Vec<Workflow>,
             github: Option<GitHub>,
             gitea: Option<Gitea>,
@@ -80,10 +80,16 @@ impl Config {
         let (package, packages) = if self.packages.len() < 2 {
             (
                 self.packages.pop().map(knope_config::Package::from),
-                Vec::new(),
+                IndexMap::new(),
             )
         } else {
-            (None, self.packages.into_iter().map(Package::into).collect())
+            (
+                None,
+                self.packages
+                    .into_iter()
+                    .map(|package| (package.name.to_string(), package.into()))
+                    .collect(),
+            )
         };
 
         let config = SimpleConfig {

@@ -1,0 +1,15 @@
+Error:   × Problem with versioned file
+  ╰─▶ knope_versioning::versioned_file::unsupported_dependency (https://
+      knope.tech/reference/config-file/packages#versioned_files)
+      
+        × Dependencies are not supported in package.json files
+        help: Dependencies aren't supported in every file type.
+      
+   ╭─[3:5]
+ 2 │ versioned_files = [
+ 3 │     { path = "package.json", dependency = "blah" }
+   ·     ───────────────────────┬──────────────────────
+   ·                            ╰── Declared here
+ 4 │ ]
+   ╰────
+

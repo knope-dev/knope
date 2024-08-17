@@ -6,7 +6,7 @@ use package_json::PackageJson;
 use pubspec::PubSpec;
 use pyproject::PyProject;
 use relative_path::RelativePathBuf;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 
 use crate::{
     action::{
@@ -22,7 +22,7 @@ mod package_json;
 mod pubspec;
 mod pyproject;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum VersionedFile {
     Cargo(Cargo),
     PubSpec(PubSpec),
@@ -37,40 +37,39 @@ impl VersionedFile {
     /// # Errors
     ///
     /// Depends on the format.
-    /// If the content does not match the expected format, an error is returned.
+    /// If the content doesn't match the expected format, an error is returned.
     pub fn new<S: AsRef<str> + Debug>(
-        path: &Path,
+        path: Path,
         content: String,
         git_tags: &[S],
     ) -> Result<Self, Error> {
-        let relative_path = path.as_path();
         match path.format {
-            Format::Cargo => Cargo::new(relative_path, content)
+            Format::Cargo => Cargo::new(path, &content)
                 .map(VersionedFile::Cargo)
                 .map_err(Error::Cargo),
-            Format::PyProject => PyProject::new(relative_path, content)
+            Format::PyProject => PyProject::new(path.as_path(), content)
                 .map(VersionedFile::PyProject)
                 .map_err(Error::PyProject),
-            Format::PubSpec => PubSpec::new(relative_path, content)
+            Format::PubSpec => PubSpec::new(path.as_path(), content)
                 .map(VersionedFile::PubSpec)
                 .map_err(Error::PubSpec),
-            Format::GoMod => GoMod::new(relative_path, content, git_tags)
+            Format::GoMod => GoMod::new(path.as_path(), content, git_tags)
                 .map(VersionedFile::GoMod)
                 .map_err(Error::GoMod),
-            Format::PackageJson => PackageJson::new(relative_path, content)
+            Format::PackageJson => PackageJson::new(path.as_path(), content)
                 .map(VersionedFile::PackageJson)
                 .map_err(Error::PackageJson),
         }
     }
 
     #[must_use]
-    pub fn path(&self) -> &RelativePathBuf {
+    pub fn path(&self) -> RelativePathBuf {
         match self {
             VersionedFile::Cargo(cargo) => cargo.get_path(),
-            VersionedFile::PyProject(pyproject) => pyproject.get_path(),
-            VersionedFile::PubSpec(pubspec) => pubspec.get_path(),
-            VersionedFile::GoMod(gomod) => gomod.get_path(),
-            VersionedFile::PackageJson(package_json) => package_json.get_path(),
+            VersionedFile::PyProject(pyproject) => pyproject.get_path().clone(),
+            VersionedFile::PubSpec(pubspec) => pubspec.get_path().clone(),
+            VersionedFile::GoMod(gomod) => gomod.get_path().clone(),
+            VersionedFile::PackageJson(package_json) => package_json.get_path().clone(),
         }
     }
 
@@ -166,6 +165,7 @@ pub enum Error {
 pub struct Path {
     parent: Option<RelativePathBuf>,
     format: Format,
+    pub dependency: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -178,7 +178,7 @@ enum Format {
 }
 
 impl Format {
-    const fn file_name(&self) -> &str {
+    const fn file_name(self) -> &'static str {
         match self {
             Format::Cargo => "Cargo.toml",
             Format::PyProject => "pyproject.toml",
@@ -198,21 +198,35 @@ impl Format {
             _ => None,
         }
     }
+
+    const fn supports_dependencies(self) -> bool {
+        matches!(self, Format::Cargo)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
-#[error("Unknown file: {path}")]
-#[cfg_attr(
-    feature = "miette",
-    diagnostic(
-        code(knope_versioning::versioned_file::unknown_file),
-        help("Knope identities the type of file based on its name."),
-        url("https://knope.tech/reference/config-file/packages#versioned_files")
-    )
-)]
-pub struct UnknownFile {
-    pub path: RelativePathBuf,
+pub enum FormatError {
+    #[error("Unknown file: {0}")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(knope_versioning::versioned_file::unknown_file),
+            help("Knope identities the type of file based on its name."),
+            url("https://knope.tech/reference/config-file/packages#versioned_files")
+        )
+    )]
+    UnknownFile(RelativePathBuf),
+    #[error("Dependencies are not supported in {0} files")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(knope_versioning::versioned_file::unsupported_dependency),
+            help("Dependencies aren't supported in every file type."),
+            url("https://knope.tech/reference/config-file/packages#versioned_files")
+        )
+    )]
+    UnsupportedDependency(&'static str),
 }
 
 impl Path {
@@ -221,11 +235,20 @@ impl Path {
     /// # Errors
     ///
     /// If the file name does not match a supported format
-    pub fn new(path: RelativePathBuf) -> Result<Self, UnknownFile> {
-        let file_name = path.file_name().ok_or(UnknownFile { path: path.clone() })?;
+    pub fn new(path: RelativePathBuf, dependency: Option<String>) -> Result<Self, FormatError> {
+        let Some(file_name) = path.file_name() else {
+            return Err(FormatError::UnknownFile(path));
+        };
         let parent = path.parent().map(RelativePathBuf::from);
-        let format = Format::try_from(file_name).ok_or(UnknownFile { path })?;
-        Ok(Path { parent, format })
+        let format = Format::try_from(file_name).ok_or(FormatError::UnknownFile(path))?;
+        if !format.supports_dependencies() && dependency.is_some() {
+            return Err(FormatError::UnsupportedDependency(format.file_name()));
+        }
+        Ok(Path {
+            parent,
+            format,
+            dependency,
+        })
     }
 
     #[must_use]
@@ -245,36 +268,31 @@ impl Path {
     pub const fn defaults() -> [Self; 5] {
         [
             Path {
-                parent: None,
                 format: Format::Cargo,
+                parent: None,
+                dependency: None,
             },
             Path {
                 parent: None,
                 format: Format::GoMod,
+                dependency: None,
             },
             Path {
                 parent: None,
                 format: Format::PackageJson,
+                dependency: None,
             },
             Path {
                 parent: None,
                 format: Format::PubSpec,
+                dependency: None,
             },
             Path {
                 parent: None,
                 format: Format::PyProject,
+                dependency: None,
             },
         ]
-    }
-}
-
-impl<'de> Deserialize<'de> for Path {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let path = RelativePathBuf::deserialize(deserializer)?;
-        Path::new(path).map_err(serde::de::Error::custom)
     }
 }
 

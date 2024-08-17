@@ -25,8 +25,21 @@ Or multiple packages:
 ## `versioned_files`
 
 The files within a package that contain the current version.
-This is an array of strings, each of which is a file path relative to the `knope.toml` file.
 Each file must have the same version number as all the other files.
+
+An entry in this array can either be a string, containing the path to a file, or an object containing a `path` and
+specifying a `dependency` within the file to update:
+
+```toml
+[package]
+versioned_files = [
+    "Cargo.toml",
+    "package.json",
+    { path = "crates/knope/Cargo.toml", dependency = "knope-versioning" }
+]
+```
+
+All paths should be relative to the config file.
 
 Knope determines the type of the file using its name (independent of its path),
 so `blah/Cargo.toml` is a `Cargo.toml` file.
@@ -43,6 +56,16 @@ name = "my-package"
 version = "1.0.0"
 ```
 
+If `dependency` is specified, it'll be searched for in the `workspace.dependencies`,
+`dependencies`, and `dev-dependencies` tables.
+Only entries which contain a version will be updated.
+
+### `Cargo.lock`
+
+Dependencies of a Rust project can be kept up to date by specifying a `Cargo.lock` file. By default, 
+the dependency name is the package name within the first `Cargo.toml` file listed in `versioned_files`.
+You can override this by specifying the `dependency` field manually. If neither is provided, Knope will error.
+
 ### `pyproject.toml`
 
 For Python projects using [PEP-621](https://peps.python.org/pep-0621/) or [Poetry](https://python-poetry.org).
@@ -57,6 +80,8 @@ version = "1.0.0"
 version = "1.0.0"
 ```
 
+`dependency` is not yet supported.
+
 ### `package.json`
 
 For JavaScript or TypeScript projects, must contain a root-level `version` field:
@@ -66,6 +91,8 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
   "version": "1.0.0"
 }
 ```
+
+`dependency` is not yet supported.
 
 ### `go.mod`
 
@@ -86,6 +113,8 @@ module github.com/knope-dev/knope/v2 // v2.0.0
 To omit the major version from the module line (e.g., for binaries, where it doesn't matter much),
 use the [`ignore_go_major_versioning`](#ignore_go_major_versioning) option.
 
+`dependency` is not yet supported.
+
 ### `pubspec.yaml`
 
 For Dart projects, must contain a `version` field:
@@ -93,6 +122,8 @@ For Dart projects, must contain a `version` field:
 ```yaml title="pubspec.yaml"
 version: 1.0.0
 ```
+
+`dependency` is not yet supported.
 
 ## `changelog`
 

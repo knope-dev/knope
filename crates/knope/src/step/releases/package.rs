@@ -3,7 +3,6 @@ use std::{fmt, fmt::Display};
 use itertools::Itertools;
 use knope_config::{changelog_section::convert_to_versioning, Asset};
 use knope_versioning::{
-    changes::Change,
     package::{BumpError, ChangeConfig, Name},
     release_notes::{ReleaseNotes, TimeError},
     semver::Version,
@@ -22,10 +21,9 @@ use crate::{
     step::{releases::changelog::load_changelog, PrepareRelease},
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct Package {
     pub(crate) versioning: knope_versioning::Package,
-    pub(crate) pending_changes: Vec<Change>,
     pub(crate) pending_actions: Vec<Action>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
@@ -57,7 +55,7 @@ impl Package {
         }
         let versioned_files: Vec<VersionedFile> = package
             .versioned_files
-            .iter()
+            .into_iter()
             .map(|path| {
                 let content = read_to_string(path.to_pathbuf())?;
                 VersionedFile::new(path, content, git_tags).map_err(Error::VersionedFile)
@@ -88,7 +86,6 @@ impl Package {
             } else {
                 GoVersioning::default()
             },
-            pending_changes: Vec::new(),
             pending_actions: Vec::new(),
             override_version: None,
         })
@@ -203,7 +200,7 @@ impl Package {
                 Name::Default,
                 &[""],
                 vec![VersionedFile::new(
-                    &knope_versioning::VersionedFilePath::new("Cargo.toml".into()).unwrap(),
+                    knope_versioning::VersionedFilePath::new("Cargo.toml".into(), None).unwrap(),
                     r#"
                 [package]
                 name = "knope"
@@ -219,7 +216,6 @@ impl Package {
                 None,
             )
             .unwrap(),
-            pending_changes: vec![],
             pending_actions: vec![],
             override_version: None,
             assets: None,

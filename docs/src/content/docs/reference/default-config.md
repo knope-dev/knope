@@ -47,10 +47,17 @@ members = ["member1", "member2"]
 The names of these packages are from the `name` in their respective `Cargo.toml` files, not the directory name.
 There _must_ be a `Cargo.toml` file in each member directory, or Knope will error.
 
+Knope will also attempt to detect dependencies **by package name** between members and keep them up to date.
+
+With members like this:
+
 ```toml title="member1/Cargo.toml"
 [package]
 name = "something"
 version = "0.1.0"
+
+[dependencies]
+something-else = { path = "../something-else", version = "0.1.0" }
 ```
 
 ```toml title="member2/Cargo.toml"
@@ -59,13 +66,19 @@ name = "something-else"
 version = "0.1.0"
 ```
 
-```toml title="knope.toml"
+The default `knope.toml` file will look like this:
+
+```toml title="Default knope.toml"
 [packages.something]
-versioned_files = ["member1/Cargo.toml"]
+versioned_files = ["member1/Cargo.toml", "Cargo.lock"]
 scopes = ["something"]
 
 [packages.something-else]
-versioned_files = ["member2/Cargo.toml"]
+versioned_files = [
+    "member2/Cargo.toml", 
+    "Cargo.lock",
+    { path = "member1/Cargo.toml", dependency = "something-else" },
+]
 scopes = ["something-else"]
 ```
 

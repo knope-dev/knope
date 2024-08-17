@@ -1,0 +1,6 @@
+[workspace]
+members = ["first", "second"]
+
+[workspace.dependencies]
+first-package = { path = "first", version = "1.0.0" }
+second-package = "0.1.0"

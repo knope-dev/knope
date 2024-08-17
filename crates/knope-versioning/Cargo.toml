@@ -23,6 +23,7 @@ serde_yaml = { workspace = true }
 thiserror = { workspace = true }
 time = { version = "0.3.36", features = ["formatting", "macros", "parsing"] }
 toml = { workspace = true }
+toml_edit = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]

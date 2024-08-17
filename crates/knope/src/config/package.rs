@@ -1,12 +1,13 @@
 use std::{ops::Range, path::PathBuf, str::FromStr};
 
-use ::toml::{from_str, Spanned, Value};
+use ::toml::Spanned;
 use itertools::Itertools;
 use knope_config::{Asset, ChangelogSection};
-use knope_versioning::{package, versioned_file::cargo, VersionedFilePath};
+use knope_versioning::{package, versioned_file::cargo, FormatError, VersionedFilePath};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
+use toml_edit::{DocumentMut, TomlError};
 
 use crate::{fs, fs::read_to_string};
 
@@ -28,7 +29,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub(crate) fn find_in_working_dir() -> Result<Vec<Self>> {
+    pub(crate) fn find_in_working_dir() -> Result<Vec<Self>, Error> {
         let packages = Self::cargo_workspace_members()?;
 
         if !packages.is_empty() {
@@ -63,12 +64,12 @@ impl Package {
         }
     }
 
-    fn cargo_workspace_members() -> std::result::Result<Vec<Self>, CargoWorkspaceError> {
+    fn cargo_workspace_members() -> Result<Vec<Self>, CargoWorkspaceError> {
         let path = RelativePath::new("Cargo.toml");
         let Ok(contents) = read_to_string(path.as_str()) else {
             return Ok(Vec::new());
         };
-        let cargo_toml = Value::from_str(&contents)
+        let cargo_toml = DocumentMut::from_str(&contents)
             .map_err(|err| CargoWorkspaceError::Toml(err, path.into()))?;
         let workspace_path = path
             .parent()
@@ -79,30 +80,60 @@ impl Package {
         else {
             return Ok(Vec::new());
         };
-        members
+        let members: Vec<WorkspaceMember> = members
             .iter()
             .map(|member_val| {
                 let member = member_val.as_str().ok_or(CargoWorkspaceError::Members)?;
                 let member_path =
-                    VersionedFilePath::new(workspace_path.join(member).join("Cargo.toml"))?;
+                    VersionedFilePath::new(workspace_path.join(member).join("Cargo.toml"), None)?;
                 let member_contents = read_to_string(member_path.as_path().to_path("."))?;
-                from_str::<cargo::Toml>(&member_contents)
-                    .map_err(|err| CargoWorkspaceError::Toml(err, member_path.as_path()))
-                    .map(|cargo| Self {
-                        name: package::Name::from(cargo.package.name.clone()),
-                        versioned_files: vec![member_path],
-                        scopes: Some(vec![cargo.package.name]),
-                        ..Self::default()
-                    })
+                let document = DocumentMut::from_str(&member_contents)
+                    .map_err(|err| CargoWorkspaceError::Toml(err, member_path.as_path()))?;
+                let name = cargo::name_from_document(&document)
+                    .ok_or_else(|| CargoWorkspaceError::NoPackageName(member_path.as_path()))?;
+                Ok(WorkspaceMember {
+                    path: member_path,
+                    name: name.to_string(),
+                    document,
+                })
             })
-            .collect()
+            .collect::<Result<_, CargoWorkspaceError>>()?;
+        // TODO: workspace dependencies
+        Ok(members
+            .iter()
+            .map(|member| {
+                let versioned_files = members
+                    .iter()
+                    .filter_map(|other_member| {
+                        if member.name == other_member.name {
+                            Some(other_member.path.clone())
+                        } else if cargo::contains_dependency(&other_member.document, &member.name) {
+                            let mut path = other_member.path.clone();
+                            path.dependency = Some(member.name.clone());
+                            Some(path)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                Self {
+                    name: package::Name::Custom(member.name.clone()),
+                    versioned_files,
+                    scopes: Some(vec![member.name.clone()]),
+                    changelog: None,
+                    extra_changelog_sections: vec![],
+                    assets: None,
+                    ignore_go_major_versioning: false,
+                }
+            })
+            .collect())
     }
 
     pub(crate) fn from_toml(
         name: package::Name,
         package: knope_config::Package,
         source_code: &str,
-    ) -> std::result::Result<Self, VersionedFileError> {
+    ) -> Result<Self, VersionedFileError> {
         let knope_config::Package {
             versioned_files,
             changelog,
@@ -115,9 +146,9 @@ impl Package {
             .into_iter()
             .map(|spanned| {
                 let span = spanned.span();
-                VersionedFilePath::new(spanned.into_inner())
-                    .map_err(|source| VersionedFileError::Unknown {
-                        file_name: source.path.file_name().unwrap_or_default().to_string(),
+                VersionedFilePath::try_from(spanned.into_inner())
+                    .map_err(|source| VersionedFileError::Format {
+                        source,
                         span: span.clone(),
                         source_code: source_code.to_string(),
                     })
@@ -152,8 +183,8 @@ impl From<Package> for knope_config::Package {
         Self {
             versioned_files: package
                 .versioned_files
-                .iter()
-                .map(|it| Spanned::new(0..0, it.as_path()))
+                .into_iter()
+                .map(|it| Spanned::new(0..0, knope_config::VersionedFile::from(it)))
                 .collect(),
             changelog: package.changelog,
             scopes: package.scopes,
@@ -164,16 +195,20 @@ impl From<Package> for knope_config::Package {
     }
 }
 
+#[derive(Debug)]
+struct WorkspaceMember {
+    path: VersionedFilePath,
+    name: String,
+    document: DocumentMut,
+}
+
 #[derive(Debug, Diagnostic, Error)]
 pub enum VersionedFileError {
-    #[error("Unknown file name {file_name}")]
-    #[diagnostic(
-        code(config::unknown_versioned_file),
-        help("Knope relies on the name of the file to determine its type."),
-        url("https://knope.tech/reference/config-file/packages#versioned_files")
-    )]
-    Unknown {
-        file_name: String,
+    #[error("Problem with versioned file")]
+    #[diagnostic()]
+    Format {
+        #[diagnostic_source]
+        source: FormatError,
         #[source_code]
         source_code: String,
         #[label("Declared here")]
@@ -195,12 +230,15 @@ pub enum VersionedFileError {
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum CargoWorkspaceError {
+    #[error("Could not find a package.name in {0}")]
+    #[diagnostic(code(workspace::no_package_name))]
+    NoPackageName(RelativePathBuf),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Fs(#[from] fs::Error),
     #[error("Could not parse TOML in {1}: {0}")]
     #[diagnostic(code(workspace::toml))]
-    Toml(::toml::de::Error, RelativePathBuf),
+    Toml(TomlError, RelativePathBuf),
     #[error("Could not get parent directory of Cargo.toml file: {0}")]
     #[diagnostic(code(workspace::parent))]
     Parent(RelativePathBuf),
@@ -209,7 +247,7 @@ pub(crate) enum CargoWorkspaceError {
     Members,
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] knope_versioning::UnknownFile),
+    UnknownFile(#[from] FormatError),
 }
 
 #[derive(Debug, Diagnostic, Error)]
@@ -218,5 +256,3 @@ pub(crate) enum Error {
     #[diagnostic(transparent)]
     CargoWorkspace(#[from] CargoWorkspaceError),
 }
-
-type Result<T> = std::result::Result<T, Error>;

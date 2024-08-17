@@ -24,7 +24,7 @@ use crate::{
     versioned_file::{GoVersioning, SetError, VersionedFile},
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Package {
     pub name: Name,
     pub versions: PackageVersions,
