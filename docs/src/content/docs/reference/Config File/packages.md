@@ -56,15 +56,31 @@ name = "my-package"
 version = "1.0.0"
 ```
 
-If `dependency` is specified, it'll be searched for in the `workspace.dependencies`,
-`dependencies`, and `dev-dependencies` tables.
-Only entries which contain a version will be updated.
+If you specify `dependency`, Knope will search for it in the `workspace.dependencies`,
+`dependencies`, and `dev-dependencies` tables:
+
+```toml title="knope.toml"
+[package]
+versioned_files = [
+    { path = "crates/knope/Cargo.toml", dependency = "knope-versioning" }
+]
+```
+
+```toml title="Cargo.toml" {6}
+[package]
+name = "something-else"
+version = "1.0.0"
+
+[dependencies]
+knope-versioning = "1.0.0"
+```
 
 ### `Cargo.lock`
 
-Dependencies of a Rust project can be kept up to date by specifying a `Cargo.lock` file. By default,
-the dependency name is the package name within the first `Cargo.toml` file listed in `versioned_files`.
-You can override this by specifying the `dependency` field manually. If neither is provided, Knope will error.
+Knope can keep dependencies of a Rust project up to date by specifying a `Cargo.lock` file. By default,
+the dependency name is the package name in the first `Cargo.toml` file listed in `versioned_files`.
+You can override this by specifying the `dependency` field manually.
+If you provide neither, Knope will error.
 
 ### `pyproject.toml`
 
@@ -80,7 +96,7 @@ version = "1.0.0"
 version = "1.0.0"
 ```
 
-`dependency` is not yet supported.
+`dependency` isn't yet supported.
 
 ### `package.json`
 
@@ -92,7 +108,7 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
 }
 ```
 
-`dependency` is not yet supported.
+`dependency` isn't yet supported.
 
 ### `go.mod`
 
@@ -113,7 +129,7 @@ module github.com/knope-dev/knope/v2 // v2.0.0
 To omit the major version from the module line (e.g., for binaries, where it doesn't matter much),
 use the [`ignore_go_major_versioning`](#ignore_go_major_versioning) option.
 
-`dependency` is not yet supported.
+`dependency` isn't yet supported.
 
 ### `pubspec.yaml`
 
@@ -123,7 +139,7 @@ For Dart projects, must contain a `version` field:
 version: 1.0.0
 ```
 
-`dependency` is not yet supported.
+`dependency` isn't yet supported.
 
 ## `changelog`
 

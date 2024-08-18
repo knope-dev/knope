@@ -240,17 +240,17 @@ impl Format {
 
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
-pub enum FormatError {
-    #[error("Unknown file: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(knope_versioning::versioned_file::unknown_file),
-            help("Knope identities the type of file based on its name."),
-            url("https://knope.tech/reference/config-file/packages#versioned_files")
-        )
-    )]
-    UnknownFile(RelativePathBuf),
+#[error("Unknown file: {path}")]
+#[cfg_attr(
+    feature = "miette",
+    diagnostic(
+        code(knope_versioning::versioned_file::unknown_file),
+        help("Knope identities the type of file based on its name."),
+        url("https://knope.tech/reference/config-file/packages#versioned_files")
+    )
+)]
+pub struct UnknownFile {
+    pub path: RelativePathBuf,
 }
 
 /// The configuration of a versioned file.
@@ -270,12 +270,12 @@ impl Config {
     /// # Errors
     ///
     /// If the file name does not match a supported format
-    pub fn new(path: RelativePathBuf, dependency: Option<String>) -> Result<Self, FormatError> {
+    pub fn new(path: RelativePathBuf, dependency: Option<String>) -> Result<Self, UnknownFile> {
         let Some(file_name) = path.file_name() else {
-            return Err(FormatError::UnknownFile(path));
+            return Err(UnknownFile { path });
         };
         let parent = path.parent().map(RelativePathBuf::from);
-        let format = Format::try_from(file_name).ok_or(FormatError::UnknownFile(path))?;
+        let format = Format::try_from(file_name).ok_or(UnknownFile { path })?;
         Ok(Config {
             parent,
             format,

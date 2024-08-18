@@ -96,13 +96,16 @@ impl Package {
         let version = self.versions.clone().into_latest();
         versioned_files
             .into_iter()
-            .map(|f| {
-                let path = self.versioned_files.iter().find(|path| *path == f.path());
-                if let Some(path) = path {
-                    f.set_version(&version, path.dependency.as_deref(), go_versioning)
+            .map(|file| {
+                let config = self
+                    .versioned_files
+                    .iter()
+                    .find(|config| *config == file.path());
+                if let Some(config) = config {
+                    file.set_version(&version, config.dependency.as_deref(), go_versioning)
                         .map_err(BumpError::SetError)
                 } else {
-                    Ok(f)
+                    Ok(file)
                 }
             })
             .collect()

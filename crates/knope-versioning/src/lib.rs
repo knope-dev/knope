@@ -8,6 +8,6 @@ pub mod versioned_file;
 pub use action::{Action, ReleaseTag};
 pub use package::{NewError as PackageNewError, Package};
 pub use versioned_file::{
-    Config as VersionedFileConfig, Error as VersionedFileError, FormatError, GoVersioning,
-    SetError, VersionedFile,
+    Config as VersionedFileConfig, Error as VersionedFileError, GoVersioning, SetError,
+    UnknownFile, VersionedFile,
 };

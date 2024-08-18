@@ -31,11 +31,10 @@ pub(crate) fn bump_version_and_update_state(
     }
     let write_files = state
         .all_versioned_files
-        .into_iter()
+        .drain(..)
         .filter_map(VersionedFile::write)
         .flatten();
     execute_prepare_actions(run_type.of(write_files), false)?;
-    state.all_versioned_files = Vec::new();
     Ok(run_type.of(state))
 }
 #[derive(Debug, Diagnostic, thiserror::Error)]

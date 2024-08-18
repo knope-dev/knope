@@ -3,7 +3,7 @@ use std::{ops::Range, path::PathBuf, str::FromStr};
 use ::toml::Spanned;
 use itertools::Itertools;
 use knope_config::{Asset, ChangelogSection};
-use knope_versioning::{package, versioned_file::cargo, FormatError, VersionedFileConfig};
+use knope_versioning::{package, versioned_file::cargo, UnknownFile, VersionedFileConfig};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
@@ -166,7 +166,7 @@ impl Package {
             .map(|spanned| {
                 let span = spanned.span();
                 VersionedFileConfig::try_from(spanned.into_inner())
-                    .map_err(|source| VersionedFileError::Format {
+                    .map_err(|source| VersionedFileError::UnknownFile {
                         source,
                         span: span.clone(),
                         source_code: source_code.to_string(),
@@ -225,9 +225,9 @@ struct WorkspaceMember {
 pub enum VersionedFileError {
     #[error("Problem with versioned file")]
     #[diagnostic()]
-    Format {
+    UnknownFile {
         #[diagnostic_source]
-        source: FormatError,
+        source: UnknownFile,
         #[source_code]
         source_code: String,
         #[label("Declared here")]
@@ -266,7 +266,7 @@ pub(crate) enum CargoWorkspaceError {
     Members,
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] FormatError),
+    UnknownFile(#[from] UnknownFile),
 }
 
 #[derive(Debug, Diagnostic, Error)]
