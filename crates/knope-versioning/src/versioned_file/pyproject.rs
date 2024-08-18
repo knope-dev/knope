@@ -11,10 +11,10 @@ use crate::{action::Action, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PyProject {
-    path: RelativePathBuf,
+    pub(super) path: RelativePathBuf,
     raw_toml: String,
     parsed: Toml,
-    version: Version,
+    pub(super) version: Version,
     diff: Option<String>,
 }
 
@@ -33,13 +33,6 @@ impl PyProject {
                 }),
             Err(err) => Err(Error::Deserialization(path, err)),
         }
-    }
-
-    pub(crate) fn get_version(&self) -> &Version {
-        &self.version
-    }
-    pub(crate) fn get_path(&self) -> &RelativePathBuf {
-        &self.path
     }
 
     pub(crate) fn set_version(mut self, new_version: &Version) -> Self {
@@ -214,8 +207,8 @@ mod tests {
         assert_eq!(
             PyProject::new(RelativePathBuf::new(), content.to_string())
                 .unwrap()
-                .get_version(),
-            &Version::from_str("0.1.0-rc.0").unwrap()
+                .version,
+            Version::from_str("0.1.0-rc.0").unwrap()
         );
     }
 

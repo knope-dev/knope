@@ -62,7 +62,7 @@ Only entries which contain a version will be updated.
 
 ### `Cargo.lock`
 
-Dependencies of a Rust project can be kept up to date by specifying a `Cargo.lock` file. By default, 
+Dependencies of a Rust project can be kept up to date by specifying a `Cargo.lock` file. By default,
 the dependency name is the package name within the first `Cargo.toml` file listed in `versioned_files`.
 You can override this by specifying the `dependency` field manually. If neither is provided, Knope will error.
 

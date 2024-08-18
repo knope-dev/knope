@@ -37,8 +37,7 @@ impl Package {
     ) -> Result<(Vec<Self>, Vec<VersionedFile>), Error> {
         let versioned_files: Vec<VersionedFile> = packages
             .iter()
-            .map(|package| package.versioned_files.iter())
-            .flatten()
+            .flat_map(|package| package.versioned_files.iter())
             .map(|path| {
                 let content = read_to_string(path.to_pathbuf())?;
                 VersionedFile::new(path, content, git_tags).map_err(Error::VersionedFile)
@@ -196,9 +195,11 @@ impl Package {
             versioning: knope_versioning::Package::new(
                 Name::Default,
                 &[""],
-                vec![knope_versioning::VersionedFilePath::new("Cargo.toml".into(), None).unwrap()],
+                vec![
+                    knope_versioning::VersionedFileConfig::new("Cargo.toml".into(), None).unwrap(),
+                ],
                 &[VersionedFile::new(
-                    &knope_versioning::VersionedFilePath::new("Cargo.toml".into(), None).unwrap(),
+                    &knope_versioning::VersionedFileConfig::new("Cargo.toml".into(), None).unwrap(),
                     r#"
                 [package]
                 name = "knope"
@@ -266,5 +267,5 @@ pub(crate) enum Error {
     UpdatePackageVersion(#[from] knope_versioning::SetError),
     #[error(transparent)]
     #[diagnostic(transparent)]
-    New(#[from] PackageNewError),
+    New(#[from] Box<PackageNewError>),
 }

@@ -8,8 +8,8 @@ use crate::{semver::Version, Action};
 
 #[derive(Clone, Debug)]
 pub struct Cargo {
-    path: RelativePathBuf,
-    document: DocumentMut,
+    pub(super) path: RelativePathBuf,
+    pub(crate) document: DocumentMut,
     diff: Vec<String>,
 }
 
@@ -31,7 +31,7 @@ impl Cargo {
         })
     }
 
-    pub fn get_version(&self) -> Result<Version, Error> {
+    pub(super) fn get_version(&self) -> Result<Version, Error> {
         self.document
             .get("package")
             .and_then(|package| package.get("version")?.as_str())
@@ -44,31 +44,26 @@ impl Cargo {
     }
 
     #[must_use]
-    pub(crate) fn get_path(&self) -> &RelativePathBuf {
-        &self.path
-    }
-
-    #[must_use]
-    pub fn set_version(mut self, new_version: &Version, dependency: Option<&str>) -> Self {
+    pub(super) fn set_version(mut self, new_version: &Version, dependency: Option<&str>) -> Self {
         let diff = if let Some(dependency) = dependency {
             if let Some(dep) = self
                 .document
                 .get_mut("dependencies")
-                .and_then(|deps| deps.get_mut(&dependency))
+                .and_then(|deps| deps.get_mut(dependency))
             {
                 write_version_to_dep(dep, new_version);
             }
             if let Some(dep) = self
                 .document
                 .get_mut("dev-dependencies")
-                .and_then(|deps| deps.get_mut(&dependency))
+                .and_then(|deps| deps.get_mut(dependency))
             {
                 write_version_to_dep(dep, new_version);
             }
             if let Some(dep) = self
                 .document
                 .get_mut("workspace")
-                .and_then(|workspace| workspace.get_mut("dependencies")?.get_mut(&dependency))
+                .and_then(|workspace| workspace.get_mut("dependencies")?.get_mut(dependency))
             {
                 write_version_to_dep(dep, new_version);
             }
@@ -87,7 +82,7 @@ impl Cargo {
         self
     }
 
-    pub(crate) fn write(self) -> Option<Action> {
+    pub(super) fn write(self) -> Option<Action> {
         if self.diff.is_empty() {
             return None;
         }
@@ -325,7 +320,7 @@ mod tests {
         let expected = Action::WriteToFile {
             path: RelativePathBuf::from("beep/Cargo.toml"),
             content: expected,
-            diff: "knope-versioning.version = 2.0.0, complex-requirement-in-object.version = 2.0.0"
+            diff: "knope-versioning.version = 0.2.0, complex-requirement-in-object.version = 2.0.0"
                 .to_string(),
         };
 

@@ -1,6 +1,6 @@
 use std::ops::Not;
 
-use knope_versioning::{FormatError, VersionedFilePath};
+use knope_versioning::{FormatError, VersionedFileConfig};
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
@@ -35,9 +35,9 @@ pub enum VersionedFile {
     },
 }
 
-impl From<VersionedFilePath> for VersionedFile {
-    fn from(path: VersionedFilePath) -> Self {
-        let (path, dependency) = (path.as_path(), path.dependency);
+impl From<VersionedFileConfig> for VersionedFile {
+    fn from(config: VersionedFileConfig) -> Self {
+        let (path, dependency) = (config.as_path(), config.dependency);
         if let Some(dependency) = dependency {
             Self::Dependency { path, dependency }
         } else {
@@ -46,14 +46,14 @@ impl From<VersionedFilePath> for VersionedFile {
     }
 }
 
-impl TryFrom<VersionedFile> for VersionedFilePath {
+impl TryFrom<VersionedFile> for VersionedFileConfig {
     type Error = FormatError;
 
     fn try_from(value: VersionedFile) -> Result<Self, Self::Error> {
         match value {
-            VersionedFile::Simple(path) => VersionedFilePath::new(path, None),
+            VersionedFile::Simple(path) => VersionedFileConfig::new(path, None),
             VersionedFile::Dependency { path, dependency } => {
-                VersionedFilePath::new(path, Some(dependency))
+                VersionedFileConfig::new(path, Some(dependency))
             }
         }
     }

@@ -6,4 +6,4 @@ version = "1.0.0"
 second-package = "0.1.0"
 
 [dev-dependencies]
-second-package = {path = "../second", version = "0.1.0"}
+second-package = { path = "../second", version = "0.1.0" }

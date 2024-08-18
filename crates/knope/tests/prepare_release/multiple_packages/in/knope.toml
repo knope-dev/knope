@@ -4,8 +4,8 @@ changelog = "FIRST_CHANGELOG.md"
 
 [packages.second]
 versioned_files = [
-    "package.json",
-    { path = "Cargo.toml", dependency = "second-package" },
+  "package.json",
+  { path = "Cargo.toml", dependency = "second-package" },
 ]
 changelog = "SECOND_CHANGELOG.md"
 

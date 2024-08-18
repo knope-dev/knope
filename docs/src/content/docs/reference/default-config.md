@@ -75,7 +75,7 @@ scopes = ["something"]
 
 [packages.something-else]
 versioned_files = [
-    "member2/Cargo.toml", 
+    "member2/Cargo.toml",
     "Cargo.lock",
     { path = "member1/Cargo.toml", dependency = "something-else" },
 ]

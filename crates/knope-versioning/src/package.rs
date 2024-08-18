@@ -21,14 +21,15 @@ use crate::{
     release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
     versioned_file,
-    versioned_file::{GoVersioning, Path, SetError, VersionedFile},
+    versioned_file::{cargo, Config, Format, GoVersioning, SetError, VersionedFile},
+    PackageNewError::CargoLockNoDependency,
 };
 
 #[derive(Clone, Debug)]
 pub struct Package {
     pub name: Name,
     pub versions: PackageVersions,
-    versioned_files: Vec<Path>,
+    versioned_files: Vec<Config>,
     pub release_notes: ReleaseNotes,
     scopes: Option<Vec<String>>,
 }
@@ -42,47 +43,24 @@ impl Package {
     pub fn new<S: AsRef<str> + Debug>(
         name: Name,
         git_tags: &[S],
-        versioned_files_tracked: Vec<Path>,
+        versioned_files_tracked: Vec<Config>,
         all_versioned_files: &[VersionedFile],
         release_notes: ReleaseNotes,
         scopes: Option<Vec<String>>,
-    ) -> Result<Self, NewError> {
-        let mut first_versioned_file: Option<(&VersionedFile, Version)> = None;
+    ) -> Result<Self, Box<NewError>> {
+        let (versioned_files, version_from_files) =
+            validate_versioned_files(versioned_files_tracked, all_versioned_files)?;
 
-        for path in &versioned_files_tracked {
-            let versioned_file = all_versioned_files
-                .iter()
-                .find(|f| f.path() == path)
-                .ok_or_else(|| NewError::NotFound(path.as_path()))?;
-            if path.dependency.is_some() {
-                continue; // It's okay for dependencies to be out of date
-            }
-            let version = versioned_file.version()?;
-            debug!("{path} has version {version}", path = path.as_path());
-            if let Some((first_versioned_file, first_version)) = first_versioned_file.as_ref() {
-                if *first_version != version {
-                    return Err(NewError::InconsistentVersions {
-                        first_path: first_versioned_file.path().clone(),
-                        first_version: first_version.clone(),
-                        second_path: versioned_file.path().clone(),
-                        second_version: version,
-                    });
-                }
-            } else {
-                first_versioned_file = Some((versioned_file, version));
-            }
-        }
         debug!("Looking for Git tags matching package name.");
         let mut versions = PackageVersions::from_tags(name.as_custom(), git_tags);
-
-        if let Some((_, version_from_files)) = first_versioned_file {
+        if let Some(version_from_files) = version_from_files {
             versions.update_version(version_from_files);
         }
 
         Ok(Self {
             name,
             versions,
-            versioned_files: versioned_files_tracked,
+            versioned_files,
             release_notes,
             scopes,
         })
@@ -212,6 +190,87 @@ impl Package {
     }
 }
 
+/// Run through the provided versioned files and make sure they meet all requirements in context.
+///
+/// Returns the potentially modified versioned files (e.g., setting defaults for lockfiles) and
+/// the package version according to those files (if any).
+fn validate_versioned_files(
+    versioned_files_tracked: Vec<Config>,
+    all_versioned_files: &[VersionedFile],
+) -> Result<(Vec<Config>, Option<Version>), Box<NewError>> {
+    let relevant_files: Vec<(Config, &VersionedFile)> = versioned_files_tracked
+        .into_iter()
+        .map(|path| {
+            all_versioned_files
+                .iter()
+                .find(|f| f.path() == &path)
+                .ok_or_else(|| NewError::NotFound(path.as_path()))
+                .map(|f| (path, f))
+        })
+        .collect::<Result<_, _>>()?;
+
+    let mut first_with_version: Option<(&VersionedFile, Version)> = None;
+    let mut validated_files = Vec::with_capacity(relevant_files.len());
+
+    for (config, versioned_file) in relevant_files.clone() {
+        let config = validate_dependency(config, &relevant_files)?;
+        let is_dep = config.dependency.is_some();
+        validated_files.push(config);
+        if is_dep {
+            // Dependencies don't have package versions
+            continue;
+        }
+        let version = versioned_file.version().map_err(NewError::VersionedFile)?;
+        debug!("{path} has version {version}", path = versioned_file.path());
+        if let Some((first_versioned_file, first_version)) = first_with_version.as_ref() {
+            if *first_version != version {
+                return Err(NewError::InconsistentVersions {
+                    first_path: first_versioned_file.path().clone(),
+                    first_version: first_version.clone(),
+                    second_path: versioned_file.path().clone(),
+                    second_version: version,
+                }
+                .into());
+            }
+        } else {
+            first_with_version = Some((versioned_file, version));
+        }
+    }
+
+    Ok((
+        validated_files,
+        first_with_version.map(|(_, version)| version),
+    ))
+}
+
+fn validate_dependency(
+    mut config: Config,
+    versioned_files: &[(Config, &VersionedFile)],
+) -> Result<Config, Box<NewError>> {
+    match (&config.format, config.dependency.is_some()) {
+        (Format::Cargo, _)  // `Cargo.toml` supports either mode
+        | (Format::CargoLock, true)  // `Cargo.lock` is always a dependency 
+            => Ok(config),
+        (Format::CargoLock, false) => {
+            // `Cargo.lock` needs to target a dependency. If there is a `Cargo.toml` file which is
+            // _not_ a dependency, we default to that one.
+            let cargo_package_name = versioned_files
+                .iter()
+                .find_map(|(config, file)| match file {
+                    VersionedFile::Cargo(file) if config.dependency.is_none() => {
+                        cargo::name_from_document(&file.document)
+                    }
+                    _ => None,
+                })
+                .ok_or(CargoLockNoDependency)?;
+            config.dependency = Some(cargo_package_name.to_string());
+            Ok(config)
+        }
+        (format, true) => Err(NewError::UnsupportedDependency(format.file_name()).into()),
+        (_, false) => Ok(config),
+    }
+}
+
 pub enum ChangeConfig {
     Force(Version),
     Calculate {
@@ -248,6 +307,27 @@ pub enum NewError {
         )
     )]
     NotFound(RelativePathBuf),
+    #[error("Dependencies are not supported in {0} files")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(knope_versioning::package::unsupported_dependency),
+            help("Dependencies aren't supported in every file type."),
+            url("https://knope.tech/reference/config-file/packages#versioned_files")
+        )
+    )]
+    UnsupportedDependency(&'static str),
+    #[error("Cargo.lock must specify a dependency")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code = "knope_versioning::package::cargo_lock_no_dependency",
+            help = "To use `Cargo.lock` in `versioned_files`, you must either manually specify \
+            `dependency` or define a `Cargo.toml` with a `package.name` in the same array.",
+            url = "https://knope.tech/reference/config-file/packages/#cargolock"
+        )
+    )]
+    CargoLockNoDependency,
     #[error("Packages must have at least one versioned file")]
     NoPackages,
     #[error(transparent)]

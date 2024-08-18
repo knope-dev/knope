@@ -1,0 +1,1 @@
+exclude = ["crates/knope/tests/generate/**"]

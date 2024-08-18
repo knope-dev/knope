@@ -137,7 +137,7 @@ mod test_replace_variables {
     use knope_versioning::{
         package::Name,
         release_notes::{Changelog, ReleaseNotes, Sections},
-        Action, VersionedFile, VersionedFilePath,
+        Action, VersionedFile, VersionedFileConfig,
     };
     use pretty_assertions::assert_eq;
     use relative_path::RelativePathBuf;
@@ -147,7 +147,7 @@ mod test_replace_variables {
 
     fn state() -> State {
         let changelog = Changelog::new(RelativePathBuf::default(), String::new());
-        let versioned_file_path = VersionedFilePath::new("Cargo.toml".into(), None).unwrap();
+        let versioned_file_path = VersionedFileConfig::new("Cargo.toml".into(), None).unwrap();
         let all_versioned_files = vec![VersionedFile::new(
             &versioned_file_path,
             "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),

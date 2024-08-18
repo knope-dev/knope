@@ -1,7 +1,7 @@
 use knope_versioning::{
     package::{Bump, BumpError},
     semver::{PreReleaseNotFound, Rule},
-    GoVersioning,
+    GoVersioning, VersionedFile,
 };
 use miette::Diagnostic;
 
@@ -32,7 +32,7 @@ pub(crate) fn bump_version_and_update_state(
     let write_files = state
         .all_versioned_files
         .into_iter()
-        .filter_map(|file| file.write())
+        .filter_map(VersionedFile::write)
         .flatten();
     execute_prepare_actions(run_type.of(write_files), false)?;
     state.all_versioned_files = Vec::new();

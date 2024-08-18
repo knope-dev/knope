@@ -7,7 +7,7 @@ use knope_versioning::{
     package::Bump,
     release_notes::Release,
     semver::{PackageVersions, Rule},
-    Action, ReleaseTag,
+    Action, ReleaseTag, VersionedFile,
 };
 use miette::Diagnostic;
 use tracing::debug;
@@ -58,7 +58,7 @@ pub(crate) fn prepare_release(
     let actions = state
         .all_versioned_files
         .drain(..)
-        .filter_map(|file| file.write())
+        .filter_map(VersionedFile::write)
         .flatten()
         .chain(state.pending_actions)
         .unique();
