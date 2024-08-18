@@ -1,14 +1,24 @@
 name: Finish Knope release
 
 on:
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      tag_name:
-        description: 'Tag name'
-        required: true
 
 jobs:
+  get-tag:
+    if: (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - run: echo "tag_name=$(gh release list --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
+        id: get-tag
+    outputs:
+      tag_name: ${{ steps.get-tag.outputs.tag_name }}
   build-artifacts:
+    needs: [get-tag]
+    if: needs.get-tag.outputs.tag_name != ''
     strategy:
       fail-fast: false
       matrix:
@@ -68,7 +78,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [build-artifacts]
+    needs: [build-artifacts, get-tag]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.1.7
@@ -79,7 +89,7 @@ jobs:
       - name: Upload artifacts to release
         run: |
           cd artifacts
-          gh release upload ${{ inputs.tag_name }} *
-          gh release edit ${{ inputs.tag_name }} --draft=false --latest
+          gh release upload ${{ needs.get-tag.outputs.tag_name }} *
+          gh release edit ${{ needs.get-tag.outputs.tag_name }} --draft=false --latest
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
