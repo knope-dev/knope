@@ -1,4 +1,5 @@
 use git_conventional::{Commit, Footer, Type};
+use tracing::debug;
 
 use super::{Change, ChangeSource, ChangeType};
 use crate::release_notes::Sections;
@@ -15,6 +16,9 @@ pub(crate) fn changes_from_commit_messages<'a, Message: AsRef<str>>(
     scopes: Option<&'a Vec<String>>,
     changelog_sections: &'a Sections,
 ) -> impl Iterator<Item = Change> + 'a {
+    if let Some(scopes) = scopes {
+        debug!("Only checking commits with scopes: {scopes:?}");
+    }
     commit_messages.iter().flat_map(move |message| {
         changes_from_commit_message(message.as_ref(), scopes, changelog_sections).into_iter()
     })

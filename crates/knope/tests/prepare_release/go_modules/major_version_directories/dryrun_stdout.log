@@ -9,15 +9,25 @@ sub_dir/v2/go.mod has version 2.0.0
 Looking for Git tags matching package name.
 No tags found matching pattern v2/v
 Getting conventional commits since last release of package v1
-Only checking commits with scopes: ["v1"]
 No tags found matching pattern v1/v
 Tag v1/v0.0.0 not found, using ALL commits
+Only checking commits with scopes: ["v1"]
 Determining new version for v1
 commit fix(v1): A fix
 	implies rule PATCH
 Using PATCH rule to bump from 1.0.0 to 1.0.1
+Getting conventional commits since last release of package v2
+No tags found matching pattern v2/v
+Tag v2/v0.0.0 not found, using ALL commits
+Only checking commits with scopes: ["v2"]
+Determining new version for v2
+commit feat(v2): New feature
+	implies rule MINOR
+Using MINOR rule to bump from 2.0.0 to 2.1.0
 Would add the following to go.mod: 1.0.1
 Would add the following to sub_dir/go.mod: 1.0.1
+Would add the following to v2/go.mod: 2.1.0
+Would add the following to sub_dir/v2/go.mod: 2.1.0
 Would add the following to CHANGELOG.md: 
 ## 1.0.1 ([DATE])
 
@@ -25,20 +35,6 @@ Would add the following to CHANGELOG.md:
 
 - A fix
 
-Would add files to git:
-  go.mod
-  sub_dir/go.mod
-  CHANGELOG.md
-Getting conventional commits since last release of package v2
-Only checking commits with scopes: ["v2"]
-No tags found matching pattern v2/v
-Tag v2/v0.0.0 not found, using ALL commits
-Determining new version for v2
-commit feat(v2): New feature
-	implies rule MINOR
-Using MINOR rule to bump from 2.0.0 to 2.1.0
-Would add the following to v2/go.mod: 2.1.0
-Would add the following to sub_dir/v2/go.mod: 2.1.0
 Would add the following to v2/CHANGELOG.md: 
 ## 2.1.0 ([DATE])
 
@@ -47,12 +43,15 @@ Would add the following to v2/CHANGELOG.md:
 - New feature
 
 Would add files to git:
+  go.mod
+  sub_dir/go.mod
   v2/go.mod
   sub_dir/v2/go.mod
+  CHANGELOG.md
   v2/CHANGELOG.md
 Would create Git tag v1.0.1
 Would create Git tag sub_dir/v1.0.1
-Would create Git tag v1/v1.0.1
 Would create Git tag v2.1.0
 Would create Git tag sub_dir/v2.1.0
+Would create Git tag v1/v1.0.1
 Would create Git tag v2/v2.1.0

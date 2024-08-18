@@ -24,7 +24,6 @@ use crate::{
 #[derive(Clone, Debug)]
 pub(crate) struct Package {
     pub(crate) versioning: knope_versioning::Package,
-    pub(crate) pending_actions: Vec<Action>,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
     pub(crate) assets: Option<Vec<Asset>>,
@@ -35,43 +34,42 @@ impl Package {
     pub(crate) fn load(
         packages: Vec<config::Package>,
         git_tags: &[String],
-    ) -> Result<Vec<Self>, Error> {
+    ) -> Result<(Vec<Self>, Vec<VersionedFile>), Error> {
+        let versioned_files: Vec<VersionedFile> = packages
+            .iter()
+            .map(|package| package.versioned_files.iter())
+            .flatten()
+            .map(|path| {
+                let content = read_to_string(path.to_pathbuf())?;
+                VersionedFile::new(path, content, git_tags).map_err(Error::VersionedFile)
+            })
+            .try_collect()?;
         let packages = packages
             .into_iter()
-            .map(|package| Package::validate(package, git_tags))
+            .map(|package| Package::validate(package, git_tags, &versioned_files))
             .collect::<Result<Vec<_>, _>>()?;
-        Ok(packages)
+        Ok((packages, versioned_files))
     }
 
     pub(crate) fn name(&self) -> &Name {
         &self.versioning.name
     }
 
-    fn validate(package: config::Package, git_tags: &[String]) -> Result<Self, Error> {
+    fn validate(
+        package: config::Package,
+        git_tags: &[String],
+        all_versioned_files: &[VersionedFile],
+    ) -> Result<Self, Error> {
         if let Name::Custom(package_name) = &package.name {
             debug!("Loading package {package_name}");
         } else {
             debug!("Loading package");
         }
-        let versioned_files: Vec<VersionedFile> = package
-            .versioned_files
-            .into_iter()
-            .map(|path| {
-                let content = read_to_string(path.to_pathbuf())?;
-                VersionedFile::new(path, content, git_tags).map_err(Error::VersionedFile)
-            })
-            .try_collect()?;
-        for versioned_file in &versioned_files {
-            debug!(
-                "{} has version {}",
-                versioned_file.path(),
-                versioned_file.version(),
-            );
-        }
         let versioning = knope_versioning::Package::new(
             package.name,
             git_tags,
-            versioned_files,
+            package.versioned_files,
+            all_versioned_files,
             ReleaseNotes {
                 sections: convert_to_versioning(package.extra_changelog_sections),
                 changelog: package.changelog.map(load_changelog).transpose()?,
@@ -86,18 +84,17 @@ impl Package {
             } else {
                 GoVersioning::default()
             },
-            pending_actions: Vec::new(),
             override_version: None,
         })
     }
 
     pub(crate) fn prepare_release(
-        mut self,
-        run_type: RunType<()>,
+        &mut self,
         prepare_release: &PrepareRelease,
         all_tags: &[String],
+        versioned_files: Vec<VersionedFile>,
         changeset: &[changesets::Release],
-    ) -> Result<Package, Error> {
+    ) -> Result<(Vec<VersionedFile>, Vec<Action>), Error> {
         let PrepareRelease {
             prerelease_label,
             ignore_conventional_commits,
@@ -109,14 +106,13 @@ impl Package {
         } else {
             conventional_commits::get_conventional_commits_after_last_stable_version(
                 &self.versioning.name,
-                self.versioning.scopes.as_ref(),
                 all_tags,
             )?
         };
         let changes = self.versioning.get_changes(changeset, &commit_messages);
 
         if changes.is_empty() {
-            return Ok(self);
+            return Ok((versioned_files, Vec::new()));
         }
 
         let change_config = match self.override_version.take() {
@@ -127,21 +123,19 @@ impl Package {
             },
         };
 
-        let pending_actions = self.versioning.apply_changes(&changes, change_config)?;
-
-        self.pending_actions = execute_prepare_actions(run_type.of(pending_actions), true)?;
-
-        Ok(self)
+        self.versioning
+            .apply_changes(&changes, versioned_files, change_config)
+            .map_err(Error::Bump)
     }
 }
 
 pub(crate) fn execute_prepare_actions(
-    actions: RunType<Vec<Action>>,
+    actions: RunType<impl Iterator<Item = Action>>,
     stage_to_git: bool,
 ) -> Result<Vec<Action>, git::Error> {
     let (run_type, actions) = actions.take();
-    let mut remainder = Vec::with_capacity(actions.len());
-    let mut paths_to_stage = Vec::with_capacity(actions.len());
+    let mut remainder = Vec::new();
+    let mut paths_to_stage = Vec::new();
     for action in actions {
         match action {
             Action::WriteToFile {
@@ -175,6 +169,9 @@ pub(crate) fn execute_prepare_actions(
 fn stage_changes_to_git(paths: RunType<&[RelativePathBuf]>) -> Result<(), git::Error> {
     match paths {
         RunType::DryRun(paths) => {
+            if paths.is_empty() {
+                return Ok(());
+            }
             info!("Would add files to git:");
             for path in paths {
                 info!("  {path}");
@@ -199,8 +196,9 @@ impl Package {
             versioning: knope_versioning::Package::new(
                 Name::Default,
                 &[""],
-                vec![VersionedFile::new(
-                    knope_versioning::VersionedFilePath::new("Cargo.toml".into(), None).unwrap(),
+                vec![knope_versioning::VersionedFilePath::new("Cargo.toml".into(), None).unwrap()],
+                &[VersionedFile::new(
+                    &knope_versioning::VersionedFilePath::new("Cargo.toml".into(), None).unwrap(),
                     r#"
                 [package]
                 name = "knope"
@@ -216,7 +214,6 @@ impl Package {
                 None,
             )
             .unwrap(),
-            pending_actions: vec![],
             override_version: None,
             assets: None,
             go_versioning: GoVersioning::default(),

@@ -6,7 +6,7 @@ use itertools::Itertools;
 pub use release::Release;
 use time::{macros::format_description, OffsetDateTime};
 
-use crate::{changes::Change, semver::Version, Action};
+use crate::{changes::Change, package, semver::Version, Action};
 
 mod changelog;
 mod config;
@@ -29,6 +29,7 @@ impl ReleaseNotes {
         &mut self,
         version: Version,
         changes: &[Change],
+        package_name: &package::Name,
     ) -> Result<Vec<Action>, TimeError> {
         let mut notes = String::new();
         for (section_name, sources) in self.sections.iter() {
@@ -56,6 +57,7 @@ impl ReleaseNotes {
             title: release_title(&version)?,
             version,
             notes,
+            package_name: package_name.clone(),
         };
 
         let mut pending_actions = Vec::with_capacity(2);

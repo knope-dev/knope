@@ -15,6 +15,7 @@ pub struct PubSpec {
     raw: String,
     parsed: Yaml,
     path: RelativePathBuf,
+    diff: Option<String>,
 }
 
 impl PubSpec {
@@ -24,6 +25,7 @@ impl PubSpec {
                 raw: content,
                 parsed,
                 path,
+                diff: None,
             }),
             Err(err) => Err(Error::Deserialize { path, source: err }),
         }
@@ -37,9 +39,9 @@ impl PubSpec {
         &self.path
     }
 
-    pub(crate) fn set_version(self, new_version: &Version) -> serde_yaml::Result<Action> {
+    pub(crate) fn set_version(mut self, new_version: &Version) -> serde_yaml::Result<Self> {
         let version_line = self.raw.lines().find(|line| line.starts_with("version: "));
-        let new_content = if let Some(version_line) = version_line {
+        self.raw = if let Some(version_line) = version_line {
             // Replace only the required bit to preserve formatting & comments (since serde_yaml doesn't preserve them)
             self.raw.replace(
                 version_line,
@@ -57,11 +59,16 @@ impl PubSpec {
             );
             to_string(&yaml)?
         };
+        self.diff = Some(new_version.to_string());
 
-        Ok(Action::WriteToFile {
+        Ok(self)
+    }
+
+    pub(crate) fn write(self) -> Option<Action> {
+        self.diff.map(|diff| Action::WriteToFile {
+            content: self.raw,
             path: self.path,
-            content: new_content,
-            diff: new_version.to_string(),
+            diff,
         })
     }
 }
@@ -119,7 +126,9 @@ mod tests {
         let action = PubSpec::new(RelativePathBuf::from("blah/blah"), content.to_string())
             .unwrap()
             .set_version(&Version::from_str("1.2.3-rc.4").unwrap())
-            .unwrap();
+            .unwrap()
+            .write()
+            .expect("diff to write");
 
         let expected_content = content.replace("1.0.0", "1.2.3-rc.4");
         let expected = Action::WriteToFile {

@@ -12,6 +12,7 @@ pub struct PackageJson {
     path: RelativePathBuf,
     raw: String,
     parsed: Json,
+    diff: Option<String>,
 }
 
 impl PackageJson {
@@ -21,6 +22,7 @@ impl PackageJson {
                 path,
                 raw: content,
                 parsed,
+                diff: None,
             }),
             Err(err) => Err(Error::Deserialize { path, source: err }),
         }
@@ -34,17 +36,22 @@ impl PackageJson {
         &self.path
     }
 
-    pub(crate) fn set_version(self, new_version: &Version) -> serde_json::Result<Action> {
+    pub(crate) fn set_version(mut self, new_version: &Version) -> serde_json::Result<Self> {
         let mut json = serde_json::from_str::<Map<String, Value>>(&self.raw)?;
         json.insert(
             "version".to_string(),
             Value::String(new_version.to_string()),
         );
-        let new_content = serde_json::to_string_pretty(&json)?;
-        Ok(Action::WriteToFile {
+        self.raw = serde_json::to_string_pretty(&json)?;
+        self.diff = Some(new_version.to_string());
+        Ok(self)
+    }
+
+    pub(crate) fn write(self) -> Option<Action> {
+        self.diff.map(|diff| Action::WriteToFile {
             path: self.path,
-            content: new_content,
-            diff: new_version.to_string(),
+            content: self.raw,
+            diff,
         })
     }
 }
@@ -103,7 +110,9 @@ mod tests {
         let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
             .unwrap()
             .set_version(&Version::from_str("1.2.3-rc.4").unwrap())
-            .unwrap();
+            .unwrap()
+            .write()
+            .expect("diff to write");
 
         let expected = r#"{
   "name": "tester",
@@ -129,7 +138,9 @@ mod tests {
         let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
             .unwrap()
             .set_version(&Version::from_str("1.2.3-rc.4").unwrap())
-            .unwrap();
+            .unwrap()
+            .write()
+            .expect("diff to write");
 
         let expected = r#"{
   "name": "tester",

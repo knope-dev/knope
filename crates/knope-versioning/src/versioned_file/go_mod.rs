@@ -16,6 +16,7 @@ pub struct GoMod {
     raw: String,
     module_line: ModuleLine,
     version: Version,
+    new_version: Option<Version>,
 }
 
 impl GoMod {
@@ -36,6 +37,7 @@ impl GoMod {
                 raw,
                 version: comment_version.clone(),
                 module_line,
+                new_version: None,
             });
         }
 
@@ -78,6 +80,7 @@ impl GoMod {
             raw,
             module_line,
             version: version_from_tag,
+            new_version: None,
         })
     }
 
@@ -92,9 +95,9 @@ impl GoMod {
     #[allow(clippy::expect_used)]
     pub(crate) fn set_version(
         mut self,
-        new_version: &Version,
+        new_version: Version,
         versioning: GoVersioning,
-    ) -> Result<[Action; 2], SetError> {
+    ) -> Result<Self, SetError> {
         let original_module_line = self
             .raw
             .lines()
@@ -123,9 +126,16 @@ impl GoMod {
             self.module_line.major_version = Some(new_version.stable_component().major);
         }
 
-        let new_content = self
+        self.raw = self
             .raw
             .replace(original_module_line, &self.module_line.to_string());
+        self.new_version = Some(new_version);
+        Ok(self)
+    }
+
+    pub(crate) fn write(self) -> Option<[Action; 2]> {
+        let new_version = self.new_version?;
+
         let tag = self
             .path
             .parent()
@@ -146,10 +156,11 @@ impl GoMod {
                 || format!("v{new_version}"),
                 |prefix| format!("{prefix}/v{new_version}"),
             );
-        Ok([
+
+        Some([
             Action::WriteToFile {
                 path: self.path,
-                content: new_content,
+                content: self.raw,
                 diff: new_version.to_string(),
             },
             Action::AddTag { tag },

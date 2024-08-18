@@ -6,7 +6,6 @@ use std::{
 };
 
 use changesets::Release;
-use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -21,16 +20,17 @@ use crate::{
     },
     release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
-    versioned_file::{GoVersioning, SetError, VersionedFile},
+    versioned_file,
+    versioned_file::{GoVersioning, Path, SetError, VersionedFile},
 };
 
 #[derive(Clone, Debug)]
 pub struct Package {
     pub name: Name,
     pub versions: PackageVersions,
-    versioned_files: Option<Vec<VersionedFile>>,
+    versioned_files: Vec<Path>,
     pub release_notes: ReleaseNotes,
-    pub scopes: Option<Vec<String>>,
+    scopes: Option<Vec<String>>,
 }
 
 impl Package {
@@ -42,32 +42,47 @@ impl Package {
     pub fn new<S: AsRef<str> + Debug>(
         name: Name,
         git_tags: &[S],
-        versioned_files: Vec<VersionedFile>,
+        versioned_files_tracked: Vec<Path>,
+        all_versioned_files: &[VersionedFile],
         release_notes: ReleaseNotes,
         scopes: Option<Vec<String>>,
     ) -> Result<Self, NewError> {
-        if let Some(first) = versioned_files.first() {
-            if let Some(conflict) = versioned_files
+        let mut first_versioned_file: Option<(&VersionedFile, Version)> = None;
+
+        for path in &versioned_files_tracked {
+            let versioned_file = all_versioned_files
                 .iter()
-                .find(|f| f.version() != first.version())
-            {
-                return Err(NewError::InconsistentVersions(
-                    Box::new(first.clone()),
-                    Box::new(conflict.clone()),
-                ));
+                .find(|f| f.path() == path)
+                .ok_or_else(|| NewError::NotFound(path.as_path()))?;
+            if path.dependency.is_some() {
+                continue; // It's okay for dependencies to be out of date
+            }
+            let version = versioned_file.version()?;
+            debug!("{path} has version {version}", path = path.as_path());
+            if let Some((first_versioned_file, first_version)) = first_versioned_file.as_ref() {
+                if *first_version != version {
+                    return Err(NewError::InconsistentVersions {
+                        first_path: first_versioned_file.path().clone(),
+                        first_version: first_version.clone(),
+                        second_path: versioned_file.path().clone(),
+                        second_version: version,
+                    });
+                }
+            } else {
+                first_versioned_file = Some((versioned_file, version));
             }
         }
         debug!("Looking for Git tags matching package name.");
         let mut versions = PackageVersions::from_tags(name.as_custom(), git_tags);
 
-        if let Some(version_from_files) = versioned_files.first().map(VersionedFile::version) {
-            versions.update_version(version_from_files.clone());
+        if let Some((_, version_from_files)) = first_versioned_file {
+            versions.update_version(version_from_files);
         }
 
         Ok(Self {
             name,
             versions,
-            versioned_files: Some(versioned_files),
+            versioned_files: versioned_files_tracked,
             release_notes,
             scopes,
         })
@@ -90,10 +105,8 @@ impl Package {
         &mut self,
         bump: Bump,
         go_versioning: GoVersioning,
-    ) -> Result<Vec<Action>, BumpError> {
-        let Some(versioned_files) = self.versioned_files.take() else {
-            return Err(BumpError::PackageAlreadyBumped);
-        };
+        versioned_files: Vec<VersionedFile>,
+    ) -> Result<Vec<VersionedFile>, BumpError> {
         match bump {
             Bump::Manual(version) => {
                 self.versions.update_version(version);
@@ -105,9 +118,16 @@ impl Package {
         let version = self.versions.clone().into_latest();
         versioned_files
             .into_iter()
-            .map(|f| f.set_version(&version, go_versioning))
-            .process_results(|iter| iter.flatten().collect())
-            .map_err(BumpError::SetError)
+            .map(|f| {
+                let path = self.versioned_files.iter().find(|path| *path == f.path());
+                if let Some(path) = path {
+                    f.set_version(&version, path.dependency.as_deref(), go_versioning)
+                        .map_err(BumpError::SetError)
+                } else {
+                    Ok(f)
+                }
+            })
+            .collect()
     }
 
     #[must_use]
@@ -132,16 +152,21 @@ impl Package {
     pub fn apply_changes(
         &mut self,
         changes: &[Change],
+        versioned_files: Vec<VersionedFile>,
         config: ChangeConfig,
-    ) -> Result<Vec<Action>, BumpError> {
+    ) -> Result<(Vec<VersionedFile>, Vec<Action>), BumpError> {
         if let Name::Custom(package_name) = &self.name {
             debug!("Determining new version for {package_name}");
         }
 
-        let mut actions = match config {
+        let updated = match config {
             ChangeConfig::Force(version) => {
                 debug!("Using overridden version {version}");
-                self.bump_version(Bump::Manual(version), GoVersioning::BumpMajor)?
+                self.bump_version(
+                    Bump::Manual(version),
+                    GoVersioning::BumpMajor,
+                    versioned_files,
+                )?
             }
             ChangeConfig::Calculate {
                 prerelease_label,
@@ -156,27 +181,34 @@ impl Package {
                 } else {
                     stable_rule.into()
                 };
-                self.bump_version(Bump::Rule(rule), go_versioning)?
+                self.bump_version(Bump::Rule(rule), go_versioning, versioned_files)?
             }
         };
         let version = self.versions.clone().into_latest();
-        actions.extend(changes.iter().filter_map(|change| {
-            if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
-                if version.is_prerelease() {
-                    None
+        let mut actions: Vec<Action> = changes
+            .iter()
+            .filter_map(|change| {
+                if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                    if version.is_prerelease() {
+                        None
+                    } else {
+                        Some(Action::RemoveFile {
+                            path: RelativePathBuf::from(CHANGESET_DIR)
+                                .join(unique_id.to_file_name()),
+                        })
+                    }
                 } else {
-                    Some(Action::RemoveFile {
-                        path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
-                    })
+                    None
                 }
-            } else {
-                None
-            }
-        }));
+            })
+            .collect();
 
-        actions.extend(self.release_notes.create_release(version, changes)?);
+        actions.extend(
+            self.release_notes
+                .create_release(version, changes, &self.name)?,
+        );
 
-        Ok(actions)
+        Ok((updated, actions))
     }
 }
 
@@ -191,7 +223,7 @@ pub enum ChangeConfig {
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum NewError {
-    #[error("Found inconsistent versions in package: {} had {} and {} had {}", .0.path(), .0.version(), .1.path(), .1.version())]
+    #[error("Found inconsistent versions in package: {first_path} had {first_version} and {second_path} had {second_version}")]
     #[cfg_attr(
         feature = "miette",
         diagnostic(
@@ -200,9 +232,27 @@ pub enum NewError {
             help = "All files in a package must have the same version"
         )
     )]
-    InconsistentVersions(Box<VersionedFile>, Box<VersionedFile>),
+    InconsistentVersions {
+        first_path: RelativePathBuf,
+        first_version: Version,
+        second_path: RelativePathBuf,
+        second_version: Version,
+    },
+    #[error("Versioned file not found: {0}")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code = "knope_versioning::package::versioned_file_not_found",
+            help = "this is likely a bug, please report it",
+            url = "https://github.com/knope-dev/knope/issues/new",
+        )
+    )]
+    NotFound(RelativePathBuf),
     #[error("Packages must have at least one versioned file")]
     NoPackages,
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    VersionedFile(#[from] versioned_file::Error),
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -300,16 +350,6 @@ pub enum BumpError {
     SetError(#[from] SetError),
     #[error(transparent)]
     PreReleaseNotFound(#[from] PreReleaseNotFound),
-    #[error("Package version has already been updated")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code = "knope_versioning::package_already_bumped",
-            url = "https://knope.tech/reference/concepts/package/#version",
-            help = "You can only run a single BumpVersion or PrepareRelease step per workflow"
-        )
-    )]
-    PackageAlreadyBumped,
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     Time(#[from] TimeError),

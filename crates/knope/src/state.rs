@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use knope_versioning::{Action, VersionedFile};
+
 use crate::{
     config,
     step::{issues, releases},
@@ -15,6 +17,8 @@ pub(crate) struct State {
     pub(crate) github_config: Option<config::GitHub>,
     pub(crate) issue: Issue,
     pub(crate) packages: Vec<releases::Package>,
+    pub(crate) all_versioned_files: Vec<VersionedFile>,
+    pub(crate) pending_actions: Vec<Action>,
     pub(crate) all_git_tags: Vec<String>,
 }
 
@@ -25,6 +29,7 @@ impl State {
         github_config: Option<config::GitHub>,
         gitea_config: Option<config::Gitea>,
         packages: Vec<releases::Package>,
+        all_versioned_files: Vec<VersionedFile>,
         all_git_tags: Vec<String>,
     ) -> Self {
         State {
@@ -35,7 +40,9 @@ impl State {
             github_config,
             issue: Issue::Initial,
             packages,
+            all_versioned_files,
             all_git_tags,
+            pending_actions: Vec::new(),
         }
     }
 }

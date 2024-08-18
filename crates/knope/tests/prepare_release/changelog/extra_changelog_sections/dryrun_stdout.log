@@ -1,4 +1,5 @@
-Would add the following to Cargo.toml: 1.0.1
+Would add the following to Cargo.toml: version = 1.0.1
+Would add the following to pyproject.toml: 0.1.1
 Would add the following to FIRST_CHANGELOG.md: 
 ## 1.0.1 ([DATE])
 
@@ -13,10 +14,6 @@ Would add the following to FIRST_CHANGELOG.md:
 - Special note
 - Whatever note
 
-Would add files to git:
-  Cargo.toml
-  FIRST_CHANGELOG.md
-Would add the following to pyproject.toml: 0.1.1
 Would add the following to SECOND_CHANGELOG.md: 
 ## 0.1.1 ([DATE])
 
@@ -26,5 +23,7 @@ Would add the following to SECOND_CHANGELOG.md:
 - Standard note second only
 
 Would add files to git:
+  Cargo.toml
   pyproject.toml
+  FIRST_CHANGELOG.md
   SECOND_CHANGELOG.md

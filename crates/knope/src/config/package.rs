@@ -3,7 +3,11 @@ use std::{ops::Range, path::PathBuf, str::FromStr};
 use ::toml::Spanned;
 use itertools::Itertools;
 use knope_config::{Asset, ChangelogSection};
-use knope_versioning::{package, versioned_file::cargo, FormatError, VersionedFilePath};
+use knope_versioning::{
+    package,
+    versioned_file::{cargo, cargo::contains_dependency},
+    FormatError, VersionedFilePath,
+};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
@@ -65,15 +69,15 @@ impl Package {
     }
 
     fn cargo_workspace_members() -> Result<Vec<Self>, CargoWorkspaceError> {
-        let path = RelativePath::new("Cargo.toml");
-        let Ok(contents) = read_to_string(path.as_str()) else {
+        let cargo_toml_path = RelativePath::new("Cargo.toml");
+        let Ok(contents) = read_to_string(cargo_toml_path.as_str()) else {
             return Ok(Vec::new());
         };
         let cargo_toml = DocumentMut::from_str(&contents)
-            .map_err(|err| CargoWorkspaceError::Toml(err, path.into()))?;
-        let workspace_path = path
+            .map_err(|err| CargoWorkspaceError::Toml(err, cargo_toml_path.into()))?;
+        let workspace_path = cargo_toml_path
             .parent()
-            .ok_or_else(|| CargoWorkspaceError::Parent(path.into()))?;
+            .ok_or_else(|| CargoWorkspaceError::Parent(cargo_toml_path.into()))?;
         let Some(members) = cargo_toml
             .get("workspace")
             .and_then(|workspace| workspace.as_table()?.get("members")?.as_array())
@@ -98,16 +102,15 @@ impl Package {
                 })
             })
             .collect::<Result<_, CargoWorkspaceError>>()?;
-        // TODO: workspace dependencies
         Ok(members
             .iter()
             .map(|member| {
-                let versioned_files = members
+                let mut versioned_files: Vec<VersionedFilePath> = members
                     .iter()
                     .filter_map(|other_member| {
                         if member.name == other_member.name {
                             Some(other_member.path.clone())
-                        } else if cargo::contains_dependency(&other_member.document, &member.name) {
+                        } else if contains_dependency(&other_member.document, &member.name) {
                             let mut path = other_member.path.clone();
                             path.dependency = Some(member.name.clone());
                             Some(path)
@@ -116,6 +119,15 @@ impl Package {
                         }
                     })
                     .collect();
+                if contains_dependency(&cargo_toml, &member.name) {
+                    versioned_files.extend(
+                        VersionedFilePath::new(
+                            cargo_toml_path.to_relative_path_buf(),
+                            Some(member.name.clone()),
+                        )
+                        .ok(),
+                    );
+                }
                 Self {
                     name: package::Name::Custom(member.name.clone()),
                     versioned_files,

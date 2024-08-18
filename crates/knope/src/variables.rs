@@ -57,7 +57,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                 } else {
                     first_package(state)?
                 };
-                if let Some(body) = package.pending_actions.iter().find_map(|action| {
+                if let Some(body) = state.pending_actions.iter().find_map(|action| {
                     if let Action::CreateRelease(Release { notes, .. }) = action {
                         Some(notes)
                     } else {
@@ -72,7 +72,7 @@ pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result
                         .release_notes
                         .changelog
                         .as_ref()
-                        .and_then(|changelog| changelog.get_release(&version))
+                        .and_then(|changelog| changelog.get_release(&version, package.name()))
                         .ok_or_else(|| Error::NoChangelogEntry(version))?;
                     template = template.replace(&var_name, &release.notes);
                 }
@@ -145,19 +145,22 @@ mod test_replace_variables {
     use super::*;
     use crate::step::issues::Issue;
 
-    fn package() -> Package {
+    fn state() -> State {
         let changelog = Changelog::new(RelativePathBuf::default(), String::new());
+        let versioned_file_path = VersionedFilePath::new("Cargo.toml".into(), None).unwrap();
+        let all_versioned_files = vec![VersionedFile::new(
+            &versioned_file_path,
+            "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
+            &[""],
+        )
+        .unwrap()];
 
-        Package {
+        let package = Package {
             versioning: knope_versioning::Package::new(
                 Name::Default,
                 &[""],
-                vec![VersionedFile::new(
-                    VersionedFilePath::new("Cargo.toml".into(), None).unwrap(),
-                    "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
-                    &[""],
-                )
-                .unwrap()],
+                vec![versioned_file_path],
+                &all_versioned_files,
                 ReleaseNotes {
                     sections: Sections::default(),
                     changelog: Some(changelog),
@@ -166,7 +169,16 @@ mod test_replace_variables {
             )
             .unwrap(),
             ..Package::default()
-        }
+        };
+
+        State::new(
+            None,
+            None,
+            None,
+            vec![package],
+            all_versioned_files,
+            Vec::new(),
+        )
     }
 
     #[test]
@@ -174,7 +186,7 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::Version);
-        let mut state = State::new(None, None, None, vec![package()], Vec::new());
+        let mut state = state();
         let version = Version::new(1, 2, 3, None);
         let package_versions = version.clone().into();
         state.packages[0].versioning.versions = package_versions;
@@ -210,6 +222,8 @@ mod test_replace_variables {
             issue: state::Issue::Selected(issue),
             packages: Vec::new(),
             all_git_tags: Vec::new(),
+            all_versioned_files: Vec::new(),
+            pending_actions: Vec::new(),
         };
 
         let result = replace_variables(
@@ -229,13 +243,14 @@ mod test_replace_variables {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
         variables.insert("$$".to_string(), Variable::ChangelogEntry);
-        let mut state = State::new(None, None, None, vec![package()], Vec::new());
+        let mut state = state();
         let version = Version::new(1, 2, 3, None);
         let changelog_entry = "some content being put in the changelog";
-        state.packages[0].pending_actions = vec![Action::CreateRelease(Release {
+        state.pending_actions = vec![Action::CreateRelease(Release {
             version: version.clone(),
             title: "title".to_string(),
             notes: changelog_entry.to_string(),
+            package_name: Name::Default,
         })];
 
         let result = replace_variables(

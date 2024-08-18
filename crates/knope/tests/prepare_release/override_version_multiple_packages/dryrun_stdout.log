@@ -1,4 +1,6 @@
-Would add the following to Cargo.toml: 1.0.0
+Would add the following to Cargo.toml: version = 1.0.0
+Would add the following to package.json: 4.5.6
+Would add the following to pyproject.toml: 4.5.6
 Would add the following to FIRST_CHANGELOG.md: 
 ## 1.0.0 ([DATE])
 
@@ -6,10 +8,6 @@ Would add the following to FIRST_CHANGELOG.md:
 
 - A bug fix
 
-Would add files to git:
-  Cargo.toml
-  FIRST_CHANGELOG.md
-Would add the following to package.json: 4.5.6
 Would add the following to SECOND_CHANGELOG.md: 
 ## 4.5.6 ([DATE])
 
@@ -17,10 +15,6 @@ Would add the following to SECOND_CHANGELOG.md:
 
 - A bug fix
 
-Would add files to git:
-  package.json
-  SECOND_CHANGELOG.md
-Would add the following to pyproject.toml: 4.5.6
 Would add the following to THIRD_CHANGELOG.md: 
 ## 4.5.6 ([DATE])
 
@@ -29,5 +23,9 @@ Would add the following to THIRD_CHANGELOG.md:
 - A bug fix
 
 Would add files to git:
+  Cargo.toml
+  package.json
   pyproject.toml
+  FIRST_CHANGELOG.md
+  SECOND_CHANGELOG.md
   THIRD_CHANGELOG.md

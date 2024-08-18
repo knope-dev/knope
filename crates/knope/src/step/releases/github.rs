@@ -1,11 +1,10 @@
 pub(crate) use api::CreateReleaseError as Error;
 use knope_config::Asset;
-use knope_versioning::{package, release_notes::Release, ReleaseTag};
+use knope_versioning::{release_notes::Release, ReleaseTag};
 
 use crate::{config::GitHub, integrations::github as api, state, state::RunType};
 
 pub(crate) fn release(
-    package_name: &package::Name,
     release: &Release,
     github_state: RunType<state::GitHub>,
     github_config: &GitHub,
@@ -13,7 +12,7 @@ pub(crate) fn release(
     tag: &ReleaseTag,
 ) -> Result<state::GitHub, Error> {
     let version = &release.version;
-    let mut name = if let package::Name::Custom(package_name) = package_name {
+    let mut name = if let Some(package_name) = release.package_name.as_custom() {
         format!("{package_name} ")
     } else {
         String::new()

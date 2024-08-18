@@ -9,11 +9,9 @@ use relative_path::RelativePathBuf;
 use serde::{Serialize, Serializer};
 
 use crate::{
-    action::{
-        ActionSet,
-        ActionSet::{Single, Two},
-    },
+    action::ActionSet::{Single, Two},
     semver::Version,
+    Action,
 };
 
 pub mod cargo;
@@ -39,12 +37,12 @@ impl VersionedFile {
     /// Depends on the format.
     /// If the content doesn't match the expected format, an error is returned.
     pub fn new<S: AsRef<str> + Debug>(
-        path: Path,
+        path: &Path,
         content: String,
         git_tags: &[S],
     ) -> Result<Self, Error> {
         match path.format {
-            Format::Cargo => Cargo::new(path, &content)
+            Format::Cargo => Cargo::new(path.as_path(), &content)
                 .map(VersionedFile::Cargo)
                 .map_err(Error::Cargo),
             Format::PyProject => PyProject::new(path.as_path(), content)
@@ -63,24 +61,28 @@ impl VersionedFile {
     }
 
     #[must_use]
-    pub fn path(&self) -> RelativePathBuf {
+    pub fn path(&self) -> &RelativePathBuf {
         match self {
             VersionedFile::Cargo(cargo) => cargo.get_path(),
-            VersionedFile::PyProject(pyproject) => pyproject.get_path().clone(),
-            VersionedFile::PubSpec(pubspec) => pubspec.get_path().clone(),
-            VersionedFile::GoMod(gomod) => gomod.get_path().clone(),
-            VersionedFile::PackageJson(package_json) => package_json.get_path().clone(),
+            VersionedFile::PyProject(pyproject) => pyproject.get_path(),
+            VersionedFile::PubSpec(pubspec) => pubspec.get_path(),
+            VersionedFile::GoMod(gomod) => gomod.get_path(),
+            VersionedFile::PackageJson(package_json) => package_json.get_path(),
         }
     }
 
-    #[must_use]
-    pub fn version(&self) -> &Version {
+    /// Get the package version from the file.
+    ///
+    /// # Errors
+    ///
+    /// If there's no package version for this type of file (e.g., lock file, dependency file).
+    pub fn version(&self) -> Result<Version, Error> {
         match self {
-            VersionedFile::Cargo(cargo) => cargo.get_version(),
-            VersionedFile::PyProject(pyproject) => pyproject.get_version(),
-            VersionedFile::PubSpec(pubspec) => pubspec.get_version(),
-            VersionedFile::GoMod(gomod) => gomod.get_version(),
-            VersionedFile::PackageJson(package_json) => package_json.get_version(),
+            VersionedFile::Cargo(cargo) => cargo.get_version().map_err(Error::from),
+            VersionedFile::PyProject(pyproject) => Ok(pyproject.get_version().clone()),
+            VersionedFile::PubSpec(pubspec) => Ok(pubspec.get_version().clone()),
+            VersionedFile::GoMod(gomod) => Ok(gomod.get_version().clone()),
+            VersionedFile::PackageJson(package_json) => Ok(package_json.get_version().clone()),
         }
     }
 
@@ -92,23 +94,34 @@ impl VersionedFile {
     pub(crate) fn set_version(
         self,
         new_version: &Version,
+        dependency: Option<&str>,
         go_versioning: GoVersioning,
-    ) -> Result<ActionSet, SetError> {
+    ) -> Result<Self, SetError> {
         match self {
-            VersionedFile::Cargo(cargo) => Ok(Single(cargo.set_version(new_version))),
-            VersionedFile::PyProject(pyproject) => Ok(Single(pyproject.set_version(new_version))),
-            VersionedFile::PubSpec(pubspec) => pubspec
+            Self::Cargo(cargo) => Ok(Self::Cargo(cargo.set_version(new_version, dependency))),
+            Self::PyProject(pyproject) => Ok(Self::PyProject(pyproject.set_version(new_version))),
+            Self::PubSpec(pubspec) => pubspec
                 .set_version(new_version)
                 .map_err(SetError::Yaml)
-                .map(Single),
-            VersionedFile::GoMod(gomod) => gomod
-                .set_version(new_version, go_versioning)
+                .map(Self::PubSpec),
+            Self::GoMod(gomod) => gomod
+                .set_version(new_version.clone(), go_versioning)
                 .map_err(SetError::GoMod)
-                .map(Two),
-            VersionedFile::PackageJson(package_json) => package_json
+                .map(Self::GoMod),
+            Self::PackageJson(package_json) => package_json
                 .set_version(new_version)
                 .map_err(SetError::Json)
-                .map(Single),
+                .map(Self::PackageJson),
+        }
+    }
+
+    pub fn write(self) -> Option<impl IntoIterator<Item = Action>> {
+        match self {
+            Self::Cargo(cargo) => cargo.write().map(Single),
+            Self::PyProject(pyproject) => pyproject.write().map(Single),
+            Self::PubSpec(pubspec) => pubspec.write().map(Single),
+            Self::GoMod(gomod) => gomod.write().map(Two),
+            Self::PackageJson(package_json) => package_json.write().map(Single),
         }
     }
 }
@@ -159,13 +172,6 @@ pub enum Error {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     PackageJson(#[from] package_json::Error),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Path {
-    parent: Option<RelativePathBuf>,
-    format: Format,
-    pub dependency: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -227,6 +233,13 @@ pub enum FormatError {
         )
     )]
     UnsupportedDependency(&'static str),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Path {
+    parent: Option<RelativePathBuf>,
+    format: Format,
+    pub dependency: Option<String>,
 }
 
 impl Path {
@@ -308,5 +321,31 @@ impl Serialize for Path {
 impl From<&Path> for PathBuf {
     fn from(path: &Path) -> Self {
         path.as_path().to_path("")
+    }
+}
+
+impl PartialEq<RelativePathBuf> for Path {
+    fn eq(&self, other: &RelativePathBuf) -> bool {
+        let other_parent = other.parent();
+        let parent = self.parent.as_deref();
+
+        let parents_match = match (parent, other_parent) {
+            (Some(parent), Some(other_parent)) => parent == other_parent,
+            (None, None) => true,
+            (Some(parent), None) if parent == "" => true,
+            (None, Some(other_parent)) if other_parent == "" => true,
+            _ => false,
+        };
+
+        parents_match
+            && other
+                .file_name()
+                .is_some_and(|file_name| file_name == self.format.file_name())
+    }
+}
+
+impl PartialEq<Path> for RelativePathBuf {
+    fn eq(&self, other: &Path) -> bool {
+        other == self
     }
 }

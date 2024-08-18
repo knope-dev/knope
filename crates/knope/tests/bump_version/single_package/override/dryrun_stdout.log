@@ -1,1 +1,1 @@
-Would add the following to Cargo.toml: 1.0.0
+Would add the following to Cargo.toml: version = 1.0.0

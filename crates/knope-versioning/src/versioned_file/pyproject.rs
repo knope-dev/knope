@@ -15,6 +15,7 @@ pub struct PyProject {
     raw_toml: String,
     parsed: Toml,
     version: Version,
+    diff: Option<String>,
 }
 
 impl PyProject {
@@ -28,6 +29,7 @@ impl PyProject {
                     raw_toml,
                     parsed,
                     version,
+                    diff: None,
                 }),
             Err(err) => Err(Error::Deserialization(path, err)),
         }
@@ -40,7 +42,7 @@ impl PyProject {
         &self.path
     }
 
-    pub(crate) fn set_version(mut self, new_version: &Version) -> Action {
+    pub(crate) fn set_version(mut self, new_version: &Version) -> Self {
         let version_str = new_version.to_string();
         let (poetry_version, project_version) = self.parsed.versions();
 
@@ -50,11 +52,16 @@ impl PyProject {
             let end = version.span().end - 1;
             self.raw_toml.replace_range(start..end, &version_str);
         }
-        Action::WriteToFile {
-            path: self.path,
+        self.diff = Some(version_str);
+        self
+    }
+
+    pub(crate) fn write(self) -> Option<Action> {
+        self.diff.map(|diff| Action::WriteToFile {
             content: self.raw_toml,
-            diff: version_str,
-        }
+            path: self.path,
+            diff,
+        })
     }
 }
 
@@ -249,7 +256,10 @@ mod tests {
 
         let pyproject =
             PyProject::new(RelativePathBuf::from("beep/boop"), String::from(content)).unwrap();
-        let action = pyproject.set_version(&Version::from_str("1.2.3-rc.4").unwrap());
+        let action = pyproject
+            .set_version(&Version::from_str("1.2.3-rc.4").unwrap())
+            .write()
+            .expect("Diff to write");
 
         let expected = Action::WriteToFile {
             content: r#"

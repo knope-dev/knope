@@ -1,5 +1,5 @@
 Would add the following to pyproject.toml: 1.1.0
-Would add the following to Cargo.toml: 1.1.0
+Would add the following to Cargo.toml: version = 1.1.0
 Would add the following to CHANGELOG.md: 
 ## 1.1.0 ([DATE])
 

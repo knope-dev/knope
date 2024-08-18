@@ -5,7 +5,6 @@ use knope_versioning::{
 };
 use miette::Diagnostic;
 
-use super::package::Package;
 use crate::{
     fs, integrations::git, state::State, step::releases::package::execute_prepare_actions, RunType,
 };
@@ -19,20 +18,24 @@ pub(crate) fn bump_version_and_update_state(
 ) -> Result<RunType<State>, Error> {
     let (run_type, mut state) = state.take();
 
-    state.packages = state
-        .packages
+    for package in &mut state.packages {
+        let (bump, go_versioning) = if let Some(version) = package.override_version.clone() {
+            (Bump::Manual(version), GoVersioning::BumpMajor)
+        } else {
+            (Bump::Rule(rule.clone()), package.go_versioning)
+        };
+        state.all_versioned_files =
+            package
+                .versioning
+                .bump_version(bump, go_versioning, state.all_versioned_files)?;
+    }
+    let write_files = state
+        .all_versioned_files
         .into_iter()
-        .map(|mut package| {
-            let (bump, go_versioning) = if let Some(version) = package.override_version.clone() {
-                (Bump::Manual(version), GoVersioning::BumpMajor)
-            } else {
-                (Bump::Rule(rule.clone()), package.go_versioning)
-            };
-            let actions = package.versioning.bump_version(bump, go_versioning)?;
-            package.pending_actions = execute_prepare_actions(run_type.of(actions), false)?;
-            Ok(package)
-        })
-        .collect::<Result<Vec<Package>, Error>>()?;
+        .filter_map(|file| file.write())
+        .flatten();
+    execute_prepare_actions(run_type.of(write_files), false)?;
+    state.all_versioned_files = Vec::new();
     Ok(run_type.of(state))
 }
 #[derive(Debug, Diagnostic, thiserror::Error)]

@@ -4,15 +4,13 @@ use relative_path::RelativePathBuf;
 use thiserror::Error;
 use toml_edit::{value, DocumentMut, TomlError};
 
-use super::Path;
-use crate::{action::Action, semver::Version};
+use crate::{semver::Version, Action};
 
 #[derive(Clone, Debug)]
 pub struct Cargo {
-    path: Path,
+    path: RelativePathBuf,
     document: DocumentMut,
-    package_name: String,
-    version: Version,
+    diff: Vec<String>,
 }
 
 impl Cargo {
@@ -21,56 +19,38 @@ impl Cargo {
     /// # Errors
     ///
     /// If the TOML is invalid or missing a required property.
-    pub fn new(path: Path, toml: &str) -> Result<Self, Error> {
+    pub fn new(path: RelativePathBuf, toml: &str) -> Result<Self, Error> {
         let document: DocumentMut = toml.parse().map_err(|source| Error::Toml {
             source,
-            path: path.as_path(),
+            path: path.clone(),
         })?;
-        let package_name = name_from_document(&document)
-            .ok_or_else(|| Error::MissingRequiredProperties {
-                property: "package.name",
-                path: path.as_path(),
-            })?
-            .to_string();
-        let version = if let Some(dependency) = path.dependency.as_ref() {
-            dependency_from_document(&path, &document, dependency)?
-        } else {
-            document
-                .get("package")
-                .and_then(|package| package.get("version")?.as_str())
-                .ok_or_else(|| Error::MissingRequiredProperties {
-                    property: "package.version",
-                    path: path.as_path(),
-                })?
-                .parse()?
-        };
         Ok(Self {
             path,
             document,
-            package_name,
-            version,
+            diff: Vec::new(),
         })
     }
 
-    #[must_use]
-    pub fn get_version(&self) -> &Version {
-        &self.version
+    pub fn get_version(&self) -> Result<Version, Error> {
+        self.document
+            .get("package")
+            .and_then(|package| package.get("version")?.as_str())
+            .ok_or_else(|| Error::MissingRequiredProperties {
+                property: "package.version",
+                path: self.path.clone(),
+            })?
+            .parse()
+            .map_err(Error::Semver)
     }
 
     #[must_use]
-    pub(crate) fn get_path(&self) -> RelativePathBuf {
-        self.path.as_path()
+    pub(crate) fn get_path(&self) -> &RelativePathBuf {
+        &self.path
     }
 
     #[must_use]
-    pub fn get_package_name(&self) -> &str {
-        &self.package_name
-    }
-
-    #[must_use]
-    pub fn set_version(mut self, new_version: &Version) -> Action {
-        let path = self.path.as_path();
-        let diff = if let Some(dependency) = self.path.dependency {
+    pub fn set_version(mut self, new_version: &Version, dependency: Option<&str>) -> Self {
+        let diff = if let Some(dependency) = dependency {
             if let Some(dep) = self
                 .document
                 .get_mut("dependencies")
@@ -92,7 +72,7 @@ impl Cargo {
             {
                 write_version_to_dep(dep, new_version);
             }
-            format!("{dependency}@{new_version}")
+            format!("{dependency}.version = {new_version}")
         } else {
             let version = self
                 .document
@@ -101,13 +81,21 @@ impl Cargo {
             if let Some(version) = version {
                 *version = value(new_version.to_string());
             }
-            new_version.to_string()
+            format!("version = {new_version}")
         };
-        Action::WriteToFile {
-            path,
-            content: self.document.to_string(),
-            diff,
+        self.diff.push(diff);
+        self
+    }
+
+    pub(crate) fn write(self) -> Option<Action> {
+        if self.diff.is_empty() {
+            return None;
         }
+        Some(Action::WriteToFile {
+            path: self.path,
+            content: self.document.to_string(),
+            diff: self.diff.join(", "),
+        })
     }
 }
 
@@ -225,43 +213,6 @@ fn write_version_to_dep(dep: &mut toml_edit::Item, version: &Version) {
     }
 }
 
-fn dependency_from_document(
-    path: &Path,
-    document: &DocumentMut,
-    dependency: &str,
-) -> Result<Version, Error> {
-    let item = document
-        .get("dependencies")
-        .and_then(|deps| deps.get(dependency))
-        .or_else(|| {
-            document
-                .get("dev-dependencies")
-                .and_then(|deps| deps.get(dependency))
-        })
-        .or_else(|| {
-            document
-                .get("workspace")
-                .and_then(|workspace| workspace.get("dependencies")?.get(dependency))
-        })
-        .ok_or_else(|| Error::MissingDependency {
-            path: path.as_path(),
-            dependency: dependency.to_string(),
-        })?;
-
-    if let Some(version) = item.as_str() {
-        version.parse().map_err(Error::Semver)
-    } else {
-        item.get("version")
-            .and_then(|version| version.as_str())
-            .ok_or_else(|| Error::MissingDependency {
-                // TODO: specify error for version not set
-                path: path.as_path(),
-                dependency: dependency.to_string(),
-            })
-            .and_then(|version| version.parse().map_err(Error::Semver))
-    }
-}
-
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
@@ -316,6 +267,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::Action;
 
     #[test]
     fn set_package_version() {
@@ -328,18 +280,13 @@ mod tests {
         knope-versioning = "0.1.0"
         "#;
 
-        let new = Cargo::new(Path::new("beep/Cargo.toml".into(), None).unwrap(), content).unwrap();
+        let new = Cargo::new(RelativePathBuf::from("beep/Cargo.toml"), content).unwrap();
 
         let new_version = "1.2.3-rc.4";
         let expected = content.replace("0.1.0-rc.0", new_version);
-        let expected = Action::WriteToFile {
-            path: RelativePathBuf::from("beep/Cargo.toml"),
-            content: expected,
-            diff: new_version.to_string(),
-        };
-        let new = new.set_version(&Version::from_str(new_version).unwrap());
+        let new = new.set_version(&Version::from_str(new_version).unwrap(), None);
 
-        assert_eq!(new, expected);
+        assert_eq!(new.document.to_string(), expected);
     }
 
     #[test]
@@ -362,25 +309,26 @@ mod tests {
         knope-versioning = "0.1.0"
         "#;
 
-        let new = Cargo::new(
-            Path::new(
-                "beep/Cargo.toml".into(),
-                Some("knope-versioning".to_string()),
-            )
-            .unwrap(),
-            content,
-        )
-        .unwrap();
+        let new = Cargo::new(RelativePathBuf::from("beep/Cargo.toml"), content).unwrap();
 
-        let new_version = "0.2.0";
-        let expected = content.replace("0.1.0", new_version);
+        let new = new.set_version(
+            &Version::from_str("0.2.0").unwrap(),
+            Some("knope-versioning"),
+        );
+        let expected = content.replace("0.1.0", "0.2.0");
+        let new = new.set_version(
+            &Version::from_str("2.0.0").unwrap(),
+            Some("complex-requirement-in-object"),
+        );
+        let expected = expected.replace("1.2.*", "2.0.0");
+
         let expected = Action::WriteToFile {
             path: RelativePathBuf::from("beep/Cargo.toml"),
             content: expected,
-            diff: format!("knope-versioning@{new_version}"),
+            diff: "knope-versioning.version = 2.0.0, complex-requirement-in-object.version = 2.0.0"
+                .to_string(),
         };
-        let new = new.set_version(&Version::from_str(new_version).unwrap());
 
-        assert_eq!(new, expected);
+        assert_eq!(new.write().expect("diff to write"), expected);
     }
 }
