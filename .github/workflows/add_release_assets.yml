@@ -1,12 +1,14 @@
 name: Finish Knope release
 
 on:
-  release:
-    types: [ created ]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name'
+        required: true
 
 jobs:
   build-artifacts:
-    if: github.event.release.draft
     strategy:
       fail-fast: false
       matrix:
@@ -77,7 +79,7 @@ jobs:
       - name: Upload artifacts to release
         run: |
           cd artifacts
-          gh release upload ${{ github.event.release.tag_name }} *
-          gh release edit ${{ github.event.release.tag_name }} --draft=false --latest
+          gh release upload ${{ inputs.tag_name }} *
+          gh release edit ${{ inputs.tag_name }} --draft=false --latest
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
