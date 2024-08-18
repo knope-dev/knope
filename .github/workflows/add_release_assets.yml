@@ -78,6 +78,6 @@ jobs:
         run: |
           cd artifacts
           gh release upload ${{ github.event.release.tag_name }} *
-          gh release edit ${{ github.event.release.tag_name }} --draft=false
+          gh release edit ${{ github.event.release.tag_name }} --draft=false --latest
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
