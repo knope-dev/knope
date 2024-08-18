@@ -1,13 +1,21 @@
 [packages.versioning]
-versioned_files = ["crates/knope-versioning/Cargo.toml"]
+versioned_files = [
+  "crates/knope-versioning/Cargo.toml",
+  "Cargo.lock",
+  { path = "Cargo.toml", dependency = "knope-versioning" },
+]
 changelog = "crates/knope-versioning/CHANGELOG.md"
 
 [packages.config]
-versioned_files = ["crates/knope-config/Cargo.toml"]
+versioned_files = [
+  "crates/knope-config/Cargo.toml",
+  "Cargo.lock",
+  { path = "crates/knope/Cargo.toml", dependency = "knope-config" },
+]
 changelog = "crates/knope-config/CHANGELOG.md"
 
 [packages.knope]
-versioned_files = ["crates/knope/Cargo.toml"]
+versioned_files = ["crates/knope/Cargo.toml", "Cargo.lock"]
 changelog = "CHANGELOG.md"
 extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
 
