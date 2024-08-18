@@ -5,7 +5,7 @@ use relative_path::RelativePathBuf;
 use crate::{package, release_notes::Release, semver::Version};
 
 /// Actions to take to finish updating a package
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Action {
     WriteToFile {
         path: RelativePathBuf,

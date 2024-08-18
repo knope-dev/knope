@@ -1,9 +1,9 @@
-[[packages]]
+[packages.first-package]
 versioned_files = ["first/Cargo.toml"]
 scopes = ["first-package"]
 
-[[packages]]
-versioned_files = ["second/Cargo.toml"]
+[packages.second-package]
+versioned_files = [{ path = "first/Cargo.toml", dependency = "second-package" }, "second/Cargo.toml"]
 scopes = ["second-package"]
 
 [[workflows]]

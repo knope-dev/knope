@@ -1,4 +1,4 @@
-use std::{iter::once, path::PathBuf};
+use std::path::PathBuf;
 
 use changesets::ChangeSet;
 use itertools::Itertools;
@@ -7,7 +7,7 @@ use knope_versioning::{
     package::Bump,
     release_notes::Release,
     semver::{PackageVersions, Rule},
-    Action, ReleaseTag,
+    Action, ReleaseTag, VersionedFile,
 };
 use miette::Diagnostic;
 use tracing::debug;
@@ -17,7 +17,7 @@ use crate::{
     fs,
     integrations::{git, git::create_tag},
     state::State,
-    step::PrepareRelease,
+    step::{releases::package::execute_prepare_actions, PrepareRelease},
     RunType,
 };
 
@@ -44,23 +44,31 @@ pub(crate) fn prepare_release(
         Vec::new()
     };
 
-    state.packages = state
-        .packages
-        .into_iter()
-        .map(|package| {
-            package.prepare_release(run_type, prepare_release, &state.all_git_tags, &changeset)
-        })
-        .try_collect()?;
+    for package in &mut state.packages {
+        let (all_versioned_files, actions) = package.prepare_release(
+            prepare_release,
+            &state.all_git_tags,
+            state.all_versioned_files,
+            &changeset,
+        )?;
+        state.all_versioned_files = all_versioned_files;
+        state.pending_actions.extend(actions);
+    }
+
+    let actions = state
+        .all_versioned_files
+        .drain(..)
+        .filter_map(VersionedFile::write)
+        .flatten()
+        .chain(state.pending_actions)
+        .unique();
+
+    state.pending_actions = execute_prepare_actions(run_type.of(actions), true)?;
 
     match run_type {
         RunType::DryRun(()) => Ok(RunType::DryRun(state)),
         RunType::Real(()) => {
-            if !prepare_release.allow_empty
-                && state
-                    .packages
-                    .iter()
-                    .all(|package| package.pending_actions.is_empty())
-            {
+            if !prepare_release.allow_empty && state.pending_actions.is_empty() {
                 Err(Error::NoRelease)
             } else {
                 Ok(RunType::Real(state))
@@ -116,45 +124,43 @@ pub(crate) enum Error {
 pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
     let (run_type, mut state) = state.take();
 
-    let mut releases = state
-        .packages
-        .iter()
-        .filter(|package| !package.pending_actions.is_empty())
-        .collect_vec();
-
-    if releases.is_empty() {
-        releases = state
-            .packages
-            .iter_mut()
-            .filter_map(|package| {
-                let release = find_prepared_release(package, &state.all_git_tags)?;
-                package.pending_actions = package
-                    .versioning
-                    .clone()
-                    .bump_version(Bump::Manual(release.version.clone()), package.go_versioning)
-                    .unwrap_or_default()
-                    .into_iter()
-                    // If the changelog was already written for this release, we don't need to write _any_ files
-                    .filter(|action| matches!(action, Action::AddTag { .. }))
-                    .chain(once(Action::CreateRelease(release)))
-                    .rev()
-                    .collect();
-                Some(&*package)
-            })
-            .collect();
+    if state.pending_actions.is_empty() {
+        for package in &mut state.packages {
+            let Some(release) = find_prepared_release(package, &state.all_git_tags) else {
+                continue;
+            };
+            state
+                .pending_actions
+                .push(Action::CreateRelease(release.clone()));
+            let go_tags = package
+                .versioning
+                .bump_version(
+                    Bump::Manual(release.version.clone()),
+                    package.go_versioning,
+                    state.all_versioned_files.clone(),
+                )
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|versioned_file| {
+                    versioned_file
+                        .write()?
+                        .into_iter()
+                        .find(|action| matches!(action, Action::AddTag { .. }))
+                });
+            state.pending_actions.extend(go_tags);
+        }
     }
 
     let github_config = state.github_config.as_ref();
     let gitea_config = state.gitea_config.as_ref();
-    for (package, action) in releases.iter().flat_map(|package| {
-        package
-            .pending_actions
-            .iter()
-            .map(move |action| (package, action))
-    }) {
+    for action in state.pending_actions.drain(..) {
         let release = match action {
             Action::AddTag { tag } => {
-                if !ReleaseTag::is_release_tag(tag, package.name()) {
+                if !state
+                    .packages
+                    .iter()
+                    .any(|package| ReleaseTag::is_release_tag(&tag, package.name()))
+                {
                     create_tag(run_type.of(tag.as_str()))?;
                 }
                 continue;
@@ -162,26 +168,23 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
             Action::CreateRelease(release) => release,
             _ => continue,
         };
-        let tag = ReleaseTag::new(&release.version, package.name());
+        let tag = ReleaseTag::new(&release.version, &release.package_name);
         if let Some(github_config) = github_config {
             state.github = github::release(
-                package.name(),
-                release,
+                &release,
                 run_type.of(state.github),
                 github_config,
-                package.assets.as_ref(),
+                state
+                    .packages
+                    .iter()
+                    .find(|package| package.name() == &release.package_name)
+                    .and_then(|package| package.assets.as_ref()),
                 &tag,
             )?;
         }
 
         if let Some(gitea_config) = gitea_config {
-            state.gitea = gitea::release(
-                package.name(),
-                release,
-                run_type.of(state.gitea),
-                gitea_config,
-                &tag,
-            )?;
+            state.gitea = gitea::release(&release, run_type.of(state.gitea), gitea_config, &tag)?;
         }
 
         // if neither is present, we fall back to just creating a tag
@@ -207,5 +210,5 @@ fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<R
         .release_notes
         .changelog
         .as_ref()
-        .and_then(|changelog| changelog.get_release(&current_version))
+        .and_then(|changelog| changelog.get_release(&current_version, package.name()))
 }

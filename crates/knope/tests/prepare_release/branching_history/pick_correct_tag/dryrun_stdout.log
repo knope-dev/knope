@@ -1,4 +1,4 @@
-Would add the following to Cargo.toml: 1.0.1
+Would add the following to Cargo.toml: version = 1.0.1
 Would add the following to CHANGELOG.md: 
 ## 1.0.1 ([DATE])
 

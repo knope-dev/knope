@@ -1,0 +1,7 @@
+Would add the following to first/Cargo.toml: version = 1.1.0, second-package.version = 0.2.0
+Would add the following to Cargo.toml: first-package.version = 1.1.0, second-package.version = 0.2.0
+Would add the following to second/Cargo.toml: version = 0.2.0
+Would add files to git:
+  first/Cargo.toml
+  Cargo.toml
+  second/Cargo.toml

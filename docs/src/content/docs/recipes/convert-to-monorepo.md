@@ -26,7 +26,7 @@ so the only thing that needs to change is the path to `versioned_files` and `cha
 
 Again, using Knope's own transformation as an example:
 
-```diff lang="tomml" title="knope.toml"
+```diff lang="toml" title="knope.toml"
 - [package]
 + [packages.knope]
 - versioned_files = ["Cargo.toml"]

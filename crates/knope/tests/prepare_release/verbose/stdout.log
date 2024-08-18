@@ -6,8 +6,8 @@ Loading package second
 package.json has version 0.4.6
 Looking for Git tags matching package name.
 Getting conventional commits since last release of package first
-Only checking commits with scopes: ["first"]
 Using commits since tag first/v1.2.3
+Only checking commits with scopes: ["first"]
 Determining new version for first
 commit feat: A feature
 	implies rule MINOR
@@ -33,8 +33,8 @@ changeset feature.md
 	implies rule MINOR
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
 Getting conventional commits since last release of package second
-Only checking commits with scopes: ["second"]
 Using commits since tag second/v0.4.6
+Only checking commits with scopes: ["second"]
 Determining new version for second
 commit feat: A feature
 	implies rule MINOR

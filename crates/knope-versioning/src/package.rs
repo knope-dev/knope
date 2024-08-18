@@ -6,7 +6,6 @@ use std::{
 };
 
 use changesets::Release;
-use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -21,16 +20,18 @@ use crate::{
     },
     release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
-    versioned_file::{GoVersioning, SetError, VersionedFile},
+    versioned_file,
+    versioned_file::{cargo, Config, Format, GoVersioning, SetError, VersionedFile},
+    PackageNewError::CargoLockNoDependency,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Package {
     pub name: Name,
     pub versions: PackageVersions,
-    versioned_files: Option<Vec<VersionedFile>>,
+    versioned_files: Vec<Config>,
     pub release_notes: ReleaseNotes,
-    pub scopes: Option<Vec<String>>,
+    scopes: Option<Vec<String>>,
 }
 
 impl Package {
@@ -42,32 +43,24 @@ impl Package {
     pub fn new<S: AsRef<str> + Debug>(
         name: Name,
         git_tags: &[S],
-        versioned_files: Vec<VersionedFile>,
+        versioned_files_tracked: Vec<Config>,
+        all_versioned_files: &[VersionedFile],
         release_notes: ReleaseNotes,
         scopes: Option<Vec<String>>,
-    ) -> Result<Self, NewError> {
-        if let Some(first) = versioned_files.first() {
-            if let Some(conflict) = versioned_files
-                .iter()
-                .find(|f| f.version() != first.version())
-            {
-                return Err(NewError::InconsistentVersions(
-                    Box::new(first.clone()),
-                    Box::new(conflict.clone()),
-                ));
-            }
-        }
+    ) -> Result<Self, Box<NewError>> {
+        let (versioned_files, version_from_files) =
+            validate_versioned_files(versioned_files_tracked, all_versioned_files)?;
+
         debug!("Looking for Git tags matching package name.");
         let mut versions = PackageVersions::from_tags(name.as_custom(), git_tags);
-
-        if let Some(version_from_files) = versioned_files.first().map(VersionedFile::version) {
-            versions.update_version(version_from_files.clone());
+        if let Some(version_from_files) = version_from_files {
+            versions.update_version(version_from_files);
         }
 
         Ok(Self {
             name,
             versions,
-            versioned_files: Some(versioned_files),
+            versioned_files,
             release_notes,
             scopes,
         })
@@ -90,10 +83,8 @@ impl Package {
         &mut self,
         bump: Bump,
         go_versioning: GoVersioning,
-    ) -> Result<Vec<Action>, BumpError> {
-        let Some(versioned_files) = self.versioned_files.take() else {
-            return Err(BumpError::PackageAlreadyBumped);
-        };
+        versioned_files: Vec<VersionedFile>,
+    ) -> Result<Vec<VersionedFile>, BumpError> {
         match bump {
             Bump::Manual(version) => {
                 self.versions.update_version(version);
@@ -105,9 +96,19 @@ impl Package {
         let version = self.versions.clone().into_latest();
         versioned_files
             .into_iter()
-            .map(|f| f.set_version(&version, go_versioning))
-            .process_results(|iter| iter.flatten().collect())
-            .map_err(BumpError::SetError)
+            .map(|file| {
+                let config = self
+                    .versioned_files
+                    .iter()
+                    .find(|config| *config == file.path());
+                if let Some(config) = config {
+                    file.set_version(&version, config.dependency.as_deref(), go_versioning)
+                        .map_err(BumpError::SetError)
+                } else {
+                    Ok(file)
+                }
+            })
+            .collect()
     }
 
     #[must_use]
@@ -132,16 +133,21 @@ impl Package {
     pub fn apply_changes(
         &mut self,
         changes: &[Change],
+        versioned_files: Vec<VersionedFile>,
         config: ChangeConfig,
-    ) -> Result<Vec<Action>, BumpError> {
+    ) -> Result<(Vec<VersionedFile>, Vec<Action>), BumpError> {
         if let Name::Custom(package_name) = &self.name {
             debug!("Determining new version for {package_name}");
         }
 
-        let mut actions = match config {
+        let updated = match config {
             ChangeConfig::Force(version) => {
                 debug!("Using overridden version {version}");
-                self.bump_version(Bump::Manual(version), GoVersioning::BumpMajor)?
+                self.bump_version(
+                    Bump::Manual(version),
+                    GoVersioning::BumpMajor,
+                    versioned_files,
+                )?
             }
             ChangeConfig::Calculate {
                 prerelease_label,
@@ -156,27 +162,115 @@ impl Package {
                 } else {
                     stable_rule.into()
                 };
-                self.bump_version(Bump::Rule(rule), go_versioning)?
+                self.bump_version(Bump::Rule(rule), go_versioning, versioned_files)?
             }
         };
         let version = self.versions.clone().into_latest();
-        actions.extend(changes.iter().filter_map(|change| {
-            if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
-                if version.is_prerelease() {
-                    None
+        let mut actions: Vec<Action> = changes
+            .iter()
+            .filter_map(|change| {
+                if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                    if version.is_prerelease() {
+                        None
+                    } else {
+                        Some(Action::RemoveFile {
+                            path: RelativePathBuf::from(CHANGESET_DIR)
+                                .join(unique_id.to_file_name()),
+                        })
+                    }
                 } else {
-                    Some(Action::RemoveFile {
-                        path: RelativePathBuf::from(CHANGESET_DIR).join(unique_id.to_file_name()),
-                    })
+                    None
                 }
-            } else {
-                None
+            })
+            .collect();
+
+        actions.extend(
+            self.release_notes
+                .create_release(version, changes, &self.name)?,
+        );
+
+        Ok((updated, actions))
+    }
+}
+
+/// Run through the provided versioned files and make sure they meet all requirements in context.
+///
+/// Returns the potentially modified versioned files (e.g., setting defaults for lockfiles) and
+/// the package version according to those files (if any).
+fn validate_versioned_files(
+    versioned_files_tracked: Vec<Config>,
+    all_versioned_files: &[VersionedFile],
+) -> Result<(Vec<Config>, Option<Version>), Box<NewError>> {
+    let relevant_files: Vec<(Config, &VersionedFile)> = versioned_files_tracked
+        .into_iter()
+        .map(|path| {
+            all_versioned_files
+                .iter()
+                .find(|f| f.path() == &path)
+                .ok_or_else(|| NewError::NotFound(path.as_path()))
+                .map(|f| (path, f))
+        })
+        .collect::<Result<_, _>>()?;
+
+    let mut first_with_version: Option<(&VersionedFile, Version)> = None;
+    let mut validated_files = Vec::with_capacity(relevant_files.len());
+
+    for (config, versioned_file) in relevant_files.clone() {
+        let config = validate_dependency(config, &relevant_files)?;
+        let is_dep = config.dependency.is_some();
+        validated_files.push(config);
+        if is_dep {
+            // Dependencies don't have package versions
+            continue;
+        }
+        let version = versioned_file.version().map_err(NewError::VersionedFile)?;
+        debug!("{path} has version {version}", path = versioned_file.path());
+        if let Some((first_versioned_file, first_version)) = first_with_version.as_ref() {
+            if *first_version != version {
+                return Err(NewError::InconsistentVersions {
+                    first_path: first_versioned_file.path().clone(),
+                    first_version: first_version.clone(),
+                    second_path: versioned_file.path().clone(),
+                    second_version: version,
+                }
+                .into());
             }
-        }));
+        } else {
+            first_with_version = Some((versioned_file, version));
+        }
+    }
 
-        actions.extend(self.release_notes.create_release(version, changes)?);
+    Ok((
+        validated_files,
+        first_with_version.map(|(_, version)| version),
+    ))
+}
 
-        Ok(actions)
+fn validate_dependency(
+    mut config: Config,
+    versioned_files: &[(Config, &VersionedFile)],
+) -> Result<Config, Box<NewError>> {
+    match (&config.format, config.dependency.is_some()) {
+        (Format::Cargo, _)  // `Cargo.toml` supports either mode
+        | (Format::CargoLock, true)  // `Cargo.lock` is always a dependency 
+            => Ok(config),
+        (Format::CargoLock, false) => {
+            // `Cargo.lock` needs to target a dependency. If there is a `Cargo.toml` file which is
+            // _not_ a dependency, we default to that one.
+            let cargo_package_name = versioned_files
+                .iter()
+                .find_map(|(config, file)| match file {
+                    VersionedFile::Cargo(file) if config.dependency.is_none() => {
+                        cargo::name_from_document(&file.document)
+                    }
+                    _ => None,
+                })
+                .ok_or(CargoLockNoDependency)?;
+            config.dependency = Some(cargo_package_name.to_string());
+            Ok(config)
+        }
+        (format, true) => Err(NewError::UnsupportedDependency(format.file_name()).into()),
+        (_, false) => Ok(config),
     }
 }
 
@@ -191,7 +285,7 @@ pub enum ChangeConfig {
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum NewError {
-    #[error("Found inconsistent versions in package: {} had {} and {} had {}", .0.path(), .0.version(), .1.path(), .1.version())]
+    #[error("Found inconsistent versions in package: {first_path} had {first_version} and {second_path} had {second_version}")]
     #[cfg_attr(
         feature = "miette",
         diagnostic(
@@ -200,9 +294,48 @@ pub enum NewError {
             help = "All files in a package must have the same version"
         )
     )]
-    InconsistentVersions(Box<VersionedFile>, Box<VersionedFile>),
+    InconsistentVersions {
+        first_path: RelativePathBuf,
+        first_version: Version,
+        second_path: RelativePathBuf,
+        second_version: Version,
+    },
+    #[error("Versioned file not found: {0}")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code = "knope_versioning::package::versioned_file_not_found",
+            help = "this is likely a bug, please report it",
+            url = "https://github.com/knope-dev/knope/issues/new",
+        )
+    )]
+    NotFound(RelativePathBuf),
+    #[error("Dependencies are not supported in {0} files")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(knope_versioning::package::unsupported_dependency),
+            help("Dependencies aren't supported in every file type."),
+            url("https://knope.tech/reference/config-file/packages#versioned_files")
+        )
+    )]
+    UnsupportedDependency(&'static str),
+    #[error("Cargo.lock must specify a dependency")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code = "knope_versioning::package::cargo_lock_no_dependency",
+            help = "To use `Cargo.lock` in `versioned_files`, you must either manually specify \
+            `dependency` or define a `Cargo.toml` with a `package.name` in the same array.",
+            url = "https://knope.tech/reference/config-file/packages/#cargolock"
+        )
+    )]
+    CargoLockNoDependency,
     #[error("Packages must have at least one versioned file")]
     NoPackages,
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    VersionedFile(#[from] versioned_file::Error),
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -300,16 +433,6 @@ pub enum BumpError {
     SetError(#[from] SetError),
     #[error(transparent)]
     PreReleaseNotFound(#[from] PreReleaseNotFound),
-    #[error("Package version has already been updated")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code = "knope_versioning::package_already_bumped",
-            url = "https://knope.tech/reference/concepts/package/#version",
-            help = "You can only run a single BumpVersion or PrepareRelease step per workflow"
-        )
-    )]
-    PackageAlreadyBumped,
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     Time(#[from] TimeError),

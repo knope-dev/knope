@@ -1,8 +1,7 @@
-Would add the following to first/Cargo.toml: 1.1.0
+Would add the following to first/Cargo.toml: version = 1.1.0
+Would add the following to second/Cargo.toml: version = 0.1.1
 Would add files to git:
   first/Cargo.toml
-Would add the following to second/Cargo.toml: 0.1.1
-Would add files to git:
   second/Cargo.toml
 Would run git commit -m "chore: prepare releases"
 Would run git push

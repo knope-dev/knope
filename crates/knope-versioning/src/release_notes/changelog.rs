@@ -5,7 +5,7 @@ use relative_path::RelativePathBuf;
 use thiserror::Error;
 use time::{macros::format_description, Date};
 
-use crate::{release_notes::Release, semver::Version};
+use crate::{package, release_notes::Release, semver::Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Changelog {
@@ -64,7 +64,7 @@ impl Changelog {
 
     /// Find a release matching `version`, if any, within the changelog.
     #[must_use]
-    pub fn get_release(&self, version: &Version) -> Option<Release> {
+    pub fn get_release(&self, version: &Version, package_name: &package::Name) -> Option<Release> {
         let expected_header_start = format!(
             "{release_header_level} {version}",
             release_header_level = self.release_header_level
@@ -104,6 +104,7 @@ impl Changelog {
             title,
             version,
             notes,
+            package_name: package_name.clone(),
         })
     }
 

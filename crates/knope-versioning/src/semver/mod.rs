@@ -10,7 +10,7 @@ mod package_versions;
 mod prerelease_map;
 mod rule;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Version {
     Stable(StableVersion),
     Pre(PreVersion),
@@ -69,7 +69,7 @@ impl Serialize for Version {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct StableVersion {
     pub(crate) major: u64,
     pub(crate) minor: u64,
@@ -132,7 +132,7 @@ impl Display for StableVersion {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct PreVersion {
     pub stable_component: StableVersion,
     pub pre_component: Prerelease,
@@ -214,7 +214,7 @@ impl Display for Version {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Prerelease {
     pub label: Label,
     pub version: u64,
@@ -264,7 +264,7 @@ impl Prerelease {
 }
 
 /// The label component of a Prerelease (e.g., "alpha" in "1.0.0-alpha.1").
-#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[repr(transparent)]
 pub struct Label(pub String);
 

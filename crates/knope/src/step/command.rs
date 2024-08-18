@@ -69,7 +69,14 @@ mod test_run_command {
     fn test() {
         let command = "echo \"hello\"";
         let result = run_command(
-            RunType::Real(State::new(None, None, None, Vec::new(), Vec::new())),
+            RunType::Real(State::new(
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            )),
             command.to_string(),
             false,
             None,
@@ -78,7 +85,14 @@ mod test_run_command {
         assert!(result.is_ok());
 
         let result = run_command(
-            RunType::Real(State::new(None, None, None, Vec::new(), Vec::new())),
+            RunType::Real(State::new(
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            )),
             String::from("exit 1"),
             false,
             None,

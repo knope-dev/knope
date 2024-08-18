@@ -221,7 +221,7 @@ fn create_state(
     } else {
         all_tags_on_branch().unwrap_or_default()
     };
-    let mut packages = Package::load(packages, &git_tags)?;
+    let (mut packages, versioned_files) = Package::load(packages, &git_tags)?;
     if let Some(version_override) = sub_matches
         .as_deref_mut()
         .and_then(|matches| matches.try_remove_one::<Version>(OVERRIDE_ONE_VERSION).ok())
@@ -265,7 +265,7 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, gitea, packages, git_tags);
+    let state = State::new(jira, github, gitea, packages, versioned_files, git_tags);
     Ok((state, workflows))
 }
 

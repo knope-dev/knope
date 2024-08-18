@@ -1,0 +1,2 @@
+allow-panic-in-tests = true
+allow-expect-in-tests = true

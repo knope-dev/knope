@@ -4,14 +4,13 @@ use knope_versioning::{package, release_notes::Release, ReleaseTag};
 use crate::{config, integrations::gitea as api, state, state::RunType};
 
 pub(crate) fn release(
-    package_name: &package::Name,
     release: &Release,
     gitea_state: RunType<state::Gitea>,
     gitea_config: &config::Gitea,
     tag: &ReleaseTag,
 ) -> Result<state::Gitea, Error> {
     let version = &release.version;
-    let mut name = if let package::Name::Custom(package_name) = package_name {
+    let mut name = if let package::Name::Custom(package_name) = &release.package_name {
         format!("{package_name} ")
     } else {
         String::new()

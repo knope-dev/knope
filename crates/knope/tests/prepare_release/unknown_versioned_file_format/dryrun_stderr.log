@@ -1,6 +1,10 @@
-Error: config::unknown_versioned_file (https://knope.tech/reference/config-file/packages#versioned_files)
-
-  × Unknown file name setup.py
+Error:   × Problem with versioned file
+  ╰─▶ knope_versioning::versioned_file::unknown_file (https://knope.tech/
+      reference/config-file/packages#versioned_files)
+      
+        × Unknown file: setup.py
+        help: Knope identities the type of file based on its name.
+      
    ╭─[2:20]
  1 │ [package]
  2 │ versioned_files = ["setup.py"]
@@ -8,5 +12,4 @@ Error: config::unknown_versioned_file (https://knope.tech/reference/config-file/
    ·                         ╰── Declared here
  3 │ changelog = "CHANGELOG.md"
    ╰────
-  help: Knope relies on the name of the file to determine its type.
 

@@ -1,4 +1,4 @@
-Would add the following to Cargo.toml: 1.1.0
+Would add the following to Cargo.toml: version = 1.1.0
 Would add files to git:
   Cargo.toml
 Would run git commit -m "chore: prepare release 1.1.0"

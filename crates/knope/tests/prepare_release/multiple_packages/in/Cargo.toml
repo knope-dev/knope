@@ -1,3 +1,9 @@
 [package]
 name = "multiple-packages"
 version = "1.2.3"
+
+[dependencies]
+second-package = "0.4.6"
+
+[dev-dependencies]
+second-package = { version = "0.4.6" }

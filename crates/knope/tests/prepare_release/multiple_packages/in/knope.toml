@@ -1,9 +1,12 @@
 [packages.first]
-versioned_files = ["Cargo.toml", "pyproject.toml"]
+versioned_files = ["Cargo.toml", "pyproject.toml", "Cargo.lock"]
 changelog = "FIRST_CHANGELOG.md"
 
 [packages.second]
-versioned_files = ["package.json"]
+versioned_files = [
+  "package.json",
+  { path = "Cargo.toml", dependency = "second-package" },
+]
 changelog = "SECOND_CHANGELOG.md"
 
 [[workflows]]
