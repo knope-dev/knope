@@ -10,6 +10,46 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.18.0 (2024-08-18)
+
+### Breaking Changes
+
+#### Auto-update Cargo workspace dependencies when using default config
+
+If using the Cargo workspace [default configuration](https://knope.tech/reference/default-config/#cargo-workspaces),
+Knope will now attempt to automatically update the version of workspace members in dependencies _and_ the workspace `Cargo.lock`.
+
+To avoid this, use `knope --generate` to create a manual config file and customize the behavior.
+
+#### Don't create _any_ go module tags that match package names
+
+Knope already avoided creating duplicate tags for Go modules which match tags that would be created by the `Release` step for the package.
+Now, Knope won't create a Go module tag if it matches a release tag for _any_ configured package, to avoid potential conflicts.
+
+### Features
+
+#### Support for `Cargo.lock` in `versioned_files`
+
+Dependencies within a `Cargo.lock` [can now be updated](https://knope.tech/reference/config-file/packages#cargolock).
+
+#### Support for dependencies within `Cargo.toml`
+
+Dependencies within a `Cargo.toml` file [can now be updated](https://knope.tech/reference/config-file/packages/)
+as part of `versioned_files`.
+
+### Fixes
+
+#### Deduplicate release actions
+
+Knope now collects all actions to be performed across all packages and runs them at once with deduplication.
+
+This means that if multiple packages write to the same `versioned_file`, for example, the file will only be written
+a single time.
+Changesets will also only be deleted once, files will be staged to Git only once, etc.
+
+This mostly only impacts the output during `--dry-run` or `--verbose`, but is especially important for the new
+dependency updating and lockfile support.
+
 ## 0.17.0 (2024-08-04)
 
 ### Breaking Changes
