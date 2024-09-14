@@ -48,7 +48,8 @@
       "datasourceTemplate": "crate",
       "depNameTemplate": "knope",
       "fileMatch": [
-          "^docs/src/content/docs.*\\.md(x)?$"
+          "^docs/src/content/docs.*\\.md(x)?$",
+          "^README.md$"
       ],
       "matchStrings": [
         "with:\\n\\s+version: (?<currentValue>.+)"
