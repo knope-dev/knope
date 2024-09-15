@@ -13,6 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.7
       - run: echo "tag_name=$(gh release list --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
         id: get-tag
     outputs:
       tag_name: ${{ steps.get-tag.outputs.tag_name }}
