@@ -1069,7 +1069,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.18.0"
+version = "0.18.1"
 dependencies = [
  "base64",
  "changesets",
@@ -1104,7 +1104,7 @@ dependencies = [
 
 [[package]]
 name = "knope-config"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "knope-versioning",
  "relative-path",

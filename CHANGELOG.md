@@ -10,6 +10,24 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.18.1 (2024-09-15)
+
+### Features
+
+#### Support glob patterns for package assets
+
+You can now provide a glob pattern when defining package assets instead of specifying each file individually in a list.
+This is especially useful when your asset names are dynamic (containing a version, date, or hash, for example) or
+when different releases have different assets.
+
+Knope will _not_ error if the glob pattern doesn't match any files.
+You can't combine glob patterns with individual file names.
+
+```toml
+[package]
+assets = "assets/*"
+```
+
 ## 0.18.0 (2024-08-18)
 
 ### Breaking Changes
