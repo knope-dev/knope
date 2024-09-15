@@ -1,5 +1,6 @@
 use datta::UriTemplate;
-use knope_config::{Asset, AssetNameError};
+use glob::glob;
+use knope_config::{Asset, AssetNameError, Assets};
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::info;
@@ -20,7 +21,7 @@ pub(crate) fn create_release(
     prerelease: bool,
     github_state: RunType<state::GitHub>,
     github_config: &config::GitHub,
-    assets: Option<&Vec<Asset>>,
+    assets: Option<&Assets>,
 ) -> Result<state::GitHub, Error> {
     let github_release =
         CreateReleaseInput::new(tag_name, name, body, prerelease, assets.is_some());
@@ -58,7 +59,7 @@ pub(crate) fn create_release(
 
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
-        for asset in assets {
+        for asset in resolve_assets(assets)? {
             let file = std::fs::read(asset.path.to_path("")).map_err(|source| {
                 Error::CouldNotReadAssetFile {
                     path: asset.path.clone(),
@@ -97,7 +98,7 @@ pub(crate) fn create_release(
 
 fn github_release_dry_run(
     name: &str,
-    assets: Option<&Vec<Asset>>,
+    assets: Option<&Assets>,
     github_release: &CreateReleaseInput,
 ) -> Result<(), Error> {
     let release_type = if github_release.prerelease {
@@ -114,14 +115,29 @@ fn github_release_dry_run(
         tag = github_release.tag_name
     );
 
-    if let Some(assets) = assets {
-        info!("Would upload assets to GitHub:");
-        for asset in assets {
-            let asset_name = asset.name()?;
-            info!("- {asset_name} from {path}", path = asset.path);
-        }
+    let Some(assets) = assets else {
+        return Ok(());
+    };
+    info!("Would upload assets to GitHub:");
+
+    let assets = resolve_assets(assets)?;
+    for asset in assets {
+        let asset_name = asset.name()?;
+        info!("- {asset_name} from {path}", path = asset.path);
     }
     Ok(())
+}
+
+fn resolve_assets(assets: &Assets) -> Result<Vec<Asset>, Error> {
+    match assets {
+        Assets::Glob(pattern) => glob(pattern)?
+            .map(|path| {
+                let path = RelativePathBuf::from_path(&path?)?;
+                Ok(Asset { path, name: None })
+            })
+            .collect(),
+        Assets::List(assets) => Ok(assets.clone()),
+    }
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -166,4 +182,14 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/packages/#assets")
     )]
     AssetName(#[from] AssetNameError),
+    #[error("Invalid glob pattern: {0}")]
+    Pattern(#[from] glob::PatternError),
+    #[error("Could not evaluate glob pattern: {0}")]
+    Glob(#[from] glob::GlobError),
+    #[error("Could not resolve asset path: {0}")]
+    #[diagnostic(
+        code(step::could_not_resolve_asset_path),
+        help("This could be a permissions issue or the file may not exist relative to the current working directory.")
+    )]
+    AssetPath(#[from] relative_path::FromPathError),
 }

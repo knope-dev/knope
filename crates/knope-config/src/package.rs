@@ -20,7 +20,8 @@ pub struct Package {
     /// Extra sections that should be added to the changelog from custom footers in commit messages.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub extra_changelog_sections: Vec<ChangelogSection>,
-    pub assets: Option<Vec<Asset>>,
+    /// The assets, if any, to upload with each release
+    pub assets: Option<Assets>,
     #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub ignore_go_major_versioning: bool,
 }
@@ -59,10 +60,17 @@ impl TryFrom<VersionedFile> for VersionedFileConfig {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(untagged)]
+pub enum Assets {
+    Glob(String),
+    List(Vec<Asset>),
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Asset {
     pub path: RelativePathBuf,
-    name: Option<String>,
+    pub name: Option<String>,
 }
 
 impl Asset {

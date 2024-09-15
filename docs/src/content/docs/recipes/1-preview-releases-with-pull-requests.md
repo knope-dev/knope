@@ -3,7 +3,7 @@ title: "Preview releases with pull requests"
 ---
 
 This recipe always keeps an open pull request which previews the changes that Knope will include in the next release.
-This pull request will let you see the next version, the changes to versioned files, and the changelog. 
+This pull request will let you see the next version, the changes to versioned files, and the changelog.
 When you merge that pull request, Knope will create a new release with the changes from the pull request.
 
 This recipe requires a custom `knope.toml` file and two GitHub Actions workflows.

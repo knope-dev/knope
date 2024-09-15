@@ -2,7 +2,7 @@ use std::{ops::Range, path::PathBuf, str::FromStr};
 
 use ::toml::Spanned;
 use itertools::Itertools;
-use knope_config::{Asset, ChangelogSection};
+use knope_config::{Assets, ChangelogSection};
 use knope_versioning::{package, versioned_file::cargo, UnknownFile, VersionedFileConfig};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
@@ -24,7 +24,7 @@ pub struct Package {
     /// Extra sections that should be added to the changelog from custom footers in commit messages
     /// or change set types.
     pub(crate) extra_changelog_sections: Vec<ChangelogSection>,
-    pub(crate) assets: Option<Vec<Asset>>,
+    pub(crate) assets: Option<Assets>,
     pub(crate) ignore_go_major_versioning: bool,
 }
 

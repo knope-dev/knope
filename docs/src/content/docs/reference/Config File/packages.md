@@ -182,9 +182,9 @@ extra_changelog_sections = [
 
 ## `assets`
 
-Assets can either be a single "glob" string, or a list of files to upload to a GitHub release. 
+Assets can either be a single "glob" string, or a list of files to upload to a GitHub release.
 They do nothing without [GitHub configuration](/reference/config-file/github).
-Assets are per-package. 
+Assets are per-package.
 When specifying an exact list, each asset can optionally have a `name`, this is what it'll appear as in GitHub releases.
 The `name` defaults to the file name (the final component of the path).
 

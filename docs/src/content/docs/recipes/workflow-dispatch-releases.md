@@ -137,9 +137,9 @@ There are three jobs here:
 2. `build-artifacts` builds the assets for the release from the new commit that `prepare-release` created.
 3. `release` runs the `release` Knope workflow which creates the GitHub Release.
 
-Throughout, there's use of a `${{ secrets.PAT }}`, this is a GitHub Token with write permissions to "contents" which 
-must be stored in GitHub Actions secrets. 
-For the minimum-possible required privileges, 
+Throughout, there's use of a `${{ secrets.PAT }}`, this is a GitHub Token with write permissions to "contents" which
+must be stored in GitHub Actions secrets.
+For the minimum-possible required privileges,
 you should [create a fine-grained access token] with read/write to "contents" for only this repo.
 
 Here's a Knope config which enables this GitHub workflow to work:
@@ -185,10 +185,10 @@ repo = "knope"
 ```
 
 There's a single `[package]`, but this pattern should also work for multi-package setups, just make sure all your assets are ready at the same time.
-In this case, there are two versioned files (`Cargo.toml` and `Cargo.lock`), the changelog (`CHANGELOG.md`), and all 
+In this case, there are two versioned files (`Cargo.toml` and `Cargo.lock`), the changelog (`CHANGELOG.md`), and all
 assets (four, in the example GitHub workflow).
 
-There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md` based 
+There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md` based
 on any conventional commits or changesets.
 Knope then runs a command to commit the changes and push them back to the current branch (note that using the `Version` variable isn't supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.
 
