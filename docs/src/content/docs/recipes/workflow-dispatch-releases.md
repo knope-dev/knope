@@ -69,6 +69,7 @@ jobs:
             os: windows-latest
     env:
       archive_name: artifact
+      package_name: # TODO: put the name of your package here
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
 
@@ -94,11 +95,11 @@ jobs:
 
       - name: Copy Unix Artifact
         if: ${{ matrix.os != 'windows-latest' }}
-        run: cp target/${{ matrix.target }}/release/test ${{ env.archive_name }}
+        run: cp target/${{ matrix.target }}/release/${{ env.package_name }} ${{ env.archive_name }}
 
       - name: Copy Windows Artifact
         if: ${{ matrix.os == 'windows-latest' }}
-        run: cp target/${{ matrix.target }}/release/test.exe ${{ env.archive_name }}
+        run: cp target/${{ matrix.target }}/release/${{ env.package_name }}.exe ${{ env.archive_name }}
 
       - name: Create Tar Archive
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
@@ -136,26 +137,18 @@ There are three jobs here:
 2. `build-artifacts` builds the assets for the release from the new commit that `prepare-release` created.
 3. `release` runs the `release` Knope workflow which creates the GitHub Release.
 
-Throughout, there is use of a `${{ secrets.PAT }}`, this is a GitHub Token with write permissions to "contents" which must be stored in GitHub Actions secrets. For the minimum-possible required privileges, you should [create a fine-grained access token] with read/write to "contents" for only this repo.
+Throughout, there's use of a `${{ secrets.PAT }}`, this is a GitHub Token with write permissions to "contents" which 
+must be stored in GitHub Actions secrets. 
+For the minimum-possible required privileges, 
+you should [create a fine-grained access token] with read/write to "contents" for only this repo.
 
 Here's a Knope config which enables this GitHub workflow to work:
 
 ```toml
 [package]
-versioned_files = ["Cargo.toml"]
+versioned_files = ["Cargo.toml", "Cargo.lock"]
 changelog = "CHANGELOG.md"
-
-[[package.assets]]
-path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
-
-[[package.assets]]
-path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
-
-[[package.assets]]
-path = "artifacts/knope-x86_64-apple-darwin.tgz"
-
-[[package.assets]]
-path = "artifacts/knope-aarch64-apple-darwin.tgz"
+assets = "artifacts/*"
 
 [[workflows]]
 name = "prepare-release"
@@ -191,18 +184,19 @@ owner = "knope-dev"
 repo = "knope"
 ```
 
-There is a single `[package]`, but this pattern should also work for multi-package setups, just make sure all your assets are ready at the same time.
-In this case, there's one versioned file (`Cargo.toml`) and one changelog (`CHANGELOG.md`).
-There are also four assets, one for each supported platform.
+There's a single `[package]`, but this pattern should also work for multi-package setups, just make sure all your assets are ready at the same time.
+In this case, there are two versioned files (`Cargo.toml` and `Cargo.lock`), the changelog (`CHANGELOG.md`), and all 
+assets (four, in the example GitHub workflow).
 
-There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml` and `CHANGELOG.md` based on any conventional commits or changesets.
+There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md` based 
+on any conventional commits or changesets.
 Knope then runs a command to commit the changes and push them back to the current branch (note that using the `Version` variable isn't supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.
 
 When ready, GitHub Actions calls into the `release` workflow which runs a single step: [`Release`].
 This will compare the latest stable tagged release to the version in `Cargo.toml` (or any other `versioned_files`)
 and create releases as needed by parsing the contents of `CHANGELOG.md` for the release's body.
 The release is initially created as a draft, then Knope uploads assets before publishing the release
-(so your subscribers won't be notified until it's all ready).
+(so your subscribers won't be notified until it's ready).
 
 [`PrepareRelease`]: /reference/config-file/steps/prepare-release
 [create a fine-grained access token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token

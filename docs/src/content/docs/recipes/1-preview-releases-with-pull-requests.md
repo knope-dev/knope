@@ -2,7 +2,9 @@
 title: "Preview releases with pull requests"
 ---
 
-This recipe always keeps an open pull request which previews the changes the Knope will include in the next release. This pull request will let you see the next version, the changes to versioned files, and the changelog. When you merge that pull request, Knope will create a new release with the changes from the pull request.
+This recipe always keeps an open pull request which previews the changes that Knope will include in the next release.
+This pull request will let you see the next version, the changes to versioned files, and the changelog. 
+When you merge that pull request, Knope will create a new release with the changes from the pull request.
 
 This recipe requires a custom `knope.toml` file and two GitHub Actions workflows.
 
@@ -14,40 +16,23 @@ Each section below is separate for easier explanation, but all these TOML snippe
 
 ```toml
 [package]
-versioned_files = ["Cargo.toml"]
+versioned_files = ["Cargo.toml", "Cargo.lock"]
 changelog = "CHANGELOG.md"
+assets = "artifacts/*"
 ```
 
 This first piece defines the package.
-`Cargo.toml` is both the source of the package's current version and a place that Knope should put new version numbers.
-You can add more `versioned_files` (for example, if you also released this as a Python package with `pyproject.toml`).
-`CHANGELOG.md` is where Knope should describe changes in the source code—this is in _addition_ to GitHub releases.
+[`versioned_files`] are how Knope determines the _current_ package version, and where it puts the new one.
+Knope will describe the changes in the [`changelog`] file in _addition_ to GitHub releases.
+Knope will expand the [`assets` glob][assets] and upload any matching files to the GitHub release.
+You can also [specify assets individually](/reference/config-file/packages/#a-list-of-files).
+
+### `prepare-release` workflow
 
 :::caution
 You can't use this recipe as-is with multiple packages due to limitations on [variables].
 You'll either need to change any references to those variables or use the [workflow dispatch recipe].
 :::
-
-### `[[package.assets]]`
-
-```toml
-[[package.assets]]
-path = "artifacts/knope-x86_64-unknown-linux-musl.tgz"
-
-[[package.assets]]
-path = "artifacts/knope-x86_64-pc-windows-msvc.tgz"
-
-[[package.assets]]
-path = "artifacts/knope-x86_64-apple-darwin.tgz"
-
-[[package.assets]]
-path = "artifacts/knope-aarch64-apple-darwin.tgz"
-```
-
-`package.assets` defines a list of files to upload to GitHub releases. You can also include `name` to change the name of the uploaded artifact.
-It defaults to the last component of the path (for example, `knope-x86_64-unknown-linux-musl.tgz`).
-
-### `prepare-release` workflow
 
 ```toml
 [[workflows]]
@@ -92,7 +77,7 @@ It also stages all those changes with Git (like `git add`).
 
 Next, the workflow commits the changes that [`PrepareRelease`] made—things like:
 
-- Updating the version in `Cargo.toml`
+- Updating the version in `Cargo.toml` and `Cargo.lock`
 - Adding a new section to `CHANGELOG.md` with the latest release notes
 - Deleting any changesets
 
@@ -123,7 +108,7 @@ type = "Release"
 ```
 
 The `release` workflow is a single [`Release`] step—this creates a GitHub release for the latest version
-(if it doesn't already exist) and uploads any [assets](#packageassets).
+(if it doesn't already exist) and uploads any [assets].
 In this case, it'll create a release for whatever the `prepare-release` workflow prepared earlier.
 GitHub Actions will run this workflow whenever someone merges the pull request (created by `prepare-release`).
 
@@ -138,12 +123,12 @@ owner = "knope-dev"
 repo = "knope"
 ```
 
-## `prepare_release.yml`
+## `prepare_release.yaml`
 
-There are two GitHub Actions workflows for this recipe—the first one goes in `.github/workflows/prepare_release.yml`
+There are two GitHub Actions workflows for this recipe—the first one goes in `.github/workflows/prepare_release.yaml`
 and it creates a fresh release preview pull request on every push to the `main` branch:
 
-```yaml title=".github/workflows/prepare_release.yml"
+```yaml title=".github/workflows/prepare_release.yaml"
 on:
   push:
     branches: [main]
@@ -193,11 +178,11 @@ Then, you can use some scripting in GitHub Actions to skip the rest of the workf
 
 In this example, the same [personal access token] is in both steps, but you could use separate ones if you wanted to.
 
-## `release.yml`
+## `release.yaml`
 
 Now that Knope is creating pull requests every push to `main`,
 it needs to automatically release those changes when a pull request merges.
-This is the job of the `release` workflow, which goes in `.github/workflows/release.yml`.
+This is the job of the `release` workflow, which goes in `.github/workflows/release.yaml`.
 
 :::caution
 YAML is sensitive to space and easy to mess up copy/pasting—so you should copy the whole file at _the end_, not the individual pieces.
@@ -207,7 +192,7 @@ To start off, this workflow must only run
 when release preview pull requests merge—there are several pieces of config that handle this.
 First:
 
-```yaml title="./github/workflows/release.yml"
+```yaml title="./github/workflows/release.yaml"
 on:
   pull_request:
     types: [closed]
@@ -222,9 +207,8 @@ and only when they _merge_ (not close for other reasons):
 if: github.head_ref == 'release' && github.event.pull_request.merged == true
 ```
 
-For Knope's own workflows, this first job is `build-artifacts`,
-which builds the [package assets](#packageassets) that Knope will upload when releasing.
-Skipping on past that job (since it probably will be different for you), the net one is the `release` job:
+If you have assets to upload, you'll want a `build-artifacts` job which runs before the next step.
+Skipping on past that job (since it probably will be different for you), the next one is the `release` job:
 
 ```yaml
 release:
@@ -251,7 +235,7 @@ The `release` job follows these steps:
 3. Install Knope
 4. Run [the `release` workflow described earlier](#release-workflow). This requires a [personal access token] with permission to **write** the **contents** of the repo.
 
-Finally, Knope's workflow publishes to crates.io—meaning the whole workflow looks like this:
+Finally, our example workflow publishes to crates.io—meaning the whole workflow looks like this:
 
 ```yaml
 name: Release
@@ -277,7 +261,7 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
     env:
-      archive_name: artifact
+      package_name: # TODO: Replace with your package name
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.target }}
@@ -297,18 +281,18 @@ jobs:
 
       - name: Set Archive Name (Non-Windows)
         id: archive
-        run: echo "archive_name=knope-${{ matrix.target }}" >> $GITHUB_ENV
+        run: echo "archive_name=${{ env.package_name }}-${{ matrix.target }}" >> $GITHUB_ENV
 
       - name: Set Archive Name (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
-        run: echo "archive_name=knope-${{ matrix.target }}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        run: echo "archive_name=${{ env.package_name }}-${{ matrix.target }}" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Create Archive Folder
         run: mkdir ${{ env.archive_name }}
 
       - name: Copy Unix Artifact
         if: ${{ matrix.os != 'windows-latest' }}
-        run: cp target/${{ matrix.target }}/release/knope ${{ env.archive_name }}
+        run: cp target/${{ matrix.target }}/release/${{ env.package_name }} ${{ env.archive_name }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4.4.0
@@ -355,6 +339,9 @@ Just to summarize, this recipe describes a process that:
 1. Automatically creates a pull request in GitHub every time a new commit is pushed to `main`. That pull request contains a preview of the next release.
 2. Automatically releases the package every time a release preview's pull request is merged.
 
+[`versioned_files`]: /reference/config-file/packages#versioned_files
+[`changelog`]: /reference/config-file/packages#changelog
+[assets]: /reference/config-file/packages/#a-single-glob-string
 [variables]: /reference/config-file/variables
 [workflow dispatch recipe]: /recipes/workflow-dispatch-releases
 [`PrepareRelease`]: /reference/config-file/steps/prepare-release
