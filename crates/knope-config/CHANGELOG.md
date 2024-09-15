@@ -1,3 +1,9 @@
+## 0.2.0 (2024-09-15)
+
+### Breaking Changes
+
+- Changed type of `Package::assets` to `Assets` enum
+
 ## 0.1.0 (2024-08-18)
 
 ### Breaking Changes
