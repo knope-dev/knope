@@ -181,12 +181,7 @@ If `PrepareRelease` set the new version of the `knope` package to "1.2.3" and `k
 
 ### Create a GitHub release with assets
 
-See [Knope's release workflow] and [knope.toml] where we:
-
-1. Prep the release to get the new version and changelog
-2. Commit the changes
-3. Fan out into several jobs which each check out the changes and build a different binary
-4. Create a GitHub release with the new version, changelog, and the binary assets
+See the ["Preview releases with pull requests" recipe](/recipes/1-preview-releases-with-pull-requests).
 
 [forge config]: /reference/concepts/forge
 [`preparerelease`]: /reference/config-file/steps/prepare-release

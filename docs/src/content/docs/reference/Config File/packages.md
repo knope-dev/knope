@@ -182,13 +182,24 @@ extra_changelog_sections = [
 
 ## `assets`
 
-Assets is a list of files to upload to a GitHub release. They do nothing without [GitHub configuration](/reference/config-file/github).
-Assets are per-package. Each asset can optionally have a `name`, this is what it will appear as in GitHub releases.
-The `name` defaults to the final part of the path.
+Assets can either be a single "glob" string, or a list of files to upload to a GitHub release.
+They do nothing without [GitHub configuration](/reference/config-file/github).
+Assets are per-package.
+When specifying an exact list, each asset can optionally have a `name`, this is what it'll appear as in GitHub releases.
+The `name` defaults to the file name (the final component of the path).
 
 :::caution
 Knope doesn't yet support uploading assets to Gitea, declaring both `[gitea]` and assets is an error.
 :::
+
+### A single glob string
+
+```toml title="knope.toml"
+[package]
+assets = "artifact/*"  # Upload all files in the artifact directory
+```
+
+### A list of files
 
 ```toml
 [package]

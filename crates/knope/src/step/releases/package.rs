@@ -1,7 +1,7 @@
 use std::{fmt, fmt::Display};
 
 use itertools::Itertools;
-use knope_config::{changelog_section::convert_to_versioning, Asset};
+use knope_config::{changelog_section::convert_to_versioning, Assets};
 use knope_versioning::{
     package::{BumpError, ChangeConfig, Name},
     release_notes::{ReleaseNotes, TimeError},
@@ -26,7 +26,7 @@ pub(crate) struct Package {
     pub(crate) versioning: knope_versioning::Package,
     /// Version manually set by the caller to use instead of the one determined by semantic rule
     pub(crate) override_version: Option<Version>,
-    pub(crate) assets: Option<Vec<Asset>>,
+    pub(crate) assets: Option<Assets>,
     pub(crate) go_versioning: GoVersioning,
 }
 

@@ -1,5 +1,5 @@
 pub(crate) use api::CreateReleaseError as Error;
-use knope_config::Asset;
+use knope_config::Assets;
 use knope_versioning::{release_notes::Release, ReleaseTag};
 
 use crate::{config::GitHub, integrations::github as api, state, state::RunType};
@@ -8,7 +8,7 @@ pub(crate) fn release(
     release: &Release,
     github_state: RunType<state::GitHub>,
     github_config: &GitHub,
-    assets: Option<&Vec<Asset>>,
+    assets: Option<&Assets>,
     tag: &ReleaseTag,
 ) -> Result<state::GitHub, Error> {
     let version = &release.version;
