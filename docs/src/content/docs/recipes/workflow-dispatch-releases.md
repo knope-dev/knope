@@ -34,7 +34,7 @@ jobs:
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4.2.1
+      - uses: actions/checkout@v4.2.2
         name: Fetch entire history (for conventional commits)
         with:
           fetch-depth: 0
@@ -74,7 +74,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4.2.1
+      - uses: actions/checkout@v4.2.2
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
 
@@ -115,7 +115,7 @@ jobs:
     needs: [build-artifacts, prepare-release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.1
+      - uses: actions/checkout@v4.2.2
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
       - uses: actions/download-artifact@v4.1.8
