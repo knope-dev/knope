@@ -35,6 +35,7 @@ allow = [
   "OpenSSL",
   "MPL-2.0",
   "BSD-3-Clause",
+  "Unicode-3.0",
   "Unicode-DFS-2016",
   "CC0-1.0",
 ]
