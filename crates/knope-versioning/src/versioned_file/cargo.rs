@@ -197,12 +197,11 @@ mod test_contains_dependency {
     }
 }
 
-#[allow(clippy::indexing_slicing)]
 fn write_version_to_dep(dep: &mut toml_edit::Item, version: &Version) {
     if let Some(table) = dep.as_table_mut() {
-        table["version"] = value(version.to_string());
+        table.insert("version", value(version.to_string()));
     } else if let Some(table) = dep.as_inline_table_mut() {
-        table["version"] = version.to_string().into();
+        table.insert("version", version.to_string().into());
     } else if let Some(value) = dep.as_value_mut() {
         *value = version.to_string().into();
     }
