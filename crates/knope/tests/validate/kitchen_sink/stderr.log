@@ -1,25 +1,33 @@
-Error:   × There are problems with the defined workflows
+Error: 
+  × There are problems with the defined workflows
 
-Error:   × Problem with workflow Cannot SelectJiraIssue without Jira config
+Error: 
+  × Problem with workflow Cannot SelectJiraIssue without Jira config
 
 Error: issues::jira::not_configured (https://knope.tech/reference/config-file/jira/)
 
   × Jira is not configured
   help: Jira must be configured in order to select a Jira issue
-Error:   × Problem with workflow Cannot TransitionJiraIssue without SelectJiraIssue
+
+Error: 
+  × Problem with workflow Cannot TransitionJiraIssue without SelectJiraIssue
 
 Error: issues::jira::no_issue_selected
 
   × No issue selected
   help: You must use the SelectJiraIssue step before TransitionJiraIssue in
         the same workflow
-Error:   × Problem with workflow Cannot SelectGitHubIssue without GitHub config
+
+Error: 
+  × Problem with workflow Cannot SelectGitHubIssue without GitHub config
 
 Error: issues::github::not_configured (https://knope.tech/reference/config-file/github/)
 
   × GitHub is not configured
   help: GitHub must be configured in order to use the SelectGitHubIssue step
-Error:   × Problem with workflow Cannot SwitchBranches without first selecting an
+
+Error: 
+  × Problem with workflow Cannot SwitchBranches without first selecting an
   │ issue
 
 Error: git::no_issue_selected
@@ -27,15 +35,19 @@ Error: git::no_issue_selected
   × No issue selected
   help: Switching branches requires selecting an issue first with
         SelectGitHubIssue or SelectJiraIssue
-Error:   × Problem with workflow Cannot use Version variable when no metadata file
-  │ is found
+
+Error: 
+  × Problem with workflow Cannot use Version variable when no metadata file is
+  │ found
 
 Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
   × No packages to operate on
   help: There must be at least one package for Knope to work with, no
         supported package files were found in this directory.
-Error:   × Problem with workflow Cannot PrepareRelease with no configured packages
+
+Error: 
+  × Problem with workflow Cannot PrepareRelease with no configured packages
 
 Error: package::no_defined_packages (https://knope.tech/reference/config-file/packages/)
 
