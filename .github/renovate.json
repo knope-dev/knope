@@ -12,10 +12,7 @@
   "packageRules": [
     {
       "groupName": "Astro",
-      "matchPackagePatterns": [
-        "^astro$",
-        "^@astrojs/*"
-      ]
+      "matchPackagePatterns": ["/^@?astro"]
     }
   ],
   "customManagers": [
