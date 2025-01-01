@@ -114,6 +114,7 @@ skip-tree = [
   { name = "bitflags", version = "1", depth = 1 },       # crossterm, inquire, redox_syscall, etc. all use this
   { name = "windows-sys", version = "0.48", depth = 5 }, # inquire requires an old version of crossterm
   { name = "windows-sys", version = "0.52", depth = 5 }, # so many things... it'll be a while
+  { name = "thiserror", version = "1.0", depth = 2 },    # Waiting on redox
 ]
 
 # This section is considered when running `cargo deny check sources`.
