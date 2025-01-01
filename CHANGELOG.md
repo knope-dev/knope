@@ -10,6 +10,13 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.18.2 (2025-01-01)
+
+### Fixes
+
+- Fix panic when Cargo.toml is missing a `version`
+- Remove warning for Cargo.lock version 4
+
 ## 0.18.1 (2024-09-15)
 
 ### Features

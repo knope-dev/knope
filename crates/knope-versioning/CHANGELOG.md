@@ -1,3 +1,10 @@
+## 0.3.1 (2025-01-01)
+
+### Fixes
+
+- Fix panic when Cargo.toml is missing a `version`
+- Remove warning for Cargo.lock version 4
+
 ## 0.3.0 (2024-08-18)
 
 ### Breaking Changes
