@@ -35,10 +35,13 @@ impl CargoLock {
 
         match self.document.get("version") {
             None => warn!("Unknown version of Cargo.lock, outcome may be unexpected"),
-            Some(version) if version.as_integer() != Some(3) => {
+            Some(version)
+                if version
+                    .as_integer()
+                    .is_some_and(|version| (3..=4).contains(&version)) => {}
+            Some(version) => {
                 warn!("Unsupported version of Cargo.lock: {version}. Outcome may be unexpected");
             }
-            _ => (),
         }
 
         let packages = self
