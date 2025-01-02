@@ -82,6 +82,8 @@ jobs:
   release:
     needs: [build-artifacts, get-tag]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: actions/download-artifact@v4.1.8
@@ -94,4 +96,4 @@ jobs:
           gh release upload ${{ needs.get-tag.outputs.tag_name }} *
           gh release edit ${{ needs.get-tag.outputs.tag_name }} --draft=false --latest
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
