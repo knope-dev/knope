@@ -295,7 +295,7 @@ jobs:
         run: cp target/${{ matrix.target }}/release/${{ env.package_name }} ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.5.0
+        uses: actions/upload-artifact@v4.6.0
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
