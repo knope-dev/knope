@@ -22,7 +22,7 @@ clap = { version = "4.5.4", features = ["cargo", "string", "env"] }
 datta = "0.1.1"
 execute = "0.2.13"
 git2 = { version = "0.20.0", default-features = false }
-gix = { version = "0.69.0", default-features = false, features = [
+gix = { version = "0.70.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 glob = "0.3.1"
