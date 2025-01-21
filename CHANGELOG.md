@@ -10,6 +10,12 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.18.3 (2025-01-21)
+
+### Fixes
+
+- Improve error messages when GitHub releases fail
+
 ## 0.18.2 (2025-01-01)
 
 ### Fixes
