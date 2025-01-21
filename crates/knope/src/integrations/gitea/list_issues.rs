@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub(crate) fn list_issues(
-    config: &Option<config::Gitea>,
+    config: Option<&config::Gitea>,
     state: state::Gitea,
     labels: Option<&[String]>,
 ) -> Result<(state::Gitea, Vec<Issue>), Error> {

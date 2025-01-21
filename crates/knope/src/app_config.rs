@@ -6,7 +6,6 @@ use platform_dirs::AppDirs;
 use crate::{prompt, prompt::get_input};
 
 /// For managing configuration of knope globally
-
 pub(crate) fn get_or_prompt_for_email() -> Result<String, Error> {
     load_value_or_prompt("email", "Input your email address")
 }

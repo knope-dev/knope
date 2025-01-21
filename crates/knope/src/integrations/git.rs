@@ -234,10 +234,10 @@ fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, Error> {
         .or(Err(ErrorKind::BadGitBranchName))?;
     let jira_issue = format!("{project_key}-{issue_number}");
     info!("Auto-selecting issue {jira_issue} from ref {ref_name}");
-    return Ok(Issue {
+    Ok(Issue {
         key: jira_issue,
         summary: parts.iter().join("-"),
-    });
+    })
 }
 
 #[cfg(test)]
