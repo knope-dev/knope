@@ -4,6 +4,7 @@ use knope_config::{Asset, AssetNameError, Assets};
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::info;
+use ureq::Response;
 
 use crate::{
     app_config, config,
@@ -43,18 +44,20 @@ pub(crate) fn create_release(
     );
     let token_header = format!("token {}", &token);
 
-    let response: CreateReleaseResponse = agent
+    let response = agent
         .post(&url)
         .set("Authorization", &token_header)
         .send_json(github_release)
         .map_err(|source| Error::ApiRequest {
             err: ureq_err_to_string(source),
             activity: "creating a release".to_string(),
-        })?
-        .into_json()
-        .map_err(|source| Error::ApiResponse {
-            source,
-            activity: "creating a release",
+        })
+        .and_then(|resp| error_on_bad_http_status(resp, "creating a release".to_string()))?;
+
+    let response: CreateReleaseResponse =
+        response.into_json().map_err(|source| Error::ApiResponse {
+            message: source.to_string(),
+            activity: "creating a release".to_string(),
         })?;
 
     if let Some(assets) = assets {
@@ -79,6 +82,14 @@ pub(crate) fn create_release(
                     activity: format!(
                         "uploading asset {asset_name}. Release has been created but not published!",
                     ),
+                })
+                .and_then(|resp| {
+                    error_on_bad_http_status(
+                        resp,
+                        format!(
+                            "uploading asset {asset_name}. Release has been created but not published!",
+                        ),
+                    )
                 })?;
         }
         agent
@@ -90,10 +101,26 @@ pub(crate) fn create_release(
             .map_err(|source| Error::ApiRequest {
                 err: ureq_err_to_string(source),
                 activity: "publishing release".to_string(),
-            })?;
+            })
+            .and_then(|resp| error_on_bad_http_status(resp, "publishing release".to_string()))?;
     }
 
     Ok(state::GitHub::Initialized { token, agent })
+}
+
+fn error_on_bad_http_status(response: Response, activity: String) -> Result<Response, Error> {
+    if response.status() >= 400 {
+        let num = response.status();
+        let text = response.status_text().to_string();
+        let message = if let Ok(body) = response.into_string() {
+            format!("Got HTTP status {num} {text} with body {body}")
+        } else {
+            format!("Got HTTP status {num} {text}")
+        };
+        Err(Error::ApiResponse { message, activity })
+    } else {
+        Ok(response)
+    }
 }
 
 fn github_release_dry_run(
@@ -164,17 +191,14 @@ pub(crate) enum Error {
         )
     )]
     ApiRequest { err: String, activity: String },
-    #[error("Trouble decoding the response from GitHub while {activity}: {source}")]
+    #[error("Trouble decoding the response from GitHub while {activity}: {message}")]
     #[diagnostic(
         code(github::api_response_error),
         help(
             "Failure to decode a response from GitHub is probably a bug. Please report it at https://github.com/knope-dev/knope"
         )
     )]
-    ApiResponse {
-        source: std::io::Error,
-        activity: &'static str,
-    },
+    ApiResponse { message: String, activity: String },
     #[error("Asset was not uploaded to GitHub, a release was created but is still a draft! {0}")]
     #[diagnostic(
         code(github::asset_name_error),
