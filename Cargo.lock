@@ -329,12 +329,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "doc-comment"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
-
-[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -488,11 +482,10 @@ checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
 
 [[package]]
 name = "git-conventional"
-version = "0.12.7"
+version = "0.12.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8066dc2ef3bd0e2bfb84b4a2b0b04f216ffb97390e09fab0752bf0ba943dacc6"
+checksum = "61a5eb2104bf174e3368d9d7b13845e5adbb4bcc6fe74173241c66cfb2716a7e"
 dependencies = [
- "doc-comment",
  "unicase",
  "winnow",
 ]
