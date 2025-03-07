@@ -4,14 +4,14 @@ use std::{
     str::FromStr,
 };
 
-use git2::{build::CheckoutBuilder, Branch, BranchType, IndexAddOption, Repository};
-use gix::{object::Kind, refs::transaction::PreviousValue, ObjectId};
+use git2::{Branch, BranchType, IndexAddOption, Repository, build::CheckoutBuilder};
+use gix::{ObjectId, object::Kind, refs::transaction::PreviousValue};
 use itertools::Itertools;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::{debug, info};
 
-use crate::{fs, prompt, prompt::select, state, state::State, step::issues::Issue, RunType};
+use crate::{RunType, fs, prompt, prompt::select, state, state::State, step::issues::Issue};
 
 /// Based on the selected issue, either checks out an existing branch matching the name or creates
 /// a new one, prompting for which branch to base it on.
@@ -70,7 +70,9 @@ enum ErrorKind {
     #[error("No issue selected")]
     #[diagnostic(
         code(git::no_issue_selected),
-        help("Switching branches requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue")
+        help(
+            "Switching branches requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue"
+        )
     )]
     NoIssueSelected,
     #[error(transparent)]
@@ -80,7 +82,7 @@ enum ErrorKind {
     #[diagnostic(
         code(git::libgit2),
         help(
-        "Something went wrong when interacting with Git that we don't have an explanation for. \
+            "Something went wrong when interacting with Git that we don't have an explanation for. \
                     Maybe try performing the operation manually?"
         )
     )]
@@ -108,8 +110,10 @@ enum ErrorKind {
     #[error("Could not complete checkout")]
     #[diagnostic(
         code(git::incomplete_checkout),
-        help("Switching branches failed, but HEAD was changed. You probably want to git switch back \
-                to the branch you were on."),
+        help(
+            "Switching branches failed, but HEAD was changed. You probably want to git switch back \
+                to the branch you were on."
+        )
     )]
     IncompleteCheckout(#[source] git2::Error),
     #[error(transparent)]

@@ -2,7 +2,7 @@
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
-use serde_yaml::{from_str, to_string, Mapping, Value};
+use serde_yaml::{Mapping, Value, from_str, to_string};
 use thiserror::Error;
 
 use crate::{
@@ -77,11 +77,16 @@ impl PubSpec {
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
     #[error("Error deserializing {path}: {source}")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(pubspec_yaml::deserialize),
-        help("knope expects the pubspec.yaml file to be an object with a top level `version` property"),
-        url("https://knope.tech/reference/config-file/packages/#pubspecyaml")
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(pubspec_yaml::deserialize),
+            help(
+                "knope expects the pubspec.yaml file to be an object with a top level `version` property"
+            ),
+            url("https://knope.tech/reference/config-file/packages/#pubspecyaml")
+        )
+    )]
     Deserialize {
         path: RelativePathBuf,
         #[source]

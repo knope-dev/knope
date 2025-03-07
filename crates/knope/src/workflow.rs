@@ -5,7 +5,7 @@ use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{state::RunType, step, step::Step, State};
+use crate::{State, state::RunType, step, step::Step};
 
 /// A workflow is basically the state machine to run for a single execution of knope.
 #[derive(Debug, Deserialize, Serialize)]

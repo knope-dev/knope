@@ -1,5 +1,5 @@
 pub(crate) use api::CreateReleaseError as Error;
-use knope_versioning::{package, release_notes::Release, ReleaseTag};
+use knope_versioning::{ReleaseTag, package, release_notes::Release};
 
 use crate::{config, integrations::gitea as api, state, state::RunType};
 

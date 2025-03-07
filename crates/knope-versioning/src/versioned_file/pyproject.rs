@@ -62,15 +62,18 @@ impl PyProject {
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
     #[error("Could not deserialize {0} as a pyproject.toml: {1}")]
-    #[cfg_attr( feature = "miette", diagnostic(
-        code(pyproject::invalid),
-        help(
-        "knope expects the pyproject.toml file to have a `tool.poetry.version` or \
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(pyproject::invalid),
+            help(
+                "knope expects the pyproject.toml file to have a `tool.poetry.version` or \
                         `project.version` property. If you use a different location for your version, please \
                         open an issue to add support."
-        ),
-        url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
-    ))]
+            ),
+            url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
+        )
+    )]
     Deserialization(RelativePathBuf, #[source] toml::de::Error),
     #[error("Found conflicting versions {project} and {poetry} in {path}")]
     #[cfg_attr(

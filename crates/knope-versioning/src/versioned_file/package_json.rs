@@ -60,11 +60,16 @@ impl PackageJson {
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
     #[error("Error deserializing {path}: {source}")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(package_json::deserialize),
-        help("knope expects the package.json file to be an object with a top level `version` property"),
-        url("https://knope.tech/reference/config-file/packages/#packagejson")
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(package_json::deserialize),
+            help(
+                "knope expects the package.json file to be an object with a top level `version` property"
+            ),
+            url("https://knope.tech/reference/config-file/packages/#packagejson")
+        )
+    )]
     Deserialize {
         path: RelativePathBuf,
         #[source]

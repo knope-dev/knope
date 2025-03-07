@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use changesets::{UniqueId, Versioning};
 use inquire::{MultiSelect, Select};
 use itertools::Itertools;
-use knope_versioning::changes::{ChangeType, CHANGESET_DIR};
+use knope_versioning::changes::{CHANGESET_DIR, ChangeType};
 use miette::Diagnostic;
 use tracing::info;
 

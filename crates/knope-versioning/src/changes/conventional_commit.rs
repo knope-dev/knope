@@ -182,7 +182,9 @@ mod tests {
                 Change {
                     change_type: ChangeType::Breaking,
                     description: "something broke".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from("fix: a bug\n\tContaining footer BREAKING CHANGE: something broke")),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "fix: a bug\n\tContaining footer BREAKING CHANGE: something broke"
+                    )),
                 },
                 Change {
                     change_type: ChangeType::Fix,
@@ -192,12 +194,16 @@ mod tests {
                 Change {
                     change_type: ChangeType::Breaking,
                     description: "something else broke".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from("feat: a features\n\tContaining footer BREAKING CHANGE: something else broke")),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "feat: a features\n\tContaining footer BREAKING CHANGE: something else broke"
+                    )),
                 },
                 Change {
                     change_type: ChangeType::Feature,
                     description: "a features".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from("feat: a features")),
+                    original_source: ChangeSource::ConventionalCommit(String::from(
+                        "feat: a features"
+                    )),
                 },
             ]
         );

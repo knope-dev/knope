@@ -3,10 +3,10 @@ name = "knope-versioning"
 description = "A library for handling all the versioned files supported by Knope"
 version = "0.3.1"
 authors = ["Dylan Anthony <contact@dylananthony.com>"]
-edition = "2021"
+edition = "2024"
 license = "MIT"
 repository = "https://github.com/knope-dev/knope"
-rust-version = "1.71.1"
+rust-version = "1.85.0"
 readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

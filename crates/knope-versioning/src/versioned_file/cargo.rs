@@ -2,9 +2,9 @@
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use thiserror::Error;
-use toml_edit::{value, DocumentMut, TomlError};
+use toml_edit::{DocumentMut, TomlError, value};
 
-use crate::{semver::Version, Action};
+use crate::{Action, semver::Version};
 
 #[derive(Clone, Debug)]
 pub struct Cargo {

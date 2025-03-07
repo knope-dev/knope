@@ -1,5 +1,5 @@
 use snapbox::{Assert, Redactions};
-use time::{macros::format_description, OffsetDateTime};
+use time::{OffsetDateTime, macros::format_description};
 
 /// Assert that includes [DATE] substitution
 pub fn assert(normalize_paths: bool) -> Assert {

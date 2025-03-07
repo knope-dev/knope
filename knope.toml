@@ -5,6 +5,7 @@ versioned_files = [
   { path = "Cargo.toml", dependency = "knope-versioning" },
 ]
 changelog = "crates/knope-versioning/CHANGELOG.md"
+extra_changelog_sections = [{ name = "Notes", types = ["note"] }]
 
 [packages.config]
 versioned_files = [
@@ -13,11 +14,20 @@ versioned_files = [
   { path = "crates/knope/Cargo.toml", dependency = "knope-config" },
 ]
 changelog = "crates/knope-config/CHANGELOG.md"
+extra_changelog_sections = [{ name = "Notes", types = ["note"] }]
 
 [packages.knope]
 versioned_files = ["crates/knope/Cargo.toml", "Cargo.lock"]
 changelog = "CHANGELOG.md"
-extra_changelog_sections = [{ name = "Documentation", types = ["docs"] }]
+
+[[extra_changelog_sections]]
+name = "Documentation"
+types = ["docs"]
+
+[[extra_changelog_sections]]
+name = "Notes"
+types = ["note"]
+
 assets = "marker for GitHub bot"
 
 [github]

@@ -1,8 +1,8 @@
 use relative_path::RelativePathBuf;
-use toml_edit::{value, DocumentMut, TomlError};
+use toml_edit::{DocumentMut, TomlError, value};
 use tracing::warn;
 
-use crate::{semver::Version, Action};
+use crate::{Action, semver::Version};
 
 /// Represents a Cargo.lock file.
 #[derive(Clone, Debug)]
@@ -117,7 +117,9 @@ pub enum SetError {
         help("The Cargo.lock may be malformed, or Knope may not yet support a newer format.")
     )]
     MissingPackageArray(RelativePathBuf),
-    #[error("Every package in {0} is expected to have a 'name' field containing a string, but one does not")]
+    #[error(
+        "Every package in {0} is expected to have a 'name' field containing a string, but one does not"
+    )]
     #[cfg_attr(
         feature = "miette",
         diagnostic(code(knope_versioning::cargo_lock::missing_package_name)),

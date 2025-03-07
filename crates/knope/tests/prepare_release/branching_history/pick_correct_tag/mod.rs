@@ -1,4 +1,4 @@
-use crate::helpers::{commit, create_branch, switch_branch, tag, TestCase};
+use crate::helpers::{TestCase, commit, create_branch, switch_branch, tag};
 
 #[test]
 fn pick_correct_tag_from_branching_history() {

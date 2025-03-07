@@ -14,15 +14,15 @@ use thiserror::Error;
 use tracing::debug;
 
 use crate::{
+    PackageNewError::CargoLockNoDependency,
     action::Action,
     changes::{
-        conventional_commit::changes_from_commit_messages, Change, ChangeSource, CHANGESET_DIR,
+        CHANGESET_DIR, Change, ChangeSource, conventional_commit::changes_from_commit_messages,
     },
     release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
     versioned_file,
-    versioned_file::{cargo, Config, Format, GoVersioning, SetError, VersionedFile},
-    PackageNewError::CargoLockNoDependency,
+    versioned_file::{Config, Format, GoVersioning, SetError, VersionedFile, cargo},
 };
 
 #[derive(Clone, Debug)]
@@ -285,7 +285,9 @@ pub enum ChangeConfig {
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum NewError {
-    #[error("Found inconsistent versions in package: {first_path} had {first_version} and {second_path} had {second_version}")]
+    #[error(
+        "Found inconsistent versions in package: {first_path} had {first_version} and {second_path} had {second_version}"
+    )]
     #[cfg_attr(
         feature = "miette",
         diagnostic(

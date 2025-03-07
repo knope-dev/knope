@@ -1,12 +1,12 @@
 use std::{fmt, fmt::Display};
 
 use itertools::Itertools;
-use knope_config::{changelog_section::convert_to_versioning, Assets};
+use knope_config::{Assets, changelog_section::convert_to_versioning};
 use knope_versioning::{
+    Action, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
     package::{BumpError, ChangeConfig, Name},
     release_notes::{ReleaseNotes, TimeError},
     semver::Version,
-    Action, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
 };
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -15,10 +15,10 @@ use tracing::{debug, info};
 use super::{conventional_commits, semver};
 use crate::{
     config, fs,
-    fs::{read_to_string, WriteType},
+    fs::{WriteType, read_to_string},
     integrations::git::{self, add_files},
     state::RunType,
-    step::{releases::changelog::load_changelog, PrepareRelease},
+    step::{PrepareRelease, releases::changelog::load_changelog},
 };
 
 #[derive(Clone, Debug)]
@@ -255,7 +255,9 @@ pub(crate) enum Error {
     #[error("No packages to operate on")]
     #[diagnostic(
         code(package::no_defined_packages),
-        help("There must be at least one package for Knope to work with, no supported package files were found in this directory."),
+        help(
+            "There must be at least one package for Knope to work with, no supported package files were found in this directory."
+        ),
         url("https://knope.tech/reference/config-file/packages/")
     )]
     NoDefinedPackages,

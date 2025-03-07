@@ -19,6 +19,8 @@ pub(crate) fn get_input(prompt: &str) -> Result<String, Error> {
 #[error("Failed to get user input")]
 #[diagnostic(
     code(prompt),
-    help("This step requires user input, but no user input was provided. Try running the step again."),
+    help(
+        "This step requires user input, but no user input was provided. Try running the step again."
+    )
 )]
 pub(crate) struct Error(#[from] InquireError);

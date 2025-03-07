@@ -4,7 +4,7 @@ use tracing::info;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{ureq_err_to_string, CreateReleaseInput, CreateReleaseResponse},
+    integrations::{CreateReleaseInput, CreateReleaseResponse, ureq_err_to_string},
     state,
     state::RunType,
 };

@@ -3,7 +3,7 @@ use std::{ops::Range, path::PathBuf, str::FromStr};
 use ::toml::Spanned;
 use itertools::Itertools;
 use knope_config::{Assets, ChangelogSection};
-use knope_versioning::{package, versioned_file::cargo, UnknownFile, VersionedFileConfig};
+use knope_versioning::{UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
 use miette::Diagnostic;
 use relative_path::{RelativePath, RelativePathBuf};
 use thiserror::Error;
