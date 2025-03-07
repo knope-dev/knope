@@ -1,0 +1,9 @@
+[packages.maven]
+versioned_files = ["pom.xml"]
+
+[[workflows]]
+name = "bump"
+
+[[workflows.steps]]
+type = "BumpVersion"
+rule = "Major"
