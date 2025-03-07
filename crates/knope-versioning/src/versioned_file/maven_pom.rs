@@ -127,7 +127,7 @@ pub enum Error {
         diagnostic(
             code(knope_versioning::maven_pom::xml),
             help("knope expects the pom.xml file to be maven project with a version property"),
-            url("https://knope.tech/reference/config-file/packages/#mavenpom")
+            url("https://knope.tech/reference/config-file/packages/#pomxml")
         )
     )]
     Xml {
@@ -141,7 +141,7 @@ pub enum Error {
         diagnostic(
             code(knope_versioning::maven_pom::serialize),
             help("an internal error prevented knope from writing the new version to the file"),
-            url("https://knope.tech/reference/config-file/packages/#mavenpom")
+            url("https://knope.tech/reference/config-file/packages/#pomxml")
         )
     )]
     #[error("Failed to serialize XML to {path}: {source}")]
@@ -157,7 +157,7 @@ pub enum Error {
         feature = "miette",
         diagnostic(
             code(knope_versioning::maven_pom::missing_property),
-            url("https://knope.tech/reference/config-file/packages/#mavenpom")
+            url("https://knope.tech/reference/config-file/packages/#pomxml")
         )
     )]
     MissingRequiredProperties {
