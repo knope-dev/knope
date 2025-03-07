@@ -14,5 +14,5 @@ pub(crate) fn get_conventional_commits_after_last_stable_version(
     let target_version = PackageVersions::from_tags(package_name.as_custom(), all_tags).stable();
     let tag = ReleaseTag::new(&target_version.into(), package_name);
 
-    get_commit_messages_after_tag(tag.as_str()).map_err(git::Error::from)
+    get_commit_messages_after_tag(tag.as_str())
 }
