@@ -1,6 +1,6 @@
 use std::{thread::sleep, time::Duration};
 
-use crate::helpers::{commit, create_branch, merge_branch, switch_branch, tag, TestCase};
+use crate::helpers::{TestCase, commit, create_branch, merge_branch, switch_branch, tag};
 
 #[test]
 fn merge_commits() {

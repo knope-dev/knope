@@ -5,7 +5,7 @@ use ureq::Agent;
 
 use crate::{
     app_config, config,
-    integrations::{git, github::initialize_state, ureq_err_to_string, PullRequest},
+    integrations::{PullRequest, git, github::initialize_state, ureq_err_to_string},
     state,
     state::RunType,
 };

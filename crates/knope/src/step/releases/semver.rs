@@ -1,12 +1,12 @@
 use knope_versioning::{
+    GoVersioning, VersionedFile,
     package::{Bump, BumpError},
     semver::{PreReleaseNotFound, Rule},
-    GoVersioning, VersionedFile,
 };
 use miette::Diagnostic;
 
 use crate::{
-    fs, integrations::git, state::State, step::releases::package::execute_prepare_actions, RunType,
+    RunType, fs, integrations::git, state::State, step::releases::package::execute_prepare_actions,
 };
 
 /// The implementation of [`crate::step::Step::BumpVersion`].

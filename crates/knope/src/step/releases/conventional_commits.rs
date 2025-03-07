@@ -1,4 +1,4 @@
-use knope_versioning::{package, semver::PackageVersions, ReleaseTag};
+use knope_versioning::{ReleaseTag, package, semver::PackageVersions};
 use tracing::debug;
 
 use crate::integrations::git::{self, get_commit_messages_after_tag};

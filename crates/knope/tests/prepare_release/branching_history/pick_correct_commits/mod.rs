@@ -1,5 +1,5 @@
 /// Specifically designed to catch <https://github.com/knope-dev/knope/issues/505/>
-use crate::helpers::{commit, create_branch, merge_branch, switch_branch, tag, TestCase};
+use crate::helpers::{TestCase, commit, create_branch, merge_branch, switch_branch, tag};
 
 #[test]
 fn pick_correct_commits_from_branching_history() {

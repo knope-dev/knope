@@ -4,7 +4,7 @@ use crate::{
     integrations::{gitea, github},
     state::{RunType, State},
     variables,
-    variables::{replace_variables, Template},
+    variables::{Template, replace_variables},
 };
 
 pub(super) fn run(

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ::toml::{from_str, to_string, Spanned};
+use ::toml::{Spanned, from_str, to_string};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use knope_versioning::package::Name;
@@ -126,7 +126,7 @@ impl TryFrom<(ConfigLoader, String)> for Config {
                     })
                 } else {
                     Err(Error::EmptyPackages)
-                }
+                };
             }
             (Some(package), None) => vec![Package::from_toml(
                 Name::Default,

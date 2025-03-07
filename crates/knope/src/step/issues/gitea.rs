@@ -3,7 +3,7 @@ use tracing::info;
 use super::Issue;
 pub(crate) use crate::integrations::gitea::ListIssuesError as Error;
 use crate::{
-    integrations::gitea::{list_issues, ListIssuesError},
+    integrations::gitea::{ListIssuesError, list_issues},
     prompt,
     state::{self, RunType, State},
 };

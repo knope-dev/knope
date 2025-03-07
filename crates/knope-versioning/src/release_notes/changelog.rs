@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use itertools::Itertools;
 use relative_path::RelativePathBuf;
 use thiserror::Error;
-use time::{macros::format_description, Date};
+use time::{Date, macros::format_description};
 
 use crate::{package, release_notes::Release, semver::Version};
 

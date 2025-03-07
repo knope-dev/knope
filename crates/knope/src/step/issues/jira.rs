@@ -1,4 +1,4 @@
-use base64::{prelude::BASE64_STANDARD as base64, Engine};
+use base64::{Engine, prelude::BASE64_STANDARD as base64};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -77,7 +77,9 @@ pub(crate) enum Error {
     #[error("The specified transition name was not found in the Jira project")]
     #[diagnostic(
         code(issues::jira::transition),
-        help("The `transition` field in TransitionJiraIssue must correspond to a valid transition in the Jira project"),
+        help(
+            "The `transition` field in TransitionJiraIssue must correspond to a valid transition in the Jira project"
+        ),
         url("https://knope.tech/reference/config-file/jira/")
     )]
     Transition,

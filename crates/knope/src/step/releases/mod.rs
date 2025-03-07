@@ -3,22 +3,21 @@ use std::path::PathBuf;
 use changesets::ChangeSet;
 use itertools::Itertools;
 use knope_versioning::{
+    Action, ReleaseTag, VersionedFile,
     changes::CHANGESET_DIR,
     package::Bump,
     release_notes::Release,
     semver::{PackageVersions, Rule},
-    Action, ReleaseTag, VersionedFile,
 };
 use miette::Diagnostic;
 use tracing::debug;
 
 pub(crate) use self::{package::Package, semver::bump_version_and_update_state};
 use crate::{
-    fs,
+    RunType, fs,
     integrations::{git, git::create_tag},
     state::State,
-    step::{releases::package::execute_prepare_actions, PrepareRelease},
-    RunType,
+    step::{PrepareRelease, releases::package::execute_prepare_actions},
 };
 
 pub(crate) mod changelog;
@@ -86,8 +85,10 @@ pub(crate) enum Error {
     #[error("No packages are ready to release")]
     #[diagnostic(
         code(releases::no_release),
-        help("The `PrepareRelease` step will not complete if no changes cause a package's version to be increased."),
-        url("https://knope.tech/reference/config-file/steps/prepare-release/#errors"),
+        help(
+            "The `PrepareRelease` step will not complete if no changes cause a package's version to be increased."
+        ),
+        url("https://knope.tech/reference/config-file/steps/prepare-release/#errors")
     )]
     NoRelease,
     #[error(transparent)]

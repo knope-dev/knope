@@ -1,11 +1,11 @@
 use std::{
     io::stderr,
-    path::{Path, PathBuf, MAIN_SEPARATOR},
+    path::{MAIN_SEPARATOR, Path, PathBuf},
 };
 
 use snapbox::{
-    cmd::{cargo_bin, Command, OutputAssert},
     Data,
+    cmd::{Command, OutputAssert, cargo_bin},
 };
 use tempfile::TempDir;
 

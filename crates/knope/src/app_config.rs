@@ -11,7 +11,10 @@ pub(crate) fn get_or_prompt_for_email() -> Result<String, Error> {
 }
 
 pub(crate) fn get_or_prompt_for_jira_token() -> Result<String, Error> {
-    load_value_or_prompt("jira_token", "No Jira token found, generate one from https://id.atlassian.com/manage-profile/security/api-tokens and input here")
+    load_value_or_prompt(
+        "jira_token",
+        "No Jira token found, generate one from https://id.atlassian.com/manage-profile/security/api-tokens and input here",
+    )
 }
 
 pub(crate) fn get_or_prompt_for_github_token() -> Result<String, Error> {

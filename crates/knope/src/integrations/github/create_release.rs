@@ -9,7 +9,7 @@ use ureq::Response;
 use crate::{
     app_config, config,
     integrations::{
-        github::initialize_state, ureq_err_to_string, CreateReleaseInput, CreateReleaseResponse,
+        CreateReleaseInput, CreateReleaseResponse, github::initialize_state, ureq_err_to_string,
     },
     state,
     state::RunType,
@@ -173,8 +173,10 @@ pub(crate) enum Error {
         "Could not read asset file {path}: {source} Release has been created but not published!"
     )]
     #[diagnostic(
-    code(step::could_not_read_asset_file),
-    help("This could be a permissions issue or the file may not exist relative to the current working directory.")
+        code(step::could_not_read_asset_file),
+        help(
+            "This could be a permissions issue or the file may not exist relative to the current working directory."
+        )
     )]
     CouldNotReadAssetFile {
         path: RelativePathBuf,
@@ -213,7 +215,9 @@ pub(crate) enum Error {
     #[error("Could not resolve asset path: {0}")]
     #[diagnostic(
         code(step::could_not_resolve_asset_path),
-        help("This could be a permissions issue or the file may not exist relative to the current working directory.")
+        help(
+            "This could be a permissions issue or the file may not exist relative to the current working directory."
+        )
     )]
     AssetPath(#[from] relative_path::FromPathError),
 }

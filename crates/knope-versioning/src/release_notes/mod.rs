@@ -4,9 +4,9 @@ pub use changelog::Changelog;
 pub use config::{CommitFooter, CustomChangeType, SectionName, SectionSource, Sections};
 use itertools::Itertools;
 pub use release::Release;
-use time::{macros::format_description, OffsetDateTime};
+use time::{OffsetDateTime, macros::format_description};
 
-use crate::{changes::Change, package, semver::Version, Action};
+use crate::{Action, changes::Change, package, semver::Version};
 
 mod changelog;
 mod config;
@@ -77,10 +77,15 @@ impl ReleaseNotes {
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 #[error("Failed to format current time")]
-#[cfg_attr(feature = "miette", diagnostic(
-    code(release_notes::time_format),
-    help("This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope")
-))]
+#[cfg_attr(
+    feature = "miette",
+    diagnostic(
+        code(release_notes::time_format),
+        help(
+            "This is probably a bug with knope, please file an issue at https://github.com/knope-dev/knope"
+        )
+    )
+)]
 pub struct TimeError(#[from] time::error::Format);
 
 #[derive(Clone, Debug, Eq, PartialEq)]

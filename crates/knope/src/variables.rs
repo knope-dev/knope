@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use knope_versioning::{release_notes::Release, semver::Version, Action};
+use knope_versioning::{Action, release_notes::Release, semver::Version};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +7,7 @@ use crate::{
     integrations::git::branch_name_from_issue,
     state,
     state::State,
-    step::releases::{package, semver, Package},
+    step::releases::{Package, package, semver},
 };
 
 /// Describes a value that can replace an arbitrary string in certain steps.
@@ -122,7 +122,9 @@ pub(crate) enum Error {
     #[error("No issue selected")]
     #[diagnostic(
         code(variables::no_issue_selected),
-        help("The IssueBranch command variable requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue")
+        help(
+            "The IssueBranch command variable requires selecting an issue first with SelectGitHubIssue or SelectJiraIssue"
+        )
     )]
     NoIssueSelected,
     #[error(transparent)]
@@ -135,9 +137,9 @@ pub(crate) enum Error {
 #[allow(clippy::indexing_slicing)]
 mod test_replace_variables {
     use knope_versioning::{
+        Action, VersionedFile, VersionedFileConfig,
         package::Name,
         release_notes::{Changelog, ReleaseNotes, Sections},
-        Action, VersionedFile, VersionedFileConfig,
     };
     use pretty_assertions::assert_eq;
     use relative_path::RelativePathBuf;
@@ -148,12 +150,14 @@ mod test_replace_variables {
     fn state() -> State {
         let changelog = Changelog::new(RelativePathBuf::default(), String::new());
         let versioned_file_path = VersionedFileConfig::new("Cargo.toml".into(), None).unwrap();
-        let all_versioned_files = vec![VersionedFile::new(
-            &versioned_file_path,
-            "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
-            &[""],
-        )
-        .unwrap()];
+        let all_versioned_files = vec![
+            VersionedFile::new(
+                &versioned_file_path,
+                "[package]\nversion = \"1.2.3\"\nname=\"blah\"".into(),
+                &[""],
+            )
+            .unwrap(),
+        ];
 
         let package = Package {
             versioning: knope_versioning::Package::new(

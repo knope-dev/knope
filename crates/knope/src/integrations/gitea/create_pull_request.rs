@@ -6,7 +6,7 @@ use ureq::Agent;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{git, ureq_err_to_string, PullRequest},
+    integrations::{PullRequest, git, ureq_err_to_string},
     state,
     state::RunType,
 };
@@ -158,7 +158,9 @@ pub(crate) enum Error {
     #[error("Trouble getting the head branch")]
     #[diagnostic(
         code(gitea::failed_getting_current_branch),
-        help("The current branch could not be parsed from the git ref path. This is a bug, please report it at https://github.com/knope-dev/knope ")
+        help(
+            "The current branch could not be parsed from the git ref path. This is a bug, please report it at https://github.com/knope-dev/knope "
+        )
     )]
     GitRef,
     #[error(transparent)]

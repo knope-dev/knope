@@ -3,10 +3,10 @@ use miette::Diagnostic;
 use tracing::info;
 
 use crate::{
+    RunType,
     state::State,
     variables,
-    variables::{replace_variables, Template, Variable},
-    RunType,
+    variables::{Template, Variable, replace_variables},
 };
 
 /// Run the command string `command` in the current shell after replacing the keys of `variables`

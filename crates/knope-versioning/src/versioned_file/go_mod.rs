@@ -172,19 +172,29 @@ impl GoMod {
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum SetError {
     #[error("Will not bump Go modules to 2.0.0")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(go::cannot_increase_major_version),
-        help("Go recommends a directory-based versioning strategy for major versions above v1. See the docs for more details."),
-        url("https://knope.tech/recipes/multiple-major-go-versions/"),
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(go::cannot_increase_major_version),
+            help(
+                "Go recommends a directory-based versioning strategy for major versions above v1. See the docs for more details."
+            ),
+            url("https://knope.tech/recipes/multiple-major-go-versions/"),
+        )
+    )]
     BumpingToV2,
     #[error("Cannot bump major versions of directory-based go modules")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(go::major_version_directory_based),
-        help("You are using directory-based major versions—Knope cannot create a new major version directory for you. \
-                    Create the new directory manually and add it as a new package in knope.toml."),
-        url("https://knope.tech/recipes/multiple-major-go-versions/"),
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(go::major_version_directory_based),
+            help(
+                "You are using directory-based major versions—Knope cannot create a new major version directory for you. \
+                    Create the new directory manually and add it as a new package in knope.toml."
+            ),
+            url("https://knope.tech/recipes/multiple-major-go-versions/"),
+        )
+    )]
     MajorVersionDirectoryBased,
 }
 
@@ -192,16 +202,23 @@ pub enum SetError {
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
     #[error("No module line found in go.mod file")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(go::no_module_line),
-        help("The go.mod file does not contain a module line. This is required for the step to work."),
-        url("https://knope.tech/reference/config-file/packages/#gomod")
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(go::no_module_line),
+            help(
+                "The go.mod file does not contain a module line. This is required for the step to work."
+            ),
+            url("https://knope.tech/reference/config-file/packages/#gomod")
+        )
+    )]
     MissingModuleLine,
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     ModuleLine(#[from] ModuleLineError),
-    #[error("No matching tag found for the go.mod file. Searched for a tag with the prefix {prefix} and a major version of {major_filter:?}")]
+    #[error(
+        "No matching tag found for the go.mod file. Searched for a tag with the prefix {prefix} and a major version of {major_filter:?}"
+    )]
     #[cfg_attr(
         feature = "miette",
         diagnostic(
@@ -305,10 +322,15 @@ impl Display for ModuleLine {
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum ModuleLineError {
     #[error("missing module path")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(go::missing_module_path),
-        help("The module line in go.mod must contain a module path, usually the URI of the repository.")
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(go::missing_module_path),
+            help(
+                "The module line in go.mod must contain a module path, usually the URI of the repository."
+            )
+        )
+    )]
     MissingModulePath,
 }
 

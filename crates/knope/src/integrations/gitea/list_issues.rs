@@ -3,7 +3,7 @@ use miette::Diagnostic;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{ureq_err_to_string, ResponseIssue},
+    integrations::{ResponseIssue, ureq_err_to_string},
     prompt, state,
     step::issues::Issue,
 };

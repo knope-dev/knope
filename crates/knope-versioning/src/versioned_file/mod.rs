@@ -9,10 +9,10 @@ use relative_path::RelativePathBuf;
 use serde::{Serialize, Serializer};
 
 use crate::{
+    Action,
     action::ActionSet::{Single, Two},
     semver::Version,
     versioned_file::cargo_lock::CargoLock,
-    Action,
 };
 
 pub mod cargo;

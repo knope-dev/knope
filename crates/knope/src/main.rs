@@ -1,22 +1,22 @@
 use std::str::FromStr;
 
-use clap::{arg, command, value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, arg, command, value_parser};
 use itertools::Itertools;
 use knope_versioning::{package, semver::Version};
-use miette::{miette, Result};
+use miette::{Result, miette};
 use tracing::info;
 use tracing_subscriber::{
-    filter::{filter_fn, LevelFilter},
+    Layer,
+    filter::{LevelFilter, filter_fn},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    Layer,
 };
 
 use crate::{
     config::{Config, ConfigSource},
     integrations::git::all_tags_on_branch,
     state::{RunType, State},
-    step::{releases::Package, Step},
+    step::{Step, releases::Package},
     workflow::Workflow,
 };
 

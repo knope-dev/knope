@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, fmt::Debug, str::FromStr};
 use tracing::debug;
 
 use super::{
-    prerelease_map::PrereleaseMap, Label, PreVersion, Prerelease, Rule, StableVersion, Version,
+    Label, PreVersion, Prerelease, Rule, StableVersion, Version, prerelease_map::PrereleaseMap,
 };
 use crate::semver::rule::Stable;
 
@@ -196,12 +196,16 @@ fn bump_stable(version: StableVersion, rule: Stable) -> StableVersion {
         }
         (Stable::Major, true) => {
             let new = version.increment_minor();
-            debug!("Rule is MAJOR, but major component is 0. Bumping minor component from {version} to {new}");
+            debug!(
+                "Rule is MAJOR, but major component is 0. Bumping minor component from {version} to {new}"
+            );
             new
         }
         (Stable::Minor, true) => {
             let new = version.increment_patch();
-            debug!("Rule is MINOR, but major component is 0. Bumping patch component from {version} to {new}");
+            debug!(
+                "Rule is MINOR, but major component is 0. Bumping patch component from {version} to {new}"
+            );
             new
         }
         (Stable::Patch, _) => {
