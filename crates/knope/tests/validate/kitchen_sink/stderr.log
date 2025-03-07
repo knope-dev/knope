@@ -1,5 +1,4 @@
-Error: 
-  × There are problems with the defined workflows
+Error:   × There are problems with the defined workflows
 
 Error: 
   × Problem with workflow Cannot SelectJiraIssue without Jira config

@@ -1,5 +1,4 @@
-Error: 
-  × Problem with versioned file
+Error:   × Problem with versioned file
   ╰─▶ knope_versioning::versioned_file::unknown_file (https://knope.tech/
       reference/config-file/packages#versioned_files)
       
