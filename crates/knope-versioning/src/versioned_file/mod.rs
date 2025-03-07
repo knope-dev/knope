@@ -2,6 +2,7 @@ use std::{fmt::Debug, path::PathBuf};
 
 use cargo::Cargo;
 pub use go_mod::{GoMod, GoVersioning};
+use maven_pom::MavenPom;
 use package_json::PackageJson;
 use pubspec::PubSpec;
 use pyproject::PyProject;
@@ -18,6 +19,7 @@ use crate::{
 pub mod cargo;
 mod cargo_lock;
 mod go_mod;
+mod maven_pom;
 mod package_json;
 mod pubspec;
 mod pyproject;
@@ -30,6 +32,7 @@ pub enum VersionedFile {
     GoMod(GoMod),
     PackageJson(PackageJson),
     PyProject(PyProject),
+    MavenPom(MavenPom),
 }
 
 impl VersionedFile {
@@ -63,6 +66,9 @@ impl VersionedFile {
             Format::PackageJson => PackageJson::new(config.as_path(), content)
                 .map(VersionedFile::PackageJson)
                 .map_err(Error::PackageJson),
+            Format::MavenPom => MavenPom::new(config.as_path(), content)
+                .map(VersionedFile::MavenPom)
+                .map_err(Error::MavenPom),
         }
     }
 
@@ -75,6 +81,7 @@ impl VersionedFile {
             VersionedFile::PubSpec(pubspec) => pubspec.get_path(),
             VersionedFile::GoMod(gomod) => gomod.get_path(),
             VersionedFile::PackageJson(package_json) => package_json.get_path(),
+            VersionedFile::MavenPom(maven_pom) => &maven_pom.path,
         }
     }
 
@@ -91,6 +98,7 @@ impl VersionedFile {
             VersionedFile::PubSpec(pubspec) => Ok(pubspec.get_version().clone()),
             VersionedFile::GoMod(gomod) => Ok(gomod.get_version().clone()),
             VersionedFile::PackageJson(package_json) => Ok(package_json.get_version().clone()),
+            VersionedFile::MavenPom(maven_pom) => maven_pom.get_version().map_err(Error::MavenPom),
         }
     }
 
@@ -124,6 +132,10 @@ impl VersionedFile {
                 .set_version(new_version)
                 .map_err(SetError::Json)
                 .map(Self::PackageJson),
+            Self::MavenPom(maven_pom) => maven_pom
+                .set_version(new_version)
+                .map_err(SetError::MavenPom)
+                .map(Self::MavenPom),
         }
     }
 
@@ -135,6 +147,7 @@ impl VersionedFile {
             Self::PubSpec(pubspec) => pubspec.write().map(Single),
             Self::GoMod(gomod) => gomod.write().map(Two),
             Self::PackageJson(package_json) => package_json.write().map(Single),
+            Self::MavenPom(maven_pom) => maven_pom.write().map(Single),
         }
     }
 }
@@ -168,6 +181,9 @@ pub enum SetError {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     CargoLock(#[from] cargo_lock::SetError),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    MavenPom(#[from] maven_pom::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -201,6 +217,9 @@ pub enum Error {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     PackageJson(#[from] package_json::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    MavenPom(#[from] maven_pom::Error),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -211,6 +230,7 @@ pub(crate) enum Format {
     PubSpec,
     GoMod,
     PackageJson,
+    MavenPom,
 }
 
 impl Format {
@@ -222,6 +242,7 @@ impl Format {
             Format::PubSpec => "pubspec.yaml",
             Format::GoMod => "go.mod",
             Format::PackageJson => "package.json",
+            Format::MavenPom => "pom.xml",
         }
     }
 
@@ -233,6 +254,7 @@ impl Format {
             "pubspec.yaml" => Some(Format::PubSpec),
             "go.mod" => Some(Format::GoMod),
             "package.json" => Some(Format::PackageJson),
+            "pom.xml" => Some(Format::MavenPom),
             _ => None,
         }
     }
@@ -297,7 +319,7 @@ impl Config {
     }
 
     #[must_use]
-    pub const fn defaults() -> [Self; 5] {
+    pub const fn defaults() -> [Self; 6] {
         [
             Config {
                 format: Format::Cargo,
@@ -322,6 +344,11 @@ impl Config {
             Config {
                 parent: None,
                 format: Format::PyProject,
+                dependency: None,
+            },
+            Config {
+                parent: None,
+                format: Format::MavenPom,
                 dependency: None,
             },
         ]
