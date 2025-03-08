@@ -25,6 +25,8 @@ time = { version = "0.3.36", features = ["formatting", "macros", "parsing"] }
 toml = { workspace = true }
 toml_edit = { workspace = true }
 tracing = { workspace = true }
+xmltree = { workspace = true, features = ["attribute-order"] }
+xml-rs = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

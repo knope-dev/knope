@@ -141,6 +141,21 @@ version: 1.0.0
 
 `dependency` isn't yet supported.
 
+### `pom.xml`
+
+For Java projects using [Maven](https://maven.apache.org), must contain a `<version>` field in the `<project>` section:
+
+```xml
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.mycompany.app</groupId>
+  <artifactId>my-app</artifactId>
+  <version>1.2.3</version>
+</project>
+```
+
+Neither `dependencies` nor multi-module projects are support yet.
+
 ## `changelog`
 
 The relative path to a Markdown file you'd like to add release notes to.

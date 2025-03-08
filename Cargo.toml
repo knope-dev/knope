@@ -19,6 +19,8 @@ thiserror = "2.0.0"
 toml = "0.8.12"
 toml_edit = "0.22.20"
 tracing = "0.1.40"
+xmltree = "0.11.0"
+xml-rs = "0.8.25"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
