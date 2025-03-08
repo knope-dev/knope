@@ -19,6 +19,7 @@ extra_changelog_sections = [{ name = "Notes", types = ["note"] }]
 [packages.knope]
 versioned_files = ["crates/knope/Cargo.toml", "Cargo.lock"]
 changelog = "CHANGELOG.md"
+assets = "marker for GitHub bot"
 
 [[packages.knope.extra_changelog_sections]]
 name = "Documentation"
@@ -28,7 +29,6 @@ types = ["docs"]
 name = "Notes"
 types = ["note"]
 
-assets = "marker for GitHub bot"
 
 [github]
 owner = "knope-dev"
