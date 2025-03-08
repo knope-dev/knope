@@ -20,11 +20,11 @@ extra_changelog_sections = [{ name = "Notes", types = ["note"] }]
 versioned_files = ["crates/knope/Cargo.toml", "Cargo.lock"]
 changelog = "CHANGELOG.md"
 
-[[extra_changelog_sections]]
+[[packages.knope.extra_changelog_sections]]
 name = "Documentation"
 types = ["docs"]
 
-[[extra_changelog_sections]]
+[[packages.knope.extra_changelog_sections]]
 name = "Notes"
 types = ["note"]
 
