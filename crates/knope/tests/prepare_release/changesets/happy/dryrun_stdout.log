@@ -1,8 +1,8 @@
 Would add the following to Cargo.toml: version = 2.0.0
 Would add the following to pyproject.toml: 2.0.0
 Would add the following to package.json: 0.4.7
-Would delete .changeset/a_complex_feature.md
-Would delete .changeset/breaking_change.md
+Would delete .changeset/A Complex Feature.md
+Would delete .changeset/breaking-change.md
 Would delete .changeset/simple_feature.md
 Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
@@ -35,8 +35,8 @@ Would add files to git:
   Cargo.toml
   pyproject.toml
   package.json
-  .changeset/a_complex_feature.md
-  .changeset/breaking_change.md
+  .changeset/A Complex Feature.md
+  .changeset/breaking-change.md
   .changeset/simple_feature.md
   FIRST_CHANGELOG.md
   SECOND_CHANGELOG.md

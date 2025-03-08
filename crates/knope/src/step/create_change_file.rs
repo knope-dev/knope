@@ -59,7 +59,7 @@ pub(crate) fn run(state: RunType<State>) -> Result<RunType<State>, Error> {
         .with_help_message("This will be used as a header in the changelog")
         .prompt()
         .map_err(prompt::Error::from)?;
-    let unique_id = UniqueId::from(&summary);
+    let unique_id = UniqueId::normalize(&summary);
     let summary = format!("# {summary}");
     let change = changesets::Change {
         unique_id,
