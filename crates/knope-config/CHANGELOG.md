@@ -1,3 +1,9 @@
+## 0.2.1 (2025-03-08)
+
+### Notes
+
+- Update to Rust edition 2024 and MSRV 1.85
+
 ## 0.2.0 (2024-09-15)
 
 ### Breaking Changes
