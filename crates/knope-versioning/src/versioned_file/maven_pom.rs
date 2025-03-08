@@ -1,4 +1,4 @@
-use std::io::BufWriter;
+use std::string::FromUtf8Error;
 
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
@@ -98,7 +98,7 @@ impl MavenPom {
         // Formatting is a bit awkward here.
         // We would like to patch the file in place and preserve the original formatting
         // as much as possible.
-        let mut buf = BufWriter::new(Vec::new());
+        let mut buf = Vec::new();
         self.project
             .write_with_config(
                 &mut buf,
@@ -113,8 +113,10 @@ impl MavenPom {
                 source: err,
             })?;
 
-        #[allow(clippy::unwrap_used)] // serializer writes valid utf-8
-        Ok(String::from_utf8(buf.into_inner().unwrap()).unwrap())
+        String::from_utf8(buf).map_err(|err| Error::Utf8 {
+            path: self.path.clone(),
+            source: err,
+        })
     }
 }
 
@@ -150,6 +152,22 @@ pub enum Error {
 
         #[source]
         source: EmitterError,
+    },
+
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(knope_versioning::maven_pom::serialize),
+            help("an internal error prevented knope from writing the new version to the file"),
+            url("https://knope.tech/reference/config-file/packages/#pomxml")
+        )
+    )]
+    #[error("XML in {path} was not valid UTF-8: {source}")]
+    Utf8 {
+        path: RelativePathBuf,
+
+        #[source]
+        source: FromUtf8Error,
     },
 
     #[error("{path} was missing required property {property}")]
