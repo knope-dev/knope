@@ -7,7 +7,7 @@ members = ["crates/knope-config", "crates/knope-versioning", "crates/knope"]
 strip = true
 
 [workspace.dependencies]
-changesets = { version = "0.3.0" }
+changesets = { version = "0.4.0" }
 itertools = "0.14.0"
 knope-versioning = { path = "crates/knope-versioning", version = "0.3.1" }
 miette = "7.2.0"
