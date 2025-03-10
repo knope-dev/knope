@@ -82,6 +82,12 @@ the dependency name is the package name in the first `Cargo.toml` file listed in
 You can override this by specifying the `dependency` field manually.
 If you provide neither, Knope will error.
 
+### `gleam.toml`
+
+A [Gleam configuration file](https://gleam.run/writing-gleam/gleam-toml/).
+
+`dependency` isn't supported yet.
+
 ### `go.mod`
 
 For Go projects using [modules](https://go.dev/ref/mod).

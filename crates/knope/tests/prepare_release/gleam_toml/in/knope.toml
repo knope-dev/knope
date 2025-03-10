@@ -1,0 +1,8 @@
+[package]
+versioned_files = ["gleam.toml"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
