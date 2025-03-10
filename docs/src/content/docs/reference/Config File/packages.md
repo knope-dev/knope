@@ -82,34 +82,6 @@ the dependency name is the package name in the first `Cargo.toml` file listed in
 You can override this by specifying the `dependency` field manually.
 If you provide neither, Knope will error.
 
-### `pyproject.toml`
-
-For Python projects using [PEP-621](https://peps.python.org/pep-0621/) or [Poetry](https://python-poetry.org).
-Must contain either a `[project.version]` or `[tool.poetry.version]` value, respectively.
-If it has both values, they must be the same.
-
-```toml title="pyproject.toml"
-[project]  # PEP-621
-version = "1.0.0"
-
-[tool.poetry]  # Poetry
-version = "1.0.0"
-```
-
-`dependency` isn't yet supported.
-
-### `package.json`
-
-For JavaScript or TypeScript projects, must contain a root-level `version` field:
-
-```json title="package.json"
-{
-  "version": "1.0.0"
-}
-```
-
-`dependency` isn't yet supported.
-
 ### `go.mod`
 
 For Go projects using [modules](https://go.dev/ref/mod).
@@ -131,12 +103,30 @@ use the [`ignore_go_major_versioning`](#ignore_go_major_versioning) option.
 
 `dependency` isn't yet supported.
 
-### `pubspec.yaml`
+### `package.json`
 
-For Dart projects, must contain a `version` field:
+For JavaScript or TypeScript projects, must contain a root-level `version` field:
 
-```yaml title="pubspec.yaml"
-version: 1.0.0
+```json title="package.json"
+{
+  "version": "1.0.0"
+}
+```
+
+`dependency` isn't yet supported.
+
+### `pyproject.toml`
+
+For Python projects using [PEP-621](https://peps.python.org/pep-0621/) or [Poetry](https://python-poetry.org).
+Must contain either a `[project.version]` or `[tool.poetry.version]` value, respectively.
+If it has both values, they must be the same.
+
+```toml title="pyproject.toml"
+[project]  # PEP-621
+version = "1.0.0"
+
+[tool.poetry]  # Poetry
+version = "1.0.0"
 ```
 
 `dependency` isn't yet supported.
@@ -155,6 +145,16 @@ For Java projects using [Maven](https://maven.apache.org), must contain a `<vers
 ```
 
 Neither `dependencies` nor multi-module projects are support yet.
+
+### `pubspec.yaml`
+
+For Dart projects, must contain a `version` field:
+
+```yaml title="pubspec.yaml"
+version: 1.0.0
+```
+
+`dependency` isn't yet supported.
 
 ## `changelog`
 
