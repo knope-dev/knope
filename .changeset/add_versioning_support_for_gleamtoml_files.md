@@ -1,5 +1,6 @@
 ---
-default: minor
+knope: minor
+versioning: minor
 ---
 
 # Add versioning support for `gleam.toml` files
