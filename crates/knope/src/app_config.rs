@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use dirs::config_dir;
 use miette::Diagnostic;
-use platform_dirs::AppDirs;
 
 use crate::{prompt, prompt::get_input};
 
@@ -40,11 +40,13 @@ pub(crate) fn get_or_prompt_for_gitea_token(host: &str) -> Result<String, Error>
 }
 
 pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String, Error> {
-    let app_dirs = AppDirs::new(Some("knope"), true).ok_or(Error::CouldNotOpenConfigPath)?;
-    let config_path = app_dirs.config_dir.join(key);
-    if !app_dirs.config_dir.exists() {
-        std::fs::create_dir_all(&app_dirs.config_dir)
-            .map_err(|err| Error::CouldNotCreateDirectory(app_dirs.config_dir, err))?;
+    let config_dir = config_dir()
+        .ok_or(Error::CouldNotOpenConfigPath)?
+        .join("knope");
+    let config_path = config_dir.join(key);
+    if !config_dir.exists() {
+        std::fs::create_dir_all(&config_dir)
+            .map_err(|err| Error::CouldNotCreateDirectory(config_dir, err))?;
     }
     std::fs::read_to_string(&config_path).or_else(|_| {
         let contents = get_input(prompt)?;
