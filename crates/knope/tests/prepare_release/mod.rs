@@ -4,6 +4,7 @@ mod cargo_workspace;
 mod changelog;
 mod changesets;
 mod enable_prerelease;
+mod gleam_toml;
 mod go_modules;
 mod handle_pre_versions_that_are_too_new;
 mod ignore_conventional_commits;

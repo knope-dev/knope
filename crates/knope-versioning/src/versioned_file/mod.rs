@@ -13,11 +13,12 @@ use crate::{
     Action,
     action::ActionSet::{Single, Two},
     semver::Version,
-    versioned_file::cargo_lock::CargoLock,
+    versioned_file::{cargo_lock::CargoLock, gleam::Gleam},
 };
 
 pub mod cargo;
 mod cargo_lock;
+mod gleam;
 mod go_mod;
 mod maven_pom;
 mod package_json;
@@ -29,6 +30,7 @@ pub enum VersionedFile {
     Cargo(Cargo),
     CargoLock(CargoLock),
     PubSpec(PubSpec),
+    Gleam(Gleam),
     GoMod(GoMod),
     PackageJson(PackageJson),
     PyProject(PyProject),
@@ -60,6 +62,9 @@ impl VersionedFile {
             Format::PubSpec => PubSpec::new(config.as_path(), content)
                 .map(VersionedFile::PubSpec)
                 .map_err(Error::PubSpec),
+            Format::Gleam => Gleam::new(config.as_path(), &content)
+                .map(VersionedFile::Gleam)
+                .map_err(Error::Gleam),
             Format::GoMod => GoMod::new(config.as_path(), content, git_tags)
                 .map(VersionedFile::GoMod)
                 .map_err(Error::GoMod),
@@ -79,6 +84,7 @@ impl VersionedFile {
             VersionedFile::CargoLock(cargo_lock) => &cargo_lock.path,
             VersionedFile::PyProject(pyproject) => &pyproject.path,
             VersionedFile::PubSpec(pubspec) => pubspec.get_path(),
+            VersionedFile::Gleam(gleam) => &gleam.path,
             VersionedFile::GoMod(gomod) => gomod.get_path(),
             VersionedFile::PackageJson(package_json) => package_json.get_path(),
             VersionedFile::MavenPom(maven_pom) => &maven_pom.path,
@@ -96,6 +102,7 @@ impl VersionedFile {
             VersionedFile::CargoLock(_) => Err(Error::NoVersion),
             VersionedFile::PyProject(pyproject) => Ok(pyproject.version.clone()),
             VersionedFile::PubSpec(pubspec) => Ok(pubspec.get_version().clone()),
+            VersionedFile::Gleam(gleam) => Ok(gleam.get_version().map_err(Error::Gleam)?),
             VersionedFile::GoMod(gomod) => Ok(gomod.get_version().clone()),
             VersionedFile::PackageJson(package_json) => Ok(package_json.get_version().clone()),
             VersionedFile::MavenPom(maven_pom) => maven_pom.get_version().map_err(Error::MavenPom),
@@ -124,6 +131,7 @@ impl VersionedFile {
                 .set_version(new_version)
                 .map_err(SetError::Yaml)
                 .map(Self::PubSpec),
+            Self::Gleam(gleam) => Ok(Self::Gleam(gleam.set_version(new_version))),
             Self::GoMod(gomod) => gomod
                 .set_version(new_version.clone(), go_versioning)
                 .map_err(SetError::GoMod)
@@ -145,6 +153,7 @@ impl VersionedFile {
             Self::CargoLock(cargo_lock) => cargo_lock.write().map(Single),
             Self::PyProject(pyproject) => pyproject.write().map(Single),
             Self::PubSpec(pubspec) => pubspec.write().map(Single),
+            Self::Gleam(gleam) => gleam.write().map(Single),
             Self::GoMod(gomod) => gomod.write().map(Two),
             Self::PackageJson(package_json) => package_json.write().map(Single),
             Self::MavenPom(maven_pom) => maven_pom.write().map(Single),
@@ -213,6 +222,9 @@ pub enum Error {
     PubSpec(#[from] pubspec::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    Gleam(#[from] gleam::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
     GoMod(#[from] go_mod::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
@@ -228,6 +240,7 @@ pub(crate) enum Format {
     CargoLock,
     PyProject,
     PubSpec,
+    Gleam,
     GoMod,
     PackageJson,
     MavenPom,
@@ -240,6 +253,7 @@ impl Format {
             Format::CargoLock => "Cargo.lock",
             Format::PyProject => "pyproject.toml",
             Format::PubSpec => "pubspec.yaml",
+            Format::Gleam => "gleam.toml",
             Format::GoMod => "go.mod",
             Format::PackageJson => "package.json",
             Format::MavenPom => "pom.xml",
@@ -252,6 +266,7 @@ impl Format {
             "Cargo.lock" => Some(Format::CargoLock),
             "pyproject.toml" => Some(Format::PyProject),
             "pubspec.yaml" => Some(Format::PubSpec),
+            "gleam.toml" => Some(Format::Gleam),
             "go.mod" => Some(Format::GoMod),
             "package.json" => Some(Format::PackageJson),
             "pom.xml" => Some(Format::MavenPom),
