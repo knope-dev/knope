@@ -10,6 +10,16 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.18.5 (2025-03-12)
+
+### Features
+
+#### Add versioning support for `gleam.toml` files
+
+##1352 by @dbanty
+
+Closes #1350
+
 ## 0.18.4 (2025-03-08)
 
 ### Features

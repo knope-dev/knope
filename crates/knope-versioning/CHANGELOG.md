@@ -1,3 +1,13 @@
+## 0.3.3 (2025-03-12)
+
+### Features
+
+#### Add versioning support for `gleam.toml` files
+
+##1352 by @dbanty
+
+Closes #1350
+
 ## 0.3.2 (2025-03-08)
 
 ### Features
