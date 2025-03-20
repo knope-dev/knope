@@ -1,0 +1,13 @@
+[package]
+versioned_files = [
+  "Cargo.toml",
+  "package.json",
+  "tauri.conf.json",
+  "tauri.macos.conf.json",
+]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
