@@ -61,7 +61,7 @@ jobs:
       - name: Replace Me with actual artifact creation
         run: echo "example artifact" >> artifact.txt
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.6.1
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: Example
           path: artifact.txt
@@ -141,7 +141,7 @@ build-artifacts:
     - name: Replace Me with actual artifact creation
       run: echo "example artifact" >> artifact.txt
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4.6.1
+      uses: actions/upload-artifact@v4.6.2
       with:
         name: Example
         path: artifact.txt
