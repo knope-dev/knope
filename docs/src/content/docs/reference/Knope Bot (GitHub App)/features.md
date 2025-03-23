@@ -60,6 +60,15 @@ the bot will check the commit messages included in the pull request.
 If Knope Bot can parse _any_ of the commits in the pull request as a
 [conventional commit] (even if they wouldn't change the next version or changelog), the check will pass.
 
+### Disabling this check
+
+Add the following to a `knope.toml` file in the root of the repository to disable this check:
+
+```toml
+[bot.checks]
+enabled = false
+```
+
 ## Creating change files
 
 When a check fails, the details of that check will contain instructions for creating a changeset:
@@ -75,6 +84,28 @@ Clicking one of those buttons will cause the bot to commit the change file direc
 For anyone who can't see those buttons (or anyone who wants more control over the change documentation), there is a
 link to using Knope's CLI.
 There's also an example Markdown snippet that contributors can copy into a change file manually.
+
+## Previewing and creating releases
+
+Add the following to a `knope.toml` file in the root of the repository to enable releases:
+
+```toml
+[bot.releases]
+enabled = true
+```
+
+When releases are enabled, Knope Bot will keep an up-to-date pull request with a preview of your next release. This pull request comes from a branch called
+`knope/release`. Merging the pull request will create a GitHub release.
+
+### Creating draft releases
+
+When Knope Bot creates a release for a package,
+if that package has any [assets configured](/reference/config-file/packages/#assets),
+it will create a draft release.
+Knope Bot does not use the content of the assets config for anything,
+merely setting it to a value triggers the draft behavior.
+
+See the ["Uploading assets to draft releases"](/recipes/uploading-assets-to-draft-releases) recipe for more information.
 
 [change file]: /reference/concepts/change-file
 [conventional commit]: /reference/concepts/conventional-commits
