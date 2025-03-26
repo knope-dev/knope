@@ -6,13 +6,5 @@ Knope has a GitHub App that enforces that changes are documented before allowing
 
 ![Screenshot of a GitHub pull request with a failing status check entitled "Require changes to be documented"](./enforce-changes.png).
 
-:::caution
-
-This bot is new and doesn't yet support all the types of changes that Knope does.
-Please [open an issue](https://knope-dev/knope/issues/new) if you find a bug or have a feature request.
-See [the reference docs](/reference/knope-bot-github-app/features) for more details.
-
-:::
-
 You can install the bot from [GitHub Marketplace](https://github.com/marketplace/knope-bot).
 Only install it for the repositories you want to enforce documentation on (as it will do this by default).
