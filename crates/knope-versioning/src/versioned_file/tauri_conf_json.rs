@@ -63,7 +63,7 @@ pub enum Error {
     #[cfg_attr(
         feature = "miette",
         diagnostic(
-            code(package_json::deserialize),
+            code(tauri_conf_json::deserialize),
             help(
                 "knope expects the tauri.conf.json file to be an object with a top level `version` property"
             ),
