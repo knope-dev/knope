@@ -288,13 +288,7 @@ impl FromStr for ModuleLine {
             .and_then(|comment_start| (*comment_start == "//").then_some(()))
             .and_then(|()| parts.get(3))
             .and_then(|v| v.strip_prefix('v'))
-            .and_then(|v| {
-                if let Ok(version) = Version::from_str(v) {
-                    Some(version)
-                } else {
-                    None
-                }
-            });
+            .and_then(|v| Version::from_str(v).ok());
         Ok(Self {
             module,
             major_version,
