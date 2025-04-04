@@ -46,7 +46,7 @@ jobs:
       - name: Install Knope
         uses: knope-dev/action@v2.1.0
         with:
-          version: 0.18.0
+          version: 0.19.0
       - run: knope prepare-release --verbose
         name: Update versioned files and changelog
       - name: Store commit
@@ -85,7 +85,7 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
         run: sudo apt-get install -y musl-tools
 
-      - uses: Swatinem/rust-cache@v2.7.7
+      - uses: Swatinem/rust-cache@v2.7.8
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
@@ -105,7 +105,7 @@ jobs:
         run: tar -czf ${{ env.archive_name }}.tgz ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.6.1
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -118,14 +118,14 @@ jobs:
       - uses: actions/checkout@v4.2.2
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v4.1.9
+      - uses: actions/download-artifact@v4.2.1
         with:
           path: artifacts
           merge-multiple: true
       - name: Install the latest Knope
         uses: knope-dev/action@v2.1.0
         with:
-          version: 0.18.0
+          version: 0.19.0
       - run: knope release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}

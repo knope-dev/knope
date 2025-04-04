@@ -148,7 +148,7 @@ jobs:
           git config user.email github-actions@github.com
       - uses: knope-dev/action@v2.1.0
         with:
-          version: 0.18.0
+          version: 0.19.0
       - run: knope prepare-release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -216,13 +216,13 @@ release:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4.2.2
-    - uses: actions/download-artifact@v4.1.9
+    - uses: actions/download-artifact@v4.2.1
       with:
         path: artifacts
         merge-multiple: true
     - uses: knope-dev/action@v2.1.0
       with:
-        version: 0.18.0
+        version: 0.19.0
     - run: knope release
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -268,7 +268,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: Swatinem/rust-cache@v2.7.7
+      - uses: Swatinem/rust-cache@v2.7.8
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
 
@@ -295,7 +295,7 @@ jobs:
         run: cp target/${{ matrix.target }}/release/${{ env.package_name }} ${{ env.archive_name }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4.6.1
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: ${{ matrix.target }}
           path: ${{ env.archive_name }}.tgz
@@ -306,13 +306,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: actions/download-artifact@v4.1.9
+      - uses: actions/download-artifact@v4.2.1
         with:
           path: artifacts
           merge-multiple: true
       - uses: knope-dev/action@v2.1.0
         with:
-          version: 0.18.0
+          version: 0.19.0
       - run: knope release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -322,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: Swatinem/rust-cache@v2.7.7
+      - uses: Swatinem/rust-cache@v2.7.8
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}

@@ -10,6 +10,21 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.19.0 (2025-03-23)
+
+### Breaking Changes
+
+#### Updated config locations
+
+Knope is internally using a newer crate for storing persistent config, so some things (like GitHub tokens) may need to
+be updated on next run.
+
+### Documentation
+
+#### Document creating releases with Knope Bot
+
+[Knope Bot can make creating releases easier than ever now!](https://knope.tech/tutorials/bot-workflow/)
+
 ## 0.18.5 (2025-03-12)
 
 ### Features

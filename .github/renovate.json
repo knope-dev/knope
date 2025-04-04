@@ -53,7 +53,8 @@
       ],
       "matchStrings": [
         "with:\\n\\s+version: (?<currentValue>.+)"
-      ]
+      ],
+      "versioningTemplate": "semver"
     }
   ]
 }
