@@ -92,7 +92,7 @@ impl Package {
             Bump::Rule(rule) => {
                 self.versions.bump(rule)?;
             }
-        };
+        }
         let version = self.versions.clone().into_latest();
         versioned_files
             .into_iter()

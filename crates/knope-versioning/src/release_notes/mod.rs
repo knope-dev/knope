@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt::Write};
 
 pub use changelog::Changelog;
 pub use config::{CommitFooter, CustomChangeType, SectionName, SectionSource, Sections};
@@ -68,7 +68,7 @@ impl ReleaseNotes {
                 content: changelog.content.clone(),
                 diff: format!("\n{new_changes}\n"),
             });
-        };
+        }
         pending_actions.push(Action::CreateRelease(release));
         Ok(pending_actions)
     }
@@ -138,10 +138,10 @@ fn build_body(changes: Vec<ChangeDescription>) -> String {
     while let Some(change) = changes.next() {
         match change {
             ChangeDescription::Simple(summary) => {
-                body.push_str(&format!("- {summary}"));
+                write!(&mut body, "- {summary}").ok();
             }
             ChangeDescription::Complex(summary, details) => {
-                body.push_str(&format!("### {summary}\n\n{details}"));
+                write!(&mut body, "### {summary}\n\n{details}").ok();
             }
         }
         match changes.peek() {
