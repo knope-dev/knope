@@ -148,7 +148,7 @@ mod tests {
             .expect("diff to write");
 
         let expected = r#"{
-  "name": "tester",
+  "productName": "tester",
   "version": "1.2.3-rc.4",
   "identifier": "com.knope.tester"
 }"#

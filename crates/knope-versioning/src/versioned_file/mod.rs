@@ -106,10 +106,10 @@ impl VersionedFile {
             VersionedFile::GoMod(gomod) => gomod.get_path(),
             VersionedFile::PackageJson(package_json) => package_json.get_path(),
             VersionedFile::MavenPom(maven_pom) => &maven_pom.path,
-            VersionedFile::TauriConf(tauri_conf) => &tauri_conf.get_path(),
-            VersionedFile::TauriMacosConf(tauri_conf) => &tauri_conf.get_path(),
-            VersionedFile::TauriWindowsConf(tauri_conf) => &tauri_conf.get_path(),
-            VersionedFile::TauriLinuxConf(tauri_conf) => &tauri_conf.get_path(),
+            VersionedFile::TauriConf(tauri_conf)
+            | VersionedFile::TauriMacosConf(tauri_conf)
+            | VersionedFile::TauriWindowsConf(tauri_conf)
+            | VersionedFile::TauriLinuxConf(tauri_conf) => tauri_conf.get_path(),
         }
     }
 
@@ -128,10 +128,10 @@ impl VersionedFile {
             VersionedFile::GoMod(gomod) => Ok(gomod.get_version().clone()),
             VersionedFile::PackageJson(package_json) => Ok(package_json.get_version().clone()),
             VersionedFile::MavenPom(maven_pom) => maven_pom.get_version().map_err(Error::MavenPom),
-            VersionedFile::TauriConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
-            VersionedFile::TauriMacosConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
-            VersionedFile::TauriWindowsConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
-            VersionedFile::TauriLinuxConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
+            VersionedFile::TauriConf(tauri_conf)
+            | VersionedFile::TauriMacosConf(tauri_conf)
+            | VersionedFile::TauriWindowsConf(tauri_conf)
+            | VersionedFile::TauriLinuxConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
         }
     }
 
@@ -199,10 +199,10 @@ impl VersionedFile {
             Self::GoMod(gomod) => gomod.write().map(Two),
             Self::PackageJson(package_json) => package_json.write().map(Single),
             Self::MavenPom(maven_pom) => maven_pom.write().map(Single),
-            Self::TauriConf(tauri_conf) => tauri_conf.write().map(Single),
-            Self::TauriMacosConf(tauri_conf) => tauri_conf.write().map(Single),
-            Self::TauriWindowsConf(tauri_conf) => tauri_conf.write().map(Single),
-            Self::TauriLinuxConf(tauri_conf) => tauri_conf.write().map(Single),
+            Self::TauriConf(tauri_conf)
+            | Self::TauriMacosConf(tauri_conf)
+            | Self::TauriWindowsConf(tauri_conf)
+            | Self::TauriLinuxConf(tauri_conf) => tauri_conf.write().map(Single),
         }
     }
 }
