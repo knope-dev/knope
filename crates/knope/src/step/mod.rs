@@ -3,6 +3,7 @@ use knope_versioning::semver::{Label, Rule};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::debug;
 
 use crate::{
     integrations::git,
@@ -99,6 +100,7 @@ pub(crate) enum Step {
 
 impl Step {
     pub(crate) fn run(self, state: RunType<State>) -> Result<RunType<State>, Error> {
+        debug!("Running step {self:?}");
         Ok(match self {
             Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, state)?,
             Step::TransitionJiraIssue { status } => issues::jira::transition_issue(&status, state)?,
