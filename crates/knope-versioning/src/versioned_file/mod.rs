@@ -83,15 +83,6 @@ impl VersionedFile {
             Format::TauriConf => TauriConfJson::new(config.as_path(), content)
                 .map(VersionedFile::TauriConf)
                 .map_err(Error::TauriConfJson),
-            Format::TauriMacosConf => TauriConfJson::new(config.as_path(), content)
-                .map(VersionedFile::TauriMacosConf)
-                .map_err(Error::TauriConfJson),
-            Format::TauriWindowsConf => TauriConfJson::new(config.as_path(), content)
-                .map(VersionedFile::TauriWindowsConf)
-                .map_err(Error::TauriConfJson),
-            Format::TauriLinuxConf => TauriConfJson::new(config.as_path(), content)
-                .map(VersionedFile::TauriLinuxConf)
-                .map_err(Error::TauriConfJson),
         }
     }
 
@@ -283,6 +274,9 @@ pub enum Error {
     TauriConfJson(#[from] tauri_conf_json::Error),
 }
 
+/// All the file types supported for versioning.
+///
+/// Be sure to add new variants to [`Format::FILE_NAMES`]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Format {
     Cargo,
@@ -294,45 +288,30 @@ pub(crate) enum Format {
     PackageJson,
     MavenPom,
     TauriConf,
-    TauriMacosConf,
-    TauriWindowsConf,
-    TauriLinuxConf,
 }
 
 impl Format {
-    pub(crate) const fn file_name(self) -> &'static str {
-        match self {
-            Format::Cargo => "Cargo.toml",
-            Format::CargoLock => "Cargo.lock",
-            Format::PyProject => "pyproject.toml",
-            Format::PubSpec => "pubspec.yaml",
-            Format::Gleam => "gleam.toml",
-            Format::GoMod => "go.mod",
-            Format::PackageJson => "package.json",
-            Format::MavenPom => "pom.xml",
-            Format::TauriConf => "tauri.conf.json",
-            Format::TauriMacosConf => "tauri.macos.conf.json",
-            Format::TauriWindowsConf => "tauri.windows.conf.json",
-            Format::TauriLinuxConf => "tauri.linux.conf.json",
-        }
-    }
+    /// This is how Knope automatically detects a file type based on its name.
+    const FILE_NAMES: &'static [(&'static str, Self)] = &[
+        ("Cargo.toml", Format::Cargo),
+        ("Cargo.lock", Format::CargoLock),
+        ("gleam.toml", Format::Gleam),
+        ("go.mod", Format::GoMod),
+        ("package.json", Format::PackageJson),
+        ("pom.xml", Format::MavenPom),
+        ("pubspec.yaml", Format::PubSpec),
+        ("pyproject.toml", Format::PyProject),
+        ("tauri.conf.json", Format::TauriConf),
+        ("tauri.macos.conf.json", Format::TauriConf),
+        ("tauri.windows.conf.json", Format::TauriConf),
+        ("tauri.linux.conf.json", Format::TauriConf),
+    ];
 
     fn try_from(file_name: &str) -> Option<Self> {
-        match file_name {
-            "Cargo.toml" => Some(Format::Cargo),
-            "Cargo.lock" => Some(Format::CargoLock),
-            "pyproject.toml" => Some(Format::PyProject),
-            "pubspec.yaml" => Some(Format::PubSpec),
-            "gleam.toml" => Some(Format::Gleam),
-            "go.mod" => Some(Format::GoMod),
-            "package.json" => Some(Format::PackageJson),
-            "pom.xml" => Some(Format::MavenPom),
-            "tauri.conf.json" => Some(Format::TauriConf),
-            "tauri.macos.conf.json" => Some(Format::TauriMacosConf),
-            "tauri.windows.conf.json" => Some(Format::TauriWindowsConf),
-            "tauri.linux.conf.json" => Some(Format::TauriLinuxConf),
-            _ => None,
-        }
+        Self::FILE_NAMES
+            .iter()
+            .find(|(name, _)| file_name == *name)
+            .map(|(_, format)| *format)
     }
 }
 
@@ -354,8 +333,8 @@ pub struct UnknownFile {
 /// The configuration of a versioned file.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config {
-    /// The directory that the file is in
-    parent: Option<RelativePathBuf>,
+    /// The location of the file
+    pub(crate) path: RelativePathBuf,
     /// The type of file
     pub(crate) format: Format,
     /// If, within the file, we're versioning a dependency (not the entire package)
@@ -372,10 +351,11 @@ impl Config {
         let Some(file_name) = path.file_name() else {
             return Err(UnknownFile { path });
         };
-        let parent = path.parent().map(RelativePathBuf::from);
-        let format = Format::try_from(file_name).ok_or(UnknownFile { path })?;
+        let Some(format) = Format::try_from(file_name) else {
+            return Err(UnknownFile { path });
+        };
         Ok(Config {
-            parent,
+            path,
             format,
             dependency,
         })
@@ -383,10 +363,7 @@ impl Config {
 
     #[must_use]
     pub fn as_path(&self) -> RelativePathBuf {
-        self.parent.as_ref().map_or_else(
-            || RelativePathBuf::from(self.format.file_name()),
-            |parent| parent.join(self.format.file_name()),
-        )
+        self.path.clone()
     }
 
     #[must_use]
@@ -394,40 +371,15 @@ impl Config {
         self.as_path().to_path("")
     }
 
-    #[must_use]
-    pub const fn defaults() -> [Self; 6] {
-        [
-            Config {
-                format: Format::Cargo,
-                parent: None,
+    pub fn defaults() -> impl Iterator<Item = Self> {
+        Format::FILE_NAMES
+            .iter()
+            .copied()
+            .map(|(name, format)| Self {
+                format,
+                path: RelativePathBuf::from(name),
                 dependency: None,
-            },
-            Config {
-                parent: None,
-                format: Format::GoMod,
-                dependency: None,
-            },
-            Config {
-                parent: None,
-                format: Format::PackageJson,
-                dependency: None,
-            },
-            Config {
-                parent: None,
-                format: Format::PubSpec,
-                dependency: None,
-            },
-            Config {
-                parent: None,
-                format: Format::PyProject,
-                dependency: None,
-            },
-            Config {
-                parent: None,
-                format: Format::MavenPom,
-                dependency: None,
-            },
-        ]
+            })
     }
 }
 
@@ -448,21 +400,7 @@ impl From<&Config> for PathBuf {
 
 impl PartialEq<RelativePathBuf> for Config {
     fn eq(&self, other: &RelativePathBuf) -> bool {
-        let other_parent = other.parent();
-        let parent = self.parent.as_deref();
-
-        let parents_match = match (parent, other_parent) {
-            (Some(parent), Some(other_parent)) => parent == other_parent,
-            (None, None) => true,
-            (Some(parent), None) if parent == "" => true,
-            (None, Some(other_parent)) if other_parent == "" => true,
-            _ => false,
-        };
-
-        parents_match
-            && other
-                .file_name()
-                .is_some_and(|file_name| file_name == self.format.file_name())
+        self.path == *other
     }
 }
 
