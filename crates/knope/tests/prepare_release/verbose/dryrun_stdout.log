@@ -5,6 +5,7 @@ Looking for Git tags matching package name.
 Loading package second
 package.json has version 0.4.6
 Looking for Git tags matching package name.
+Running step PrepareRelease(PrepareRelease { prerelease_label: None, allow_empty: false, ignore_conventional_commits: false })
 Getting conventional commits since last release of package first
 Using commits since tag first/v1.2.3
 Only checking commits with scopes: ["first"]
