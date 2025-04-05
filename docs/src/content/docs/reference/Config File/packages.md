@@ -162,6 +162,10 @@ version: 1.0.0
 
 `dependency` isn't yet supported.
 
+### `tauri.conf.json`
+
+Supports [Tauri configuration files](https://v1.tauri.app/v1/references/configuration-files) in json format. Also supports `tauri.macos.conf.json`, `tauri.windows.conf.json`, and `tauri.linux.conf.json`.
+
 ## `changelog`
 
 The relative path to a Markdown file you'd like to add release notes to.

@@ -24,5 +24,6 @@ mod pyproject_toml;
 mod release_after_prerelease;
 mod scopes;
 mod second_prerelease;
+mod tauri_conf_json;
 mod unknown_versioned_file_format;
 mod verbose;

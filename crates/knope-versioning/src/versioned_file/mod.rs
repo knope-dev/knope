@@ -8,6 +8,7 @@ use pubspec::PubSpec;
 use pyproject::PyProject;
 use relative_path::RelativePathBuf;
 use serde::{Serialize, Serializer};
+use tauri_conf_json::TauriConfJson;
 
 use crate::{
     Action,
@@ -24,6 +25,7 @@ mod maven_pom;
 mod package_json;
 mod pubspec;
 mod pyproject;
+mod tauri_conf_json;
 
 #[derive(Clone, Debug)]
 pub enum VersionedFile {
@@ -35,6 +37,10 @@ pub enum VersionedFile {
     PackageJson(PackageJson),
     PyProject(PyProject),
     MavenPom(MavenPom),
+    TauriConf(TauriConfJson),
+    TauriMacosConf(TauriConfJson),
+    TauriWindowsConf(TauriConfJson),
+    TauriLinuxConf(TauriConfJson),
 }
 
 impl VersionedFile {
@@ -74,6 +80,18 @@ impl VersionedFile {
             Format::MavenPom => MavenPom::new(config.as_path(), content)
                 .map(VersionedFile::MavenPom)
                 .map_err(Error::MavenPom),
+            Format::TauriConf => TauriConfJson::new(config.as_path(), content)
+                .map(VersionedFile::TauriConf)
+                .map_err(Error::TauriConfJson),
+            Format::TauriMacosConf => TauriConfJson::new(config.as_path(), content)
+                .map(VersionedFile::TauriMacosConf)
+                .map_err(Error::TauriConfJson),
+            Format::TauriWindowsConf => TauriConfJson::new(config.as_path(), content)
+                .map(VersionedFile::TauriWindowsConf)
+                .map_err(Error::TauriConfJson),
+            Format::TauriLinuxConf => TauriConfJson::new(config.as_path(), content)
+                .map(VersionedFile::TauriLinuxConf)
+                .map_err(Error::TauriConfJson),
         }
     }
 
@@ -88,6 +106,10 @@ impl VersionedFile {
             VersionedFile::GoMod(gomod) => gomod.get_path(),
             VersionedFile::PackageJson(package_json) => package_json.get_path(),
             VersionedFile::MavenPom(maven_pom) => &maven_pom.path,
+            VersionedFile::TauriConf(tauri_conf)
+            | VersionedFile::TauriMacosConf(tauri_conf)
+            | VersionedFile::TauriWindowsConf(tauri_conf)
+            | VersionedFile::TauriLinuxConf(tauri_conf) => tauri_conf.get_path(),
         }
     }
 
@@ -106,6 +128,10 @@ impl VersionedFile {
             VersionedFile::GoMod(gomod) => Ok(gomod.get_version().clone()),
             VersionedFile::PackageJson(package_json) => Ok(package_json.get_version().clone()),
             VersionedFile::MavenPom(maven_pom) => maven_pom.get_version().map_err(Error::MavenPom),
+            VersionedFile::TauriConf(tauri_conf)
+            | VersionedFile::TauriMacosConf(tauri_conf)
+            | VersionedFile::TauriWindowsConf(tauri_conf)
+            | VersionedFile::TauriLinuxConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
         }
     }
 
@@ -144,6 +170,22 @@ impl VersionedFile {
                 .set_version(new_version)
                 .map_err(SetError::MavenPom)
                 .map(Self::MavenPom),
+            Self::TauriConf(tauri_conf) => tauri_conf
+                .set_version(new_version)
+                .map_err(SetError::Json)
+                .map(Self::TauriConf),
+            Self::TauriMacosConf(tauri_conf) => tauri_conf
+                .set_version(new_version)
+                .map_err(SetError::Json)
+                .map(Self::TauriMacosConf),
+            Self::TauriWindowsConf(tauri_conf) => tauri_conf
+                .set_version(new_version)
+                .map_err(SetError::Json)
+                .map(Self::TauriWindowsConf),
+            Self::TauriLinuxConf(tauri_conf) => tauri_conf
+                .set_version(new_version)
+                .map_err(SetError::Json)
+                .map(Self::TauriLinuxConf),
         }
     }
 
@@ -157,6 +199,10 @@ impl VersionedFile {
             Self::GoMod(gomod) => gomod.write().map(Two),
             Self::PackageJson(package_json) => package_json.write().map(Single),
             Self::MavenPom(maven_pom) => maven_pom.write().map(Single),
+            Self::TauriConf(tauri_conf)
+            | Self::TauriMacosConf(tauri_conf)
+            | Self::TauriWindowsConf(tauri_conf)
+            | Self::TauriLinuxConf(tauri_conf) => tauri_conf.write().map(Single),
         }
     }
 }
@@ -232,6 +278,9 @@ pub enum Error {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     MavenPom(#[from] maven_pom::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    TauriConfJson(#[from] tauri_conf_json::Error),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -244,6 +293,10 @@ pub(crate) enum Format {
     GoMod,
     PackageJson,
     MavenPom,
+    TauriConf,
+    TauriMacosConf,
+    TauriWindowsConf,
+    TauriLinuxConf,
 }
 
 impl Format {
@@ -257,6 +310,10 @@ impl Format {
             Format::GoMod => "go.mod",
             Format::PackageJson => "package.json",
             Format::MavenPom => "pom.xml",
+            Format::TauriConf => "tauri.conf.json",
+            Format::TauriMacosConf => "tauri.macos.conf.json",
+            Format::TauriWindowsConf => "tauri.windows.conf.json",
+            Format::TauriLinuxConf => "tauri.linux.conf.json",
         }
     }
 
@@ -270,6 +327,10 @@ impl Format {
             "go.mod" => Some(Format::GoMod),
             "package.json" => Some(Format::PackageJson),
             "pom.xml" => Some(Format::MavenPom),
+            "tauri.conf.json" => Some(Format::TauriConf),
+            "tauri.macos.conf.json" => Some(Format::TauriMacosConf),
+            "tauri.windows.conf.json" => Some(Format::TauriWindowsConf),
+            "tauri.linux.conf.json" => Some(Format::TauriLinuxConf),
             _ => None,
         }
     }
