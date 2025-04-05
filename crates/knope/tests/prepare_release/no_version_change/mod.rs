@@ -6,6 +6,6 @@ use crate::helpers::{
 #[test]
 fn is_an_error() {
     TestCase::new(file!())
-        .git(&[Commit("docs: update REAMDME"), Tag("v1.2.3")])
+        .git(&[Commit("docs: update README"), Tag("v1.2.3")])
         .run("release");
 }
