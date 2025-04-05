@@ -43,7 +43,6 @@ impl Package {
             .then_some(default_changelog_path);
 
         let versioned_files = VersionedFileConfig::defaults()
-            .into_iter()
             .filter_map(|file_name| {
                 let path = file_name.as_path();
                 if path.to_path("").exists() {

@@ -269,7 +269,7 @@ fn validate_dependency(
             config.dependency = Some(cargo_package_name.to_string());
             Ok(config)
         }
-        (format, true) => Err(NewError::UnsupportedDependency(format.file_name()).into()),
+        (_, true) => Err(NewError::UnsupportedDependency(config.path.file_name().unwrap_or_default().to_string()).into()),
         (_, false) => Ok(config),
     }
 }
@@ -321,7 +321,7 @@ pub enum NewError {
             url("https://knope.tech/reference/config-file/packages#versioned_files")
         )
     )]
-    UnsupportedDependency(&'static str),
+    UnsupportedDependency(String),
     #[error("Cargo.lock must specify a dependency")]
     #[cfg_attr(
         feature = "miette",
