@@ -10,6 +10,14 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.19.1 (2025-04-05)
+
+### Features
+
+#### Add support for Tauri config files
+
+Supports [Tauri configuration files](https://v1.tauri.app/v1/references/configuration-files) in json format named `tauri.conf.json`, `tauri.macos.conf.json`, `tauri.windows.conf.json`, and `tauri.linux.conf.json`.
+
 ## 0.19.0 (2025-03-23)
 
 ### Breaking Changes

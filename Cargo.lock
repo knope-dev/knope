@@ -1363,7 +1363,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.19.0"
+version = "0.19.1"
 dependencies = [
  "base64",
  "changesets",
@@ -1408,7 +1408,7 @@ dependencies = [
 
 [[package]]
 name = "knope-versioning"
-version = "0.3.3"
+version = "0.4.0"
 dependencies = [
  "changesets",
  "git-conventional",

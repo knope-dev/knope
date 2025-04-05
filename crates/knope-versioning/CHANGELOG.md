@@ -1,3 +1,15 @@
+## 0.4.0 (2025-04-05)
+
+### Breaking Changes
+
+- Change the return type of `Config::defaults`
+
+### Features
+
+#### Add support for Tauri config files
+
+Supports [Tauri configuration files](https://v1.tauri.app/v1/references/configuration-files) in json format named `tauri.conf.json`, `tauri.macos.conf.json`, `tauri.windows.conf.json`, and `tauri.linux.conf.json`.
+
 ## 0.3.3 (2025-03-12)
 
 ### Features
