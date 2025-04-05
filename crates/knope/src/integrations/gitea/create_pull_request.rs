@@ -19,7 +19,7 @@ pub(crate) fn create_or_update_pull_request(
     config: &config::Gitea,
 ) -> Result<state::Gitea, Error> {
     let branch_ref = git::current_branch()?;
-    let current_branch = branch_ref.split('/').last().ok_or(Error::GitRef)?;
+    let current_branch = branch_ref.split('/').next_back().ok_or(Error::GitRef)?;
     let state = match state {
         RunType::DryRun(state) => {
             info!("Would create or update a pull request from {current_branch} to {base}:");

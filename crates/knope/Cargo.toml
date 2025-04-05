@@ -23,7 +23,7 @@ datta = "0.1.1"
 dirs = "6.0.0"
 execute = "0.2.13"
 git2 = { version = "0.20.0", default-features = false }
-gix = { version = "0.70.0", default-features = false, features = [
+gix = { version = "0.71.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 glob = "0.3.1"
