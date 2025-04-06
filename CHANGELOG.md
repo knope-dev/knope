@@ -10,6 +10,12 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.19.2 (2025-04-05)
+
+### Features
+
+- Print each step before it runs when `--verbose` is set (#1399)
+
 ## 0.19.1 (2025-04-05)
 
 ### Features
