@@ -203,13 +203,23 @@ fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<R
     let current_version = package.versioning.versions.clone().into_latest();
     debug!("Searching for last package tag to determine if there's a release to release");
     let last_tag = PackageVersions::from_tags(package.name().as_custom(), all_tags).into_latest();
+    debug!("Last tag is {last_tag}");
     if last_tag == current_version {
         return None;
     }
-    package
+    Some(package
         .versioning
         .release_notes
         .changelog
         .as_ref()
         .and_then(|changelog| changelog.get_release(&current_version, package.name()))
+        .unwrap_or_else(|| {
+            debug!("Release has previously been prepared without a changelog, will create a release with no notes.");
+            Release {
+                title: current_version.to_string(),
+                version: current_version,
+                notes: String::new(),
+                package_name: package.name().clone(),
+            }
+        }))
 }
