@@ -1,6 +1,7 @@
 Loading package
 Cargo.toml has version 1.1.0
 Looking for Git tags matching package name.
+Running step Release
 Searching for last package tag to determine if there's a release to release
 Last tag is 1.0.0
 Release has previously been prepared without a changelog, will create a release with no notes.
