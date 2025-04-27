@@ -11,8 +11,16 @@ export default defineConfig({
       title: "Knope",
       favicon: "/favicon.png",
       social: [
-        { icon: 'github', label: 'GitHub', href: "https://github.com/knope-dev/knope"},
-        { icon: 'discord', label: "Discord", href: "https://discord.gg/sQSJtQAvb8"},
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/knope-dev/knope",
+        },
+        {
+          icon: "discord",
+          label: "Discord",
+          href: "https://discord.gg/sQSJtQAvb8",
+        },
       ],
       editLink: {
         baseUrl: "https://github.com/knope-dev/knope/edit/main/docs/",
