@@ -10,10 +10,18 @@ export default defineConfig({
     starlight({
       title: "Knope",
       favicon: "/favicon.png",
-      social: {
-        github: "https://github.com/knope-dev/knope",
-        discord: "https://discord.gg/sQSJtQAvb8",
-      },
+      social: [
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/knope-dev/knope",
+        },
+        {
+          icon: "discord",
+          label: "Discord",
+          href: "https://discord.gg/sQSJtQAvb8",
+        },
+      ],
       editLink: {
         baseUrl: "https://github.com/knope-dev/knope/edit/main/docs/",
       },
