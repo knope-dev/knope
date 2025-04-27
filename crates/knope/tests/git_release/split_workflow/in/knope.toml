@@ -1,0 +1,8 @@
+[package]
+versioned_files = ["Cargo.toml"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "Release"
