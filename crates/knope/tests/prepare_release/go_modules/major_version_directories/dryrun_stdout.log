@@ -8,6 +8,7 @@ v2/go.mod has version 2.0.0
 sub_dir/v2/go.mod has version 2.0.0
 Looking for Git tags matching package name.
 No tags found matching pattern v2/v
+Running step PrepareRelease(PrepareRelease { prerelease_label: None, allow_empty: false, ignore_conventional_commits: false })
 Getting conventional commits since last release of package v1
 No tags found matching pattern v1/v
 Tag v1/v0.0.0 not found, using ALL commits
@@ -49,6 +50,7 @@ Would add files to git:
   sub_dir/v2/go.mod
   CHANGELOG.md
   v2/CHANGELOG.md
+Running step Release
 Would create Git tag v1.0.1
 Would create Git tag sub_dir/v1.0.1
 Would create Git tag v2.1.0

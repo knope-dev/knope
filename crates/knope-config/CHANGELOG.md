@@ -1,3 +1,9 @@
+## 0.2.2 (2025-04-05)
+
+### Features
+
+- Print each step before it runs when `--verbose` is set (#1399)
+
 ## 0.2.1 (2025-03-08)
 
 ### Notes

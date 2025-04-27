@@ -46,7 +46,7 @@ jobs:
       - name: Install Knope
         uses: knope-dev/action@v2.1.0
         with:
-          version: 0.19.0
+          version: 0.19.2
       - run: knope prepare-release --verbose
         name: Update versioned files and changelog
       - name: Store commit
@@ -118,14 +118,14 @@ jobs:
       - uses: actions/checkout@v4.2.2
         with:
           ref: ${{ needs.prepare-release.outputs.sha }}
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v4.3.0
         with:
           path: artifacts
           merge-multiple: true
       - name: Install the latest Knope
         uses: knope-dev/action@v2.1.0
         with:
-          version: 0.19.0
+          version: 0.19.2
       - run: knope release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
