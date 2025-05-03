@@ -16,7 +16,7 @@ Anywhere the string on the left appears in the content, it'll be replaced.
 - `$version`: [`Version`](#version)
 - `$changelog`: [`ChangelogEntry`](#changelogentry)
 
-These defaults are only in place if custom variables aren't defined. To disable to defaults, define variables, even 
+These defaults are only in place if custom variables aren't defined. To disable to defaults, define variables, even
 as an empty map:
 
 ```toml
