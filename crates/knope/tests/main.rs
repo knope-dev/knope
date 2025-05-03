@@ -1,6 +1,6 @@
-#![allow(clippy::unwrap_used)]
 mod bump_version;
 mod command;
+mod create_pull_requests;
 mod default_workflows;
 mod generate;
 mod git_release;

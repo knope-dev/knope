@@ -1,0 +1,5 @@
+Would create or update a pull request from refs/heads/main to main:
+	Title: chore: Release $version
+	Body: Merging this PR will release the following:
+
+$changelog
