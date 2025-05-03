@@ -110,7 +110,7 @@ impl Package {
         };
         let changes = self.versioning.get_changes(changeset, &commit_messages);
 
-        if changes.is_empty() {
+        if changes.is_empty() && self.override_version.is_none() {
             return Ok((versioned_files, Vec::new()));
         }
 
