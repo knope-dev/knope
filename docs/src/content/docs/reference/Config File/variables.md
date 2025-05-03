@@ -11,7 +11,7 @@ of the string `version` with `Version`.
 ## Defaults
 
 Any part of `knope.toml` which _can_ accept variables will replace the following variables _by default_.
-Anywhere the string on the left appears in the content, it'll be replaced.
+Anywhere the string on the left appears in the content, Knope will replace it.
 
 - `$version`: [`Version`](#version)
 - `$changelog`: [`ChangelogEntry`](#changelogentry)

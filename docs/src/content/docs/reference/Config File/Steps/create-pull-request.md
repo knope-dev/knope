@@ -25,7 +25,7 @@ A template string for the title of the pull request. This is a **required** para
 
 ### `title.variables`
 
-An optional map of variables to use in the title template.
+An optional map of variables to use in the title template. You can omit this to use [the defaults].
 
 ### `body.template`
 
@@ -33,7 +33,7 @@ A template string for the body of the pull request. This is **required**.
 
 ### `body.variables`
 
-An optional map of [variables] to use in the body template. This can be omitted to use [the defaults].
+An optional map of [variables] to use in the body template. You can omit this to use [the defaults].
 
 ## Example
 
@@ -59,7 +59,7 @@ variables = { "{changelog}" = "ChangelogEntry" }
 
 :::note
 
-We would not need to include `variables` if we used `$version` and `$changelog` instead.
+`variables` wouldn't be necessary if the templates used `$version` and `$changelog` instead of `{version}` and `{changelog}`.
 
 :::
 

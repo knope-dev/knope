@@ -28,7 +28,7 @@ and the value is one of the [available variables](/reference/config-file/variabl
 Replacements occur in the order they're declared in the config,
 so Knope may replace earlier substitutions with later ones.
 
-If `variables` is not included, Knope will do some [default substitutions](/reference/config-file/variables#defaults)
+If `variables` isn't included, Knope will do some [default substitutions](/reference/config-file/variables#defaults)
 
 ## Shell mode
 
