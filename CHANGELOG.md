@@ -10,6 +10,36 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.20.0 (2025-05-03)
+
+### Breaking Changes
+
+#### Add default variables
+
+[Default variables](https://knope.tech/reference/config-file/variables/#defaults) will now apply anywhere they can be
+used—including the `Command` and `CreatePullRequest` steps.
+
+If any of the defaults, like `$version` or `$changelog`, appear in a variable-supporting location
+and you don't have explicit `variables =` set for that step, this is a breaking change.
+
+### Fixes
+
+#### Fix detecting previous releases with no changelog
+
+Previously, if you ran a `PrepareRelease` step with no `changelog` to modify in one workflow and then a `Release` step
+in a separate workflow, `Release` would fail to create a Git tag.
+
+Now, a release with "no notes" will properly be created if the last Git tag doesn't match the current version of
+a file.
+If a forge is configured, a release will be created on that forge without any notes,
+and a title simply containing the version.
+
+Fixes #1267
+
+#### `PrepareRelease` will allow empty releases when using `--override-version`
+
+Fixes #1423
+
 ## 0.19.2 (2025-04-05)
 
 ### Features
