@@ -1,0 +1,23 @@
+[package]
+name = "test"
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "pr"
+
+[[workflows.steps]]
+type = "CreatePullRequest"
+base = "main"
+
+[workflows.steps.title]
+template = "chore: Release {version}"
+variables = { "{version}" = "Version" }
+
+[workflows.steps.body]
+template = "Merging this PR will release the following:\n\n{changelog}"
+variables = { "{changelog}" = "ChangelogEntry" }
+
+[github]
+owner = "knope-dev"
+repo = "knope"

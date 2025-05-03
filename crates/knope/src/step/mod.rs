@@ -1,4 +1,7 @@
+use std::borrow::Cow;
+
 use indexmap::IndexMap;
+use knope_config::{Template, Variable};
 use knope_versioning::semver::{Label, Rule};
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
@@ -9,7 +12,6 @@ use crate::{
     integrations::git,
     prompt,
     state::{RunType, State},
-    variables::{Template, Variable},
 };
 
 pub mod command;
@@ -71,7 +73,7 @@ pub(crate) enum Step {
         command: String,
         /// A map of value-to-replace to [Variable][`crate::command::Variable`] to replace
         /// it with.
-        variables: Option<IndexMap<String, Variable>>,
+        variables: Option<IndexMap<Cow<'static, str>, Variable>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         /// Whether to run the command in the platform's shell or not
         shell: Option<bool>,
@@ -128,7 +130,7 @@ impl Step {
             Step::Release => releases::release(state)?,
             Step::CreateChangeFile => create_change_file::run(state)?,
             Step::CreatePullRequest { base, title, body } => {
-                create_pull_request::run(&base, title, body, state)?
+                create_pull_request::run(&base, &title, &body, state)?
             }
         })
     }

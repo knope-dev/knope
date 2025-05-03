@@ -6,8 +6,25 @@ You can customize some steps with variables—pieces of context that Knope can s
 You configure variables with both the string to replace and the name of the variable that
 will replace it. For example, if you wanted to insert the current package
 version into a command, you might use a `{"version": "Version"}` variable config. This would replace any instance
-of the string `version` with `Version`. If you wanted a bash-like syntax, you might use `{"$version": "Version"}`
-instead—pick whatever works best for you.
+of the string `version` with `Version`.
+
+## Defaults
+
+Any part of `knope.toml` which _can_ accept variables will replace the following variables _by default_.
+Anywhere the string on the left appears in the content, Knope will replace it.
+
+- `$version`: [`Version`](#version)
+- `$changelog`: [`ChangelogEntry`](#changelogentry)
+
+These defaults are only in place if custom variables aren't defined. To disable to defaults, define variables, even
+as an empty map:
+
+```toml
+[[workflows.steps]]
+type = "Command"
+command = "echo $version"
+variables = {} # Disable default `$version` variable substitution
+```
 
 ## `Version`
 

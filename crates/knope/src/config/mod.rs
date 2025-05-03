@@ -14,7 +14,6 @@ use crate::{
     fs,
     integrations::git,
     step::{PrepareRelease, Step},
-    variables::Variable,
     workflow::Workflow,
 };
 
@@ -295,19 +294,17 @@ pub(crate) fn generate() -> Result<Config, package::Error> {
 }
 
 fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
-    let (commit_message, variables) = if packages.len() < 2 {
-        let mut variables = IndexMap::new();
-        variables.insert(String::from("$version"), Variable::Version);
-        ("chore: prepare release $version", Some(variables))
+    let commit_message = if packages.len() < 2 {
+        "chore: prepare release $version"
     } else {
-        ("chore: prepare releases", None)
+        "chore: prepare releases"
     };
 
     let mut release_steps = if has_forge {
         vec![
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\"",),
-                variables,
+                variables: None,
                 shell: None,
             },
             Step::Command {
@@ -321,7 +318,7 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
         vec![
             Step::Command {
                 command: format!("git commit -m \"{commit_message}\""),
-                variables,
+                variables: None,
                 shell: None,
             },
             Step::Release,
@@ -353,12 +350,9 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
     ];
 
     if packages.len() == 1 {
-        let mut get_version_variables = IndexMap::new();
-        get_version_variables.insert(String::from("$version"), Variable::Version);
-
         let get_version_steps = vec![Step::Command {
             command: String::from("echo \"$version\""),
-            variables: Some(get_version_variables),
+            variables: None,
             shell: None,
         }];
 

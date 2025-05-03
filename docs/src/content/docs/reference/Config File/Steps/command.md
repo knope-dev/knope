@@ -11,7 +11,7 @@ then call that script with a command.
 ## Example
 
 If the current version for your project is `1.0.0`,
-the following workflow step will run the `git` command with the arguments `tag` and `v.version`.
+the following workflow step will run the `git` command with the arguments `tag` and `v.$version`.
 
 ```toml
 [[workflows.steps]]
@@ -27,6 +27,8 @@ and the value is one of the [available variables](/reference/config-file/variabl
 **Take care when selecting a key to replace** as Knope will replace _any_ matching string that it finds.
 Replacements occur in the order they're declared in the config,
 so Knope may replace earlier substitutions with later ones.
+
+If `variables` isn't included, Knope will do some [default substitutions](/reference/config-file/variables#defaults)
 
 ## Shell mode
 

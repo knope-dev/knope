@@ -10,6 +10,7 @@ rust-version = "1.85.0"
 readme = "README.md"
 
 [dependencies]
+indexmap.workspace = true
 knope-versioning = { workspace = true }
 relative-path = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

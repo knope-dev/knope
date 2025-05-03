@@ -53,20 +53,15 @@ command = "git commit -m \"chore: prepare release $version\""
 type = "Command"
 command = "git push --force --set-upstream origin release"
 
-[workflows.steps.variables]
-"$version" = "Version"
-
 [[workflows.steps]]
 type = "CreatePullRequest"
 base = "main"
 
 [workflows.steps.title]
 template = "chore: prepare release $version"
-variables = { "$version" = "Version" }
 
 [workflows.steps.body]
 template = "This PR was created by Knope. Merging it will create a new release\n\n$changelog"
-variables = { "$changelog" = "ChangelogEntry" }
 ```
 
 The first workflow has a `name` of `prepare-release`,
@@ -91,7 +86,7 @@ You could use a variable to name the branch based on the version instead of eras
 The [`CreatePullRequest`] step then creates a pull request from the current branch
 (`release`) to the specified base branch (`main`).
 It uses string templates containing [variables] to set the title and body,
-in this case, the title includes the new `Version` and the body includes the new `ChangelogEntry`.
+in this case, the title includes the new version (`$version`) and the body includes the changelog entry (`$changelog`).
 
 The pull request that this creates looks something like this:
 
