@@ -80,8 +80,7 @@ type = "PrepareRelease"
 # Commit the changes that PrepareRelease added
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: Bump to version\""
-variables = {"version" = "Version"}
+command = "git commit -m \"chore: Bump to $version\""
 
 # Push the changes to GitHub so the created tag will point to the right place.
 [[workflows.steps]]
@@ -118,8 +117,7 @@ type = "PrepareRelease"
 # Commit the changes that PrepareRelease made
 [[workflows.steps]]
 type = "Command"
-command = "git commit -m \"chore: Bump to version\""
-variables = {"version" = "Version"}
+command = "git commit -m \"chore: Bump to $version\""
 
 # Create a Git tag on the fresh commit (e.g., v1.2.3)
 [[workflows.steps]]

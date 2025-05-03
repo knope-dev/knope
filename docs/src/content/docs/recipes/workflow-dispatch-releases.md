@@ -164,9 +164,6 @@ command = "git commit -m \"chore: prepare release $version\""
 type = "Command"
 command = "git push"
 
-[workflows.steps.variables]
-"$version" = "Version"
-
 [[workflows]]
 name = "release"
 
@@ -190,7 +187,7 @@ assets (four, in the example GitHub workflow).
 
 There are two relevant workflows here, the third (`document-change`) is for creating changesets during development. `prepare-release` starts by running the [`PrepareRelease`] step, which does the work of updating `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md` based
 on any conventional commits or changesets.
-Knope then runs a command to commit the changes and push them back to the current branch (note that using the `Version` variable isn't supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.
+Knope then runs a command to commit the changes and push them back to the current branch (note that using the `$version` variable isn't supported for multi-package setups at this time). Once this workflow runs, the project is ready to build assets.
 
 When ready, GitHub Actions calls into the `release` workflow which runs a single step: [`Release`].
 This will compare the latest stable tagged release to the version in `Cargo.toml` (or any other `versioned_files`)

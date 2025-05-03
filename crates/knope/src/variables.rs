@@ -1,7 +1,6 @@
-use indexmap::IndexMap;
+use knope_config::{Template, Variable};
 use knope_versioning::{Action, release_notes::Release, semver::Version};
 use miette::Diagnostic;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     integrations::git::branch_name_from_issue,
@@ -10,82 +9,53 @@ use crate::{
     step::releases::{Package, package, semver},
 };
 
-/// Describes a value that can replace an arbitrary string in certain steps.
-///
-/// <https://knope.tech/reference/config-file/variables//>
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub(crate) enum Variable {
-    /// The version of the package, if only a single package is configured (error if multiple).
-    Version,
-    /// The generated branch name for the selected issue. Note that this means the workflow must
-    /// already be in [`State::IssueSelected`] when this variable is used.
-    IssueBranch,
-    /// Get the current changelog entry from the latest release.
-    ChangelogEntry,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-/// A template string and the variables that should be replaced in it.
-pub(crate) struct Template {
-    pub(crate) template: String,
-    #[serde(default)]
-    pub(crate) variables: IndexMap<String, Variable>,
-}
-
 /// Replace declared variables in the string and return the new string.
-pub(crate) fn replace_variables(template: Template, state: &mut State) -> Result<String, Error> {
+pub(crate) fn replace_variables(template: &Template, state: &mut State) -> Result<String, Error> {
     let mut package_cache = None;
-    let Template {
-        mut template,
-        variables,
-    } = template;
-    for (var_name, var_type) in variables {
-        match var_type {
-            Variable::Version => {
-                let package = if let Some(package) = package_cache.take() {
-                    package
-                } else {
-                    first_package(state)?
-                };
-                let version = package.versioning.versions.clone().into_latest();
-                template = template.replace(&var_name, &version.to_string());
-                package_cache = Some(package);
-            }
-            Variable::ChangelogEntry => {
-                let package = if let Some(package) = package_cache.take() {
-                    package
-                } else {
-                    first_package(state)?
-                };
-                if let Some(body) = state.pending_actions.iter().find_map(|action| {
-                    if let Action::CreateRelease(Release { notes, .. }) = action {
-                        Some(notes)
-                    } else {
-                        None
-                    }
-                }) {
-                    template = template.replace(&var_name, body);
-                } else {
-                    let version = package.versioning.versions.clone().into_latest();
-                    let release = package
-                        .versioning
-                        .release_notes
-                        .changelog
-                        .as_ref()
-                        .and_then(|changelog| changelog.get_release(&version, package.name()))
-                        .ok_or_else(|| Error::NoChangelogEntry(version))?;
-                    template = template.replace(&var_name, &release.notes);
-                }
-                package_cache = Some(package);
-            }
-            Variable::IssueBranch => match &state.issue {
-                state::Issue::Initial => return Err(Error::NoIssueSelected),
-                state::Issue::Selected(issue) => {
-                    template = template.replace(&var_name, &branch_name_from_issue(issue));
-                }
-            },
+    let template = template.replace_variables(|variable| match variable {
+        Variable::Version => {
+            let package = if let Some(package) = package_cache.take() {
+                package
+            } else {
+                first_package(state)?
+            };
+            let version = package.versioning.versions.clone().into_latest();
+            package_cache = Some(package);
+            Ok(version.to_string())
         }
-    }
+        Variable::ChangelogEntry => {
+            let package = if let Some(package) = package_cache.take() {
+                package
+            } else {
+                first_package(state)?
+            };
+            if let Some(body) = state.pending_actions.iter().find_map(|action| {
+                if let Action::CreateRelease(Release { notes, .. }) = action {
+                    Some(notes)
+                } else {
+                    None
+                }
+            }) {
+                package_cache = Some(package);
+                Ok(body.clone())
+            } else {
+                let version = package.versioning.versions.clone().into_latest();
+                let release = package
+                    .versioning
+                    .release_notes
+                    .changelog
+                    .as_ref()
+                    .and_then(|changelog| changelog.get_release(&version, package.name()))
+                    .ok_or_else(|| Error::NoChangelogEntry(version))?;
+                package_cache = Some(package);
+                Ok(release.notes)
+            }
+        }
+        Variable::IssueBranch => match &state.issue {
+            state::Issue::Initial => Err(Error::NoIssueSelected),
+            state::Issue::Selected(issue) => Ok(branch_name_from_issue(issue)),
+        },
+    })?;
     if let Some(package) = package_cache {
         state.packages.push(package);
     }
@@ -136,6 +106,9 @@ pub(crate) enum Error {
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::indexing_slicing)]
 mod test_replace_variables {
+    use std::borrow::Cow;
+
+    use indexmap::IndexMap;
     use knope_versioning::{
         Action, VersionedFile, VersionedFileConfig,
         package::Name,
@@ -189,20 +162,14 @@ mod test_replace_variables {
     fn replace_prepared_version() {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
-        variables.insert("$$".to_string(), Variable::Version);
+        variables.insert(Cow::Borrowed("$$"), Variable::Version);
         let mut state = state();
         let version = Version::new(1, 2, 3, None);
         let package_versions = version.clone().into();
         state.packages[0].versioning.versions = package_versions;
 
-        let result = replace_variables(
-            Template {
-                template,
-                variables,
-            },
-            &mut state,
-        )
-        .unwrap();
+        let result =
+            replace_variables(&Template::new(template, Some(variables)), &mut state).unwrap();
 
         assert_eq!(result, format!("blah {version} other blah"));
     }
@@ -211,7 +178,7 @@ mod test_replace_variables {
     fn replace_issue_branch() {
         let template = "blah $$ other blah".to_string();
         let mut variables = IndexMap::new();
-        variables.insert("$$".to_string(), Variable::IssueBranch);
+        variables.insert(Cow::Borrowed("$$"), Variable::IssueBranch);
         let issue = Issue {
             key: "13".to_string(),
             summary: "1234".to_string(),
@@ -230,23 +197,15 @@ mod test_replace_variables {
             pending_actions: Vec::new(),
         };
 
-        let result = replace_variables(
-            Template {
-                template,
-                variables,
-            },
-            &mut state,
-        )
-        .unwrap();
+        let result =
+            replace_variables(&Template::new(template, Some(variables)), &mut state).unwrap();
 
         assert_eq!(result, format!("blah {expected_branch_name} other blah"));
     }
 
     #[test]
     fn replace_changelog_entry_prepared_release() {
-        let template = "blah $$ other blah".to_string();
-        let mut variables = IndexMap::new();
-        variables.insert("$$".to_string(), Variable::ChangelogEntry);
+        let template = "blah $changelog other blah".to_string();
         let mut state = state();
         let version = Version::new(1, 2, 3, None);
         let changelog_entry = "some content being put in the changelog";
@@ -257,14 +216,7 @@ mod test_replace_variables {
             package_name: Name::Default,
         })];
 
-        let result = replace_variables(
-            Template {
-                template,
-                variables,
-            },
-            &mut state,
-        )
-        .unwrap();
+        let result = replace_variables(&Template::new(template, None), &mut state).unwrap();
 
         assert_eq!(result, format!("blah {changelog_entry} other blah"));
     }

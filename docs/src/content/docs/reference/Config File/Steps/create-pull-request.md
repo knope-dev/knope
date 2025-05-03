@@ -33,7 +33,7 @@ A template string for the body of the pull request. This is **required**.
 
 ### `body.variables`
 
-An optional map of variables to use in the body template.
+An optional map of [variables] to use in the body template. This can be omitted to use [the defaults].
 
 ## Example
 
@@ -49,16 +49,23 @@ type = "CreatePullRequest"
 base = "main"
 
 [workflows.steps.title]
-template = "chore: Release $version"
-variables = { "$version" = "Version" }
+template = "chore: Release {version}"
+variables = { "{version}" = "Version" }
 
 [workflows.steps.body]
-template = "Merging this PR will release the following:\n\n$changelog"
-variables = { "$changelog" = "ChangelogEntry" }
+template = "Merging this PR will release the following:\n\n{changelog}"
+variables = { "{changelog}" = "ChangelogEntry" }
 ```
+
+:::note
+
+We would not need to include `variables` if we used `$version` and `$changelog` instead.
+
+:::
 
 For a full example of how to use this with GitHub Actions to help automate releases, check out [Knope's prepare-release workflow] and [Knope's release workflow].
 
 [Knope's prepare-release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/prepare_release.yml
 [knope's release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/release.yml
 [configuring a forge]: /reference/concepts/forge
+[the defaults]: /reference/config-file/variables#defaults

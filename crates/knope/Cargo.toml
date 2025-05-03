@@ -27,7 +27,7 @@ gix = { version = "0.72.0", default-features = false, features = [
   "max-performance-safe",
 ] }
 glob = "0.3.1"
-indexmap = { version = "2.2.6", features = ["serde"] }
+indexmap = { workspace = true }
 inquire = { version = "0.7.5", default-features = false, features = [
   "crossterm",
 ] }

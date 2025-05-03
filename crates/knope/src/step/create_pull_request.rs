@@ -1,16 +1,17 @@
+use knope_config::Template;
 use miette::Diagnostic;
 
 use crate::{
     integrations::{gitea, github},
     state::{RunType, State},
     variables,
-    variables::{Template, replace_variables},
+    variables::replace_variables,
 };
 
 pub(super) fn run(
     base: &str,
-    title: Template,
-    body: Template,
+    title: &Template,
+    body: &Template,
     state: RunType<State>,
 ) -> Result<RunType<State>, Error> {
     let (run_type, mut state) = state.take();

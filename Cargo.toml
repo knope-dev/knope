@@ -8,6 +8,7 @@ strip = true
 
 [workspace.dependencies]
 changesets = "0.4.0"
+indexmap = { version = "2", features = ["serde"] }
 itertools = "0.14.0"
 knope-versioning = { path = "crates/knope-versioning", version = "0.4.1" }
 miette = "7.2.0"

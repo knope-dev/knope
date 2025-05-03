@@ -112,10 +112,6 @@ type = "PrepareRelease"
 type = "Command"
 command = "git commit -m \"chore: prepare release $version\""
 
-
-[workflows.steps.variables]
-"$version" = "Version"
-
 [[workflows.steps]]
 type = "Command"
 command = "git push"
@@ -139,9 +135,6 @@ help_text = "Get the current version of the project"
 [[workflows.steps]]
 type = "Command"
 command = "echo \"$version\""
-
-[[workflows.steps.variables]]
-"$version" = "Version"
 ```
 
 ## Forges

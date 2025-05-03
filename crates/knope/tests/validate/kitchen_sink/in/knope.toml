@@ -19,7 +19,7 @@ name = "Cannot use Version variable when no metadata file is found"
 
 [[workflows.steps]]
 type = "Command"
-command = "echo"
+command = "echo version"
 variables = { version = "Version" }
 
 [[workflows]]

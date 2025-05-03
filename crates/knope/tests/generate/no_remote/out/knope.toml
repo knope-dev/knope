@@ -8,9 +8,6 @@ type = "PrepareRelease"
 type = "Command"
 command = 'git commit -m "chore: prepare release $version"'
 
-[workflows.steps.variables]
-"$version" = "Version"
-
 [[workflows.steps]]
 type = "Release"
 

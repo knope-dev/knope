@@ -1,13 +1,11 @@
+use std::borrow::Cow;
+
 use indexmap::IndexMap;
+use knope_config::{Template, Variable};
 use miette::Diagnostic;
 use tracing::info;
 
-use crate::{
-    RunType,
-    state::State,
-    variables,
-    variables::{Template, Variable, replace_variables},
-};
+use crate::{RunType, state::State, variables, variables::replace_variables};
 
 /// Run the command string `command` in the current shell after replacing the keys of `variables`
 /// with the values that the [`Variable`]s represent.
@@ -15,18 +13,10 @@ pub(crate) fn run_command(
     state: RunType<State>,
     mut command: String,
     shell: bool,
-    variables: Option<IndexMap<String, Variable>>,
+    variables: Option<IndexMap<Cow<'static, str>, Variable>>,
 ) -> Result<RunType<State>, Error> {
     let (run_type, mut state) = state.take();
-    if let Some(variables) = variables {
-        command = replace_variables(
-            Template {
-                template: command,
-                variables,
-            },
-            &mut state,
-        )?;
-    }
+    command = replace_variables(&Template::new(command, variables), &mut state)?;
     if let RunType::DryRun(()) = run_type {
         info!("Would run {command}");
         return Ok(run_type.of(state));
