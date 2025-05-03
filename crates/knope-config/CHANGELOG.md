@@ -1,3 +1,9 @@
+## 0.2.3 (2025-05-03)
+
+### Features
+
+- Add Variable and Template structs (from CLI)
+
 ## 0.2.2 (2025-04-05)
 
 ### Features
