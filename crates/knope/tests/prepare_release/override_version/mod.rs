@@ -6,10 +6,6 @@ use crate::helpers::{
 #[test]
 fn override_version() {
     TestCase::new(file!())
-        .git(&[
-            Commit("feat: Existing feature"),
-            Tag("v0.1.0"),
-            Commit("fix: A bug fix"),
-        ])
+        .git(&[Commit("feat: Existing feature"), Tag("v0.1.0")])
         .run("release --override-version=1.0.0");
 }
