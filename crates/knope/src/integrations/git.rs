@@ -118,7 +118,7 @@ enum ErrorKind {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),
-    #[error("Could not determine Git committer to commit changes")]
+    #[error("Could not determine Git committer to commit changes: {0}")]
     #[diagnostic(
         code(git::no_committer),
         help(
@@ -126,7 +126,7 @@ enum ErrorKind {
                 `user.email` Git config options."
         )
     )]
-    NoCommitter,
+    NoCommitter(git2::Error),
 }
 
 /// Rebase the current branch onto the selected one.
@@ -425,7 +425,7 @@ pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
             let head = repo.head()?;
             let head_commit = head.peel_to_commit()?;
 
-            let signature = repo.signature().map_err(|_| ErrorKind::NoCommitter)?;
+            let signature = repo.signature().map_err(ErrorKind::NoCommitter)?;
 
             repo.tag(name, &head_commit.into_object(), &signature, "", false)?;
 
