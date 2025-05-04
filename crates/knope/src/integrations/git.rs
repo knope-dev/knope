@@ -4,8 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use git2::{Branch, BranchType, IndexAddOption, Repository, build::CheckoutBuilder};
-use gix::{ObjectId, object::Kind, refs::transaction::PreviousValue};
+use git2::{Branch, BranchType, IndexAddOption, Oid, Repository, build::CheckoutBuilder};
 use itertools::Itertools;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -119,19 +118,7 @@ enum ErrorKind {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),
-    #[error("Could not open Git repository: {0}")]
-    #[diagnostic(
-        code(git::open_git_repo),
-        help("Please check that the current directory is a Git repository.")
-    )]
-    OpenGitRepo(#[from] gix::open::Error),
-    #[error("Could not get Git references to parse tags: {0}")]
-    GitReferences(#[from] gix::reference::iter::Error),
-    #[error("Could not get Git tags: {0}")]
-    Tags(#[from] gix::reference::iter::init::Error),
-    #[error("Could not find head commit: {0}")]
-    HeadCommit(#[from] gix::reference::head_commit::Error),
-    #[error("Could not determine Git committer to commit changes")]
+    #[error("Could not determine Git committer to commit changes: {0}")]
     #[diagnostic(
         code(git::no_committer),
         help(
@@ -139,21 +126,7 @@ enum ErrorKind {
                 `user.email` Git config options."
         )
     )]
-    NoCommitter,
-    #[error("Could not create a tag: {0}")]
-    #[diagnostic(
-        code(git::tag_failed),
-        help("A Git tag could not be created for the release.")
-    )]
-    CreateTagError(#[from] gix::tag::Error),
-    #[error("Could not peel oid: {0}")]
-    #[diagnostic(
-        code(releases::git::peel_oid),
-        help("Please check that the reference exists.")
-    )]
-    PeelOid(#[from] gix::reference::peel::Error),
-    #[error("Could not walk commits back from HEAD: {0}")]
-    RevisionWalk(#[from] gix::revision::walk::Error),
+    NoCommitter(git2::Error),
 }
 
 /// Rebase the current branch onto the selected one.
@@ -390,45 +363,54 @@ pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
 pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Error> {
-    let repo = gix::open(".")?;
+    let repo = Repository::open(".")?;
 
-    let reference = repo.find_reference(&format!("refs/tags/{tag}")).ok();
-    if reference.is_some() {
+    let tag_ref_name = format!("refs/tags/{tag}");
+    let tag_ref = repo.find_reference(&tag_ref_name).ok();
+
+    if tag_ref.is_some() {
         debug!("Using commits since tag {tag}");
     } else {
         debug!("Tag {tag} not found, using ALL commits");
     }
-    let commits_to_exclude = reference
-        .map(gix::Reference::into_fully_peeled_id)
-        .transpose()?
-        .and_then(|tag_oid| repo.find_object(tag_oid).ok().map(gix::Object::into_commit))
-        .and_then(|commit| {
-            commit.ancestors().all().ok().map(|ancestors| {
-                ancestors
-                    .into_iter()
-                    .filter_map(Result::ok)
-                    .map(|info| info.id)
-                    .collect::<HashSet<ObjectId>>()
-            })
-        })
-        .unwrap_or_default();
-    let head_commit = repo.head_commit()?;
-    let mut reverse_commits = head_commit
-        .ancestors()
-        .all()?
-        .filter_map(Result::ok)
-        .filter(|info| !commits_to_exclude.contains(&info.id))
-        .filter_map(|info| {
-            info.object().ok().and_then(|commit| {
-                commit
-                    .decode()
-                    .ok()
-                    .map(|commit| commit.message.to_string())
-            })
-        })
-        .collect_vec();
-    reverse_commits.reverse();
-    Ok(reverse_commits)
+
+    // Get the commit that the tag points to (if it exists)
+    let tag_commit_id = tag_ref
+        .and_then(|reference| reference.peel_to_commit().ok())
+        .map(|commit| commit.id());
+
+    // Create a set of all commit IDs to exclude
+    let mut commits_to_exclude = HashSet::new();
+
+    // If we found the tag, add all its ancestors to the exclude set
+    if let Some(commit_id) = tag_commit_id {
+        let mut revwalk = repo.revwalk()?;
+        revwalk.push(commit_id)?;
+
+        for ancestor_id in revwalk.filter_map(Result::ok) {
+            commits_to_exclude.insert(ancestor_id);
+        }
+    }
+
+    // Get all commits from HEAD that aren't in the exclude set
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
+
+    let mut commits = Vec::new();
+    for oid in revwalk.filter_map(Result::ok) {
+        if !commits_to_exclude.contains(&oid) {
+            if let Ok(commit) = repo.find_commit(oid) {
+                if let Some(message) = commit.message().map(String::from) {
+                    commits.push(message);
+                }
+            }
+        }
+    }
+
+    // Reverse to get chronological order (oldest first)
+    commits.reverse();
+
+    Ok(commits)
 }
 
 pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
@@ -438,18 +420,15 @@ pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
             Ok(())
         }
         RunType::Real(name) => {
-            let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
-            let head = repo.head_commit()?;
-            repo.tag(
-                name,
-                head.id,
-                Kind::Commit,
-                repo.committer()
-                    .transpose()
-                    .map_err(|_| ErrorKind::NoCommitter)?,
-                "",
-                PreviousValue::Any,
-            )?;
+            let repo = Repository::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
+
+            let head = repo.head()?;
+            let head_commit = head.peel_to_commit()?;
+
+            let signature = repo.signature().map_err(ErrorKind::NoCommitter)?;
+
+            repo.tag(name, &head_commit.into_object(), &signature, "", false)?;
+
             Ok(())
         }
     }
@@ -457,35 +436,29 @@ pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
 
 /// Get all tags on the current branch.
 pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
-    let repo = gix::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
-    let mut all_tags: HashMap<ObjectId, Vec<String>> = HashMap::new();
-    for (id, tag) in repo
-        .references()?
-        .tags()?
-        .filter_map(Result::ok)
-        .filter_map(|mut reference| {
-            reference.peel_to_id_in_place().ok().map(|id| {
-                (
-                    id.detach(),
-                    reference
-                        .name()
-                        .as_bstr()
-                        .to_string()
-                        .replace("refs/tags/", ""),
-                )
-            })
-        })
-    {
-        all_tags.entry(id).or_default().push(tag);
+    let repo = Repository::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
+    let mut all_tags: HashMap<Oid, Vec<String>> = HashMap::new();
+    for reference in repo.references()?.filter_map(Result::ok) {
+        let Some(name) = reference.name() else {
+            continue;
+        };
+        if !name.starts_with("refs/tags/") {
+            continue;
+        }
+        let name = name.trim_start_matches("refs/tags/");
+        if let Ok(target) = reference.peel_to_commit() {
+            all_tags
+                .entry(target.id())
+                .or_default()
+                .push(name.to_string());
+        }
     }
 
     let mut tags: Vec<String> = Vec::with_capacity(all_tags.len());
-    for commit_id in repo
-        .head_commit()?
-        .ancestors()
-        .all()?
-        .filter_map(|info| info.ok().map(|info| info.id))
-    {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
+
+    for commit_id in revwalk.filter_map(Result::ok) {
         if let Some(tag) = all_tags.remove(&commit_id) {
             tags.extend(tag);
         }

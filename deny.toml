@@ -35,7 +35,6 @@ allow = [
   "MPL-2.0",
   "BSD-3-Clause",
   "Unicode-3.0",
-  "CC0-1.0",
   "Zlib",
 ]
 # The confidence threshold for detecting a license from license text.
@@ -110,12 +109,11 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "bitflags", version = "1", depth = 1 },         # crossterm, inquire, redox_syscall, etc. all use this
-  { name = "windows-sys", version = "0.48", depth = 5 },   # inquire requires an old version of crossterm
-  { name = "windows-sys", version = "0.52", depth = 5 },   # so many things... it'll be a while
-  { name = "generic-array", version = "0.14", depth = 1 }, # Small dep which will be removed soon
-  { name = "getrandom", version = "0.2", depth = 1 },      # Waiting on ring
-  { name = "wasi", version = "*", depth = 1 },             # We don't compile for wasi, so don't care
+  { name = "bitflags", version = "1", depth = 1 },       # crossterm, inquire, redox_syscall, etc. all use this
+  { name = "windows-sys", version = "0.48", depth = 5 }, # inquire requires an old version of crossterm
+  { name = "windows-sys", version = "0.52", depth = 5 }, # so many things... it'll be a while
+  { name = "getrandom", version = "0.2", depth = 1 },    # Waiting on ring
+  { name = "wasi", version = "*", depth = 1 },           # We don't compile for wasi, so don't care
 ]
 
 # This section is considered when running `cargo deny check sources`.
