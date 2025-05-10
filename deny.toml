@@ -116,6 +116,7 @@ skip-tree = [
   { name = "getrandom", version = "0.2", depth = 1 },     # Waiting on ring
   { name = "wasi", version = "*", depth = 1 },            # We don't compile for wasi, so don't care
   { name = "unicode-width", version = "0.1", depth = 1 }, # Also inquire
+  { name = "webpki-roots", version = "0.26" },            # Update ureq or switch to reqwest
 ]
 
 # This section is considered when running `cargo deny check sources`.
