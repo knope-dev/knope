@@ -97,6 +97,35 @@ enabled = true
 When releases are enabled, Knope Bot will keep an up-to-date pull request with a preview of your next release. This pull request comes from a branch called
 `knope/release`. Merging the pull request will create a GitHub release.
 
+### Customizing pull request title
+
+You can customize the title of the pull request (which is also used as the commit message) by adding the following to your `knope.toml`:
+
+```toml {3}
+[bot.releases]
+enabled = true
+pull_request.title = "Custom PR title here"
+```
+
+For single-package-repos only, you can also include the `$version` [variable](/reference/config-file/variables/#version) to dynamically insert the new version:
+
+```toml {3}
+[bot.releases]
+enabled = true
+pull_request.title = "Time to release $version!"
+```
+
+For more advanced customization, you can use the same template syntax as the [CreatePullRequest](/reference/config-file/steps/create-pull-request/) step:
+
+```toml {4-6}
+[bot.releases]
+enabled = true
+
+[bot.releases.pull_request.title]
+template = "I need to preserve $version and instead replace {version}"
+variables = {"{version}" = "Version"}
+```
+
 ### Creating draft releases
 
 When Knope Bot creates a release for a package,
