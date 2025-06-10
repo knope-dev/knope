@@ -31,7 +31,7 @@ impl PyProject {
                     version,
                     diff: None,
                 }),
-            Err(err) => Err(Error::Deserialization(path, err)),
+            Err(err) => Err(Error::Deserialization(path, Box::new(err))),
         }
     }
 
@@ -74,7 +74,7 @@ pub enum Error {
             url("https://knope.tech/reference/config-file/packages/#pyprojecttoml")
         )
     )]
-    Deserialization(RelativePathBuf, #[source] toml::de::Error),
+    Deserialization(RelativePathBuf, #[source] Box<toml::de::Error>),
     #[error("Found conflicting versions {project} and {poetry} in {path}")]
     #[cfg_attr(
         feature = "miette",
