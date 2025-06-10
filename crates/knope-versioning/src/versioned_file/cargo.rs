@@ -21,7 +21,7 @@ impl Cargo {
     /// If the TOML is invalid or missing a required property.
     pub fn new(path: RelativePathBuf, toml: &str) -> Result<Self, Error> {
         let document: DocumentMut = toml.parse().map_err(|source| Error::Toml {
-            source,
+            source: Box::new(source),
             path: path.clone(),
         })?;
         Ok(Self {
@@ -215,7 +215,7 @@ pub enum Error {
     Toml {
         path: RelativePathBuf,
         #[source]
-        source: TomlError,
+        source: Box<TomlError>,
     },
     #[error("{path} was missing required property {property}")]
     #[cfg_attr(
