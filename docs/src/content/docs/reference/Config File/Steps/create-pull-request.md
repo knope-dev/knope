@@ -69,3 +69,4 @@ For a full example of how to use this with GitHub Actions to help automate relea
 [knope's release workflow]: https://github.com/knope-dev/knope/blob/e7292fa746fe1d81b84e5848815c02a0d8fc6f95/.github/workflows/release.yml
 [configuring a forge]: /reference/concepts/forge
 [the defaults]: /reference/config-file/variables#defaults
+[variables]: /reference/config-file/variables
