@@ -1,5 +1,5 @@
 Would add the following to Cargo.toml: version = 0.2.0
-Would add the following to package.json: 0.2.0
+Would add the following to package.json: version = 0.2.0
 Would add the following to tauri.conf.json: 0.2.0
 Would add the following to tauri.macos.conf.json: 0.2.0
 Would add files to git:

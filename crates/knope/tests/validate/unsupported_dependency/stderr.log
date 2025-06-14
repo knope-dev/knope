@@ -1,5 +1,5 @@
 Error: knope_versioning::package::unsupported_dependency (https://knope.tech/reference/config-file/packages#versioned_files)
 
-  × Dependencies are not supported in package.json files
+  × Dependencies are not supported in pyproject.toml files
   help: Dependencies aren't supported in every file type.
 

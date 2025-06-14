@@ -6,6 +6,7 @@ use std::{
 };
 
 use changesets::Release;
+use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -96,17 +97,18 @@ impl Package {
         let version = self.versions.clone().into_latest();
         versioned_files
             .into_iter()
-            .map(|file| {
-                let config = self
+            .map(|mut file| {
+                let configs = self
                     .versioned_files
                     .iter()
-                    .find(|config| *config == file.path());
-                if let Some(config) = config {
-                    file.set_version(&version, config.dependency.as_deref(), go_versioning)
-                        .map_err(BumpError::SetError)
-                } else {
-                    Ok(file)
+                    .filter(|config| *config == file.path())
+                    .collect_vec();
+                for config in configs {
+                    file = file
+                        .set_version(&version, config.dependency.as_deref(), go_versioning)
+                        .map_err(BumpError::SetError)?;
                 }
+                Ok(file)
             })
             .collect()
     }
@@ -251,9 +253,7 @@ fn validate_dependency(
     versioned_files: &[(Config, &VersionedFile)],
 ) -> Result<Config, Box<NewError>> {
     match (&config.format, config.dependency.is_some()) {
-        (Format::Cargo, _)  // `Cargo.toml` supports either mode
-        | (Format::CargoLock, true)  // `Cargo.lock` is always a dependency 
-            => Ok(config),
+        (Format::Cargo | Format::PackageJson, _) | (Format::CargoLock, true) => Ok(config),
         (Format::CargoLock, false) => {
             // `Cargo.lock` needs to target a dependency. If there is a `Cargo.toml` file which is
             // _not_ a dependency, we default to that one.
@@ -269,7 +269,10 @@ fn validate_dependency(
             config.dependency = Some(cargo_package_name.to_string());
             Ok(config)
         }
-        (_, true) => Err(NewError::UnsupportedDependency(config.path.file_name().unwrap_or_default().to_string()).into()),
+        (_, true) => Err(NewError::UnsupportedDependency(
+            config.path.file_name().unwrap_or_default().to_string(),
+        )
+        .into()),
         (_, false) => Ok(config),
     }
 }

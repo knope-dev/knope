@@ -1,0 +1,9 @@
+[package]
+name = "test-package"
+version = "1.0.0"
+
+[dependencies]
+dependency-name = "1.0.0"
+
+[dev-dependencies]
+dev-dependency-name = "1.0.0"

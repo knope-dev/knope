@@ -119,7 +119,31 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
 }
 ```
 
-`dependency` isn't yet supported.
+If you specify `dependency` in `knope.toml`, Knope will search for it in both `dependencies` and `devDependencies`:
+
+```toml title="knope.toml"
+[package]
+versioned_files = [
+    { path = "something/package.json", dependency = "@scope/depName" },
+    { path = "somethingElse/package.json", dependency = "anotherName" },
+]
+```
+
+```json title="something/package.json"
+{
+  "dependencies": {
+    "@scope/depName": "1.0.0"
+  }
+}
+```
+
+```json title="somethingElse/package.json"
+{
+  "devDependencies": {
+    "anotherName": "1.0.0"
+  }
+}
+```
 
 ### `pyproject.toml`
 

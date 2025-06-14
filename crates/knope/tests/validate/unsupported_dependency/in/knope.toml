@@ -1,2 +1,2 @@
 [package]
-versioned_files = [{ path = "package.json", dependency = "blah" }]
+versioned_files = [{ path = "pyproject.toml", dependency = "blah" }]
