@@ -2,6 +2,8 @@
 title: Packages
 ---
 
+import { Badge } from "@astrojs/starlight/components";
+
 A package is a set of files that Knope releases together with the same version.
 Knope can increase this version based on changes that affect the package.
 
@@ -118,6 +120,8 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
   "version": "1.0.0"
 }
 ```
+
+#### Dependencies <Badge text="v0.20.1+" variant="tip" />
 
 If you specify `dependency` in `knope.toml`, Knope will search for it in both `dependencies` and `devDependencies`:
 
