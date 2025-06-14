@@ -10,6 +10,42 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.20.1 (2025-06-14)
+
+### Features
+
+#### Add support for dependencies in `package.json` files
+
+You can now update the `dependencies` and `devDependencies` of a `package.json` like this:
+
+```toml
+[package]
+versioned_files = [
+  # Update @my/package-name in dependencies and devDependencies whenever this package version updates
+  { path = "package.json", dependency = "@my/package-name" }
+]
+```
+
+### Fixes
+
+#### Fix multiple versioned files with same path
+
+Previously, if you referenced the same file multiple times in versioned_files, only the first instance would apply.
+Now, if you reference the same path multiple times, each instance will be processed sequentially.
+
+Consider a mono-repo where every package should be versioned in lockstep:
+
+```toml
+[package]
+versioned_files = [
+  "package.json",
+  { path = "package.json", dependency = "aDependency" },  # Before this fix, this was ignored
+  "aDependency/package.json"
+]
+```
+
+This use-case is now supported!
+
 ## 0.20.0 (2025-05-03)
 
 ### Breaking Changes
