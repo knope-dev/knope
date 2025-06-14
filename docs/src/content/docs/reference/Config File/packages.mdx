@@ -2,6 +2,8 @@
 title: Packages
 ---
 
+import { Badge } from "@astrojs/starlight/components";
+
 A package is a set of files that Knope releases together with the same version.
 Knope can increase this version based on changes that affect the package.
 
@@ -119,7 +121,33 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
 }
 ```
 
-`dependency` isn't yet supported.
+#### Dependencies <Badge text="Knope 0.20.1+" variant="tip" />
+
+If you specify `dependency` in `knope.toml`, Knope will search for it in both `dependencies` and `devDependencies`:
+
+```toml title="knope.toml"
+[package]
+versioned_files = [
+    { path = "something/package.json", dependency = "@scope/depName" },
+    { path = "somethingElse/package.json", dependency = "anotherName" },
+]
+```
+
+```json title="something/package.json"
+{
+  "dependencies": {
+    "@scope/depName": "1.0.0"
+  }
+}
+```
+
+```json title="somethingElse/package.json"
+{
+  "devDependencies": {
+    "anotherName": "1.0.0"
+  }
+}
+```
 
 ### `pyproject.toml`
 

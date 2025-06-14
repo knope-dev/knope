@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
@@ -36,14 +38,42 @@ impl PackageJson {
         &self.path
     }
 
-    pub(crate) fn set_version(mut self, new_version: &Version) -> serde_json::Result<Self> {
+    pub(crate) fn set_version(
+        mut self,
+        new_version: &Version,
+        dependency: Option<&str>,
+    ) -> serde_json::Result<Self> {
         let mut json = serde_json::from_str::<Map<String, Value>>(&self.raw)?;
-        json.insert(
-            "version".to_string(),
-            Value::String(new_version.to_string()),
-        );
+        let diff = self.diff.get_or_insert_default();
+        if !diff.is_empty() {
+            diff.push_str(", ");
+        }
+
+        if let Some(dependency_name) = dependency {
+            write!(diff, "{dependency_name} = {new_version}").unwrap();
+            // Check dependencies
+            if let Some(Value::Object(deps)) = json.get_mut("dependencies") {
+                if let Some(dep_value) = deps.get_mut(dependency_name) {
+                    *dep_value = Value::String(new_version.to_string());
+                }
+            }
+
+            // Check devDependencies
+            if let Some(Value::Object(dev_deps)) = json.get_mut("devDependencies") {
+                if let Some(dep_value) = dev_deps.get_mut(dependency_name) {
+                    *dep_value = Value::String(new_version.to_string());
+                }
+            }
+        } else {
+            json.insert(
+                "version".to_string(),
+                Value::String(new_version.to_string()),
+            );
+            write!(diff, "version = {new_version}").unwrap();
+        }
+
         self.raw = serde_json::to_string_pretty(&json)?;
-        self.diff = Some(new_version.to_string());
+
         Ok(self)
     }
 
@@ -114,7 +144,7 @@ mod tests {
 
         let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
             .unwrap()
-            .set_version(&Version::from_str("1.2.3-rc.4").unwrap())
+            .set_version(&Version::from_str("1.2.3-rc.4").unwrap(), None)
             .unwrap()
             .write()
             .expect("diff to write");
@@ -127,7 +157,7 @@ mod tests {
         let expected = Action::WriteToFile {
             path: RelativePathBuf::new(),
             content: expected,
-            diff: "1.2.3-rc.4".to_string(),
+            diff: "version = 1.2.3-rc.4".to_string(),
         };
         assert_eq!(new, expected);
     }
@@ -142,7 +172,7 @@ mod tests {
 
         let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
             .unwrap()
-            .set_version(&Version::from_str("1.2.3-rc.4").unwrap())
+            .set_version(&Version::from_str("1.2.3-rc.4").unwrap(), None)
             .unwrap()
             .write()
             .expect("diff to write");
@@ -156,7 +186,85 @@ mod tests {
         let expected = Action::WriteToFile {
             path: RelativePathBuf::new(),
             content: expected,
-            diff: "1.2.3-rc.4".to_string(),
+            diff: "version = 1.2.3-rc.4".to_string(),
+        };
+        assert_eq!(new, expected);
+    }
+
+    #[test]
+    fn update_dependency() {
+        let content = r#"{
+            "name": "tester",
+            "version": "1.0.0",
+            "dependencies": {
+                "dependency-name": "2.0.0",
+                "some-other-dependency": "0.1.0"
+            },
+            "devDependencies": {
+                "@another/dev-dependency": "0.2.0",
+                "@dev/dependency-name": "3.0.0"
+            }
+        }"#;
+
+        // Test updating a regular dependency
+        let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
+            .unwrap()
+            .set_version(
+                &Version::from_str("2.1.0").unwrap(),
+                Some("dependency-name"),
+            )
+            .unwrap()
+            .write()
+            .expect("diff to write");
+
+        let expected = r#"{
+  "name": "tester",
+  "version": "1.0.0",
+  "dependencies": {
+    "dependency-name": "2.1.0",
+    "some-other-dependency": "0.1.0"
+  },
+  "devDependencies": {
+    "@another/dev-dependency": "0.2.0",
+    "@dev/dependency-name": "3.0.0"
+  }
+}"#
+        .to_string();
+        let expected = Action::WriteToFile {
+            path: RelativePathBuf::new(),
+            content: expected,
+            diff: "dependency-name = 2.1.0".to_string(),
+        };
+        assert_eq!(new, expected);
+
+        // Test updating a dev dependency
+        let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
+            .unwrap()
+            .set_version(
+                &Version::from_str("3.1.0").unwrap(),
+                Some("@dev/dependency-name"),
+            )
+            .unwrap()
+            .write()
+            .expect("diff to write");
+
+        let expected = r#"{
+  "name": "tester",
+  "version": "1.0.0",
+  "dependencies": {
+    "dependency-name": "2.0.0",
+    "some-other-dependency": "0.1.0"
+  },
+  "devDependencies": {
+    "@another/dev-dependency": "0.2.0",
+    "@dev/dependency-name": "3.1.0"
+  }
+}"#
+        .to_string();
+        let expected = Action::WriteToFile {
+            path: RelativePathBuf::new(),
+            content: expected,
+            diff: "@dev/dependency-name = 3.1.0".to_string(),
         };
         assert_eq!(new, expected);
     }

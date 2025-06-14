@@ -1,5 +1,6 @@
 mod allow_empty;
 mod branching_history;
+mod cargo_toml_dependencies;
 mod cargo_workspace;
 mod changelog;
 mod changesets;
@@ -17,6 +18,7 @@ mod no_versioned_files;
 mod override_prerelease_label;
 mod override_version;
 mod override_version_multiple_packages;
+mod package_json_dependencies;
 mod package_selection;
 mod prerelease_after_release;
 mod pubspec_yaml;

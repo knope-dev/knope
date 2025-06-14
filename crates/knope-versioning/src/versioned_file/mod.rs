@@ -154,7 +154,7 @@ impl VersionedFile {
                 .map_err(SetError::GoMod)
                 .map(Self::GoMod),
             Self::PackageJson(package_json) => package_json
-                .set_version(new_version)
+                .set_version(new_version, dependency)
                 .map_err(SetError::Json)
                 .map(Self::PackageJson),
             Self::MavenPom(maven_pom) => maven_pom

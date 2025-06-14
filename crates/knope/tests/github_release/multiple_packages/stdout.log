@@ -1,6 +1,6 @@
 Would add the following to Cargo.toml: version = 2.0.0
 Would add the following to pyproject.toml: 2.0.0
-Would add the following to package.json: 0.5.0
+Would add the following to package.json: version = 0.5.0
 Would add the following to FIRST_CHANGELOG.md: 
 ## 2.0.0 ([DATE])
 

@@ -1,0 +1,12 @@
+[package]
+versioned_files = [
+  "Cargo.toml",
+  { path = "Cargo.toml", dependency = "dependency-name" },
+  { path = "Cargo.toml", dependency = "dev-dependency-name" },
+]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
