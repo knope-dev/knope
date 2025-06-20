@@ -1,0 +1,5 @@
+Would add the following to package.json: version = 1.1.0
+Would add the following to package-lock.json: version = 1.1.0
+Would add files to git:
+  package.json
+  package-lock.json

@@ -1,20 +1,18 @@
 use std::{fmt::Debug, path::PathBuf};
 
-use cargo::Cargo;
-pub use go_mod::{GoMod, GoVersioning};
-use maven_pom::MavenPom;
-use package_json::PackageJson;
-use pubspec::PubSpec;
-use pyproject::PyProject;
 use relative_path::RelativePathBuf;
 use serde::{Serialize, Serializer};
-use tauri_conf_json::TauriConfJson;
 
+pub use self::go_mod::GoVersioning;
+use self::{
+    cargo::Cargo, cargo_lock::CargoLock, gleam::Gleam, go_mod::GoMod, maven_pom::MavenPom,
+    package_json::PackageJson, package_lock_json::PackageLockJson, pubspec::PubSpec,
+    pyproject::PyProject, tauri_conf_json::TauriConfJson,
+};
 use crate::{
     Action,
     action::ActionSet::{Single, Two},
     semver::Version,
-    versioned_file::{cargo_lock::CargoLock, gleam::Gleam},
 };
 
 pub mod cargo;
@@ -23,6 +21,7 @@ mod gleam;
 mod go_mod;
 mod maven_pom;
 mod package_json;
+mod package_lock_json;
 mod pubspec;
 mod pyproject;
 mod tauri_conf_json;
@@ -35,6 +34,7 @@ pub enum VersionedFile {
     Gleam(Gleam),
     GoMod(GoMod),
     PackageJson(PackageJson),
+    PackageLockJson(PackageLockJson),
     PyProject(PyProject),
     MavenPom(MavenPom),
     TauriConf(TauriConfJson),
@@ -77,6 +77,9 @@ impl VersionedFile {
             Format::PackageJson => PackageJson::new(config.as_path(), content)
                 .map(VersionedFile::PackageJson)
                 .map_err(Error::PackageJson),
+            Format::PackageLockJson => PackageLockJson::new(config.as_path(), &content)
+                .map(VersionedFile::PackageLockJson)
+                .map_err(Error::PackageLockJson),
             Format::MavenPom => MavenPom::new(config.as_path(), content)
                 .map(VersionedFile::MavenPom)
                 .map_err(Error::MavenPom),
@@ -96,6 +99,7 @@ impl VersionedFile {
             VersionedFile::Gleam(gleam) => &gleam.path,
             VersionedFile::GoMod(gomod) => gomod.get_path(),
             VersionedFile::PackageJson(package_json) => package_json.get_path(),
+            VersionedFile::PackageLockJson(package_lock_json) => package_lock_json.get_path(),
             VersionedFile::MavenPom(maven_pom) => &maven_pom.path,
             VersionedFile::TauriConf(tauri_conf)
             | VersionedFile::TauriMacosConf(tauri_conf)
@@ -118,6 +122,9 @@ impl VersionedFile {
             VersionedFile::Gleam(gleam) => Ok(gleam.get_version().map_err(Error::Gleam)?),
             VersionedFile::GoMod(gomod) => Ok(gomod.get_version().clone()),
             VersionedFile::PackageJson(package_json) => Ok(package_json.get_version().clone()),
+            VersionedFile::PackageLockJson(package_lock_json) => package_lock_json
+                .get_version()
+                .map_err(Error::PackageLockJson),
             VersionedFile::MavenPom(maven_pom) => maven_pom.get_version().map_err(Error::MavenPom),
             VersionedFile::TauriConf(tauri_conf)
             | VersionedFile::TauriMacosConf(tauri_conf)
@@ -157,6 +164,9 @@ impl VersionedFile {
                 .set_version(new_version, dependency)
                 .map_err(SetError::Json)
                 .map(Self::PackageJson),
+            Self::PackageLockJson(package_lock_json) => Ok(Self::PackageLockJson(
+                package_lock_json.set_version(new_version, dependency),
+            )),
             Self::MavenPom(maven_pom) => maven_pom
                 .set_version(new_version)
                 .map_err(SetError::MavenPom)
@@ -189,6 +199,7 @@ impl VersionedFile {
             Self::Gleam(gleam) => gleam.write().map(Single),
             Self::GoMod(gomod) => gomod.write().map(Two),
             Self::PackageJson(package_json) => package_json.write().map(Single),
+            Self::PackageLockJson(package_lock_json) => package_lock_json.write().map(Single),
             Self::MavenPom(maven_pom) => maven_pom.write().map(Single),
             Self::TauriConf(tauri_conf)
             | Self::TauriMacosConf(tauri_conf)
@@ -268,6 +279,9 @@ pub enum Error {
     PackageJson(#[from] package_json::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    PackageLockJson(#[from] package_lock_json::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
     MavenPom(#[from] maven_pom::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
@@ -286,6 +300,7 @@ pub(crate) enum Format {
     Gleam,
     GoMod,
     PackageJson,
+    PackageLockJson,
     MavenPom,
     TauriConf,
 }
@@ -298,6 +313,7 @@ impl Format {
         ("gleam.toml", Format::Gleam),
         ("go.mod", Format::GoMod),
         ("package.json", Format::PackageJson),
+        ("package-lock.json", Format::PackageLockJson),
         ("pom.xml", Format::MavenPom),
         ("pubspec.yaml", Format::PubSpec),
         ("pyproject.toml", Format::PyProject),
