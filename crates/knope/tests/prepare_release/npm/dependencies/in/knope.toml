@@ -1,8 +1,9 @@
 [package]
 versioned_files = [
-  "package.json",
   { path = "package.json", dependency = "dependency-name" },
   { path = "package.json", dependency = "dev-dependency-name" },
+  { path = "package-lock.json", dependency = "dependency-name" },
+  { path = "package-lock.json", dependency = "dev-dependency-name" },
 ]
 
 [[workflows]]

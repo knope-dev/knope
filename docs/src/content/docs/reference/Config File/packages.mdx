@@ -121,7 +121,7 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
 }
 ```
 
-#### Dependencies <Badge text="Knope 0.20.1+" variant="tip" />
+#### Dependencies <Badge text="Knope 0.21.0+" variant="tip" />
 
 If you specify `dependency` in `knope.toml`, Knope will search for it in both `dependencies` and `devDependencies`:
 
@@ -145,6 +145,66 @@ versioned_files = [
 {
   "devDependencies": {
     "anotherName": "1.0.0"
+  }
+}
+```
+
+### `package-lock.json` <Badge text="Knope 0.21.0+" variant="tip" />
+
+Knope can update `npm` lock files with version 2+, corresponding to `npm` 7+.
+Just like `package.json`, Knope can either update the version for the lock file's package, or for dependencies.
+When automatically detected using [default config](/reference/default-config/#packages) Knope will assume the lock file
+is for the _current_ package, not a dependency.
+
+#### Root `package-lock.json` example
+
+A configuration like this might be used to update the lock file entry for a single package.
+This is equivalent to the default configuration for a directory containing those files.
+Knope will update root `version` property and the `packages[""].version` property in `package-lock.json`.
+
+```toml title="knope.toml"
+[package]
+versioned_files = ["package.json", "package-lock.json"]
+```
+
+#### Dependencies in `package-lock.json` example
+
+You can also update dependency entries matching a package name, useful for monorepos:
+
+```toml title="knope.toml"
+[packages.a]
+versioned_files = [
+  "packages/a/package.json",
+  { path = "package-lock.json", dependency = "@myScope/packageA" },
+]
+```
+
+With a config like this, Knope will update the version of all `packages` with the `name` of `@myScope/packageA`
+_and_ any `dependencies` of any packages matching that same name.
+
+```json title="package-lock.json" {19,24}
+{
+  "name": "",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "packages": {
+    "": {
+      "name": "",
+      "version": "1.0.0",
+      "license": "ISC",
+      "workspaces": ["packages/a", "packages/b"]
+    },
+    "packages/b": {
+      "name": "@myScope/packageB",
+      "version": "1.0.0",
+      "dependencies": {
+        "@myScope/packageA": "0.1.0"
+      }
+    },
+    "packages/a": {
+      "name": "@myScope/packageA",
+      "version": "0.1.0"
+    }
   }
 }
 ```

@@ -1,0 +1,10 @@
+{
+  "name": "test-package",
+  "version": "1.1.0",
+  "dependencies": {
+    "dependency-name": "1.0.0"
+  },
+  "devDependencies": {
+    "dev-dependency-name": "1.0.0"
+  }
+}
