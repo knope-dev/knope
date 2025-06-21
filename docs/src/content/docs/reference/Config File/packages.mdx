@@ -77,6 +77,12 @@ version = "1.0.0"
 knope-versioning = "1.0.0"
 ```
 
+:::note
+
+Cargo workspaces are only supported when using the [default config](/reference/default-config/#cargo-workspaces)
+
+:::
+
 ### `Cargo.lock`
 
 Knope can keep dependencies of a Rust project up to date by specifying a `Cargo.lock` file. By default,
@@ -120,6 +126,12 @@ For JavaScript or TypeScript projects, must contain a root-level `version` field
   "version": "1.0.0"
 }
 ```
+
+:::note
+
+NPM workspaces are only supported when using the [default config](/reference/default-config/#npm-workspaces)
+
+:::
 
 #### Dependencies <Badge text="Knope 0.21.0+" variant="tip" />
 
