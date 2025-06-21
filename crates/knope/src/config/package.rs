@@ -1,11 +1,13 @@
 use std::{ops::Range, path::PathBuf, str::FromStr};
 
 use ::toml::Spanned;
+use glob::glob;
 use itertools::Itertools;
 use knope_config::{Assets, ChangelogSection};
 use knope_versioning::{UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
 use miette::Diagnostic;
-use relative_path::{RelativePath, RelativePathBuf};
+use relative_path::{PathExt, RelativePath, RelativePathBuf};
+use serde_json::Value;
 use thiserror::Error;
 use toml_edit::{DocumentMut, TomlError};
 
@@ -30,7 +32,8 @@ pub struct Package {
 
 impl Package {
     pub(crate) fn find_in_working_dir() -> Result<Vec<Self>, Error> {
-        let packages = Self::cargo_workspace_members()?;
+        let mut packages = Self::cargo_workspace_members()?;
+        packages.extend(Self::npm_workspaces()?);
 
         if !packages.is_empty() {
             return Ok(packages);
@@ -145,6 +148,103 @@ impl Package {
                 }
             })
             .collect())
+    }
+
+    fn npm_workspaces() -> Result<Vec<Self>, NPMWorkspaceError> {
+        #[derive(Debug)]
+        struct Workspace {
+            path: RelativePathBuf,
+            value: Value,
+        }
+
+        let Some(workspace_patterns) = read_to_string("package.json").ok().and_then(|json| {
+            serde_json::Value::from_str(&json)
+                .ok()?
+                .get("workspaces")?
+                .as_array()
+                .cloned()
+        }) else {
+            return Ok(Vec::new());
+        };
+
+        let lock_file = PathBuf::from("package-lock.json").exists();
+
+        let mut workspaces = Vec::new();
+
+        for workspace_pattern in workspace_patterns
+            .iter()
+            .filter_map(|pattern| pattern.as_str())
+        {
+            let paths = glob(workspace_pattern).map_err(|source| NPMWorkspaceError::Glob {
+                pattern: workspace_pattern.to_string(),
+                source,
+            })?;
+            for path in paths {
+                let Ok(path) = path else { continue };
+                let path = path.join("package.json");
+                let Ok(package_json) = read_to_string(&path) else {
+                    continue;
+                };
+                let Ok(json) = serde_json::Value::from_str(&package_json) else {
+                    continue;
+                };
+                let Ok(path) = path.relative_to(".") else {
+                    continue;
+                };
+                workspaces.push(Workspace { path, value: json });
+            }
+        }
+
+        let mut packages = Vec::with_capacity(workspaces.len());
+
+        for workspace in &workspaces {
+            let name = workspace
+                .value
+                .get("name")
+                .and_then(|name| name.as_str())
+                .ok_or_else(|| NPMWorkspaceError::NoName {
+                    path: workspace.path.clone(),
+                })?
+                .to_string();
+            let mut versioned_files = vec![VersionedFileConfig::new(workspace.path.clone(), None)?];
+            if lock_file {
+                versioned_files.push(VersionedFileConfig::new(
+                    "package-lock.json".into(),
+                    Some(name.clone()),
+                )?);
+            }
+            for other_workspace in &workspaces {
+                if other_workspace.path == workspace.path {
+                    continue;
+                }
+                if other_workspace
+                    .value
+                    .get("dependencies")
+                    .and_then(|deps| deps.get(&name))
+                    .or_else(|| {
+                        other_workspace
+                            .value
+                            .get("devDependencies")
+                            .and_then(|deps| deps.get(&name))
+                    })
+                    .is_some()
+                {
+                    versioned_files.push(VersionedFileConfig::new(
+                        other_workspace.path.clone(),
+                        Some(name.clone()),
+                    )?);
+                }
+            }
+            packages.push(Package {
+                name: package::Name::Custom(name.clone()),
+                versioned_files,
+                changelog: workspace.path.parent().map(|dir| dir.join("CHANGELOG.md")),
+                scopes: Some(vec![name]),
+                ..Default::default()
+            });
+        }
+
+        Ok(packages)
     }
 
     pub(crate) fn from_toml(
@@ -268,9 +368,28 @@ pub(crate) enum CargoWorkspaceError {
     UnknownFile(#[from] UnknownFile),
 }
 
+#[derive(Debug, Diagnostic, thiserror::Error)]
+pub(crate) enum NPMWorkspaceError {
+    #[error("Could not process workspaces glob pattern {pattern} in package.json: {source}")]
+    #[diagnostic(code(workspaces::npm_glob))]
+    Glob {
+        pattern: String,
+        source: glob::PatternError,
+    },
+    #[error("Could not find a name in {path}")]
+    #[diagnostic(code(workspaces::npm_no_name))]
+    NoName { path: RelativePathBuf },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    UnknownFile(#[from] UnknownFile),
+}
+
 #[derive(Debug, Diagnostic, Error)]
 pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     CargoWorkspace(#[from] CargoWorkspaceError),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NPMWorkspace(#[from] NPMWorkspaceError),
 }

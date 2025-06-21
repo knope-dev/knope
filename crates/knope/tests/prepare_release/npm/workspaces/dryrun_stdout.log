@@ -1,0 +1,33 @@
+Would add the following to first/package.json: version = 0.2.0, secondPackage = 2.1.0, thirdPackage = 3.0.1
+Would add the following to package-lock.json: firstPackage = 0.2.0, secondPackage = 2.1.0, thirdPackage = 3.0.1
+Would add the following to others/second/package.json: version = 2.1.0, thirdPackage = 3.0.1
+Would add the following to others/third/package.json: version = 3.0.1
+Would add the following to first/CHANGELOG.md: 
+## 0.2.0 ([DATE])
+
+### Breaking Changes
+
+- Breaking
+
+Would add the following to others/second/CHANGELOG.md: 
+## 2.1.0 ([DATE])
+
+### Features
+
+- Add new feature
+
+Would add the following to others/third/CHANGELOG.md: 
+## 3.0.1 ([DATE])
+
+### Fixes
+
+- A fix
+
+Would add files to git:
+  first/package.json
+  package-lock.json
+  others/second/package.json
+  others/third/package.json
+  first/CHANGELOG.md
+  others/second/CHANGELOG.md
+  others/third/CHANGELOG.md
