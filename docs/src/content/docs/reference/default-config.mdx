@@ -2,6 +2,8 @@
 title: "Default config"
 ---
 
+import { Badge, FileTree } from "@astrojs/starlight/components";
+
 Knope has some default configuration for things that aren't specified in a `knope.toml` file
 (either when the file isn't present, or when there are missing sections).
 
@@ -94,6 +96,45 @@ versioned_files = [
     { path = "member1/Cargo.toml", dependency = "something-else" },
 ]
 scopes = ["something-else"]
+```
+
+### NPM Workspaces <Badge text="Knope 0.21.0+" variant="tip" />
+
+If there's a `package.json` file in the current directory with `workspaces` defined, Knope will create a package for each
+workspace.
+
+```json title="package.json"
+{ "workspaces": ["member1", "others/*"] }
+```
+
+The names of these packages are from the `name` in their respective `package.json` files, not the directory name.
+Knope will also attempt to detect dependencies **by package name** between members and keep them up to date.
+
+For the above `package.json` which defines workspaces, with this file tree:
+
+<FileTree>
+  - package.json # Workspace - package-lock.json - member1/ - package.json #
+  name = "first", depends on "second" - others/ - member2/ - package.json # name
+  = "second" - anotherDir/
+</FileTree>
+
+The default `knope.toml` file will look something like this:
+
+```toml title="Default knope.toml"
+[packages.first]
+versioned_files = [
+    "member1/package.json",
+    { path = "package-lock.json", dependency = "first" },
+]
+scopes = ["first"]
+
+[packages.something-else]
+versioned_files = [
+    "others/member2/package.json",
+    { path = "package-lock.json", dependency = "second" },
+    { path = "member1/package.json", dependency = "second" },
+]
+scopes = ["second"]
 ```
 
 ## Workflows

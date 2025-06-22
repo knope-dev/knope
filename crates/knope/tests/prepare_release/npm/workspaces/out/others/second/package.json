@@ -1,0 +1,7 @@
+{
+  "name": "secondPackage",
+  "version": "2.1.0",
+  "devDependencies": {
+    "thirdPackage": "3.0.1"
+  }
+}
