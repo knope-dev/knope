@@ -1,3 +1,9 @@
+## 0.2.4 (2025-06-23)
+
+### Fixes
+
+- Update relative-path dependency
+
 ## 0.2.3 (2025-05-03)
 
 ### Features
