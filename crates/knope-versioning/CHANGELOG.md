@@ -1,3 +1,47 @@
+## 0.4.2 (2025-06-23)
+
+### Features
+
+#### Add support for dependencies in `package.json` files
+
+You can now update the `dependencies` and `devDependencies` of a `package.json` like this:
+
+```toml
+[package]
+versioned_files = [
+  # Update @my/package-name in dependencies and devDependencies whenever this package version updates
+  { path = "package.json", dependency = "@my/package-name" }
+]
+```
+
+#### Support `package-lock.json` files
+
+`package-lock.json` files are [now supported](https://knope.tech/reference/config-file/packages/#package-lockjson)
+as `versioned_files` both for single packages and dependencies (in monorepos).
+
+These files will be auto-detected and updated if using the default (no `[package]` or `[packages]`) config, so
+this is a breaking change for those users.
+
+### Fixes
+
+#### Fix multiple versioned files with same path
+
+Previously, if you referenced the same file multiple times in versioned_files, only the first instance would apply.
+Now, if you reference the same path multiple times, each instance will be processed sequentially.
+
+Consider a mono-repo where every package should be versioned in lockstep:
+
+```toml
+[package]
+versioned_files = [
+  "package.json",
+  { path = "package.json", dependency = "aDependency" },  # Before this fix, this was ignored
+  "aDependency/package.json"
+]
+```
+
+This use-case is now supported!
+
 ## 0.4.1 (2025-04-05)
 
 ### Features
