@@ -10,61 +10,6 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
-## 0.21.0 (2025-06-22)
-
-### Breaking Changes
-
-#### Change to default handling of top-level `package.json` files
-
-When using the default config (no `[package]` or `[packages]`), Knope will now treat a top-level `package.json` file
-which contains a `workspaces` property as the entrypoint into a monorepo and _not_ a single versioned_file package.
-
-#### Support `package-lock.json` files
-
-`package-lock.json` files are [now supported](https://knope.tech/reference/config-file/packages/#package-lockjson)
-as `versioned_files` both for single packages and dependencies (in monorepos).
-
-These files will be auto-detected and updated if using the default (no `[package]` or `[packages]`) config, so
-this is a breaking change for those users.
-
-### Features
-
-#### Add support for dependencies in `package.json` files
-
-You can now update the `dependencies` and `devDependencies` of a `package.json` like this:
-
-```toml
-[package]
-versioned_files = [
-  # Update @my/package-name in dependencies and devDependencies whenever this package version updates
-  { path = "package.json", dependency = "@my/package-name" }
-]
-```
-
-#### Support for NPM workspaces
-
-Knope now supports NPM-style workspaces [when using the default config](https://knope.tech/reference/default-config/#npm-workspaces)!
-
-### Fixes
-
-#### Fix multiple versioned files with same path
-
-Previously, if you referenced the same file multiple times in versioned_files, only the first instance would apply.
-Now, if you reference the same path multiple times, each instance will be processed sequentially.
-
-Consider a mono-repo where every package should be versioned in lockstep:
-
-```toml
-[package]
-versioned_files = [
-  "package.json",
-  { path = "package.json", dependency = "aDependency" },  # Before this fix, this was ignored
-  "aDependency/package.json"
-]
-```
-
-This use-case is now supported!
-
 ## 0.20.0 (2025-05-03)
 
 ### Breaking Changes
