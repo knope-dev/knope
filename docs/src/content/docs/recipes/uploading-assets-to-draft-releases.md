@@ -27,7 +27,7 @@ release as a draft instead of a published release.
 :::tip
 
 This also works for monorepos with multiple packages. Only packages with
-`aasets` set are set to draft.
+`assets` set are set to draft.
 
 :::
 
@@ -44,9 +44,11 @@ jobs:
   get-tag:
     if: (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4.2.2
-      - run: echo "tag_name=$(gh release list --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
+      - name: "Get tag of draft release"
+        run: echo "tag_name=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ github.token }}
         id: get-tag
@@ -104,14 +106,17 @@ The first job "get-tag" then determines what the GitHub release is that needs
 to be edited.
 This job only runs if the pull request was a _release_ pull request,
 and only if the pull request merged (not just closed).
+Getting details about a _draft_ release requires privileged "write" permissions.
 
 ```yaml
 get-tag:
   if: (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
   runs-on: ubuntu-latest
+  permissions:
+    contents: write
   steps:
-    - uses: actions/checkout@v4.2.2
-    - run: echo "tag_name=$(gh release list --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
+    - name: "Get tag of draft release"
+      run: echo "tag_name=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
       env:
         GH_TOKEN: ${{ github.token }}
       id: get-tag
