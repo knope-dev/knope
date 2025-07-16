@@ -16,6 +16,13 @@
         "/^@?astro/",
         "starlight"
       ]
+    },
+    {
+      "groupName": "toml",
+      "matchPackageNames": [
+        "toml",
+        "toml_edit"
+      ]
     }
   ],
   "customManagers": [
