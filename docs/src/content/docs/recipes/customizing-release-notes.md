@@ -1,8 +1,8 @@
 ---
-title: Customizing changelogs
+title: Customizing release notes
 ---
 
-You don't have to settle for the built-in changelog sections,
+You don't have to settle for the built-in changelog formatting,
 there are a number of ways to customize generated changelogs.
 Each top-level heading on this page is a different way to customize.
 You can skip right to the most interesting one for you.

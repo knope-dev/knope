@@ -1,6 +1,5 @@
 use std::{fmt::Display, sync::Arc};
 
-pub use changeset::CHANGESET_DIR;
 use git_conventional::FooterToken;
 
 use crate::{
@@ -8,8 +7,9 @@ use crate::{
     release_notes::{CommitFooter, CustomChangeType, SectionSource},
 };
 
-mod changeset;
 pub mod conventional_commit;
+
+pub const CHANGESET_DIR: &str = ".changeset";
 
 /// A change to one or more packages.
 #[derive(Clone, Debug, Eq, PartialEq)]

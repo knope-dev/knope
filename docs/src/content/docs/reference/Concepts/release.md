@@ -8,13 +8,13 @@ In Knope, releasing a package consists of:
 
 1. Determining the new [semantic version]
 2. Update all versioned files with the new version
-3. Add the details of all changes since the last release to the [changelog]
+3. Add [release notes] to the [changelog] (if configured)
 4. Create a [Git tag](#git-tags)
-5. Optionally create a release (as part of the previous step) if [a forge is configured](/reference/concepts/forge)
+5. Optionally create a release (as part of the previous step) if [a forge is configured](/reference/concepts/forge) including [release notes]
 
-:::tip
+:::note
 
-This is how the [built-in release workflow](/reference/default-config) works.
+
 
 :::
 
@@ -45,3 +45,4 @@ If you have named packages, it's important that _either_:
 [package]: /reference/concepts/package
 [semantic version]: /reference/concepts/semantic-versioning
 [changelog]: /reference/concepts/changelog
+[release notes]: /reference/concepts/release-notes
