@@ -14,11 +14,15 @@ Before starting, here is how a [version in a changelog](/reference/concepts/chan
 
 ### Breaking changes
 
-#### A breaking change
+- Simple breaking change
+
+#### Complex breaking change
 
 Some details about that change
 
 ### Features
+
+- Simple feature
 
 #### A new feature
 
@@ -26,44 +30,23 @@ Some details about that feature
 
 ### Fixes
 
+- Simple fix
+
 #### A bug fix
 
 Some details about that fix
 
 ### Notes
 
+- Simple note
+
 #### A note
 
 Some details about that note
 ```
 
-Knope will always include these sections in the same order, but it only includes sections which contain changes.
-
-## Changing the header level
-
-By default, the heading of a version is `##`, each section is `###`, and each [complex change](/reference/concepts/changelog/#simple-vs-complex-changes) is `####`.
-The _relative_ level of those sections is always the same,
-but you can change each version to be a top-level heading (`#`)
-by modifying the last version in the changelog to be that level.
-Knope looks for the previous version to decide the level of the next version.
-
-:::caution
-Knope expects versions in the changelog to look similar to how it would generate them,
-specifically it _must_ start with a valid [semantic version](/reference/concepts/semantic-versioning).
-If you have a different format for your pre-existing headers, you'll need to update the _latest_ version to Knope's format.
-:::
-
-```markdown
-# 2.0.0 (2023-10-31)
-
-## Breaking changes
-
-- A breaking change
-
-# 1.0.0
-
-This was edited to be a top-level heading
-```
+This is using the [default sections](/reference/concepts/release-notes#sections) at the recommended [header level](#changing-the-header-level) and the 
+default [change templates](#customizing-change-entries). Only sections containing at least one change are included.
 
 ## Adding more sections
 
@@ -127,3 +110,82 @@ Now, when running a [`CreateChangeFile`](/reference/config-file/steps/create-cha
 > note
 [↑↓ to move, enter to select, type to filter]
 ```
+
+## Customizing change entries
+
+By default, there are two was a change might appear in release notes, depending on whether the change is[simple or complex](/reference/concepts/release-notes#simple-vs-complex-changes).
+You can add custom templates for rendering changes [to your config file](/reference/config-file/release-notes):
+
+```toml
+[release-notes]
+change_templates = [
+    "* $summary by $commitAuthorName ($commitHash)",
+    "### $summary\n\n$details",
+    "### $summary",
+]
+```
+
+Knope will attempt to apply any templates in order from top to bottom, skipping ones where the a variable can't be 
+applied. So in the above example:
+
+1. If the change was a conventional commit, and therefore as `$commitAuthorName` and `$commitHash`, use the first template.
+2. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.
+3. Use the third template (all changes have a `$summary`).
+
+:::note
+
+You can find all the available variables for `change_templates` in [the config reference](/reference/config-file/release-notes).
+
+:::
+
+If Knope gets to the end of the list and hasn't found a applicable template, it uses defaults which are equivalent to:
+
+```toml
+[release-notes]
+change_templates = [
+    "### $summary\n\n$details",
+    "- $summary",
+]
+```
+
+:::note
+
+The order of the templates _only_ determines their precedence, not the order that changes appear in the release notes.
+The order of changes in the release notes currently can't be customized.
+
+:::
+
+## Changing the header level
+
+:::note
+
+This affects [changelogs][changelog] only, not releases on [forges][forge].
+
+:::
+
+By default, the heading of a version is `##`, each section is `###`, and each [complex change](/reference/concepts/release-notes/#simple-vs-complex-changes) is `####`.
+The _relative_ level of those sections is always the same,
+but you can change each version to be a top-level heading (`#`)
+by modifying the last version in the changelog to be that level.
+Knope looks for the previous version to decide the level of the next version.
+
+:::caution
+Knope expects versions in the changelog to look similar to how it would generate them,
+specifically it _must_ start with a valid [semantic version](/reference/concepts/semantic-versioning).
+If you have a different format for your pre-existing headers, you'll need to update the _latest_ version to Knope's format.
+:::
+
+```markdown
+# 2.0.0 (2023-10-31)
+
+## Breaking changes
+
+- A breaking change
+
+# 1.0.0
+
+This was edited to be a top-level heading
+```
+
+[changelog]: /reference/concepts/changelog
+[forge]: /reference/concepts/forge
