@@ -30,7 +30,6 @@ Some details about how versioning works, how to read the changelog, etc.
 Some details about that.
 ```
 
-
 Changelogs have a number of parts:
 
 ## Title (optional)
@@ -95,7 +94,6 @@ Some details about the fixing
 
 Knope sorts versions from newest to oldest,
 so the most recent version is near the top of the changelog right after the optional title and introduction.
-
 
 [package]: /reference/concepts/package
 [release notes]: /reference/concepts/release-notes

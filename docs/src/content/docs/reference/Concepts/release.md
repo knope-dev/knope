@@ -14,8 +14,6 @@ In Knope, releasing a package consists of:
 
 :::note
 
-
-
 :::
 
 ## Git tags

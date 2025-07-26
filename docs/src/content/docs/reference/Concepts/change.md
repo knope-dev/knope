@@ -3,10 +3,10 @@ title: Change
 ---
 
 A change, in the context of Knope releases, is a single thing that is different from one release to another which is relevant to a user.
-Changes can be documented using either a [change file] or a 
+Changes can be documented using either a [change file] or a
 [conventional commit](/reference/concepts/conventional-commits).
 A Git commit may contain no changes, one change, or even many changes.
-Each change appears in the project's [release notes](/reference/concepts/release-notes) and affects a package's 
+Each change appears in the project's [release notes](/reference/concepts/release-notes) and affects a package's
 [version](/reference/concepts/semantic-versioning).
 
 ## Example changes
@@ -35,7 +35,7 @@ this is a breaking change for those users.
 
 ### A feature
 
-We enhanced the `--verbose` flag to be more verbose. Not a ton of detail to add, so we can document this with a simple 
+We enhanced the `--verbose` flag to be more verbose. Not a ton of detail to add, so we can document this with a simple
 [conventional commit].
 
 ```
@@ -45,7 +45,7 @@ feat(knope): Print each step before it runs when `--verbose` is set (#1399)
 ### A bug fix
 
 Here we have a complex bug fix that requires some explaining.
-It's important to let users know what happened here in case they were relying on the old behavior! 
+It's important to let users know what happened here in case they were relying on the old behavior!
 
 ````markdown
 ---
@@ -74,7 +74,7 @@ This use-case is now supported!
 ### A note
 
 We updated the minimum supported Rust version of Knope.
-This isn't expected to impact most users, but _may_ impact anyone redistributing Knope, so we include it as a simple 
+This isn't expected to impact most users, but _may_ impact anyone redistributing Knope, so we include it as a simple
 `Note` using a conventional commit footer:
 
 ```
@@ -99,7 +99,7 @@ chore: Updated TOML parser to 0.9
 Some cases where the user _might_ care:
 
 1. You are publishing a library, and updating the dependency allows the user to clean up their own dependency tree.
-    Include these changes as a `Note`.
+   Include these changes as a `Note`.
 2. The dependency contained a security issue _which impacted the project_. Note the relevant issue and its fix under `Fixes`.
 3. Updating the dependency changes the behavior of your program. Note the relevant changes as `Breaking Changes`
 
@@ -111,7 +111,7 @@ If the refactor was part of implementing some fix, performance improvement, or n
 
 ### Fixing typos in the docs
 
-There are definitely times you'll want to inform users that a new docs article exists, but _most_ of the time docs 
+There are definitely times you'll want to inform users that a new docs article exists, but _most_ of the time docs
 changes impact _future_ users, not current users (who are reading your release notes).
 
 ### Changes to your CI/CD process
