@@ -894,7 +894,7 @@ For additional details, see:
 
 - [`PrepareRelease` step](https://knope.tech/reference/config-file/steps/prepare-release/)
 - [`CreateChangeFile` step](https://knope.tech/reference/config-file/steps/create-change-file/)
-- [Customizing changelogs](https://knope.tech/recipes/customizing-changelogs/)
+- [Customizing changelogs](https://knope.tech/recipes/customizing-release-notes/)
 
 ## 0.7.4
 

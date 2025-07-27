@@ -58,14 +58,14 @@ for example "Breaking changes" or "Features."
 ```
 
 Following the section heading, there's at least one change.
-[Simple changes](#simple-vs-complex-changes) will appear as bullets immediately under the section heading:
+[Simple changes][simple-vs-complex-changes] will appear as bullets immediately under the section heading:
 
 ```markdown
 - A very easy to describe change
 - Another as well
 ```
 
-Next, [complex changes](#simple-vs-complex-changes) will each get a heading (two levels below the version heading):
+Next, [complex changes][simple-vs-complex-changes] will each get a heading (two levels below the version heading):
 
 ```markdown
 #### A breaking change
@@ -98,3 +98,4 @@ so the most recent version is near the top of the changelog right after the opti
 [package]: /reference/concepts/package
 [release notes]: /reference/concepts/release-notes
 [release]: /reference/concepts/release
+[simple-vs-complex-changes]: /reference/concepts/release-notes#simple-vs-complex-changes
