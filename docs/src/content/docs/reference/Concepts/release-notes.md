@@ -75,7 +75,7 @@ You can [customize] these sections.
 ## Simple vs complex changes
 
 Knope divides each change section into simple and complex changes.
-Changes that are descibed by only a single sentence are simple changes. All changes which come from a [conventional commit] are simple changes.
+Changes that are described by only a single sentence are simple changes. All changes which come from a [conventional commit] are simple changes.
 Additionally, any [change file] with only a header in is a simple change.
 Knope includes simple changes as bullets at the top of a section.
 
@@ -89,7 +89,7 @@ For example, `feat: a simple feature` and a change file containing only `# Anoth
 ```
 
 Complex changes are [change files][change file] that have content below their header. Each complex change gets its own sub-section with
-a header. Headers are auto-adjusted to the appropriate level for the changelog or release. For example, this change file:
+a header. Headers are auto adjusted to the appropriate level for the changelog or release. For example, this change file:
 
 ```markdown
 ---

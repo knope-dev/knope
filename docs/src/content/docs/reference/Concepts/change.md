@@ -2,8 +2,8 @@
 title: Change
 ---
 
-A change, in the context of Knope releases, is a single thing that is different from one release to another which is relevant to a user.
-Changes can be documented using either a [change file] or a
+A change, in the context of Knope releases, is a single thing that's different from one release to another which is relevant to a user.
+You can document changes using either a [change file] or a
 [conventional commit](/reference/concepts/conventional-commits).
 A Git commit may contain no changes, one change, or even many changes.
 Each change appears in the project's [release notes](/reference/concepts/release-notes) and affects a package's
@@ -44,7 +44,7 @@ feat(knope): Print each step before it runs when `--verbose` is set (#1399)
 
 ### A bug fix
 
-Here we have a complex bug fix that requires some explaining.
+Here we've a complex bug fix that requires some explaining.
 It's important to let users know what happened here in case they were relying on the old behavior!
 
 ````markdown
@@ -86,7 +86,7 @@ Changelog-Note: Update to Rust edition 2024 and MSRV 1.85
 ## Example non-changes
 
 Only changes that are relevant to users should be documented and result in a version increase.
-Documenting hidden changes clutters up the release notes, making it less likely that users will see what _is_ important.
+Documenting hidden changes clutters up the release notes, making it less likely that users will see what's important.
 
 ### Updating an internal dependency
 
