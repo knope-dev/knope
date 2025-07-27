@@ -13,7 +13,7 @@ mod config;
 mod release;
 
 /// Defines how release notes are handled for a package.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ReleaseNotes {
     pub sections: Sections,
     pub changelog: Option<Changelog>,
@@ -25,7 +25,7 @@ impl ReleaseNotes {
     /// # Errors
     ///
     /// If the current date can't be formatted
-    pub fn create_release(
+    pub(crate) fn create_release(
         &mut self,
         version: Version,
         changes: &[Change],
@@ -45,14 +45,16 @@ impl ReleaseNotes {
                 .sorted()
                 .collect_vec();
             if !changes.is_empty() {
-                notes.push_str("\n\n## ");
+                if !notes.is_empty() {
+                    notes.push_str("\n\n");
+                }
+                notes.push_str("## ");
                 notes.push_str(section_name.as_ref());
                 notes.push_str("\n\n");
-                notes.push_str(&build_body(changes));
+                write_body(&mut notes, changes);
             }
         }
 
-        let notes = notes.trim().to_string();
         let release = Release {
             title: release_title(&version)?,
             version,
@@ -132,25 +134,23 @@ impl From<&Change> for ChangeDescription {
     }
 }
 
-fn build_body(changes: Vec<ChangeDescription>) -> String {
-    let mut body = String::new();
+fn write_body(out: &mut String, changes: Vec<ChangeDescription>) {
     let mut changes = changes.into_iter().peekable();
     while let Some(change) = changes.next() {
         match change {
             ChangeDescription::Simple(summary) => {
-                write!(&mut body, "- {summary}").ok();
+                write!(out, "- {summary}").unwrap();
             }
             ChangeDescription::Complex(summary, details) => {
-                write!(&mut body, "### {summary}\n\n{details}").ok();
+                write!(out, "### {summary}\n\n{details}").unwrap();
             }
         }
         match changes.peek() {
-            Some(ChangeDescription::Simple(_)) => body.push('\n'),
-            Some(ChangeDescription::Complex(_, _)) => body.push_str("\n\n"),
+            Some(ChangeDescription::Simple(_)) => out.push('\n'),
+            Some(ChangeDescription::Complex(_, _)) => out.push_str("\n\n"),
             None => (),
         }
     }
-    body
 }
 
 /// Create the title of a new release with no Markdown header level.
@@ -162,6 +162,58 @@ fn release_title(version: &Version) -> Result<String, TimeError> {
     let format = format_description!("[year]-[month]-[day]");
     let date_str = OffsetDateTime::now_utc().date().format(&format)?;
     Ok(format!("{version} ({date_str})"))
+}
+
+#[cfg(test)]
+mod test_release_notes {
+    use std::sync::Arc;
+
+    use changesets::UniqueId;
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+    use crate::changes::{ChangeSource, ChangeType};
+
+    #[test]
+    fn simple_changes_before_complex() {
+        let changes = vec![
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                description: "# a complex feature\n\nsome details\n\n\n\n    ".into(),
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                description: "# a simple feature".into(),
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit(String::new()),
+                description: "a super simple feature".into(),
+            },
+        ];
+
+        let mut actions = ReleaseNotes::create_release(
+            &mut ReleaseNotes::default(),
+            Version::new(1, 0, 0, None),
+            &changes,
+            &package::Name::Default,
+        )
+        .expect("can create release notes");
+        assert_eq!(actions.len(), 1);
+
+        let action = actions.pop().unwrap();
+
+        let Action::CreateRelease(release) = action else {
+            panic!("expected release action");
+        };
+
+        assert_eq!(
+            release.notes,
+            "## Features\n\n- a simple feature\n- a super simple feature\n\n### a complex feature\n\nsome details"
+        );
+    }
 }
 
 #[cfg(test)]
