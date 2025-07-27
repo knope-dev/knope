@@ -9,6 +9,7 @@ A Git commit may contain no changes, one change, or even many changes.
 Each change appears in the project's [release notes](/reference/concepts/release-notes) and affects a package's
 [version](/reference/concepts/semantic-versioning).
 
+<!-- vale Microsoft.We = NO -->
 ## Example changes
 
 ### A breaking change
@@ -83,15 +84,14 @@ chore: Update Rust
 Changelog-Note: Update to Rust edition 2024 and MSRV 1.85
 ```
 
-<!-- vale Microsoft.We = NO -->
 ## Example non-changes
 
-Only changes that are relevant to users should be documented and result in a version increase.
-Documenting hidden changes clutters up the release notes, making it less likely that users will see what'sm important.
+You should only document changes that are relevant to users and result in a version increase.
+Documenting hidden changes clutters up the release notes, making it less likely that users will see what's important.
 
 ### Updating an internal dependency
 
-Unless updating the dependency changes the behavior for the user in some way, they won't care that it was updated!
+Unless updating the dependency changes the behavior for the user in some way, they won't care about this change.
 
 ```
 chore: Updated TOML parser to 0.9
@@ -99,7 +99,7 @@ chore: Updated TOML parser to 0.9
 
 Some cases where the user _might_ care:
 
-1. You are publishing a library, and updating the dependency allows the user to clean up their own dependency tree.
+1. You're publishing a library and updating the dependency enables the user to clean up their own dependency tree.
    Include these changes as a `Note`.
 2. The dependency contained a security issue _which impacted the project_. Note the relevant issue and its fix under `Fixes`.
 3. Updating the dependency changes the behavior of your program. Note the relevant changes as `Breaking Changes`
