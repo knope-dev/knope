@@ -3,7 +3,7 @@ title: Changelog
 ---
 
 In Knope, a changelog is a Markdown file that documents every change **relevant to users** for a [package].
-This is one of the places that knope places [release notes] during a [release].
+This is one of the places that Knope places [release notes] during a [release].
 
 The changelog contains the entire history of changes for a package, sorted from newest to oldest:
 
