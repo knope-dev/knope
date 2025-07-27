@@ -10,6 +10,7 @@ Each change appears in the project's [release notes](/reference/concepts/release
 [version](/reference/concepts/semantic-versioning).
 
 <!-- vale Microsoft.We = NO -->
+
 ## Example changes
 
 ### A breaking change
@@ -112,10 +113,10 @@ If the refactor was part of implementing some fix, performance improvement, or n
 
 ### Fixing typos in the docs
 
-There are definitely times you'll want to inform users that a new docs article exists, but _most_ of the time docs
-changes impact _future_ users, not current users (who are reading your release notes).
+There are times you'll want to tell users about a new article, but _most_ of the time docs
+changes impact _future_ users, not current users. Release notes are usually for current users.
 
-### Changes to your CI/CD process
+### Changes to your build or release process
 
 Things which only impact developers of your project and not the _users_ of the project don't belong in the changelog.
 You should definitely notify developers of significant change, but that should use a channel other than releases.

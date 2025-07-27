@@ -2,16 +2,16 @@
 title: Release notes
 ---
 
-Release notes are information about a particular version of a [package]. The goal is to provide users of your project
-with important information about _why_ they should want to update to the new version (like new features, better performance, or bug fixes)
-as well as any challenges they might face when upgrading (like breaking changes).
+Release notes are information about a particular version of a [package].
+The goal is to tell your users _why_ they should update to a new version
+and what challenges they may face when upgrading.
 
 Most projects have their release notes in two difference places:
 
 1. A markdown file called a [changelog] which lists the entire version history for a package in one place
-2. A tagged [release] on a [forge] (like GitHub) where users can be notified of new versions
+2. A tagged [release] on a [forge] (like GitHub) which can notify users of new versions
 
-It's important for both of these locations (if both are used) to be consistent and accurate, so they're generated
+It's important for these locations to be consistent and accurate, so Knope generates them
 from the same sources and in _almost_ the same format.
 
 :::tip
