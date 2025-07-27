@@ -48,7 +48,7 @@ Some details about that note
 ```
 
 This is using the [default sections](/reference/concepts/release-notes#sections) at the recommended [header level](#changing-the-header-level) and the
-default [change templates](#customizing-change-entries). Only sections containing at least one change are included.
+default [change templates](#customizing-change-entries). Knope only includes sections containing at least one change.
 
 ## Adding more sections
 
@@ -127,8 +127,8 @@ change_templates = [
 ]
 ```
 
-Knope will attempt to apply any templates in order from top to bottom, skipping ones where a variable can't be
-applied. So in the above example:
+Knope will attempt to apply any templates in order from top to bottom, skipping ones where a variable isn't relevant.
+So in the above example:
 
 1. If the change was a conventional commit, and therefore as `$commit_author_name` and `$commit_hash`, use the first template.
 2. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.

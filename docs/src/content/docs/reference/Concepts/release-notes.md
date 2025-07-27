@@ -53,8 +53,9 @@ The version number and date also go in a separate title attribute for a forge, n
 
 ## Sections
 
-Every change is assigned to a section within the changelog, like `## Fixes` above. These sections are determined by the
-change type of a [change file] or the type or footer of a [conventional commit]. Sections have a fixed order that they
+Knope assigns each change to a section within the release notes, like `## Fixes` or `## Features`.
+Knope decides which section a change belongs to based on the type of a [change file] or the type or footer of a [conventional commit].
+Sections have a fixed order that they
 always appear in, but the section itself only appears if it contains at least one change.
 
 The default sections are:
@@ -75,7 +76,7 @@ You can [customize] these sections.
 ## Simple vs complex changes
 
 Knope divides each change section into simple and complex changes.
-Changes that are described by only a single sentence are simple changes. All changes which come from a [conventional commit] are simple changes.
+Changes that are only a single sentence are simple changes. All changes which come from a [conventional commit] are simple changes.
 Additionally, any [change file] with only a header in is a simple change.
 Knope includes simple changes as bullets at the top of a section.
 
@@ -116,8 +117,8 @@ With a more complicated description.
 
 :::tip
 
-You can [customize] how each change appears, but they will always be listed with simple first, followed by complex
-within their section.
+You can [customize] how each change appears, but Knope will always list simple changes first, followed by complex
+within a section.
 
 :::
 
