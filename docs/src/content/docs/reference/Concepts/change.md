@@ -83,10 +83,11 @@ chore: Update Rust
 Changelog-Note: Update to Rust edition 2024 and MSRV 1.85
 ```
 
+<!-- vale Microsoft.We = NO -->
 ## Example non-changes
 
 Only changes that are relevant to users should be documented and result in a version increase.
-Documenting hidden changes clutters up the release notes, making it less likely that users will see what's important.
+Documenting hidden changes clutters up the release notes, making it less likely that users will see what'sm important.
 
 ### Updating an internal dependency
 
