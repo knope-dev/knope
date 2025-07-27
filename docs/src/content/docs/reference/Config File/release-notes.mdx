@@ -4,7 +4,7 @@ title: Release Notes
 
 import { Badge } from "@astrojs/starlight/components";
 
-The `[release_notes]` section of `knope.toml` allows you to customize how [release notes] are rendered, both as
+The `[release_notes]` section of `knope.toml` customizes how Knope renders [release notes], both as
 [changelogs][changelog] and [forge] releases.
 
 ## `change_templates` <Badge text="Knope 0.21.1+" variant="tip" />
@@ -21,15 +21,14 @@ See also the [customizing release notes guide](/recipes/customizing-release-note
 [release_notes]
 change_templates = [
     "* $summary by $commit_author_name ($commit_hash)",
-    "### $summary\n\n$details",
-    "- $summary",
 ]
 ```
 
 Different variables are available for different types of [changes][change].
 Knope will use the first template containing _only_ valid variables for a given change.
-If no template can be used, Knope will use a default template.
-In the above example, the last two entries are equivalent the to default templates.
+If no template is applicable, Knope will use a default template.
+The default templates are equivalent to `["### $summary\n\n$details", "- $summary"]`, using a small Markdown section for
+complex changes and a single bullet for simple changes.
 
 ### Variables
 
