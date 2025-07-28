@@ -1,0 +1,16 @@
+[release_notes]
+change_templates = [
+  "* $summary by $commit_author_name ($commit_hash)",
+  "## $summary\n\n\n$details",
+  "* $summary",
+]
+
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

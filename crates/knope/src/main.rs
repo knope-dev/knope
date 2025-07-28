@@ -209,6 +209,7 @@ fn create_state(
     mut sub_matches: Option<&mut ArgMatches>,
 ) -> Result<(State, Vec<Workflow>)> {
     let Config {
+        release_notes,
         packages,
         workflows,
         jira,
@@ -221,7 +222,7 @@ fn create_state(
     } else {
         all_tags_on_branch().unwrap_or_default()
     };
-    let (mut packages, versioned_files) = Package::load(packages, &git_tags)?;
+    let (mut packages, versioned_files) = Package::load(&release_notes, packages, &git_tags)?;
     if let Some(version_override) = sub_matches
         .as_deref_mut()
         .and_then(|matches| matches.try_remove_one::<Version>(OVERRIDE_ONE_VERSION).ok())

@@ -1,8 +1,15 @@
-use git_conventional::{Commit, Footer, Type};
+use git_conventional::{Commit as ConventionalCommit, Footer, Type};
 use tracing::debug;
 
 use super::{Change, ChangeSource, ChangeType};
 use crate::release_notes::Sections;
+
+#[derive(Clone, Debug, Default)]
+pub struct Commit {
+    pub message: String,
+    pub author_name: Option<String>,
+    pub hash: Option<String>,
+}
 
 /// Try to parse each commit message as a [conventional commit](https://www.conventionalcommits.org/).
 ///
@@ -11,25 +18,25 @@ use crate::release_notes::Sections;
 /// 1. If the commit message doesn't follow the conventional commit format, it is ignored.
 /// 2. For non-standard change types, only those included will be considered.
 /// 3. For non-standard footers, only those included will be considered.
-pub(crate) fn changes_from_commit_messages<'a, Message: AsRef<str>>(
-    commit_messages: &'a [Message],
+pub(crate) fn changes_from_commit_messages<'a>(
+    commit_messages: &'a [Commit],
     scopes: Option<&'a Vec<String>>,
     changelog_sections: &'a Sections,
 ) -> impl Iterator<Item = Change> + 'a {
     if let Some(scopes) = scopes {
         debug!("Only checking commits with scopes: {scopes:?}");
     }
-    commit_messages.iter().flat_map(move |message| {
-        changes_from_commit_message(message.as_ref(), scopes, changelog_sections).into_iter()
+    commit_messages.iter().flat_map(move |commit| {
+        changes_from_commit_message(commit, scopes, changelog_sections).into_iter()
     })
 }
 
 fn changes_from_commit_message(
-    commit_message: &str,
+    commit_info: &Commit,
     scopes: Option<&Vec<String>>,
     changelog_sections: &Sections,
 ) -> Vec<Change> {
-    let Some(commit) = Commit::parse(commit_message.trim()).ok() else {
+    let Some(commit) = ConventionalCommit::parse(commit_info.message.trim()).ok() else {
         return Vec::new();
     };
     let mut has_breaking_footer = false;
@@ -55,11 +62,13 @@ fn changes_from_commit_message(
         }
         changes.push(Change {
             change_type: footer.token().into(),
-            description: footer.value().into(),
-            original_source: ChangeSource::ConventionalCommit(format_commit_footer(
-                &commit_summary,
-                footer,
-            )),
+            summary: footer.value().into(),
+            details: None,
+            original_source: ChangeSource::ConventionalCommit {
+                description: format_commit_footer(&commit_summary, footer),
+                author_name: commit_info.author_name.clone(),
+                hash: commit_info.hash.clone(),
+            },
         });
     }
 
@@ -75,14 +84,19 @@ fn changes_from_commit_message(
 
     changes.push(Change {
         change_type: commit_description_change_type,
-        description: commit.description().into(),
-        original_source: ChangeSource::ConventionalCommit(commit_summary),
+        summary: commit.description().into(),
+        details: None,
+        original_source: ChangeSource::ConventionalCommit {
+            description: commit_summary,
+            author_name: commit_info.author_name.clone(),
+            hash: commit_info.hash.clone(),
+        },
     });
 
     changes
 }
 
-fn format_commit_summary(commit: &Commit) -> String {
+fn format_commit_summary(commit: &ConventionalCommit) -> String {
     let commit_scope = commit
         .scope()
         .map(|s| s.to_string())
@@ -128,10 +142,22 @@ mod tests {
     #[test]
     fn commit_types() {
         let commits = &[
-            "fix: a bug",
-            "fix!: a breaking bug fix",
-            "feat!: add a feature",
-            "feat: add another feature",
+            Commit {
+                message: "fix: a bug".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "fix!: a breaking bug fix".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "feat!: add a feature".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "feat: add another feature".to_string(),
+                ..Default::default()
+            },
         ];
         let changes =
             changes_from_commit_messages(commits, None, &Sections::default()).collect_vec();
@@ -140,29 +166,43 @@ mod tests {
             vec![
                 Change {
                     change_type: ChangeType::Fix,
-                    description: "a bug".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from("fix: a bug")),
+                    summary: "a bug".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("fix: a bug"),
+                        author_name: None,
+                        hash: None,
+                    },
                 },
                 Change {
                     change_type: ChangeType::Breaking,
-                    description: "a breaking bug fix".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "fix!: a breaking bug fix"
-                    )),
+                    summary: "a breaking bug fix".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("fix!: a breaking bug fix",),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Breaking,
-                    description: "add a feature".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "feat!: add a feature"
-                    )),
+                    summary: "add a feature".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("feat!: add a feature"),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Feature,
-                    description: "add another feature".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "feat: add another feature"
-                    )),
+                    summary: "add another feature".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("feat: add another feature"),
+                        author_name: None,
+                        hash: None
+                    },
                 }
             ]
         );
@@ -171,8 +211,14 @@ mod tests {
     #[test]
     fn separate_breaking_messages() {
         let commits = [
-            "fix: a bug\n\nBREAKING CHANGE: something broke",
-            "feat: a features\n\nBREAKING CHANGE: something else broke",
+            Commit {
+                message: "fix: a bug\n\nBREAKING CHANGE: something broke".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "feat: a features\n\nBREAKING CHANGE: something else broke".to_string(),
+                ..Default::default()
+            },
         ];
         let changes =
             changes_from_commit_messages(&commits, None, &Sections::default()).collect_vec();
@@ -181,29 +227,47 @@ mod tests {
             vec![
                 Change {
                     change_type: ChangeType::Breaking,
-                    description: "something broke".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "fix: a bug\n\tContaining footer BREAKING CHANGE: something broke"
-                    )),
+                    summary: "something broke".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from(
+                            "fix: a bug\n\tContaining footer BREAKING CHANGE: something broke"
+                        ),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Fix,
-                    description: "a bug".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from("fix: a bug")),
+                    summary: "a bug".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("fix: a bug"),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Breaking,
-                    description: "something else broke".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "feat: a features\n\tContaining footer BREAKING CHANGE: something else broke"
-                    )),
+                    summary: "something else broke".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from(
+                            "feat: a features\n\tContaining footer BREAKING CHANGE: something else broke"
+                        ),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Feature,
-                    description: "a features".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "feat: a features"
-                    )),
+                    summary: "a features".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("feat: a features"),
+                        author_name: None,
+                        hash: None
+                    },
                 },
             ]
         );
@@ -212,8 +276,14 @@ mod tests {
     #[test]
     fn scopes_used_but_none_defined() {
         let commits = [
-            "feat(scope)!: Wrong scope breaking change!",
-            "fix: No scope",
+            Commit {
+                message: "feat(scope)!: Wrong scope breaking change!".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "fix: No scope".to_string(),
+                ..Default::default()
+            },
         ];
         let changes =
             changes_from_commit_messages(&commits, None, &Sections::default()).collect_vec();
@@ -222,17 +292,23 @@ mod tests {
             vec![
                 Change {
                     change_type: ChangeType::Breaking,
-                    description: "Wrong scope breaking change!".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "feat(scope)!: Wrong scope breaking change!"
-                    )),
+                    summary: "Wrong scope breaking change!".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("feat(scope)!: Wrong scope breaking change!"),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Fix,
-                    description: "No scope".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "fix: No scope"
-                    )),
+                    summary: "No scope".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("fix: No scope"),
+                        author_name: None,
+                        hash: None
+                    },
                 }
             ]
         );
@@ -241,9 +317,18 @@ mod tests {
     #[test]
     fn filter_scopes() {
         let commits = [
-            "feat(wrong_scope)!: Wrong scope breaking change!",
-            "feat(scope): Scoped feature",
-            "fix: No scope",
+            Commit {
+                message: "feat(wrong_scope)!: Wrong scope breaking change!".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "feat(scope): Scoped feature".to_string(),
+                ..Default::default()
+            },
+            Commit {
+                message: "fix: No scope".to_string(),
+                ..Default::default()
+            },
         ];
 
         let changes = changes_from_commit_messages(
@@ -257,17 +342,23 @@ mod tests {
             vec![
                 Change {
                     change_type: ChangeType::Feature,
-                    description: "Scoped feature".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "feat(scope): Scoped feature"
-                    )),
+                    summary: "Scoped feature".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("feat(scope): Scoped feature"),
+                        author_name: None,
+                        hash: None
+                    },
                 },
                 Change {
                     change_type: ChangeType::Fix,
-                    description: "No scope".into(),
-                    original_source: ChangeSource::ConventionalCommit(String::from(
-                        "fix: No scope"
-                    )),
+                    summary: "No scope".into(),
+                    details: None,
+                    original_source: ChangeSource::ConventionalCommit {
+                        description: String::from("fix: No scope"),
+                        author_name: None,
+                        hash: None
+                    },
                 },
             ]
         );
@@ -275,7 +366,11 @@ mod tests {
 
     #[test]
     fn custom_footers() {
-        let commits = ["chore: ignored type\n\nignored-footer: ignored\ncustom-footer: hello"];
+        let commits = [Commit {
+            message: "chore: ignored type\n\nignored-footer: ignored\ncustom-footer: hello"
+                .to_string(),
+            ..Default::default()
+        }];
         let changelog_sections = Sections(vec![(
             "custom section".into(),
             vec![ChangeType::Custom(SectionSource::CommitFooter(
@@ -290,10 +385,15 @@ mod tests {
                 change_type: ChangeType::Custom(SectionSource::CommitFooter(
                     "custom-footer".into()
                 )),
-                description: "hello".into(),
-                original_source: ChangeSource::ConventionalCommit(String::from(
-                    "chore: ignored type\n\tContaining footer custom-footer: hello"
-                )),
+                summary: "hello".into(),
+                details: None,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::from(
+                        "chore: ignored type\n\tContaining footer custom-footer: hello"
+                    ),
+                    author_name: None,
+                    hash: None
+                },
             }]
         );
     }

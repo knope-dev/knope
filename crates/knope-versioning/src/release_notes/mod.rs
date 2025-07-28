@@ -1,12 +1,18 @@
-use std::{cmp::Ordering, fmt::Write};
+use std::{borrow::Cow, fmt::Write, iter::Peekable};
 
 pub use changelog::Changelog;
 pub use config::{CommitFooter, CustomChangeType, SectionName, SectionSource, Sections};
 use itertools::Itertools;
 pub use release::Release;
+use serde::Deserialize;
 use time::{OffsetDateTime, macros::format_description};
 
-use crate::{Action, changes::Change, package, semver::Version};
+use crate::{
+    Action,
+    changes::{Change, ChangeSource},
+    package,
+    semver::Version,
+};
 
 mod changelog;
 mod config;
@@ -17,6 +23,7 @@ mod release;
 pub struct ReleaseNotes {
     pub sections: Sections,
     pub changelog: Option<Changelog>,
+    pub change_templates: Vec<ChangeTemplate>,
 }
 
 impl ReleaseNotes {
@@ -33,25 +40,19 @@ impl ReleaseNotes {
     ) -> Result<Vec<Action>, TimeError> {
         let mut notes = String::new();
         for (section_name, sources) in self.sections.iter() {
-            let changes = changes
+            let mut changes = changes
                 .iter()
-                .filter_map(|change| {
-                    if sources.contains(&change.change_type) {
-                        Some(ChangeDescription::from(change))
-                    } else {
-                        None
-                    }
-                })
+                .filter(|change| sources.contains(&change.change_type))
                 .sorted()
-                .collect_vec();
-            if !changes.is_empty() {
+                .peekable();
+            if changes.peek().is_some() {
                 if !notes.is_empty() {
                     notes.push_str("\n\n");
                 }
                 notes.push_str("## ");
                 notes.push_str(section_name.as_ref());
                 notes.push_str("\n\n");
-                write_body(&mut notes, changes);
+                write_body(&mut notes, changes, &self.change_templates);
             }
         }
 
@@ -90,66 +91,33 @@ impl ReleaseNotes {
 )]
 pub struct TimeError(#[from] time::error::Format);
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum ChangeDescription {
-    Simple(String),
-    Complex(String, String),
-}
-
-impl Ord for ChangeDescription {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Self::Simple(_), Self::Complex(_, _)) => Ordering::Less,
-            (Self::Complex(_, _), Self::Simple(_)) => Ordering::Greater,
-            _ => Ordering::Equal,
-        }
-    }
-}
-
-impl PartialOrd for ChangeDescription {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl From<&Change> for ChangeDescription {
-    fn from(change: &Change) -> Self {
-        let mut lines = change
-            .description
-            .trim()
-            .lines()
-            .skip_while(|it| it.is_empty());
-        let summary: String = lines
-            .next()
-            .unwrap_or_default()
-            .chars()
-            .skip_while(|it| *it == '#' || *it == ' ')
-            .collect();
-        let body: String = lines.skip_while(|it| it.is_empty()).join("\n");
-        if body.is_empty() {
-            Self::Simple(summary)
-        } else {
-            Self::Complex(summary, body)
-        }
-    }
-}
-
-fn write_body(out: &mut String, changes: Vec<ChangeDescription>) {
-    let mut changes = changes.into_iter().peekable();
+fn write_body<'change>(
+    out: &mut String,
+    changes: Peekable<impl Iterator<Item = &'change Change>>,
+    templates: &[ChangeTemplate],
+) {
+    let mut changes = changes.peekable();
     while let Some(change) = changes.next() {
-        match change {
-            ChangeDescription::Simple(summary) => {
-                write!(out, "- {summary}").unwrap();
-            }
-            ChangeDescription::Complex(summary, details) => {
-                write!(out, "### {summary}\n\n{details}").unwrap();
-            }
-        }
-        match changes.peek() {
-            Some(ChangeDescription::Simple(_)) => out.push('\n'),
-            Some(ChangeDescription::Complex(_, _)) => out.push_str("\n\n"),
+        write_change(out, change, templates);
+
+        match changes.peek().map(|change| change.details.is_some()) {
+            Some(false) => out.push('\n'),
+            Some(true) => out.push_str("\n\n"),
             None => (),
         }
+    }
+}
+
+fn write_change(out: &mut String, change: &Change, templates: &[ChangeTemplate]) {
+    for template in templates {
+        if template.write(change, out) {
+            return;
+        }
+    }
+    if let Some(details) = &change.details {
+        write!(out, "### {summary}\n\n{details}", summary = change.summary).unwrap();
+    } else {
+        write!(out, "- {summary}", summary = change.summary).unwrap();
     }
 }
 
@@ -162,6 +130,61 @@ fn release_title(version: &Version) -> Result<String, TimeError> {
     let format = format_description!("[year]-[month]-[day]");
     let date_str = OffsetDateTime::now_utc().date().format(&format)?;
     Ok(format!("{version} ({date_str})"))
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct ChangeTemplate(Cow<'static, str>);
+
+impl ChangeTemplate {
+    const COMMIT_AUTHOR_NAME: &'static str = "$commit_author_name";
+    const COMMIT_HASH: &'static str = "$commit_hash";
+    const SUMMARY: &'static str = "$summary";
+    const DETAILS: &'static str = "$details";
+
+    fn write(&self, change: &Change, out: &mut String) -> bool {
+        let mut result = self.0.to_string();
+        if result.contains(Self::COMMIT_AUTHOR_NAME) || result.contains(Self::COMMIT_HASH) {
+            if let ChangeSource::ConventionalCommit {
+                author_name: author,
+                hash,
+                ..
+            } = &change.original_source
+            {
+                result = result.replace(
+                    Self::COMMIT_AUTHOR_NAME,
+                    author.as_deref().unwrap_or_default(),
+                );
+                result = result.replace(Self::COMMIT_HASH, hash.as_deref().unwrap_or_default());
+            } else {
+                return false;
+            }
+        }
+
+        if result.contains(Self::DETAILS) {
+            if let Some(details) = change.details.as_deref() {
+                result = result.replace(Self::DETAILS, details);
+            } else {
+                return false;
+            }
+        }
+
+        result = result.replace(Self::SUMMARY, &change.summary);
+        out.push_str(&result);
+
+        true
+    }
+}
+
+impl From<String> for ChangeTemplate {
+    fn from(template: String) -> Self {
+        Self(Cow::Owned(template))
+    }
+}
+
+impl From<&'static str> for ChangeTemplate {
+    fn from(template: &'static str) -> Self {
+        Self(Cow::Borrowed(template))
+    }
 }
 
 #[cfg(test)]
@@ -180,17 +203,24 @@ mod test_release_notes {
             Change {
                 change_type: ChangeType::Feature,
                 original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
-                description: "# a complex feature\n\nsome details\n\n\n\n    ".into(),
+                summary: "a complex feature".into(),
+                details: Some("some details".into()),
             },
             Change {
                 change_type: ChangeType::Feature,
                 original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
-                description: "# a simple feature".into(),
+                summary: "a simple feature".into(),
+                details: None,
             },
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ConventionalCommit(String::new()),
-                description: "a super simple feature".into(),
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                    author_name: None,
+                    hash: None,
+                },
+                summary: "a super simple feature".into(),
+                details: None,
             },
         ];
 
@@ -214,57 +244,128 @@ mod test_release_notes {
             "## Features\n\n- a simple feature\n- a super simple feature\n\n### a complex feature\n\nsome details"
         );
     }
-}
-
-#[cfg(test)]
-mod test_change_description {
-    use pretty_assertions::assert_eq;
-
-    use super::*;
-    use crate::changes::{ChangeSource, ChangeType};
 
     #[test]
-    fn conventional_commit() {
-        let change = Change {
-            change_type: ChangeType::Feature,
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "a feature".into(),
-        };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Simple("a feature".to_string())
-        );
-    }
+    fn custom_templates() {
+        let change_templates = [
+            "* $summary by $commit_author_name ($commit_hash)", // commit-only
+            "###### $summary!!! $notAVariable\n\n$details", // Complex change files, should skip #s
+            "* $summary",                                   // A fallback that's always applicable
+        ]
+        .into_iter()
+        .map(ChangeTemplate::from)
+        .collect_vec();
 
-    #[test]
-    fn simple_changeset() {
-        let change = Change {
-            change_type: ChangeType::Feature,
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "# a feature\n\n\n\n".into(),
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            changelog: Some(Changelog::new(
+                "CHANGELOG.md".into(),
+                "# My Changelog\n\n## 1.2.3 (previous version)".to_string(),
+            )),
+            ..ReleaseNotes::default()
         };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Simple("a feature".to_string())
-        );
-    }
 
-    #[test]
-    fn complex_changeset() {
-        let change = Change {
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            change_type: ChangeType::Feature,
-            description: "# a feature\n\nwith details\n\n- first\n- second".into(),
-        };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Complex(
-                "a feature".to_string(),
-                "with details\n\n- first\n- second".to_string()
+        let changes = &[
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                summary: "a complex feature".to_string(),
+                details: Some("some details".into()),
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                summary: "a simple feature".into(),
+                details: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                    author_name: Some("Sushi".into()),
+                    hash: Some("1234".into()),
+                },
+                summary: "a super simple feature".into(),
+                details: None,
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(1, 3, 0, None),
+                changes,
+                &package::Name::Default,
             )
+            .expect("can create release notes");
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+
+        assert_eq!(
+            release.notes,
+            "## Features\n\n* a simple feature\n* a super simple feature by Sushi (1234)\n\n###### a complex feature!!! $notAVariable\n\nsome details"
+        );
+
+        let Some(Action::WriteToFile { diff, .. }) = actions.pop() else {
+            panic!("expected write changelog action");
+        };
+
+        assert!(
+            diff.ends_with(
+            "\n\n### Features\n\n* a simple feature\n* a super simple feature by Sushi (1234)\n\n####### a complex feature!!! $notAVariable\n\nsome details\n"
+            ) // Can't check the date
+        );
+    }
+
+    #[test]
+    fn fall_back_to_built_in_templates() {
+        let change_templates = ["* $summary by $commit_author_name"]
+            .into_iter()
+            .map(ChangeTemplate::from)
+            .collect_vec(); // Only applies to commits
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            ..ReleaseNotes::default()
+        };
+
+        let changes = &[
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                summary: "a complex feature".to_string(),
+                details: Some("some details".into()),
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                summary: "a simple feature".into(),
+                details: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                    author_name: Some("Sushi".into()),
+                    hash: None,
+                },
+                summary: "a super simple feature".into(),
+                details: None,
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(1, 3, 0, None),
+                changes,
+                &package::Name::Default,
+            )
+            .expect("can create release notes");
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+        assert_eq!(
+            release.notes,
+            "## Features\n\n- a simple feature\n* a super simple feature by Sushi\n\n### a complex feature\n\nsome details"
         );
     }
 }

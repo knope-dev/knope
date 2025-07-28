@@ -6,6 +6,7 @@ use std::{
 
 use git2::{Branch, BranchType, IndexAddOption, Oid, Repository, build::CheckoutBuilder};
 use itertools::Itertools;
+use knope_versioning::changes::conventional_commit::Commit;
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::{debug, info};
@@ -362,7 +363,7 @@ pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
 /// means that there could be paths which jump _behind_ the target tag... and we want to exclude
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
-pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Error> {
+pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Error> {
     let repo = Repository::open(".")?;
 
     let tag_ref_name = format!("refs/tags/{tag}");
@@ -401,7 +402,11 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Er
         if !commits_to_exclude.contains(&oid) {
             if let Ok(commit) = repo.find_commit(oid) {
                 if let Some(message) = commit.message().map(String::from) {
-                    commits.push(message);
+                    commits.push(Commit {
+                        message,
+                        author_name: commit.author().name().map(String::from),
+                        hash: oid.to_string().get(..7).map(String::from),
+                    });
                 }
             }
         }

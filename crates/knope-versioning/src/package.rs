@@ -18,7 +18,8 @@ use crate::{
     PackageNewError::CargoLockNoDependency,
     action::Action,
     changes::{
-        CHANGESET_DIR, Change, ChangeSource, conventional_commit::changes_from_commit_messages,
+        CHANGESET_DIR, Change, ChangeSource,
+        conventional_commit::{Commit, changes_from_commit_messages},
     },
     release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
@@ -114,7 +115,7 @@ impl Package {
     }
 
     #[must_use]
-    pub fn get_changes(&self, changeset: &[Release], commit_messages: &[String]) -> Vec<Change> {
+    pub fn get_changes(&self, changeset: &[Release], commit_messages: &[Commit]) -> Vec<Change> {
         changes_from_commit_messages(
             commit_messages,
             self.scopes.as_ref(),

@@ -32,6 +32,7 @@ pub(crate) struct Package {
 
 impl Package {
     pub(crate) fn load(
+        release_notes: &knope_config::ReleaseNotes,
         packages: Vec<config::Package>,
         git_tags: &[String],
     ) -> Result<(Vec<Self>, Vec<VersionedFile>), Error> {
@@ -45,7 +46,9 @@ impl Package {
             .try_collect()?;
         let packages = packages
             .into_iter()
-            .map(|package| Package::validate(package, git_tags, &versioned_files))
+            .map(|package| {
+                Package::validate(package, release_notes.clone(), git_tags, &versioned_files)
+            })
             .collect::<Result<Vec<_>, _>>()?;
         Ok((packages, versioned_files))
     }
@@ -56,6 +59,7 @@ impl Package {
 
     fn validate(
         package: config::Package,
+        release_notes: knope_config::ReleaseNotes,
         git_tags: &[String],
         all_versioned_files: &[VersionedFile],
     ) -> Result<Self, Error> {
@@ -72,6 +76,7 @@ impl Package {
             ReleaseNotes {
                 sections: convert_to_versioning(package.extra_changelog_sections),
                 changelog: package.changelog.map(load_changelog).transpose()?,
+                change_templates: release_notes.change_templates,
             },
             package.scopes,
         )?;
@@ -211,6 +216,7 @@ impl Package {
                 ReleaseNotes {
                     sections: knope_versioning::release_notes::Sections::default(),
                     changelog: None,
+                    change_templates: Vec::new(),
                 },
                 None,
             )

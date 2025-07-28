@@ -10,6 +10,9 @@ use crate::workflow::Workflow;
 /// error messages.
 #[derive(Debug, Deserialize)]
 pub(crate) struct ConfigLoader {
+    /// Config which is shared with Knope Bot, and defined in [`knope_config::Config`]
+    #[serde(flatten)]
+    pub(crate) shared: knope_config::Config,
     pub(crate) package: Option<Spanned<Package>>,
     pub(crate) packages: Option<IndexMap<String, Spanned<Package>>>,
     /// The list of defined workflows that are selectable

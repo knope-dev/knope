@@ -69,8 +69,13 @@ impl TestCase {
         for command in self.git {
             match command {
                 GitCommand::Commit(message) => {
-                    commit(path, message);
+                    commit(path, message, "Knope <knope@example.com>");
                 }
+                GitCommand::CommitWithAuthor {
+                    message,
+                    name,
+                    email,
+                } => commit(path, message, &format!("{name} <{email}>")),
                 GitCommand::Tag(name) => {
                     tag(path, name);
                 }
@@ -212,5 +217,10 @@ pub struct Asserts {
 #[derive(Clone, Copy, Debug)]
 pub enum GitCommand {
     Commit(&'static str),
+    CommitWithAuthor {
+        message: &'static str,
+        name: &'static str,
+        email: &'static str,
+    },
     Tag(&'static str),
 }

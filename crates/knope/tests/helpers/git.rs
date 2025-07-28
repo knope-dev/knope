@@ -60,13 +60,15 @@ pub fn add_remote(path: &Path, remote: &str) {
     );
 }
 
-/// Create a commit with `message` in the Git repo which exists in `path`.
-pub fn commit(path: &Path, message: &str) {
+/// Create a commit with `description` in the Git repo which exists in `path`.
+pub fn commit(path: &Path, message: &str, author: &str) {
     let output = Command::new("git")
         .arg("commit")
         .arg("--allow-empty")
         .arg("-m")
         .arg(message)
+        .arg("--author")
+        .arg(author)
         .current_dir(path)
         .output()
         .unwrap();

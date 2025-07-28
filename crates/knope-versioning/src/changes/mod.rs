@@ -1,6 +1,7 @@
-use std::{fmt::Display, sync::Arc};
+use std::{cmp::Ordering, fmt::Display, sync::Arc};
 
 use git_conventional::FooterToken;
+use itertools::Itertools;
 
 use crate::{
     package,
@@ -15,7 +16,8 @@ pub const CHANGESET_DIR: &str = ".changeset";
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Change {
     pub change_type: ChangeType,
-    pub description: Arc<str>,
+    pub summary: String,
+    pub details: Option<String>,
     pub original_source: ChangeSource,
 }
 
@@ -28,17 +30,46 @@ impl Change {
             .iter()
             .find(|release| *package_name == release.package_name)
             .into_iter()
-            .flat_map(|release_changes| release_changes.changes.clone().into_iter().map(Self::from))
+            .flat_map(|release_changes| release_changes.changes.iter().map(Self::from))
     }
 }
 
-impl From<changesets::PackageChange> for Change {
-    fn from(package_change: changesets::PackageChange) -> Self {
+impl From<&changesets::PackageChange> for Change {
+    fn from(package_change: &changesets::PackageChange) -> Self {
+        let mut lines = package_change
+            .summary
+            .trim()
+            .lines()
+            .skip_while(|it| it.is_empty());
+        let summary: String = lines
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .skip_while(|it| *it == '#' || *it == ' ')
+            .collect();
+        let details: String = lines.skip_while(|it| it.is_empty()).join("\n");
         Self {
-            change_type: package_change.change_type.into(),
-            description: package_change.summary,
-            original_source: ChangeSource::ChangeFile(package_change.unique_id),
+            change_type: ChangeType::from(&package_change.change_type),
+            summary,
+            details: (!details.is_empty()).then_some(details),
+            original_source: ChangeSource::ChangeFile(package_change.unique_id.clone()),
         }
+    }
+}
+
+impl Ord for Change {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self.details.is_some(), other.details.is_some()) {
+            (false, true) => Ordering::Less,
+            (true, false) => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    }
+}
+
+impl PartialOrd for Change {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -65,8 +96,8 @@ impl ChangeType {
     }
 }
 
-impl From<ChangeType> for changesets::ChangeType {
-    fn from(value: ChangeType) -> Self {
+impl From<&ChangeType> for changesets::ChangeType {
+    fn from(value: &ChangeType) -> Self {
         match value {
             ChangeType::Breaking => Self::Major,
             ChangeType::Feature => Self::Minor,
@@ -126,15 +157,65 @@ impl From<FooterToken<'_>> for ChangeType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ChangeSource {
-    ConventionalCommit(String),
+    ConventionalCommit {
+        description: String,
+        author_name: Option<String>,
+        hash: Option<String>,
+    },
     ChangeFile(Arc<changesets::UniqueId>),
 }
 
 impl Display for ChangeSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::ConventionalCommit(commit) => write!(f, "commit {commit}"),
+            Self::ConventionalCommit {
+                description: message,
+                ..
+            } => write!(f, "commit {message}"),
             Self::ChangeFile(id) => write!(f, "changeset {}", id.to_file_name()),
         }
+    }
+}
+
+#[cfg(test)]
+mod test_parse_changes {
+    use changesets::{PackageChange, UniqueId};
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+    use crate::changes::{ChangeSource, ChangeType};
+
+    #[test]
+    fn simple_changeset() {
+        let package_change = PackageChange {
+            unique_id: Arc::new(UniqueId::exact("1234")),
+            change_type: changesets::ChangeType::Minor,
+            summary: "# a feature\n\n\n\n".into(),
+        };
+        let change = Change::from(&package_change);
+        assert_eq!(change.summary, "a feature");
+        assert!(change.details.is_none());
+        assert_eq!(
+            change.original_source,
+            ChangeSource::ChangeFile(package_change.unique_id)
+        );
+        assert_eq!(change.change_type, ChangeType::Feature);
+    }
+
+    #[test]
+    fn complex_changeset() {
+        let package_change = PackageChange {
+            unique_id: Arc::new(UniqueId::exact("1234")),
+            change_type: changesets::ChangeType::Minor,
+            summary: "# a feature\n\nwith details\n\n- first\n- second".into(),
+        };
+        let change = Change::from(&package_change);
+        assert_eq!(change.summary, "a feature");
+        assert_eq!(change.details.unwrap(), "with details\n\n- first\n- second");
+        assert_eq!(
+            change.original_source,
+            ChangeSource::ChangeFile(package_change.unique_id)
+        );
+        assert_eq!(change.change_type, ChangeType::Feature);
     }
 }
