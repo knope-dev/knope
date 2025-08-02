@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     env::current_dir,
+    path::Path,
     str::FromStr,
 };
 
@@ -405,7 +406,7 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Er
                     commits.push(Commit {
                         message,
                         author_name: commit.author().name().map(String::from),
-                        hash: oid.to_string().get(..7).map(String::from),
+                        hash: short_sha(oid),
                     });
                 }
             }
@@ -416,6 +417,10 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Er
     commits.reverse();
 
     Ok(commits)
+}
+
+fn short_sha(oid: Oid) -> Option<String> {
+    oid.to_string().get(..7).map(String::from)
 }
 
 pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
@@ -475,4 +480,30 @@ pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
         );
     }
     Ok(tags)
+}
+
+/// Given the path to a file in the local directory, if that file has been committed previously,
+/// find the short sha of the _first_ commit it appeared in.
+pub(crate) fn get_first_commit_for_file(path: &Path) -> Option<String> {
+    let repo = Repository::open(".").ok()?;
+
+    // Walk through all commits
+    let mut revwalk = repo.revwalk().ok()?;
+    revwalk.push_head().ok()?;
+    revwalk
+        .set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::REVERSE)
+        .ok()?;
+
+    // Look for first commit containing this blob
+    for commit_id in revwalk.filter_map(Result::ok) {
+        if let Ok(commit) = repo.find_commit(commit_id) {
+            if let Ok(tree) = commit.tree() {
+                if tree.get_path(Path::new(path)).is_ok() {
+                    return short_sha(commit_id);
+                }
+            }
+        }
+    }
+
+    None
 }
