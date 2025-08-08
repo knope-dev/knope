@@ -4,7 +4,7 @@
 
 ### Breaking Changes
 
-### A breaking change with the intentionally wrong header
+### A breaking change with the intentionally wrong header by Alice ([..])
 
 
 Some details about the breaking change

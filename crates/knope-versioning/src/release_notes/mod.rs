@@ -7,12 +7,7 @@ pub use release::Release;
 use serde::Deserialize;
 use time::{OffsetDateTime, macros::format_description};
 
-use crate::{
-    Action,
-    changes::{Change, ChangeSource},
-    package,
-    semver::Version,
-};
+use crate::{Action, changes::Change, package, semver::Version};
 
 mod changelog;
 mod config;
@@ -144,18 +139,11 @@ impl ChangeTemplate {
     fn write(&self, change: &Change, out: &mut String) -> bool {
         let mut result = self.0.to_string();
         if result.contains(Self::COMMIT_AUTHOR_NAME) || result.contains(Self::COMMIT_HASH) {
-            if let ChangeSource::ConventionalCommit {
-                author_name: author,
-                hash,
-                ..
-            } = &change.original_source
-            {
-                result = result.replace(
-                    Self::COMMIT_AUTHOR_NAME,
-                    author.as_deref().unwrap_or_default(),
-                );
-                result = result.replace(Self::COMMIT_HASH, hash.as_deref().unwrap_or_default());
+            if let Some(git) = change.git.as_ref() {
+                result = result.replace(Self::COMMIT_AUTHOR_NAME, &git.author_name);
+                result = result.replace(Self::COMMIT_HASH, &git.hash);
             } else {
+                // Change doesn't have commit info, template not applicable
                 return false;
             }
         }
@@ -195,32 +183,37 @@ mod test_release_notes {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::changes::{ChangeSource, ChangeType};
+    use crate::changes::{ChangeSource, ChangeType, GitInfo};
 
     #[test]
     fn simple_changes_before_complex() {
         let changes = vec![
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
                 summary: "a complex feature".into(),
                 details: Some("some details".into()),
+                git: None,
             },
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
                 summary: "a simple feature".into(),
                 details: None,
+                git: None,
             },
             Change {
                 change_type: ChangeType::Feature,
                 original_source: ChangeSource::ConventionalCommit {
                     description: String::new(),
-                    author_name: None,
-                    hash: None,
                 },
                 summary: "a super simple feature".into(),
                 details: None,
+                git: None,
             },
         ];
 
@@ -268,25 +261,33 @@ mod test_release_notes {
         let changes = &[
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
                 summary: "a complex feature".to_string(),
                 details: Some("some details".into()),
+                git: None,
             },
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
                 summary: "a simple feature".into(),
                 details: None,
+                git: None,
             },
             Change {
                 change_type: ChangeType::Feature,
                 original_source: ChangeSource::ConventionalCommit {
                     description: String::new(),
-                    author_name: Some("Sushi".into()),
-                    hash: Some("1234".into()),
                 },
                 summary: "a super simple feature".into(),
                 details: None,
+                git: Some(GitInfo {
+                    author_name: "Sushi".into(),
+                    hash: "1234".into(),
+                }),
             },
         ];
 
@@ -331,25 +332,33 @@ mod test_release_notes {
         let changes = &[
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
                 summary: "a complex feature".to_string(),
                 details: Some("some details".into()),
+                git: None,
             },
             Change {
                 change_type: ChangeType::Feature,
-                original_source: ChangeSource::ChangeFile(Arc::new(UniqueId::exact(""))),
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
                 summary: "a simple feature".into(),
                 details: None,
+                git: None,
             },
             Change {
                 change_type: ChangeType::Feature,
                 original_source: ChangeSource::ConventionalCommit {
                     description: String::new(),
-                    author_name: Some("Sushi".into()),
-                    hash: None,
                 },
                 summary: "a super simple feature".into(),
                 details: None,
+                git: Some(GitInfo {
+                    author_name: "Sushi".into(),
+                    hash: "1234".into(),
+                }),
             },
         ];
 
@@ -366,6 +375,103 @@ mod test_release_notes {
         assert_eq!(
             release.notes,
             "## Features\n\n- a simple feature\n* a super simple feature by Sushi\n\n### a complex feature\n\nsome details"
+        );
+    }
+
+    #[test]
+    fn change_files_with_commit_info_use_commit_templates() {
+        let change_templates = [
+            "* $summary by $commit_author_name ($commit_hash)\n\n$details", // commit + details
+            "* $summary by $commit_author_name ($commit_hash)",             // commit only
+            "### $summary\n\n$details",                                     // details only
+            "* $summary",                                                   // fallback
+        ]
+        .into_iter()
+        .map(ChangeTemplate::from)
+        .collect_vec();
+
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            ..ReleaseNotes::default()
+        };
+
+        let changes = &[
+            // Committed change file with details - should use first template (commit + details)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("committed-with-details")),
+                },
+                summary: "a committed feature with details".to_string(),
+                details: Some("some implementation details".into()),
+                git: Some(GitInfo {
+                    author_name: "Alice".into(),
+                    hash: "abc123".into(),
+                }),
+            },
+            // Committed change file without details - should use second template (commit only)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("committed-simple")),
+                },
+                summary: "a committed simple feature".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Bob".into(),
+                    hash: "def456".into(),
+                }),
+            },
+            // Uncommitted change file with details - should use third template (details only)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("uncommitted-with-details")),
+                },
+                summary: "an uncommitted feature with details".to_string(),
+                details: Some("some more details".into()),
+                git: None,
+            },
+            // Uncommitted change file without details - should use fallback template
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("uncommitted-simple")),
+                },
+                summary: "an uncommitted simple feature".into(),
+                details: None,
+                git: None,
+            },
+            // Conventional commit - should use second template (commit only)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: "feat: conventional commit feature".into(),
+                },
+                summary: "conventional commit feature".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Charlie".into(),
+                    hash: "ghi789".into(),
+                }),
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(2, 0, 0, None),
+                changes,
+                &package::Name::Default,
+            )
+            .expect("can create release notes");
+
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+
+        assert_eq!(
+            release.notes,
+            "## Features\n\n* a committed simple feature by Bob (def456)\n* an uncommitted simple feature\n* conventional commit feature by Charlie (ghi789)\n\n* a committed feature with details by Alice (abc123)\n\nsome implementation details\n\n### an uncommitted feature with details\n\nsome more details"
         );
     }
 }

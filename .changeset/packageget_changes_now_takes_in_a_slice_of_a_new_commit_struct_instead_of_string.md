@@ -2,4 +2,4 @@
 versioning: major
 ---
 
-# `Package::get_changes` now takes in a slice of a new `Commit` struct instead of `&[String]`
+# `Package::get_changes` has a completely different signature, to support providing commit info for each change

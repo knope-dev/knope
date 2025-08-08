@@ -7,7 +7,7 @@ use std::{
 
 use git2::{Branch, BranchType, IndexAddOption, Oid, Repository, build::CheckoutBuilder};
 use itertools::Itertools;
-use knope_versioning::changes::conventional_commit::Commit;
+use knope_versioning::changes::{GitInfo, conventional_commit::Commit};
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::{debug, info};
@@ -405,8 +405,7 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Er
                 if let Some(message) = commit.message().map(String::from) {
                     commits.push(Commit {
                         message,
-                        author_name: commit.author().name().map(String::from),
-                        hash: short_sha(oid),
+                        info: commit_info(&commit),
                     });
                 }
             }
@@ -419,8 +418,11 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Er
     Ok(commits)
 }
 
-fn short_sha(oid: Oid) -> Option<String> {
-    oid.to_string().get(..7).map(String::from)
+fn commit_info(commit: &git2::Commit) -> Option<GitInfo> {
+    Some(GitInfo {
+        author_name: commit.author().name().map(String::from)?,
+        hash: commit.id().to_string().get(..7).map(String::from)?,
+    })
 }
 
 pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
@@ -482,28 +484,57 @@ pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
     Ok(tags)
 }
 
-/// Given the path to a file in the local directory, if that file has been committed previously,
-/// find the short sha of the _first_ commit it appeared in.
-pub(crate) fn get_first_commit_for_file(path: &Path) -> Option<String> {
-    let repo = Repository::open(".").ok()?;
+/// Find the first commit information for multiple files at once, returning a map of file paths to commit details.
+pub(crate) fn get_first_commits_for_files(
+    mut paths: HashSet<&Path>,
+) -> HashMap<&Path, Option<GitInfo>> {
+    let mut results = HashMap::new();
+
+    let Ok(repo) = Repository::open(".") else {
+        return results;
+    };
 
     // Walk through all commits
-    let mut revwalk = repo.revwalk().ok()?;
-    revwalk.push_head().ok()?;
-    revwalk
-        .set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::REVERSE)
-        .ok()?;
+    let Ok(mut revwalk) = repo.revwalk() else {
+        return results;
+    };
 
-    // Look for first commit containing this blob
-    for commit_id in revwalk.filter_map(Result::ok) {
-        if let Ok(commit) = repo.find_commit(commit_id) {
-            if let Ok(tree) = commit.tree() {
-                if tree.get_path(Path::new(path)).is_ok() {
-                    return short_sha(commit_id);
-                }
-            }
-        }
+    if revwalk.push_head().is_err() {
+        return results;
     }
 
-    None
+    if revwalk
+        .set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::REVERSE)
+        .is_err()
+    {
+        return results;
+    }
+
+    // Look for first commit containing each file
+    for commit_id in revwalk.filter_map(Result::ok) {
+        if paths.is_empty() {
+            break; // Found all files
+        }
+
+        let Ok(commit) = repo.find_commit(commit_id) else {
+            continue;
+        };
+        let Ok(tree) = commit.tree() else {
+            continue;
+        };
+
+        for &path in &paths {
+            if tree.get_path(path).is_ok() {
+                results.insert(path, commit_info(&commit));
+            }
+        }
+
+        paths.retain(|path| !results.contains_key(path));
+    }
+
+    for path in paths {
+        results.insert(path, None);
+    }
+
+    results
 }

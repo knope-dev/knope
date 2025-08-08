@@ -1,14 +1,13 @@
 use git_conventional::{Commit as ConventionalCommit, Footer, Type};
 use tracing::debug;
 
-use super::{Change, ChangeSource, ChangeType};
+use super::{Change, ChangeSource, ChangeType, GitInfo};
 use crate::release_notes::Sections;
 
 #[derive(Clone, Debug, Default)]
 pub struct Commit {
     pub message: String,
-    pub author_name: Option<String>,
-    pub hash: Option<String>,
+    pub info: Option<GitInfo>,
 }
 
 /// Try to parse each commit message as a [conventional commit](https://www.conventionalcommits.org/).
@@ -66,9 +65,8 @@ fn changes_from_commit_message(
             details: None,
             original_source: ChangeSource::ConventionalCommit {
                 description: format_commit_footer(&commit_summary, footer),
-                author_name: commit_info.author_name.clone(),
-                hash: commit_info.hash.clone(),
             },
+            git: commit_info.info.clone(),
         });
     }
 
@@ -88,9 +86,8 @@ fn changes_from_commit_message(
         details: None,
         original_source: ChangeSource::ConventionalCommit {
             description: commit_summary,
-            author_name: commit_info.author_name.clone(),
-            hash: commit_info.hash.clone(),
         },
+        git: commit_info.info.clone(),
     });
 
     changes
@@ -170,19 +167,17 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("fix: a bug"),
-                        author_name: None,
-                        hash: None,
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Breaking,
                     summary: "a breaking bug fix".into(),
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
-                        description: String::from("fix!: a breaking bug fix",),
-                        author_name: None,
-                        hash: None
+                        description: String::from("fix!: a breaking bug fix"),
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Breaking,
@@ -190,9 +185,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("feat!: add a feature"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Feature,
@@ -200,9 +194,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("feat: add another feature"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 }
             ]
         );
@@ -233,9 +226,8 @@ mod tests {
                         description: String::from(
                             "fix: a bug\n\tContaining footer BREAKING CHANGE: something broke"
                         ),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Fix,
@@ -243,9 +235,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("fix: a bug"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Breaking,
@@ -255,9 +246,8 @@ mod tests {
                         description: String::from(
                             "feat: a features\n\tContaining footer BREAKING CHANGE: something else broke"
                         ),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Feature,
@@ -265,9 +255,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("feat: a features"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
             ]
         );
@@ -296,9 +285,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("feat(scope)!: Wrong scope breaking change!"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Fix,
@@ -306,9 +294,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("fix: No scope"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 }
             ]
         );
@@ -346,9 +333,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("feat(scope): Scoped feature"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
                 Change {
                     change_type: ChangeType::Fix,
@@ -356,9 +342,8 @@ mod tests {
                     details: None,
                     original_source: ChangeSource::ConventionalCommit {
                         description: String::from("fix: No scope"),
-                        author_name: None,
-                        hash: None
                     },
+                    git: None,
                 },
             ]
         );
@@ -391,9 +376,8 @@ mod tests {
                     description: String::from(
                         "chore: ignored type\n\tContaining footer custom-footer: hello"
                     ),
-                    author_name: None,
-                    hash: None
                 },
+                git: None,
             }]
         );
     }

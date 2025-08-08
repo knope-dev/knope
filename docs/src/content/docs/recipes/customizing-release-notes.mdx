@@ -121,18 +121,20 @@ You can add custom templates for rendering changes [to your config file](/refere
 ```toml
 [release_notes]
 change_templates = [
+    "### $summary ($commit_hash)\n\n$details\n\nBy $commit_author_name",
     "* $summary by $commit_author_name ($commit_hash)",
     "### $summary\n\n$details",
-    "### $summary",
+    "* $summary",
 ]
 ```
 
 Knope will attempt to apply any templates in order from top to bottom, skipping ones where a variable isn't relevant.
 So in the above example:
 
-1. If the change was a conventional commit, and therefore as `$commit_author_name` and `$commit_hash`, use the first template.
-2. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.
-3. Use the third template (all changes have a `$summary`).
+1. If the change is a complex change file (has `$details`) which has been committed (has `$commit_hash` & `$commit_author_name`), use the first template
+2. If the change was simple and has commit details (has `$commit_author_name` and `$commit_hash` but could not use `$details` in first template), use the second template.
+3. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.
+4. Use the third template (all changes have a `$summary`).
 
 :::note
 
@@ -140,7 +142,7 @@ You can find all the available variables for `change_templates` in [the config r
 
 :::
 
-If Knope gets to the end of the list and hasn't found a applicable template, it uses defaults which are equivalent to:
+If Knope gets to the end of the list and hasn't found an applicable template, it uses defaults which are equivalent to:
 
 ```toml
 [release_notes]

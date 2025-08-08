@@ -46,11 +46,15 @@ Only a [change file] can have details, they're any content after the title line.
 
 #### `$commit_author_name`
 
-For [conventional commits] only, the name of the author of the commit.
+The name of the author of a [conventional commits] or the commit which introduced a [change file].
+
+If a [change file] has not been committed, templates containing this variable will be skipped.
 
 #### `$commit_hash`
 
-The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of a [conventional commit].
+The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of a [conventional commit] of the commit that introduced a [change file].
+
+If a [change file] has not been committed, templates containing this variable will be skipped.
 
 [change]: /reference/concepts/change
 [changelog]: /reference/concepts/changelog
