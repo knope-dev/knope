@@ -4,6 +4,7 @@ mod cargo_toml_dependencies;
 mod cargo_workspace;
 mod changelog;
 mod changesets;
+mod custom_change_entries;
 mod enable_prerelease;
 mod gleam_toml;
 mod go_modules;

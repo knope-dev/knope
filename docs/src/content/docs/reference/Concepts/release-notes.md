@@ -1,0 +1,131 @@
+---
+title: Release notes
+---
+
+Release notes are information about a particular version of a [package].
+The goal is to tell your users _why_ they should update to a new version
+and what challenges they may face when upgrading.
+
+Most projects have their release notes in two difference places:
+
+1. A markdown file called a [changelog] which lists the entire version history for a package in one place
+2. A tagged [release] on a [forge] (like GitHub) which can notify users of new versions
+
+It's important for these locations to be consistent and accurate, so Knope generates them
+from the same sources and in _almost_ the same format.
+
+:::tip
+You can [customize your release notes in a number of ways][customize].
+:::
+
+## Examples
+
+Here's what release notes might look like in a changelog:
+
+```markdown
+## 1.2.3 (2022-12-03)
+
+### Fixes
+
+- A simple fix
+- Another
+
+#### A more complex fix
+
+Some details about that.
+```
+
+And that same release on GitHub:
+
+```markdown
+## Fixes
+
+- A simple fix
+- Another
+
+### A more complex fix
+
+Some details about that.
+```
+
+The main difference is that because a changelog lists all versions in one file, the headers for each section are smaller.
+The version number and date also go in a separate title attribute for a forge, not in the Markdown content.
+
+## Sections
+
+Knope assigns each change to a section within the release notes, like `## Fixes` or `## Features`.
+Knope decides which section a change belongs to based on the type of a [change file] or the type or footer of a [conventional commit].
+Sections have a fixed order that they
+always appear in, but the section itself only appears if it contains at least one change.
+
+The default sections are:
+
+| Section          | Changeset Type | Commit Type | Commit Footer     |
+| ---------------- | -------------- | ----------- | ----------------- |
+| Breaking Changes | `major`        | `!`         | `BREAKING CHANGE` |
+| Features         | `minor`        | `feat:`     |                   |
+| Fixes            | `patch`        | `fix:`      |                   |
+| Notes            |                |             | `Changelog-Note`  |
+
+:::tip
+
+You can [customize] these sections.
+
+:::
+
+## Simple vs complex changes
+
+Knope divides each change section into simple and complex changes.
+Changes that are only a single sentence are simple changes. All changes which come from a [conventional commit] are simple changes.
+Additionally, any [change file] with only a header in is a simple change.
+Knope includes simple changes as bullets at the top of a section.
+
+For example, `feat: a simple feature` and a change file containing only `# Another simple feature` below its frontmatter will appear as
+
+```markdown
+## Features
+
+- a simple feature
+- Another simple feature
+```
+
+Complex changes are [change files][change file] that have content below their header. Each complex change gets its own sub-section with
+a header. Headers are auto adjusted to the appropriate level for the changelog or release. For example, this change file:
+
+```markdown
+---
+default: minor
+---
+
+# A more complicated feature
+
+With a more complicated description.
+```
+
+Would appear after the simple changes like this:
+
+```markdown
+## Features
+
+- a simple feature
+- Another simple feature
+
+### A more complicated feature
+
+With a more complicated description.
+```
+
+:::tip
+
+You can [customize] how each change appears, but Knope will always list simple changes first, followed by complex
+within a section.
+
+:::
+
+[package]: /reference/concepts/package
+[changelog]: /reference/concepts/changelog
+[release]: /reference/concepts/release
+[forge]: /reference/concepts/forge
+[change file]: /reference/concepts/change-file
+[conventional commit]: /reference/concepts/conventional-commits
+[customize]: /recipes/customizing-release-notes

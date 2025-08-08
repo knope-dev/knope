@@ -1,0 +1,22 @@
+Would add the following to Cargo.toml: version = 2.0.0
+Would delete .changeset/breaking_change.md
+Would delete .changeset/feature.md
+Would add the following to CHANGELOG.md:
+## 2.0.0 ([DATE])
+
+### Breaking changes
+
+#### A breaking change with the intentionally wrong header
+
+Some details about the breaking change
+
+### Features
+
+- A simple feature
+* Feature from commit by Sushi ([..])
+
+Would add files to git:
+  Cargo.toml
+  .changeset/breaking_change.md
+  .changeset/feature.md
+  CHANGELOG.md

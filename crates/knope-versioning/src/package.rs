@@ -5,7 +5,7 @@ use std::{
     ops::Deref,
 };
 
-use changesets::Release;
+use changesets::PackageChange;
 use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
@@ -18,7 +18,8 @@ use crate::{
     PackageNewError::CargoLockNoDependency,
     action::Action,
     changes::{
-        CHANGESET_DIR, Change, ChangeSource, conventional_commit::changes_from_commit_messages,
+        CHANGESET_DIR, Change, ChangeSource, GitInfo,
+        conventional_commit::{Commit, changes_from_commit_messages},
     },
     release_notes::{ReleaseNotes, TimeError},
     semver::{Label, PackageVersions, PreReleaseNotFound, Rule, StableRule, Version},
@@ -114,13 +115,17 @@ impl Package {
     }
 
     #[must_use]
-    pub fn get_changes(&self, changeset: &[Release], commit_messages: &[String]) -> Vec<Change> {
+    pub fn get_changes<'a>(
+        &self,
+        changeset: impl IntoIterator<Item = (&'a PackageChange, Option<GitInfo>)>,
+        commit_messages: &[Commit],
+    ) -> Vec<Change> {
         changes_from_commit_messages(
             commit_messages,
             self.scopes.as_ref(),
             &self.release_notes.sections,
         )
-        .chain(Change::from_changesets(&self.name, changeset))
+        .chain(Change::from_changeset(changeset))
         .collect()
     }
 
@@ -171,13 +176,12 @@ impl Package {
         let mut actions: Vec<Action> = changes
             .iter()
             .filter_map(|change| {
-                if let ChangeSource::ChangeFile(unique_id) = &change.original_source {
+                if let ChangeSource::ChangeFile { id } = &change.original_source {
                     if version.is_prerelease() {
                         None
                     } else {
                         Some(Action::RemoveFile {
-                            path: RelativePathBuf::from(CHANGESET_DIR)
-                                .join(unique_id.to_file_name()),
+                            path: RelativePathBuf::from(CHANGESET_DIR).join(id.to_file_name()),
                         })
                     }
                 } else {

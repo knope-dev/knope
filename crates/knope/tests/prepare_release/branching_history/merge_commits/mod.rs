@@ -8,13 +8,17 @@ fn merge_commits() {
     let temp_dir = test.arrange();
     let temp_path = temp_dir.path();
 
-    commit(temp_path, "Initial commit");
+    commit(temp_path, "Initial commit", "Knope <knope@knope.tech>");
     create_branch(temp_path, "feature");
-    commit(temp_path, "feat: A new feature");
+    commit(temp_path, "feat: A new feature", "Knope <knope@knope.tech>");
     switch_branch(temp_path, "main");
     // Even if the latest tag commit is newer than the merged, the ancestors from the merge should be processed
     sleep(Duration::from_secs(1));
-    commit(temp_path, "feat: existing feature");
+    commit(
+        temp_path,
+        "feat: existing feature",
+        "Knope <knope@knope.tech>",
+    );
     tag(temp_path, "v1.2.3"); // The current stable version
     merge_branch(temp_path, "feature");
 

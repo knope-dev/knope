@@ -60,13 +60,30 @@ pub fn add_remote(path: &Path, remote: &str) {
     );
 }
 
-/// Create a commit with `message` in the Git repo which exists in `path`.
-pub fn commit(path: &Path, message: &str) {
+/// Add a file to the Git index in the repo at `path`.
+pub fn add(path: &Path, file: &str) {
+    let output = Command::new("git")
+        .arg("add")
+        .arg(file)
+        .current_dir(path)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Create a commit with `description` in the Git repo which exists in `path`.
+pub fn commit(path: &Path, message: &str, author: &str) {
     let output = Command::new("git")
         .arg("commit")
         .arg("--allow-empty")
         .arg("-m")
         .arg(message)
+        .arg("--author")
+        .arg(author)
         .current_dir(path)
         .output()
         .unwrap();

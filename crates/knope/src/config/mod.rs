@@ -3,13 +3,14 @@ use std::path::Path;
 use ::toml::{Spanned, from_str, to_string};
 use indexmap::IndexMap;
 use itertools::Itertools;
+use knope_config::ReleaseNotes;
 use knope_versioning::package::Name;
 use miette::{Diagnostic, IntoDiagnostic, Result, SourceSpan};
-pub(crate) use package::Package;
 use serde::Serialize;
 use thiserror::Error;
-use toml::ConfigLoader;
 
+pub(crate) use self::package::Package;
+use self::toml::ConfigLoader;
 use crate::{
     fs,
     integrations::git,
@@ -27,6 +28,7 @@ use crate::fs::WriteType;
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
 pub(crate) struct Config {
+    pub(crate) release_notes: ReleaseNotes,
     pub(crate) packages: Vec<Package>,
     /// The list of defined workflows that are selectable
     pub(crate) workflows: Vec<Workflow>,
@@ -159,6 +161,7 @@ impl TryFrom<(ConfigLoader, String)> for Config {
         Ok(Self {
             packages,
             workflows,
+            release_notes: config.shared.release_notes.unwrap_or_default(),
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
@@ -287,6 +290,7 @@ pub(crate) fn generate() -> Result<Config, package::Error> {
     Ok(Config {
         workflows: generate_workflows(github.is_some() || gitea.is_some(), &packages),
         jira: None,
+        release_notes: ReleaseNotes::default(),
         github,
         gitea,
         packages,

@@ -1,9 +1,10 @@
-use std::{cmp::Ordering, fmt::Write};
+use std::{borrow::Cow, fmt::Write, iter::Peekable};
 
 pub use changelog::Changelog;
 pub use config::{CommitFooter, CustomChangeType, SectionName, SectionSource, Sections};
 use itertools::Itertools;
 pub use release::Release;
+use serde::Deserialize;
 use time::{OffsetDateTime, macros::format_description};
 
 use crate::{Action, changes::Change, package, semver::Version};
@@ -13,10 +14,11 @@ mod config;
 mod release;
 
 /// Defines how release notes are handled for a package.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ReleaseNotes {
     pub sections: Sections,
     pub changelog: Option<Changelog>,
+    pub change_templates: Vec<ChangeTemplate>,
 }
 
 impl ReleaseNotes {
@@ -25,7 +27,7 @@ impl ReleaseNotes {
     /// # Errors
     ///
     /// If the current date can't be formatted
-    pub fn create_release(
+    pub(crate) fn create_release(
         &mut self,
         version: Version,
         changes: &[Change],
@@ -33,26 +35,22 @@ impl ReleaseNotes {
     ) -> Result<Vec<Action>, TimeError> {
         let mut notes = String::new();
         for (section_name, sources) in self.sections.iter() {
-            let changes = changes
+            let mut changes = changes
                 .iter()
-                .filter_map(|change| {
-                    if sources.contains(&change.change_type) {
-                        Some(ChangeDescription::from(change))
-                    } else {
-                        None
-                    }
-                })
+                .filter(|change| sources.contains(&change.change_type))
                 .sorted()
-                .collect_vec();
-            if !changes.is_empty() {
-                notes.push_str("\n\n## ");
+                .peekable();
+            if changes.peek().is_some() {
+                if !notes.is_empty() {
+                    notes.push_str("\n\n");
+                }
+                notes.push_str("## ");
                 notes.push_str(section_name.as_ref());
                 notes.push_str("\n\n");
-                notes.push_str(&build_body(changes));
+                write_body(&mut notes, changes, &self.change_templates);
             }
         }
 
-        let notes = notes.trim().to_string();
         let release = Release {
             title: release_title(&version)?,
             version,
@@ -88,69 +86,34 @@ impl ReleaseNotes {
 )]
 pub struct TimeError(#[from] time::error::Format);
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum ChangeDescription {
-    Simple(String),
-    Complex(String, String),
-}
-
-impl Ord for ChangeDescription {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Self::Simple(_), Self::Complex(_, _)) => Ordering::Less,
-            (Self::Complex(_, _), Self::Simple(_)) => Ordering::Greater,
-            _ => Ordering::Equal,
-        }
-    }
-}
-
-impl PartialOrd for ChangeDescription {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl From<&Change> for ChangeDescription {
-    fn from(change: &Change) -> Self {
-        let mut lines = change
-            .description
-            .trim()
-            .lines()
-            .skip_while(|it| it.is_empty());
-        let summary: String = lines
-            .next()
-            .unwrap_or_default()
-            .chars()
-            .skip_while(|it| *it == '#' || *it == ' ')
-            .collect();
-        let body: String = lines.skip_while(|it| it.is_empty()).join("\n");
-        if body.is_empty() {
-            Self::Simple(summary)
-        } else {
-            Self::Complex(summary, body)
-        }
-    }
-}
-
-fn build_body(changes: Vec<ChangeDescription>) -> String {
-    let mut body = String::new();
-    let mut changes = changes.into_iter().peekable();
+fn write_body<'change>(
+    out: &mut String,
+    changes: Peekable<impl Iterator<Item = &'change Change>>,
+    templates: &[ChangeTemplate],
+) {
+    let mut changes = changes.peekable();
     while let Some(change) = changes.next() {
-        match change {
-            ChangeDescription::Simple(summary) => {
-                write!(&mut body, "- {summary}").ok();
-            }
-            ChangeDescription::Complex(summary, details) => {
-                write!(&mut body, "### {summary}\n\n{details}").ok();
-            }
-        }
-        match changes.peek() {
-            Some(ChangeDescription::Simple(_)) => body.push('\n'),
-            Some(ChangeDescription::Complex(_, _)) => body.push_str("\n\n"),
+        write_change(out, change, templates);
+
+        match changes.peek().map(|change| change.details.is_some()) {
+            Some(false) => out.push('\n'),
+            Some(true) => out.push_str("\n\n"),
             None => (),
         }
     }
-    body
+}
+
+fn write_change(out: &mut String, change: &Change, templates: &[ChangeTemplate]) {
+    for template in templates {
+        if template.write(change, out) {
+            return;
+        }
+    }
+    if let Some(details) = &change.details {
+        write!(out, "### {summary}\n\n{details}", summary = change.summary).unwrap();
+    } else {
+        write!(out, "- {summary}", summary = change.summary).unwrap();
+    }
 }
 
 /// Create the title of a new release with no Markdown header level.
@@ -164,55 +127,351 @@ fn release_title(version: &Version) -> Result<String, TimeError> {
     Ok(format!("{version} ({date_str})"))
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct ChangeTemplate(Cow<'static, str>);
+
+impl ChangeTemplate {
+    const COMMIT_AUTHOR_NAME: &'static str = "$commit_author_name";
+    const COMMIT_HASH: &'static str = "$commit_hash";
+    const SUMMARY: &'static str = "$summary";
+    const DETAILS: &'static str = "$details";
+
+    fn write(&self, change: &Change, out: &mut String) -> bool {
+        let mut result = self.0.to_string();
+        if result.contains(Self::COMMIT_AUTHOR_NAME) || result.contains(Self::COMMIT_HASH) {
+            if let Some(git) = change.git.as_ref() {
+                result = result.replace(Self::COMMIT_AUTHOR_NAME, &git.author_name);
+                result = result.replace(Self::COMMIT_HASH, &git.hash);
+            } else {
+                // Change doesn't have commit info, template not applicable
+                return false;
+            }
+        }
+
+        if result.contains(Self::DETAILS) {
+            if let Some(details) = change.details.as_deref() {
+                result = result.replace(Self::DETAILS, details);
+            } else {
+                return false;
+            }
+        }
+
+        result = result.replace(Self::SUMMARY, &change.summary);
+        out.push_str(&result);
+
+        true
+    }
+}
+
+impl From<String> for ChangeTemplate {
+    fn from(template: String) -> Self {
+        Self(Cow::Owned(template))
+    }
+}
+
+impl From<&'static str> for ChangeTemplate {
+    fn from(template: &'static str) -> Self {
+        Self(Cow::Borrowed(template))
+    }
+}
+
 #[cfg(test)]
-mod test_change_description {
+mod test_release_notes {
+    use std::sync::Arc;
+
+    use changesets::UniqueId;
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::changes::{ChangeSource, ChangeType};
+    use crate::changes::{ChangeSource, ChangeType, GitInfo};
 
     #[test]
-    fn conventional_commit() {
-        let change = Change {
-            change_type: ChangeType::Feature,
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "a feature".into(),
+    fn simple_changes_before_complex() {
+        let changes = vec![
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "a complex feature".into(),
+                details: Some("some details".into()),
+                git: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "a simple feature".into(),
+                details: None,
+                git: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                },
+                summary: "a super simple feature".into(),
+                details: None,
+                git: None,
+            },
+        ];
+
+        let mut actions = ReleaseNotes::create_release(
+            &mut ReleaseNotes::default(),
+            Version::new(1, 0, 0, None),
+            &changes,
+            &package::Name::Default,
+        )
+        .expect("can create release notes");
+        assert_eq!(actions.len(), 1);
+
+        let action = actions.pop().unwrap();
+
+        let Action::CreateRelease(release) = action else {
+            panic!("expected release action");
         };
-        let description = ChangeDescription::from(&change);
+
         assert_eq!(
-            description,
-            ChangeDescription::Simple("a feature".to_string())
+            release.notes,
+            "## Features\n\n- a simple feature\n- a super simple feature\n\n### a complex feature\n\nsome details"
         );
     }
 
     #[test]
-    fn simple_changeset() {
-        let change = Change {
-            change_type: ChangeType::Feature,
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            description: "# a feature\n\n\n\n".into(),
-        };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Simple("a feature".to_string())
-        );
-    }
+    fn custom_templates() {
+        let change_templates = [
+            "* $summary by $commit_author_name ($commit_hash)", // commit-only
+            "###### $summary!!! $notAVariable\n\n$details", // Complex change files, should skip #s
+            "* $summary",                                   // A fallback that's always applicable
+        ]
+        .into_iter()
+        .map(ChangeTemplate::from)
+        .collect_vec();
 
-    #[test]
-    fn complex_changeset() {
-        let change = Change {
-            original_source: ChangeSource::ConventionalCommit(String::new()),
-            change_type: ChangeType::Feature,
-            description: "# a feature\n\nwith details\n\n- first\n- second".into(),
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            changelog: Some(Changelog::new(
+                "CHANGELOG.md".into(),
+                "# My Changelog\n\n## 1.2.3 (previous version)".to_string(),
+            )),
+            ..ReleaseNotes::default()
         };
-        let description = ChangeDescription::from(&change);
-        assert_eq!(
-            description,
-            ChangeDescription::Complex(
-                "a feature".to_string(),
-                "with details\n\n- first\n- second".to_string()
+
+        let changes = &[
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "a complex feature".to_string(),
+                details: Some("some details".into()),
+                git: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "a simple feature".into(),
+                details: None,
+                git: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                },
+                summary: "a super simple feature".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Sushi".into(),
+                    hash: "1234".into(),
+                }),
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(1, 3, 0, None),
+                changes,
+                &package::Name::Default,
             )
+            .expect("can create release notes");
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+
+        assert_eq!(
+            release.notes,
+            "## Features\n\n* a simple feature\n* a super simple feature by Sushi (1234)\n\n###### a complex feature!!! $notAVariable\n\nsome details"
+        );
+
+        let Some(Action::WriteToFile { diff, .. }) = actions.pop() else {
+            panic!("expected write changelog action");
+        };
+
+        assert!(
+            diff.ends_with(
+            "\n\n### Features\n\n* a simple feature\n* a super simple feature by Sushi (1234)\n\n####### a complex feature!!! $notAVariable\n\nsome details\n"
+            ) // Can't check the date
+        );
+    }
+
+    #[test]
+    fn fall_back_to_built_in_templates() {
+        let change_templates = ["* $summary by $commit_author_name"]
+            .into_iter()
+            .map(ChangeTemplate::from)
+            .collect_vec(); // Only applies to commits
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            ..ReleaseNotes::default()
+        };
+
+        let changes = &[
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "a complex feature".to_string(),
+                details: Some("some details".into()),
+                git: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "a simple feature".into(),
+                details: None,
+                git: None,
+            },
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                },
+                summary: "a super simple feature".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Sushi".into(),
+                    hash: "1234".into(),
+                }),
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(1, 3, 0, None),
+                changes,
+                &package::Name::Default,
+            )
+            .expect("can create release notes");
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+        assert_eq!(
+            release.notes,
+            "## Features\n\n- a simple feature\n* a super simple feature by Sushi\n\n### a complex feature\n\nsome details"
+        );
+    }
+
+    #[test]
+    fn change_files_with_commit_info_use_commit_templates() {
+        let change_templates = [
+            "* $summary by $commit_author_name ($commit_hash)\n\n$details", // commit + details
+            "* $summary by $commit_author_name ($commit_hash)",             // commit only
+            "### $summary\n\n$details",                                     // details only
+            "* $summary",                                                   // fallback
+        ]
+        .into_iter()
+        .map(ChangeTemplate::from)
+        .collect_vec();
+
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            ..ReleaseNotes::default()
+        };
+
+        let changes = &[
+            // Committed change file with details - should use first template (commit + details)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("committed-with-details")),
+                },
+                summary: "a committed feature with details".to_string(),
+                details: Some("some implementation details".into()),
+                git: Some(GitInfo {
+                    author_name: "Alice".into(),
+                    hash: "abc123".into(),
+                }),
+            },
+            // Committed change file without details - should use second template (commit only)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("committed-simple")),
+                },
+                summary: "a committed simple feature".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Bob".into(),
+                    hash: "def456".into(),
+                }),
+            },
+            // Uncommitted change file with details - should use third template (details only)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("uncommitted-with-details")),
+                },
+                summary: "an uncommitted feature with details".to_string(),
+                details: Some("some more details".into()),
+                git: None,
+            },
+            // Uncommitted change file without details - should use fallback template
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("uncommitted-simple")),
+                },
+                summary: "an uncommitted simple feature".into(),
+                details: None,
+                git: None,
+            },
+            // Conventional commit - should use second template (commit only)
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: "feat: conventional commit feature".into(),
+                },
+                summary: "conventional commit feature".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Charlie".into(),
+                    hash: "ghi789".into(),
+                }),
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(2, 0, 0, None),
+                changes,
+                &package::Name::Default,
+            )
+            .expect("can create release notes");
+
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+
+        assert_eq!(
+            release.notes,
+            "## Features\n\n* a committed simple feature by Bob (def456)\n* an uncommitted simple feature\n* conventional commit feature by Charlie (ghi789)\n\n* a committed feature with details by Alice (abc123)\n\nsome implementation details\n\n### an uncommitted feature with details\n\nsome more details"
         );
     }
 }

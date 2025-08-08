@@ -141,6 +141,7 @@ mod test_replace_variables {
                 ReleaseNotes {
                     sections: Sections::default(),
                     changelog: Some(changelog),
+                    change_templates: Vec::new(),
                 },
                 None,
             )

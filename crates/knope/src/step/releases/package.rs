@@ -1,9 +1,12 @@
-use std::{fmt, fmt::Display};
+use std::{fmt, fmt::Display, path::PathBuf};
 
+use changesets::PackageChange;
+use indexmap::IndexMap;
 use itertools::Itertools;
 use knope_config::{Assets, changelog_section::convert_to_versioning};
 use knope_versioning::{
     Action, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
+    changes::CHANGESET_DIR,
     package::{BumpError, ChangeConfig, Name},
     release_notes::{ReleaseNotes, TimeError},
     semver::Version,
@@ -32,6 +35,7 @@ pub(crate) struct Package {
 
 impl Package {
     pub(crate) fn load(
+        release_notes: &knope_config::ReleaseNotes,
         packages: Vec<config::Package>,
         git_tags: &[String],
     ) -> Result<(Vec<Self>, Vec<VersionedFile>), Error> {
@@ -45,7 +49,9 @@ impl Package {
             .try_collect()?;
         let packages = packages
             .into_iter()
-            .map(|package| Package::validate(package, git_tags, &versioned_files))
+            .map(|package| {
+                Package::validate(package, release_notes.clone(), git_tags, &versioned_files)
+            })
             .collect::<Result<Vec<_>, _>>()?;
         Ok((packages, versioned_files))
     }
@@ -56,6 +62,7 @@ impl Package {
 
     fn validate(
         package: config::Package,
+        release_notes: knope_config::ReleaseNotes,
         git_tags: &[String],
         all_versioned_files: &[VersionedFile],
     ) -> Result<Self, Error> {
@@ -72,6 +79,7 @@ impl Package {
             ReleaseNotes {
                 sections: convert_to_versioning(package.extra_changelog_sections),
                 changelog: package.changelog.map(load_changelog).transpose()?,
+                change_templates: release_notes.change_templates,
             },
             package.scopes,
         )?;
@@ -108,7 +116,36 @@ impl Package {
                 all_tags,
             )?
         };
-        let changes = self.versioning.get_changes(changeset, &commit_messages);
+
+        let changeset_dir = PathBuf::from(CHANGESET_DIR);
+
+        // Get commit information for change files
+        let change_files = {
+            let change_paths: IndexMap<PathBuf, &PackageChange> = changeset
+                .iter()
+                .find(|release| release.package_name == self.versioning.name.as_ref())
+                .map(|release| {
+                    release
+                        .changes
+                        .iter()
+                        .map(|change| (changeset_dir.join(change.unique_id.to_file_name()), change))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let mut git_info = git::get_first_commits_for_files(
+                change_paths.keys().map(PathBuf::as_path).collect(),
+            );
+
+            change_paths
+                .iter()
+                .map(|(path, package_change)| {
+                    (*package_change, git_info.remove(path.as_path()).flatten())
+                })
+                .collect_vec()
+        };
+
+        let changes = self.versioning.get_changes(change_files, &commit_messages);
 
         if changes.is_empty() && self.override_version.is_none() {
             return Ok((versioned_files, Vec::new()));
@@ -211,6 +248,7 @@ impl Package {
                 ReleaseNotes {
                     sections: knope_versioning::release_notes::Sections::default(),
                     changelog: None,
+                    change_templates: Vec::new(),
                 },
                 None,
             )

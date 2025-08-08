@@ -25,6 +25,7 @@ snapshot +tests:
 lint:
     cargo clippy --workspace -- -D warnings
     cargo-deny check
+    npm run --prefix docs astro check
 
 # Reformat all files, requires `npx` and `install-lint-dependencies`
 reformat: reformat-rust reformat-toml reformat-docs

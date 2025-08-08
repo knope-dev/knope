@@ -2,8 +2,10 @@
 title: Changelog
 ---
 
-In Knope, a changelog is a Markdown file which documents every change **relevant to users** for a [package].
-The format of a changelog looks like this:
+In Knope, a changelog is a Markdown file that documents every change **relevant to users** for a [package].
+This is one of the places that Knope places [release notes] during a [release].
+
+The changelog contains the entire history of changes for a package, sorted from newest to oldest:
 
 ```markdown
 # Some optional title for the changelog
@@ -27,10 +29,6 @@ Some details about how versioning works, how to read the changelog, etc.
 
 Some details about that.
 ```
-
-:::tip
-You can [customize your changelogs in a number of ways](/recipes/customizing-changelogs).
-:::
 
 Changelogs have a number of parts:
 
@@ -60,14 +58,14 @@ for example "Breaking changes" or "Features."
 ```
 
 Following the section heading, there's at least one change.
-[Simple changes](#simple-vs-complex-changes) will appear as bullets immediately under the section heading:
+[Simple changes][simple-vs-complex-changes] will appear as bullets immediately under the section heading:
 
 ```markdown
 - A very easy to describe change
 - Another as well
 ```
 
-Next, [complex changes](#simple-vs-complex-changes) will each get a heading (two levels below the version heading):
+Next, [complex changes][simple-vs-complex-changes] will each get a heading (two levels below the version heading):
 
 ```markdown
 #### A breaking change
@@ -97,14 +95,7 @@ Some details about the fixing
 Knope sorts versions from newest to oldest,
 so the most recent version is near the top of the changelog right after the optional title and introduction.
 
-## Simple vs complex changes
-
-Knope divides each change section into simple and complex changes.
-Changes that are descibed by only a single sentence are simple changes. All changes which come from [conventional commits](/reference/concepts/conventional-commits) are simple changes.
-Additionally, any changeset with only a header in is a simple change.
-Knope includes simple changes as bullets at the top of a section.
-
-Complex changes are changesets that have content below their header. Each complex change gets its own sub-section with
-a header.
-
 [package]: /reference/concepts/package
+[release notes]: /reference/concepts/release-notes
+[release]: /reference/concepts/release
+[simple-vs-complex-changes]: /reference/concepts/release-notes#simple-vs-complex-changes
