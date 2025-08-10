@@ -10,6 +10,14 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.21.1 (2025-08-10)
+
+### Features
+
+#### Add support for customizing release note entries
+
+You can now [customize individual entries in release notes](https://knope.tech/recipes/customizing-release-notes/#customizing-change-entries) to change the formatting or add authors/hashes to entries when available.
+
 ## 0.21.0 (2025-06-23)
 
 ### Breaking Changes

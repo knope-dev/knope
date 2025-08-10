@@ -1,3 +1,23 @@
+## 0.5.0 (2025-08-10)
+
+### Breaking Changes
+
+- `Change` now has `summary` and `details` instead of `description`
+- `Change` no longer impls `From<changesets::PackageChange>`
+- `ChangeSource` variants are now a struct style instead of tuple style
+- `Package::get_changes` has a completely different signature, to support providing commit info for each change
+- `ReleaseNotes` has new, required `change_templates` field
+- Swapped `From<ChangeType>` to `From<&ChangeType>` for `changesets::ChangeType`
+
+#### `ReleaseNotes::create_release` is no longer `pub`
+
+This wasn't being used by Knope or Knope Bot directly, and non-pub functions give better lints.
+If anyone is using this crate and needed that function, let me know!
+
+### Features
+
+- `impl Default for ReleaseNotes`
+
 ## 0.4.2 (2025-06-23)
 
 ### Features

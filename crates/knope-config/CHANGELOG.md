@@ -1,3 +1,9 @@
+## 0.2.5 (2025-08-10)
+
+### Features
+
+- New `Config` and `ReleaseNotes` structs
+
 ## 0.2.4 (2025-06-23)
 
 ### Fixes
