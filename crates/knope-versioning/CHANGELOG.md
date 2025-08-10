@@ -1,3 +1,9 @@
+## 0.5.1 (2025-08-10)
+
+### Features
+
+- Support `workspace.package.version` in Cargo.toml
+
 ## 0.5.0 (2025-08-10)
 
 ### Breaking Changes

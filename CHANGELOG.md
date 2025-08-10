@@ -10,6 +10,12 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.21.2 (2025-08-10)
+
+### Features
+
+- Support `workspace.package.version` in Cargo.toml
+
 ## 0.21.1 (2025-08-10)
 
 ### Features
