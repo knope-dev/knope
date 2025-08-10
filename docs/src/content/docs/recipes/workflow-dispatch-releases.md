@@ -46,7 +46,7 @@ jobs:
       - name: Install Knope
         uses: knope-dev/action@v2.1.0
         with:
-          version: 0.21.1
+          version: 0.21.2
       - run: knope prepare-release --verbose
         name: Update versioned files and changelog
       - name: Store commit
@@ -125,7 +125,7 @@ jobs:
       - name: Install the latest Knope
         uses: knope-dev/action@v2.1.0
         with:
-          version: 0.21.1
+          version: 0.21.2
       - run: knope release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
