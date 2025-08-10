@@ -1,0 +1,12 @@
+[package]
+versioned_files = [
+  "Cargo.toml",
+  { path = "Cargo.lock", dependency = "first-package" },
+  { path = "Cargo.lock", dependency = "second-package" },
+]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

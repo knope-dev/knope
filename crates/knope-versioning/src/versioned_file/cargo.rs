@@ -35,8 +35,15 @@ impl Cargo {
         self.document
             .get("package")
             .and_then(|package| package.get("version")?.as_str())
+            .or_else(|| {
+                self.document
+                    .get("workspace")?
+                    .get("package")?
+                    .get("version")?
+                    .as_str()
+            })
             .ok_or_else(|| Error::MissingRequiredProperties {
-                property: "package.version",
+                property: "`package.version` or `workspace.package.version`",
                 path: self.path.clone(),
             })?
             .parse()
@@ -69,11 +76,19 @@ impl Cargo {
             }
             format!("{dependency}.version = {new_version}")
         } else {
-            let version = self
+            if let Some(version) = self
                 .document
                 .get_mut("package")
-                .and_then(|package| package.get_mut("version"));
-            if let Some(version) = version {
+                .and_then(|package| package.get_mut("version"))
+                && version.is_str()
+            // Skip package.version.workspace = true
+            {
+                *version = value(new_version.to_string());
+            } else if let Some(version) = self
+                .document
+                .get_mut("workspace")
+                .and_then(|ws| ws.get_mut("package")?.get_mut("version"))
+            {
                 *version = value(new_version.to_string());
             }
             format!("version = {new_version}")
@@ -126,7 +141,7 @@ mod test_contains_dependency {
         [package]
         name = "tester"
         version = "1.2.3-rc.0"
-        
+
         [dependencies]
         knope-versioning = "0.1.0"
         "#;
@@ -141,7 +156,7 @@ mod test_contains_dependency {
         [package]
         name = "tester"
         version = "1.2.3-rc.0"
-        
+
         [dependencies]
         knope-versioning = { version = "0.1.0" }
         "#;
@@ -156,7 +171,7 @@ mod test_contains_dependency {
         [package]
         name = "tester"
         version = "1.2.3-rc.0"
-        
+
         [dependencies.knope-versioning]
         path = "../knope-versioning"
         version = "0.1.0"
@@ -172,7 +187,7 @@ mod test_contains_dependency {
         [package]
         name = "tester"
         version = "1.2.3-rc.0"
-        
+
         [dev-dependencies]
         knope-versioning = "0.1.0"
         "#;
@@ -187,7 +202,7 @@ mod test_contains_dependency {
         [package]
         name = "tester"
         version = "1.2.3-rc.0"
-        
+
         [workspace.dependencies]
         knope-versioning = "0.1.0"
         "#;

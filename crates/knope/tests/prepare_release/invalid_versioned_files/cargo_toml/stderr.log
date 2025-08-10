@@ -1,4 +1,5 @@
 Error: knope_versioning::cargo::missing_property (https://knope.tech/reference/config-file/packages/#cargotoml)
 
-  × Cargo.toml was missing required property package.version
+  × Cargo.toml was missing required property `package.version` or
+  │ `workspace.package.version`
 

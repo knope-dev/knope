@@ -1,0 +1,9 @@
+[workspace]
+members = ["first", "second"]
+
+[workspace.package]
+version = "1.3.0"
+
+[package]
+name = "root"
+version.workspace = true
