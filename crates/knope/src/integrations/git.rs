@@ -311,7 +311,7 @@ fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<(), Error> {
     Ok(())
 }
 
-fn get_all_branches(repo: &Repository) -> Result<Vec<Branch>, Error> {
+fn get_all_branches(repo: &Repository) -> Result<Vec<Branch<'_>>, Error> {
     Ok(repo
         .branches(Some(BranchType::Local))?
         .filter_map(|value| {

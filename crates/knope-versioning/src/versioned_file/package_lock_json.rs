@@ -61,7 +61,7 @@ impl PackageLockJson {
         }
 
         if let Some(dependency_name) = dependency {
-            write!(diff, "{dependency_name} = {new_version}").unwrap();
+            write!(diff, "{dependency_name} = {new_version}").ok();
             let Some(packages) = self
                 .parsed
                 .get_mut("packages")
@@ -113,7 +113,7 @@ impl PackageLockJson {
                 );
                 Some(root_package)
             });
-            write!(diff, "version = {new_version}").unwrap();
+            write!(diff, "version = {new_version}").ok();
         }
 
         self

@@ -50,7 +50,7 @@ impl PackageJson {
         }
 
         if let Some(dependency_name) = dependency {
-            write!(diff, "{dependency_name} = {new_version}").unwrap();
+            write!(diff, "{dependency_name} = {new_version}").ok();
             // Check dependencies
             if let Some(Value::Object(deps)) = json.get_mut("dependencies") {
                 if let Some(dep_value) = deps.get_mut(dependency_name) {
@@ -69,7 +69,7 @@ impl PackageJson {
                 "version".to_string(),
                 Value::String(new_version.to_string()),
             );
-            write!(diff, "version = {new_version}").unwrap();
+            write!(diff, "version = {new_version}").ok();
         }
 
         self.raw = serde_json::to_string_pretty(&json)?;

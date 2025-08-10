@@ -110,9 +110,9 @@ fn write_change(out: &mut String, change: &Change, templates: &[ChangeTemplate])
         }
     }
     if let Some(details) = &change.details {
-        write!(out, "### {summary}\n\n{details}", summary = change.summary).unwrap();
+        write!(out, "### {summary}\n\n{details}", summary = change.summary).ok();
     } else {
-        write!(out, "- {summary}", summary = change.summary).unwrap();
+        write!(out, "- {summary}", summary = change.summary).ok();
     }
 }
 
