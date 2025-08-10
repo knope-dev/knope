@@ -76,7 +76,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4.2.2
-      - uses: actions/download-artifact@v4.3.0
+      - uses: actions/download-artifact@v5.0.0
         with:
           path: artifacts
           merge-multiple: true
@@ -164,7 +164,7 @@ release:
     contents: write
   steps:
     - uses: actions/checkout@v4.2.2
-    - uses: actions/download-artifact@v4.3.0
+    - uses: actions/download-artifact@v5.0.0
       with:
         path: artifacts
         merge-multiple: true
