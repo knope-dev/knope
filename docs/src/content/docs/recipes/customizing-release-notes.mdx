@@ -132,7 +132,7 @@ Knope will attempt to apply any templates in order from top to bottom, skipping 
 So in the above example:
 
 1. If the change is a complex change file (has `$details`) which has been committed (has `$commit_hash` & `$commit_author_name`), use the first template
-2. If the change was simple and has commit details (has `$commit_author_name` and `$commit_hash` but could not use `$details` in first template), use the second template.
+2. If the change was simple and has commit details (has `$commit_author_name` and `$commit_hash` but couldn't use `$details` in first template), use the second template.
 3. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.
 4. Use the third template (all changes have a `$summary`).
 
