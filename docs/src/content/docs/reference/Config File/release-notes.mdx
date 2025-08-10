@@ -1,0 +1,65 @@
+---
+title: Release Notes
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+The `[release_notes]` section of `knope.toml` customizes how Knope renders [release notes], both as
+[changelogs][changelog] and [forge] releases.
+
+## `change_templates` <Badge text="Knope 0.21.1+" variant="tip" />
+
+An array of templates to customize each [change] entry.
+
+:::tip
+
+See also the [customizing release notes guide](/recipes/customizing-release-notes#customizing-change-entries)
+
+:::
+
+```toml title="knope.toml"
+[release_notes]
+change_templates = [
+    "* $summary by $commit_author_name ($commit_hash)",
+]
+```
+
+Different variables are available for different types of [changes][change].
+Knope will use the first template containing _only_ valid variables for a given change.
+If no template is applicable, Knope will use a default template.
+The default templates are equivalent to `["### $summary\n\n$details", "- $summary"]`, using a small Markdown section for
+complex changes and a single bullet for simple changes.
+
+### Variables
+
+#### `$summary`
+
+Every change has a summary. It's one of:
+
+1. The title line (first non-empty line after the frontmatter, typically starting with a `#`) of a [change file]
+2. Everything after the `:` on the first line of [conventional commits]
+3. Everything after the `:` in a [conventional commit footer]
+
+#### `$details`
+
+Only a [change file] can have details, they're any content after the title line.
+
+#### `$commit_author_name`
+
+The name of the author of a [conventional commits] or the commit which introduced a [change file].
+
+Knope will skip templates containing this variable for [change file]s that aren't committed.
+
+#### `$commit_hash`
+
+The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of a [conventional commit] of the commit that introduced a [change file].
+
+Knope will skip templates containing this variable for [change file]s that aren't committed.
+
+[change]: /reference/concepts/change
+[changelog]: /reference/concepts/changelog
+[change file]: /reference/concepts/change-file
+[conventional commits]: /reference/concepts/conventional-commits
+[conventional commit footer]: /reference/concepts/conventional-commits#footers
+[forge]: /reference/concepts/forge
+[release notes]: /reference/concepts/release-notes

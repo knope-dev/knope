@@ -9,7 +9,7 @@ use snapbox::{
 };
 use tempfile::TempDir;
 
-use crate::helpers::{add_remote, assert, commit, copy_dir_contents, get_tags, init, tag};
+use crate::helpers::{add, add_remote, assert, commit, copy_dir_contents, get_tags, init, tag};
 
 pub struct TestCase {
     file_name: &'static str,
@@ -69,10 +69,18 @@ impl TestCase {
         for command in self.git {
             match command {
                 GitCommand::Commit(message) => {
-                    commit(path, message);
+                    commit(path, message, "Knope <knope@example.com>");
                 }
+                GitCommand::CommitWithAuthor {
+                    message,
+                    name,
+                    email,
+                } => commit(path, message, &format!("{name} <{email}>")),
                 GitCommand::Tag(name) => {
                     tag(path, name);
+                }
+                GitCommand::Add(file) => {
+                    add(path, file);
                 }
             }
         }
@@ -211,6 +219,12 @@ pub struct Asserts {
 
 #[derive(Clone, Copy, Debug)]
 pub enum GitCommand {
+    Add(&'static str),
     Commit(&'static str),
+    CommitWithAuthor {
+        message: &'static str,
+        name: &'static str,
+        email: &'static str,
+    },
     Tag(&'static str),
 }

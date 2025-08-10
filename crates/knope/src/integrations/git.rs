@@ -1,11 +1,13 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     env::current_dir,
+    path::Path,
     str::FromStr,
 };
 
 use git2::{Branch, BranchType, IndexAddOption, Oid, Repository, build::CheckoutBuilder};
 use itertools::Itertools;
+use knope_versioning::changes::{GitInfo, conventional_commit::Commit};
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::{debug, info};
@@ -362,7 +364,7 @@ pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
 /// means that there could be paths which jump _behind_ the target tag... and we want to exclude
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
-pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Error> {
+pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Error> {
     let repo = Repository::open(".")?;
 
     let tag_ref_name = format!("refs/tags/{tag}");
@@ -401,7 +403,10 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Er
         if !commits_to_exclude.contains(&oid) {
             if let Ok(commit) = repo.find_commit(oid) {
                 if let Some(message) = commit.message().map(String::from) {
-                    commits.push(message);
+                    commits.push(Commit {
+                        message,
+                        info: commit_info(&commit),
+                    });
                 }
             }
         }
@@ -411,6 +416,13 @@ pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<String>, Er
     commits.reverse();
 
     Ok(commits)
+}
+
+fn commit_info(commit: &git2::Commit) -> Option<GitInfo> {
+    Some(GitInfo {
+        author_name: commit.author().name().map(String::from)?,
+        hash: commit.id().to_string().get(..7).map(String::from)?,
+    })
 }
 
 pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
@@ -470,4 +482,59 @@ pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
         );
     }
     Ok(tags)
+}
+
+/// Find the first commit information for multiple files at once, returning a map of file paths to commit details.
+pub(crate) fn get_first_commits_for_files(
+    mut paths: HashSet<&Path>,
+) -> HashMap<&Path, Option<GitInfo>> {
+    let mut results = HashMap::new();
+
+    let Ok(repo) = Repository::open(".") else {
+        return results;
+    };
+
+    // Walk through all commits
+    let Ok(mut revwalk) = repo.revwalk() else {
+        return results;
+    };
+
+    if revwalk.push_head().is_err() {
+        return results;
+    }
+
+    if revwalk
+        .set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::REVERSE)
+        .is_err()
+    {
+        return results;
+    }
+
+    // Look for first commit containing each file
+    for commit_id in revwalk.filter_map(Result::ok) {
+        if paths.is_empty() {
+            break; // Found all files
+        }
+
+        let Ok(commit) = repo.find_commit(commit_id) else {
+            continue;
+        };
+        let Ok(tree) = commit.tree() else {
+            continue;
+        };
+
+        for &path in &paths {
+            if tree.get_path(path).is_ok() {
+                results.insert(path, commit_info(&commit));
+            }
+        }
+
+        paths.retain(|path| !results.contains_key(path));
+    }
+
+    for path in paths {
+        results.insert(path, None);
+    }
+
+    results
 }

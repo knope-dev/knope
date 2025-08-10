@@ -1,0 +1,195 @@
+---
+title: Customizing release notes
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+You don't have to settle for the built-in changelog formatting,
+there are a number of ways to customize generated changelogs.
+Each top-level heading on this page is a different way to customize.
+You can skip right to the most interesting one for you.
+
+Before starting, here is how a [version in a changelog](/reference/concepts/changelog#versions) looks by default:
+
+```markdown
+## 2.0.0 (2023-10-31)
+
+### Breaking changes
+
+- Simple breaking change
+
+#### Complex breaking change
+
+Some details about that change
+
+### Features
+
+- Simple feature
+
+#### A new feature
+
+Some details about that feature
+
+### Fixes
+
+- Simple fix
+
+#### A bug fix
+
+Some details about that fix
+
+### Notes
+
+- Simple note
+
+#### A note
+
+Some details about that note
+```
+
+This is using the [default sections](/reference/concepts/release-notes#sections) at the recommended [header level](#changing-the-header-level) and the
+default [change templates](#customizing-change-entries). Knope only includes sections containing at least one change.
+
+## Adding more sections
+
+You can use the `extra_changelog_sections` config option to add extra sections to a changelog.
+This is per-package, so if you have more than one package, you'll need to customize each changelog.
+
+```toml title="knope.toml"
+[package]
+extra_changelog_sections = [
+    { name = "Security", footers = ["Security"], types = ["sec"] }
+]
+```
+
+You can add as many sections as you want, they will appear in order _after_ the built-in sections.
+Each section can be added to from any number of [conventional commit footers](/reference/concepts/conventional-commits/#footers) and [changeset types](https://github.com/knope-dev/changesets?tab=readme-ov-file#change-type).
+The semantic version impact of any custom changes is `patch`.
+
+## Overriding built-in sections
+
+The built-in sections, as described at the top of this page, can be overridden.
+
+:::caution
+The default order is recommended, as it organizes changes from most-important (for consumers) to least-important.
+Overridden sections always appear after non-overridden sections in the order they're defined.
+So, if you're going to override any of the first three sections,
+it's recommended you also override any sections that should appear below them.
+:::
+
+Here's some config that would override all the built-in sections,
+_only_ changing their name (not their order or sources):
+
+```toml title="knope.toml"
+[package]
+extra_changelog_sections = [
+    { types = ["major"], name = "❗️Breaking ❗" },
+    { types = ["minor"], name = "🚀 Features" },
+    { types = ["patch"], name = "🐛 Fixes" },
+    { footers = ["Changelog-Note"], name = "📝 Notes" },
+]
+```
+
+## Adding to `Notes` from more sources
+
+The built-in `Notes` section comes from any [conventional commit footers](/reference/concepts/conventional-commits#footers) named `Changelog-Note`.
+You can override this section in the config file to add more sources:
+
+```toml title="knope.toml"
+[package]
+extra_changelog_sections = [
+    { name = "Notes", footers = ["Changelog-Note"], types = ["note"] }
+]
+```
+
+Now, when running a [`CreateChangeFile`](/reference/config-file/steps/create-change-file/) step (for example, with `knope document-change`), the `note` type will be available:
+
+```text
+? What type of change is this?
+  major
+  minor
+  patch
+> note
+[↑↓ to move, enter to select, type to filter]
+```
+
+## Customizing change entries <Badge text="Knope 0.21.1+" variant="tip" />
+
+By default, there are two ways a change might appear in release notes, depending on whether the change is [simple or complex](/reference/concepts/release-notes#simple-vs-complex-changes).
+You can add custom templates for rendering changes [to your config file](/reference/config-file/release-notes):
+
+```toml
+[release_notes]
+change_templates = [
+    "### $summary ($commit_hash)\n\n$details\n\nBy $commit_author_name",
+    "* $summary by $commit_author_name ($commit_hash)",
+    "### $summary\n\n$details",
+    "* $summary",
+]
+```
+
+Knope will attempt to apply any templates in order from top to bottom, skipping ones where a variable isn't relevant.
+So in this example:
+
+1. If the change is a complex change file (has `$details`) which exists in a Git commit (has `$commit_hash` & `$commit_author_name`), use the first template
+2. If the change was simple and has commit details (has `$commit_author_name` and `$commit_hash` but couldn't use `$details` in first template), use the second template.
+3. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.
+4. Use the third template (all changes have a `$summary`).
+
+:::note
+
+You can find all the available variables for `change_templates` in [the config reference](/reference/config-file/release-notes).
+
+:::
+
+If Knope gets to the end of the list and hasn't found an applicable template, it uses defaults which are equivalent to:
+
+```toml
+[release_notes]
+change_templates = [
+    "### $summary\n\n$details",
+    "- $summary",
+]
+```
+
+:::note
+
+The order of the templates _only_ determines their precedence, not the order that changes appear in a section.
+You currently can't customize the order of changes in a section.
+
+:::
+
+## Changing the header level
+
+:::note
+
+This affects [changelogs][changelog] only, not releases on [forges][forge].
+
+:::
+
+By default, the heading of a version is `##`, each section is `###`, and each [complex change](/reference/concepts/release-notes/#simple-vs-complex-changes) is `####`.
+The _relative_ level of those sections is always the same,
+but you can make each version a top-level heading (`#`)
+by modifying the most recent version to that level.
+Knope looks for the previous version to decide the level of the next version.
+
+:::caution
+Knope expects versions in the changelog to look similar to how it would generate them,
+specifically it _must_ start with a valid [semantic version](/reference/concepts/semantic-versioning).
+If you have a different format for your pre-existing headers, you'll need to update the _latest_ version to Knope's format.
+:::
+
+```markdown
+# 2.0.0 (2023-10-31)
+
+## Breaking changes
+
+- A breaking change
+
+# 1.0.0
+
+This was edited to be a top-level heading
+```
+
+[changelog]: /reference/concepts/changelog
+[forge]: /reference/concepts/forge
