@@ -112,10 +112,15 @@ Knope will also attempt to detect dependencies **by package name** between membe
 
 For the above `package.json` which defines workspaces, with this file tree:
 
+{/* prettier-ignore */}
 <FileTree>
-  - package.json # Workspace - package-lock.json - member1/ - package.json #
-  name = "first", depends on "second" - others/ - member2/ - package.json # name
-  = "second" - anotherDir/
+  - package.json # Workspace
+  - package-lock.json
+  - member1/
+    - package.json # name = "first", depends on "second"
+  - others/
+    - member2/ - package.json # name = "second"
+  - anotherDir/
 </FileTree>
 
 The default `knope.toml` file will look something like this:

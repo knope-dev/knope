@@ -2,7 +2,7 @@
 title: Packages
 ---
 
-import { Badge } from "@astrojs/starlight/components";
+import { Badge, FileTree } from "@astrojs/starlight/components";
 
 A package is a set of files that Knope releases together with the same version.
 Knope can increase this version based on changes that affect the package.
@@ -50,7 +50,11 @@ Knope supports the following file names:
 
 ### `Cargo.toml`
 
-For versioning Rust projects. Must contain `version` and `name` fields in the `package` table, like so:
+For versioning Rust projects. There are a few different types of `Cargo.toml` supported.
+
+#### Basic Rust package
+
+If a `Cargo.toml` contains `package.version`, Knope can update that field for you when incrementing the version:
 
 ```toml title="Cargo.toml"
 [package]
@@ -58,7 +62,9 @@ name = "my-package"
 version = "1.0.0"
 ```
 
-If you specify `dependency`, Knope will search for it in the `workspace.dependencies`,
+#### Update Rust dependencies
+
+If you specify `dependency` in `knope.toml`, Knope will search for that crate name in the `workspace.dependencies`,
 `dependencies`, and `dev-dependencies` tables:
 
 ```toml title="knope.toml"
@@ -79,7 +85,48 @@ knope-versioning = "1.0.0"
 
 :::note
 
-Cargo workspaces are only supported when using the [default config](/reference/default-config/#cargo-workspaces)
+Members of Cargo workspaces are auto-detected when using the [default config](/reference/default-config/#cargo-workspaces)
+
+:::
+
+#### Update a workspace version
+
+If `Cargo.toml` contains `workspace.package.version` and _not_ `package.version`, Knope will update that version.
+
+{/* prettier-ignore */}
+<FileTree>
+  - Cargo.toml
+  - Cargo.lock
+  - some-crate/
+    - Cargo.toml
+  - knope.toml
+</FileTree>
+
+```toml title="Cargo.toml"
+[workspace.package]
+version = "1.0.0"
+```
+
+```toml title="some-crate/Cargo.toml"
+[package]
+name = "something"
+version.workspace = true
+```
+
+```toml title="knope.toml"
+[package]
+versioned_files = [
+    "Cargo.toml", # NOT some-crate/Cargo.toml
+    { path = "Cargo.lock", dependency = "some-crate" },
+]
+```
+
+:::caution
+
+Knope will _not_ search for the workspace file if you specify the member's `Cargo.toml`.
+You must tell Knope to version that workspace file directly, as it contains the version.
+
+Because the workspace `Cargo.toml` does not have a `package.name`, you must specify the dependency in `Cargo.lock` manually.
 
 :::
 

@@ -1,6 +1,9 @@
 [workspace]
 members = ["first", "second"]
 
+[workspace.package]
+version = "9.8.7" # Should be ignored
+
 [workspace.dependencies]
 first-package = { path = "first", version = "1.0.0" }
 second-package = "0.1.0"

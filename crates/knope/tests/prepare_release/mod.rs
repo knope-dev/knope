@@ -1,7 +1,6 @@
 mod allow_empty;
 mod branching_history;
-mod cargo_toml_dependencies;
-mod cargo_workspace;
+mod cargo;
 mod changelog;
 mod changesets;
 mod custom_change_entries;

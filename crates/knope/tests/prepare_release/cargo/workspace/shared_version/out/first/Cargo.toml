@@ -1,0 +1,6 @@
+[package]
+name = "first-package"
+version.workspace = true
+
+[dependencies]
+second-package = { path = "../second" }

@@ -1,0 +1,3 @@
+[package]
+name = "second-package"
+version.workspace = true
