@@ -48,13 +48,13 @@ Only a [change file] can have details, they're any content after the title line.
 
 The name of the author of a [conventional commits] or the commit which introduced a [change file].
 
-If a [change file] hasn't been committed, templates containing this variable will be skipped.
+Knope will skip templates containing this variable for [change file]s that aren't committed.
 
 #### `$commit_hash`
 
 The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of a [conventional commit] of the commit that introduced a [change file].
 
-If a [change file] hasn't been committed, templates containing this variable will be skipped.
+Knope will skip templates containing this variable for [change file]s that aren't committed.
 
 [change]: /reference/concepts/change
 [changelog]: /reference/concepts/changelog

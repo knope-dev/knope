@@ -129,9 +129,9 @@ change_templates = [
 ```
 
 Knope will attempt to apply any templates in order from top to bottom, skipping ones where a variable isn't relevant.
-So in the above example:
+So in this example:
 
-1. If the change is a complex change file (has `$details`) which has been committed (has `$commit_hash` & `$commit_author_name`), use the first template
+1. If the change is a complex change file (has `$details`) which exists in a Git commit (has `$commit_hash` & `$commit_author_name`), use the first template
 2. If the change was simple and has commit details (has `$commit_author_name` and `$commit_hash` but couldn't use `$details` in first template), use the second template.
 3. If the change is complex (a change file with content below the header), and therefore has `$details`, use the second template.
 4. Use the third template (all changes have a `$summary`).
@@ -169,8 +169,8 @@ This affects [changelogs][changelog] only, not releases on [forges][forge].
 
 By default, the heading of a version is `##`, each section is `###`, and each [complex change](/reference/concepts/release-notes/#simple-vs-complex-changes) is `####`.
 The _relative_ level of those sections is always the same,
-but you can change each version to be a top-level heading (`#`)
-by modifying the last version in the changelog to be that level.
+but you can make each version a top-level heading (`#`)
+by modifying the most recent version to that level.
 Knope looks for the previous version to decide the level of the next version.
 
 :::caution
