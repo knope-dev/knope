@@ -11,7 +11,7 @@ jobs:
     if: (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.3.0
+      - uses: actions/checkout@v5.0.0
       - run: echo "tag_name=$(gh release list --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ github.token }}
@@ -38,7 +38,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v4.3.0
+      - uses: actions/checkout@v5.0.0
       - uses: Swatinem/rust-cache@v2
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
@@ -85,7 +85,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4.3.0
+      - uses: actions/checkout@v5.0.0
       - uses: actions/download-artifact@v5.0.0
         with:
           path: artifacts
