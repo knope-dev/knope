@@ -16,7 +16,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4.3.0
+      - uses: actions/checkout@v5.0.0
       - uses: Swatinem/rust-cache@v2
         if: matrix.os != 'windows-latest' # rust-cache is slower on windows than building from scratch every time
       - uses: actions/setup-node@v4
@@ -61,7 +61,7 @@ jobs:
     name: Vale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: npm install -g mdx2vast # Adds MDX support for Vale
       - uses: errata-ai/vale-action@reviewdog
         with:
