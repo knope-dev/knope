@@ -1,33 +1,21 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use super::Label;
 use crate::changes::{Change, ChangeType};
 
 /// The various rules that can be used when bumping semantic versions.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
-#[serde(tag = "rule")]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Rule {
-    Major,
-    Minor,
-    Patch,
-    Pre {
-        label: Label,
-        #[serde(skip)]
-        stable_rule: Stable,
-    },
+    Stable(Stable),
+    Pre { label: Label, stable_rule: Stable },
     Release,
 }
 
 impl From<Stable> for Rule {
     fn from(conventional_rule: Stable) -> Self {
-        match conventional_rule {
-            Stable::Major => Rule::Major,
-            Stable::Minor => Rule::Minor,
-            Stable::Patch => Rule::Patch,
-        }
+        Self::Stable(conventional_rule)
     }
 }
 

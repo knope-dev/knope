@@ -19,7 +19,12 @@ pub(crate) fn replace_variables(template: &Template, state: &mut State) -> Resul
             } else {
                 first_package(state)?
             };
-            let version = package.versioning.versions.clone().into_latest();
+            let version = package
+                .versioning
+                .versions
+                .clone()
+                .into_latest()
+                .ok_or(Error::NoVersion)?;
             package_cache = Some(package);
             Ok(version.to_string())
         }
@@ -39,7 +44,12 @@ pub(crate) fn replace_variables(template: &Template, state: &mut State) -> Resul
                 package_cache = Some(package);
                 Ok(body.clone())
             } else {
-                let version = package.versioning.versions.clone().into_latest();
+                let version = package
+                    .versioning
+                    .versions
+                    .clone()
+                    .into_latest()
+                    .ok_or(Error::NoVersion)?;
                 let release = package
                     .versioning
                     .release_notes
@@ -83,6 +93,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Package(#[from] package::Error),
+    #[error("Could not determine version of package")]
+    #[diagnostic(code(variables::no_version))]
+    NoVersion,
     #[error("Could not find a changelog entry for version {0}")]
     #[diagnostic(
         code(variables::no_changelog_entry),

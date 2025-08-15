@@ -5,7 +5,6 @@ use itertools::Itertools;
 use knope_versioning::{
     Action, ReleaseTag, VersionedFile,
     changes::CHANGESET_DIR,
-    package::Bump,
     release_notes::Release,
     semver::{PackageVersions, Rule},
 };
@@ -136,7 +135,7 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
             let go_tags = package
                 .versioning
                 .bump_version(
-                    Bump::Manual(release.version.clone()),
+                    &release.version,
                     package.go_versioning,
                     state.all_versioned_files.clone(),
                 )
@@ -200,12 +199,15 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
 /// Given a package, figure out if there was a release prepared in a separate workflow. Basically,
 /// if the package version is newer than the latest tag, there's a release to release!
 fn find_prepared_release(package: &mut Package, all_tags: &[String]) -> Option<Release> {
-    let current_version = package.versioning.versions.clone().into_latest();
+    let current_version = package.versioning.versions.clone().into_latest()?;
     debug!("Searching for last package tag to determine if there's a release to release");
-    let last_tag = PackageVersions::from_tags(package.name().as_custom(), all_tags).into_latest();
-    debug!("Last tag is {last_tag}");
-    if last_tag == current_version {
-        return None;
+    if let Some(last_tag) =
+        PackageVersions::from_tags(package.name().as_custom(), all_tags).into_latest()
+    {
+        debug!("Last tag is {last_tag}");
+        if last_tag == current_version {
+            return None;
+        }
     }
     Some(package
         .versioning
