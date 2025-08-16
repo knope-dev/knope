@@ -1,6 +1,6 @@
 use knope_versioning::{
     GoVersioning, VersionedFile,
-    package::{Bump, BumpError},
+    package::BumpError,
     semver::{PreReleaseNotFound, Rule},
 };
 use miette::Diagnostic;
@@ -19,15 +19,18 @@ pub(crate) fn bump_version_and_update_state(
     let (run_type, mut state) = state.take();
 
     for package in &mut state.packages {
-        let (bump, go_versioning) = if let Some(version) = package.override_version.clone() {
-            (Bump::Manual(version), GoVersioning::BumpMajor)
+        let (version, go_versioning) = if let Some(version) = package.override_version.clone() {
+            (version, GoVersioning::BumpMajor)
         } else {
-            (Bump::Rule(rule.clone()), package.go_versioning)
+            (
+                package.versioning.versions.bump(rule.clone())?,
+                package.go_versioning,
+            )
         };
         state.all_versioned_files =
             package
                 .versioning
-                .bump_version(bump, go_versioning, state.all_versioned_files)?;
+                .bump_version(&version, go_versioning, state.all_versioned_files)?;
     }
     let write_files = state
         .all_versioned_files

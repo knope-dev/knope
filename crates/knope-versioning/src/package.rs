@@ -83,19 +83,10 @@ impl Package {
     /// error too.
     pub fn bump_version(
         &mut self,
-        bump: Bump,
+        version: &Version,
         go_versioning: GoVersioning,
         versioned_files: Vec<VersionedFile>,
     ) -> Result<Vec<VersionedFile>, BumpError> {
-        match bump {
-            Bump::Manual(version) => {
-                self.versions.update_version(version);
-            }
-            Bump::Rule(rule) => {
-                self.versions.bump(rule)?;
-            }
-        }
-        let version = self.versions.clone().into_latest();
         versioned_files
             .into_iter()
             .map(|mut file| {
@@ -106,7 +97,7 @@ impl Package {
                     .collect_vec();
                 for config in configs {
                     file = file
-                        .set_version(&version, config.dependency.as_deref(), go_versioning)
+                        .set_version(version, config.dependency.as_deref(), go_versioning)
                         .map_err(BumpError::SetError)?;
                 }
                 Ok(file)
@@ -147,14 +138,10 @@ impl Package {
             debug!("Determining new version for {package_name}");
         }
 
-        let updated = match config {
+        let (version, go_versioning) = match config {
             ChangeConfig::Force(version) => {
                 debug!("Using overridden version {version}");
-                self.bump_version(
-                    Bump::Manual(version),
-                    GoVersioning::BumpMajor,
-                    versioned_files,
-                )?
+                (version, GoVersioning::BumpMajor)
             }
             ChangeConfig::Calculate {
                 prerelease_label,
@@ -169,10 +156,11 @@ impl Package {
                 } else {
                     stable_rule.into()
                 };
-                self.bump_version(Bump::Rule(rule), go_versioning, versioned_files)?
+                (self.versions.bump(rule)?, go_versioning)
             }
         };
-        let version = self.versions.clone().into_latest();
+
+        let updated = self.bump_version(&version, go_versioning, versioned_files)?;
         let mut actions: Vec<Action> = changes
             .iter()
             .filter_map(|change| {
@@ -428,11 +416,6 @@ impl PartialEq<String> for Name {
     fn eq(&self, str: &String) -> bool {
         str == self.as_ref()
     }
-}
-
-pub enum Bump {
-    Manual(Version),
-    Rule(Rule),
 }
 
 #[derive(Debug, Error)]

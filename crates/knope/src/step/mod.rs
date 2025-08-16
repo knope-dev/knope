@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use indexmap::IndexMap;
 use knope_config::{Template, Variable};
-use knope_versioning::semver::{Label, Rule};
+use knope_versioning::semver::Label;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -100,6 +100,35 @@ pub(crate) enum Step {
     },
 }
 
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(tag = "rule")]
+pub(crate) enum Rule {
+    Major,
+    Minor,
+    Patch,
+    Pre { label: Label },
+    Release,
+}
+
+impl From<Rule> for knope_versioning::semver::Rule {
+    fn from(value: Rule) -> Self {
+        use knope_versioning::semver::{
+            Rule::{Pre, Release, Stable},
+            StableRule::{Major, Minor, Patch},
+        };
+        match value {
+            Rule::Major => Stable(Major),
+            Rule::Minor => Stable(Minor),
+            Rule::Patch => Stable(Patch),
+            Rule::Pre { label } => Pre {
+                label,
+                stable_rule: Patch,
+            },
+            Rule::Release => Release,
+        }
+    }
+}
+
 impl Step {
     pub(crate) fn run(self, state: RunType<State>) -> Result<RunType<State>, Error> {
         debug!("Running step {self:?}");
@@ -117,7 +146,7 @@ impl Step {
                 git::rebase_branch(&state.of(to))?;
                 state
             }
-            Step::BumpVersion(rule) => releases::bump_version(state, &rule)?,
+            Step::BumpVersion(rule) => releases::bump_version(state, &rule.into())?,
             Step::Command {
                 command,
                 variables,

@@ -14,7 +14,7 @@ use crate::semver::rule::Stable;
 /// So we might have 1.2.3, 1.2.4-rc.1, 1.3.0-beta.0, and 2.0.0-alpha.4
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PackageVersions {
-    stable: StableVersion,
+    stable: Option<StableVersion>,
     prereleases: Prereleases,
 }
 
@@ -38,7 +38,7 @@ impl PackageVersions {
             .peekable();
 
         if tags.peek().is_none() {
-            debug!("No tags found matching pattern {pattern}");
+            debug!("No tags found starting with {pattern}");
         }
 
         let mut current_versions = Self::default();
@@ -47,7 +47,7 @@ impl PackageVersions {
             if let Ok(version) = Version::from_str(version_string.as_str()) {
                 match version {
                     Version::Stable(stable) => {
-                        current_versions.stable = stable;
+                        current_versions.stable = Some(stable);
                         break; // Only prereleases newer than the last stable version are relevant
                     }
                     Version::Pre(_) => {
@@ -62,17 +62,17 @@ impl PackageVersions {
 
     /// Consumes `self` to produce the most recent version (determined by order of tags).
     #[must_use]
-    pub fn into_latest(mut self) -> Version {
-        self.prereleases.pop_last().map_or(
-            Version::Stable(self.stable),
-            |(stable_component, pres)| {
+    pub fn into_latest(mut self) -> Option<Version> {
+        self.prereleases
+            .pop_last()
+            .map(|(stable_component, pres)| {
                 let pre_component = pres.into_last();
                 Version::Pre(PreVersion {
                     stable_component,
                     pre_component,
                 })
-            },
-        )
+            })
+            .or_else(|| self.stable.map(Version::Stable))
     }
 
     /// Replace or insert the version in the correct location if it's newer than the current
@@ -81,13 +81,13 @@ impl PackageVersions {
     /// and erase all pre-releases.
     /// If the version is a newer prerelease, it will overwrite the prerelease with
     /// the same stable component and label.
-    pub fn update_version(&mut self, version: Version) {
+    pub(crate) fn update_version(&mut self, version: Version) {
         match version {
             Version::Stable(new) => {
-                if self.stable >= new {
+                if self.stable.is_some_and(|it| it >= new) {
                     return;
                 }
-                self.stable = new;
+                self.stable = Some(new);
                 self.prereleases.clear();
             }
             Version::Pre(PreVersion {
@@ -120,43 +120,61 @@ impl PackageVersions {
     /// Versions with major component 0 have special meaning in Semantic Versioning and therefore have
     /// different behavior:
     /// 1. [`Rule::Major`] will bump the minor component.
-    /// 2. [`Rule::Minor`] will bump the patch component.
+    /// 2. [`Stable(Minor)`] will bump the patch component.
     ///
     /// # Errors
     ///
     /// Can fail if trying to run [`Rule::Release`] when there is no pre-release.
-    pub fn bump(&mut self, rule: Rule) -> Result<(), PreReleaseNotFound> {
-        match rule {
-            Rule::Major => self.update_version(bump_stable(self.stable, Stable::Major).into()),
-            Rule::Minor => self.update_version(bump_stable(self.stable, Stable::Minor).into()),
-            Rule::Patch => self.update_version(bump_stable(self.stable, Stable::Patch).into()),
-            Rule::Release => {
-                let version = self
+    pub fn bump(&mut self, rule: Rule) -> Result<Version, PreReleaseNotFound> {
+        match (rule, self.stable) {
+            (Rule::Stable(rule), Some(stable)) => {
+                let version: Version = bump_stable(stable, rule).into();
+                self.update_version(version.clone());
+                Ok(version)
+            }
+            (Rule::Stable(_), None) => {
+                // Bumping the stable version, but there is no previous stable version.
+                // So we use the last pre-release version as-is (assuming it was set manually)
+                // _or_ 0.0.0 as the first version of the project.
+                let version: Version = self
+                    .prereleases
+                    .pop_last()
+                    .map(|(version, _pre)| version)
+                    .unwrap_or_default()
+                    .into();
+                self.update_version(version.clone());
+                Ok(version)
+            }
+            (Rule::Pre { label, stable_rule }, _) => Ok(self.bump_pre(label, stable_rule)),
+            (Rule::Release, _) => {
+                let version: Version = self
                     .prereleases
                     .pop_last()
                     .map(|(version, _pre)| version)
                     .ok_or(PreReleaseNotFound)?
                     .into();
-                self.update_version(version);
+                self.update_version(version.clone());
+                Ok(version)
             }
-            Rule::Pre { label, stable_rule } => self.bump_pre(label, stable_rule),
         }
-        Ok(())
     }
 
     #[must_use]
-    pub fn stable(&self) -> StableVersion {
+    pub fn stable(&self) -> Option<StableVersion> {
         self.stable
     }
 
     /// Bumps the pre-release component of a [`Version`] after applying the `stable_rule`.
-    ///
-    /// # Errors
-    ///
-    /// Can fail if there's an existing pre-release component that can't be incremented.
-    fn bump_pre(&mut self, label: Label, stable_rule: Stable) {
+    fn bump_pre(&mut self, label: Label, stable_rule: Stable) -> Version {
         debug!("Pre-release label {label} selected. Determining next stable version...");
-        let stable_component = bump_stable(self.stable, stable_rule);
+        let stable_component = if let Some(stable) = self.stable {
+            bump_stable(stable, stable_rule)
+        } else {
+            self.prereleases
+                .last_key_value()
+                .map(|(stable, _)| *stable)
+                .unwrap_or_default()
+        };
         let pre_version = self
             .prereleases
             .get(&stable_component)
@@ -174,10 +192,12 @@ impl PackageVersions {
 
         self.prereleases.clear();
 
-        self.update_version(Version::Pre(PreVersion {
+        let version = Version::Pre(PreVersion {
             stable_component,
             pre_component: pre,
-        }));
+        });
+        self.update_version(version.clone());
+        version
     }
 }
 
@@ -239,7 +259,7 @@ pub struct PreReleaseNotFound;
 impl From<StableVersion> for PackageVersions {
     fn from(version: StableVersion) -> Self {
         Self {
-            stable: version,
+            stable: Some(version),
             prereleases: BTreeMap::new(),
         }
     }
@@ -254,7 +274,6 @@ impl From<Version> for PackageVersions {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test_from_tags {
     use std::str::FromStr;
 
@@ -276,7 +295,7 @@ mod test_from_tags {
         let versions = PackageVersions::from_tags(None, &tags);
 
         assert_eq!(
-            versions.stable(),
+            versions.stable().unwrap(),
             StableVersion {
                 major: 1,
                 minor: 2,
@@ -286,7 +305,7 @@ mod test_from_tags {
 
         assert_eq!(
             versions.clone().into_latest(),
-            Version::from_str("2.0.0-alpha.0").unwrap()
+            Version::from_str("2.0.0-alpha.0").ok()
         );
         assert_eq!(
             *versions
@@ -319,34 +338,42 @@ mod test_from_tags {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod test_bump {
     use std::str::FromStr;
 
     use super::*;
+    use crate::semver::{Rule::*, StableRule::*};
 
     #[test]
     fn major() {
         let mut versions: PackageVersions = Version::new(1, 2, 3, None).into();
-        versions.bump(Rule::Major).unwrap();
+        versions.bump(Stable(Major)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(2, 0, 0, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(2, 0, 0, None));
     }
 
     #[test]
     fn major_0() {
         let mut versions = PackageVersions::from(Version::new(0, 1, 2, None));
-        versions.bump(Rule::Major).unwrap();
+        versions.bump(Stable(Major)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(0, 2, 0, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(0, 2, 0, None));
+    }
+
+    #[test]
+    fn major_pre_only() {
+        let mut versions = PackageVersions::from_tags(None, &["v1.0.0-rc.0"]);
+        versions.bump(Stable(Major)).unwrap();
+
+        assert_eq!(versions.into_latest().unwrap(), Version::new(1, 0, 0, None));
     }
 
     #[test]
     fn major_unset() {
         let mut versions = PackageVersions::default();
-        versions.bump(Rule::Major).unwrap();
+        versions.bump(Stable(Major)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(0, 1, 0, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(0, 0, 0, None));
     }
 
     #[test]
@@ -354,34 +381,41 @@ mod test_bump {
         for pre_version in ["1.2.4-rc.0", "1.3.0-rc.0", "2.0.0-rc.0"] {
             let mut versions = PackageVersions::from(Version::new(1, 2, 3, None));
             versions.update_version(Version::from_str(pre_version).unwrap());
-            versions.bump(Rule::Major).unwrap();
+            versions.bump(Stable(Major)).unwrap();
 
-            assert_eq!(versions.into_latest(), Version::new(2, 0, 0, None));
+            assert_eq!(versions.into_latest().unwrap(), Version::new(2, 0, 0, None));
         }
     }
 
     #[test]
     fn minor() {
         let mut versions = PackageVersions::from(Version::new(1, 2, 3, None));
-        versions.bump(Rule::Minor).unwrap();
+        versions.bump(Stable(Minor)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(1, 3, 0, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(1, 3, 0, None));
     }
 
     #[test]
     fn minor_0() {
         let mut versions = PackageVersions::from(Version::new(0, 1, 2, None));
-        versions.bump(Rule::Minor).unwrap();
+        versions.bump(Stable(Minor)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(0, 1, 3, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(0, 1, 3, None));
+    }
+
+    #[test]
+    fn minor_pre_only() {
+        let mut versions = PackageVersions::from_tags(None, &["v1.0.0-rc.0"]);
+        versions.bump(Stable(Minor)).unwrap();
+        assert_eq!(versions.into_latest().unwrap(), Version::new(1, 0, 0, None));
     }
 
     #[test]
     fn minor_unset() {
         let mut versions = PackageVersions::default();
-        versions.bump(Rule::Minor).unwrap();
+        versions.bump(Stable(Minor)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(0, 0, 1, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(0, 0, 0, None));
     }
 
     #[test]
@@ -389,43 +423,50 @@ mod test_bump {
         for pre_version in ["1.2.4-rc.0", "1.3.0-rc.0"] {
             let mut versions = PackageVersions::from(Version::new(1, 2, 3, None));
             versions.update_version(Version::from_str(pre_version).unwrap());
-            versions.bump(Rule::Minor).unwrap();
+            versions.bump(Stable(Minor)).unwrap();
 
-            assert_eq!(versions.into_latest(), Version::new(1, 3, 0, None));
+            assert_eq!(versions.into_latest().unwrap(), Version::new(1, 3, 0, None));
         }
     }
 
     #[test]
     fn patch() {
         let mut versions = PackageVersions::from(Version::new(1, 2, 3, None));
-        versions.bump(Rule::Patch).unwrap();
+        versions.bump(Stable(Patch)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(1, 2, 4, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(1, 2, 4, None));
     }
 
     #[test]
     fn patch_0() {
         let mut versions = PackageVersions::from(Version::new(0, 1, 0, None));
-        versions.bump(Rule::Patch).unwrap();
+        versions.bump(Stable(Patch)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(0, 1, 1, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(0, 1, 1, None));
+    }
+
+    #[test]
+    fn patch_pre_only() {
+        let mut versions = PackageVersions::from_tags(None, &["v1.0.0-rc.0"]);
+        versions.bump(Stable(Patch)).unwrap();
+        assert_eq!(versions.into_latest().unwrap(), Version::new(1, 0, 0, None));
     }
 
     #[test]
     fn patch_unset() {
         let mut versions = PackageVersions::default();
-        versions.bump(Rule::Patch).unwrap();
+        versions.bump(Stable(Patch)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(0, 0, 1, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(0, 0, 0, None));
     }
 
     #[test]
     fn patch_after_pre() {
         let mut versions = PackageVersions::from(Version::new(1, 2, 3, None));
         versions.update_version(Version::from_str("1.2.4-rc.0").unwrap());
-        versions.bump(Rule::Patch).unwrap();
+        versions.bump(Stable(Patch)).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(1, 2, 4, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(1, 2, 4, None));
     }
 
     #[test]
@@ -434,14 +475,11 @@ mod test_bump {
         versions
             .bump(Rule::Pre {
                 label: Label::from("rc"),
-                stable_rule: Stable::Minor,
+                stable_rule: Minor,
             })
             .unwrap();
 
-        assert_eq!(
-            versions.into_latest(),
-            Version::from_str("1.3.0-rc.0").unwrap()
-        );
+        assert_eq!(versions.into_latest(), Version::from_str("1.3.0-rc.0").ok());
     }
 
     #[test]
@@ -453,14 +491,27 @@ mod test_bump {
         versions
             .bump(Rule::Pre {
                 label: Label::from("rc"),
-                stable_rule: Stable::Minor,
+                stable_rule: Minor,
             })
             .unwrap();
 
-        assert_eq!(
-            versions.into_latest(),
-            Version::from_str("1.3.0-rc.1").unwrap()
-        );
+        assert_eq!(versions.into_latest(), Version::from_str("1.3.0-rc.1").ok());
+    }
+
+    #[test]
+    fn pre_without_stable() {
+        let mut versions = PackageVersions::default();
+        versions.update_version(Version::from_str("1.3.0-rc.0").unwrap());
+        versions.update_version(Version::from_str("1.2.4-rc.1").unwrap());
+        versions.update_version(Version::from_str("2.0.0-rc.2").unwrap());
+        versions
+            .bump(Rule::Pre {
+                label: Label::from("rc"),
+                stable_rule: Minor,
+            })
+            .unwrap();
+
+        assert_eq!(versions.into_latest(), Version::from_str("2.0.0-rc.3").ok());
     }
 
     #[test]
@@ -471,13 +522,13 @@ mod test_bump {
         versions
             .bump(Rule::Pre {
                 label: Label::from("beta"),
-                stable_rule: Stable::Patch,
+                stable_rule: Patch,
             })
             .unwrap();
 
         assert_eq!(
             versions.into_latest(),
-            Version::from_str("1.2.4-beta.2").unwrap()
+            Version::from_str("1.2.4-beta.2").ok()
         );
     }
 
@@ -488,14 +539,11 @@ mod test_bump {
         versions
             .bump(Rule::Pre {
                 label: Label::from("rc"),
-                stable_rule: Stable::Minor,
+                stable_rule: Minor,
             })
             .unwrap();
 
-        assert_eq!(
-            versions.into_latest(),
-            Version::from_str("1.3.0-rc.0").unwrap()
-        );
+        assert_eq!(versions.into_latest(), Version::from_str("1.3.0-rc.0").ok());
     }
 
     #[test]
@@ -507,6 +555,6 @@ mod test_bump {
 
         versions.bump(Rule::Release).unwrap();
 
-        assert_eq!(versions.into_latest(), Version::new(2, 0, 0, None));
+        assert_eq!(versions.into_latest().unwrap(), Version::new(2, 0, 0, None));
     }
 }

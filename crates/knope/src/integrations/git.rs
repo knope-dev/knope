@@ -364,17 +364,21 @@ pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
 /// means that there could be paths which jump _behind_ the target tag... and we want to exclude
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
-pub(crate) fn get_commit_messages_after_tag(tag: &str) -> Result<Vec<Commit>, Error> {
+pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Commit>, Error> {
     let repo = Repository::open(".")?;
 
-    let tag_ref_name = format!("refs/tags/{tag}");
-    let tag_ref = repo.find_reference(&tag_ref_name).ok();
-
-    if tag_ref.is_some() {
-        debug!("Using commits since tag {tag}");
+    let tag_ref = if let Some(tag) = tag {
+        let tag_ref = repo.find_reference(&format!("refs/tags/{tag}")).ok();
+        if tag_ref.is_some() {
+            debug!("Using commits since tag {tag}");
+        } else {
+            debug!("Tag {tag} not found, using ALL commits");
+        }
+        tag_ref
     } else {
-        debug!("Tag {tag} not found, using ALL commits");
-    }
+        debug!("Using ALL commits");
+        None
+    };
 
     // Get the commit that the tag points to (if it exists)
     let tag_commit_id = tag_ref
