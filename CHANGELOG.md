@@ -10,6 +10,21 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.21.3 (2025-08-16)
+
+### Fixes
+
+#### Fix pre-release versioning when there are no previous stable versions
+
+Previously, if there was not a Git tag containing a previous stable version, Knope would default to "0.0.0".
+Because of the special 1.0.0 rules, this also meant there was _no_ way to start a project at a pre-release of 1.0.0
+with no prior releases.
+
+Now, if there are no previous stable releases, Knope will use the version in your files instead of calculating a version
+based on "0.0.0".
+
+Fixes #1515, thanks for the report @hazre!
+
 ## 0.21.2 (2025-08-10)
 
 ### Features
