@@ -1,0 +1,25 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@scope/test-package@1": "1.0.1"
+  },
+  "jsr": {
+    "@scope/test-package@1.0.1": {
+      "integrity": "sha256-test"
+    }
+  },
+  "workspace": {
+    "members": {
+      "packages/test-package": {
+        "dependencies": [
+          "jsr:@scope/test-package@1.0.1"
+        ],
+        "packageJson": {
+          "dependencies": [
+            "jsr:@scope/test-package@1.0.1"
+          ]
+        }
+      }
+    }
+  }
+}
