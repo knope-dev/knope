@@ -7,6 +7,8 @@ It has a single version number, though that version number can be in many places
 For example, Knope is a package,
 which at the time of writing has the version number `0.13.0` in a single file, `Cargo.toml`.
 To release Knope on NPM as well, we'd add a `package.json` file with the same version number.
+To publish the CLI to [JSR](https://jsr.io/) for Deno users, we'd include a `deno.json` (or `deno.jsonc`) manifest with the
+same version, optionally pairing it with `deno.lock` so dependencies stay in sync.
 
 To split out some of Knope's functionality into a Rust crate that others could consume,
 say `knope-changelogs`, _that_ crate would be a _separate_ package with its own version number.

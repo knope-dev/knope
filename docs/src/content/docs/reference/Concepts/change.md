@@ -71,6 +71,7 @@ versioned_files = [
 ```
 
 This use-case is now supported!
+The same configuration style works for Deno projects that mix `deno.json` manifests and a shared `deno.lock` file.
 ````
 
 ### A note

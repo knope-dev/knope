@@ -208,6 +208,38 @@ versioned_files = [
 }
 ```
 
+### `deno.json` / `deno.jsonc`
+
+For [Deno](https://deno.com/) projects, the manifest must include both a `name` and a `version` field at the top level.
+Knope accepts either plain JSON (`deno.json`) or JSON with comments (`deno.jsonc`).
+When updating the version number, Knope rewrites the manifest with the new value while preserving other settings and
+any existing comments.
+
+```json title="deno.json"
+{
+  "name": "@scope/my-module",
+  "version": "1.0.0"
+}
+```
+
+When both `deno.json` and `deno.jsonc` exist in the same directory, the `.json` file takes priority for version updates.
+
+### `deno.lock`
+
+For Deno workspaces that publish to [JSR](https://jsr.io/) or NPM, add a `deno.lock` entry with the `dependency` field
+set to the package name you want to keep in sync. Knope updates the `specifiers`, registry entries (`jsr`/`npm`), and
+`workspace` sections for that dependency to match the release version.
+
+```toml title="knope.toml"
+[packages."@scope/my-module"]
+versioned_files = [
+  "deno.json",
+  { path = "deno.lock", dependency = "@scope/my-module" }
+]
+```
+
+Only lock files using format version `5` are supported. Earlier versions must be migrated with `deno lock --lock-write`.
+
 ### `package-lock.json` <Badge text="Knope 0.21.0+" variant="tip" />
 
 Knope can update `npm` lock files with version 2+, corresponding to `npm` 7+.

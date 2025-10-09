@@ -26,11 +26,14 @@ and add all of those to a single package:
 
 ```toml title="knope.toml"
 [package]
-versioned_files = ["Cargo.toml", "package.json"]
+versioned_files = ["Cargo.toml", "package.json", "deno.json"]
 changelog = "CHANGELOG.md"
 ```
 
 The `changelog` field is only set if there's a `CHANGELOG.md` file in the current directory.
+
+If the directory also contains a `deno.lock` file for the detected package, Knope will automatically add it with the
+correct `dependency` so lockfile entries stay aligned with releases.
 
 ### Cargo workspaces
 
@@ -141,6 +144,51 @@ versioned_files = [
 ]
 scopes = ["second"]
 ```
+
+### Deno workspaces
+
+If there's a `deno.json` file in the current directory with a [`workspace`](https://docs.deno.com/runtime/reference/workspaces/)
+array, Knope will create a package for each member that has both a `name` and a `version` in its `deno.json` (or `deno.jsonc`).
+Any `package.json` files living alongside those manifests are also considered so mixed JSR/NPM modules stay aligned.
+
+```json title="deno.json"
+{
+  "workspace": ["first", "packages/second"]
+}
+```
+
+{/* prettier-ignore */}
+<FileTree>
+  - deno.json # Workspace
+  - deno.lock
+  - first/
+    - deno.json # name = "@scope/first", depends on second
+  - packages/
+    - second/
+      - deno.json # name = "@scope/second"
+</FileTree>
+
+For this layout, the default `knope.toml` file looks like:
+
+```toml title="Default knope.toml"
+[packages."@scope/first"]
+versioned_files = [
+    "first/deno.json",
+    { path = "deno.lock", dependency = "@scope/first" },
+]
+scopes = ["@scope/first"]
+
+[packages."@scope/second"]
+versioned_files = [
+    "packages/second/deno.json",
+    { path = "deno.lock", dependency = "@scope/second" },
+    { path = "first/deno.json", dependency = "@scope/second" },
+]
+scopes = ["@scope/second"]
+```
+
+If a member also has a `package.json` with a version, Knope adds that file to the relevant package and keeps
+`deno.lock` entries aligned for both the Deno and Node manifests.
 
 ## Workflows
 

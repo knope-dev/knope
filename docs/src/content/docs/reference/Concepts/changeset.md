@@ -16,7 +16,7 @@ Changesets are based on the NodeJS-oriented [Changesets](https://github.com/chan
 and should be compatible if you are migrating from that project.
 There are a few differences between the two—notably,
 this project doesn't require a `.changeset/config.json` nor a `package.json` file
-(it works for all languages, not just JavaScript).
+(it works for all languages, not just JavaScript, including Deno projects that only have `deno.json`).
 
 For more on the differences, check out the [Rust changesets docs](https://github.com/knope-dev/changesets)
 :::
