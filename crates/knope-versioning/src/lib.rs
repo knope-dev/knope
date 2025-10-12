@@ -1,6 +1,5 @@
 mod action;
 pub mod changes;
-pub mod jsonc;
 pub mod package;
 pub mod release_notes;
 pub mod semver;

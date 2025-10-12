@@ -1,35 +1,30 @@
-use std::fmt::Write;
+use std::{fmt::Write, str::FromStr};
 
+use jsonc_parser::{ParseOptions, parse_to_serde_value};
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
-use serde::Deserialize;
-use serde_json::{Map, Value};
+use serde_json::Value;
 use thiserror::Error;
 
-use crate::{action::Action, jsonc, semver::Version};
+use crate::{action::Action, semver::Version};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct DenoJson {
     path: RelativePathBuf,
     raw: String,
-    parsed: Json,
+    parsed: Value,
     diff: Option<String>,
 }
 
 impl DenoJson {
     pub(crate) fn new(path: RelativePathBuf, content: String) -> Result<Self, Error> {
-        // Try to parse as-is first (for standard JSON)
-        let parsed = if let Ok(parsed) = serde_json::from_str(&content) {
-            parsed
-        } else {
-            // If that fails, try to strip comments and parse again (for JSONC)
-            let stripped = jsonc::strip_json_comments(&content);
-            serde_json::from_str(&stripped).map_err(|err| Error::Deserialize {
+        let parsed = parse_to_serde_value(&content, &ParseOptions::default())
+            .map_err(|source| Error::Parse {
+                source,
                 path: path.clone(),
-                source: err,
             })?
-        };
+            .ok_or_else(|| Error::NoContent { path: path.clone() })?;
 
         Ok(DenoJson {
             path,
@@ -39,8 +34,11 @@ impl DenoJson {
         })
     }
 
-    pub(crate) fn get_version(&self) -> Option<&Version> {
-        self.parsed.version.as_ref()
+    pub(crate) fn get_version(&self) -> Option<Version> {
+        self.parsed
+            .get("version")
+            .and_then(Value::as_str)
+            .and_then(|val| Version::from_str(val).ok())
     }
 
     pub(crate) fn get_path(&self) -> &RelativePathBuf {
@@ -59,17 +57,12 @@ impl DenoJson {
             return Ok(self);
         }
 
-        let mut json = if let Ok(json) = serde_json::from_str::<Map<String, Value>>(&self.raw) {
-            json
-        } else {
-            let stripped = jsonc::strip_json_comments(&self.raw);
-            serde_json::from_str(&stripped)?
-        };
-
-        json.insert(
-            "version".to_string(),
-            Value::String(new_version.to_string()),
-        );
+        self.parsed.as_object_mut().and_then(|obj| {
+            obj.insert(
+                "version".to_string(),
+                Value::String(new_version.to_string()),
+            )
+        });
 
         let diff = self.diff.get_or_insert_default();
         if !diff.is_empty() {
@@ -77,8 +70,7 @@ impl DenoJson {
         }
         write!(diff, "version = {new_version}").ok();
 
-        self.raw = serde_json::to_string_pretty(&json)?;
-        self.parsed.version = Some(new_version.clone());
+        self.raw = serde_json::to_string_pretty(&self.parsed)?;
         Ok(self)
     }
 }
@@ -96,25 +88,24 @@ impl DenoJson {
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
-    #[error("Could not deserialize {path}")]
+    #[error("Could not parse {path}: {source}")]
     #[cfg_attr(
         feature = "miette",
         diagnostic(
-            code(knope_versioning::versioned_file::deno_json::deserialize),
+            code(knope_versioning::versioned_file::deno_json::parse),
             help("Make sure the file is valid JSON")
         )
     )]
-    Deserialize {
+    Parse {
+        source: jsonc_parser::errors::ParseError,
         path: RelativePathBuf,
-        source: serde_json::Error,
     },
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-struct Json {
-    version: Option<Version>,
-    #[serde(flatten)]
-    other: Map<String, Value>,
+    #[error("File {path} was empty or contained only comments.")]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(code(knope_versioning::versioned_file::deno_json::no_content),)
+    )]
+    NoContent { path: RelativePathBuf },
 }
 
 #[cfg(test)]
@@ -131,7 +122,7 @@ mod tests {
         let deno_json = DenoJson::new("deno.json".into(), content.to_string()).unwrap();
         assert_eq!(
             deno_json.get_version(),
-            Some(&Version::from_str("1.0.0").unwrap())
+            Some(Version::from_str("1.0.0").unwrap())
         );
     }
 
@@ -148,7 +139,7 @@ mod tests {
         let deno_json = DenoJson::new("deno.json".into(), content.to_string()).unwrap();
         let new_version = Version::from_str("1.1.0").unwrap();
         let updated = deno_json.set_version(&new_version, None).unwrap();
-        assert_eq!(updated.get_version(), Some(&new_version));
+        assert_eq!(updated.get_version(), Some(new_version));
     }
 
     #[test]
@@ -157,7 +148,7 @@ mod tests {
         let deno_json = DenoJson::new("deno.json".into(), content.to_string()).unwrap();
         let new_version = Version::from_str("1.0.0").unwrap();
         let updated = deno_json.set_version(&new_version, None).unwrap();
-        assert_eq!(updated.get_version(), Some(&new_version));
+        assert_eq!(updated.get_version(), Some(new_version));
     }
 
     #[test]
@@ -166,7 +157,7 @@ mod tests {
         let deno_json = DenoJson::new("deno.jsonc".into(), content.to_string()).unwrap();
         assert_eq!(
             deno_json.get_version(),
-            Some(&Version::from_str("1.0.0").unwrap())
+            Some(Version::from_str("1.0.0").unwrap())
         );
     }
 
@@ -176,6 +167,6 @@ mod tests {
         let deno_json = DenoJson::new("deno.jsonc".into(), content.to_string()).unwrap();
         let new_version = Version::from_str("1.2.0").unwrap();
         let updated = deno_json.set_version(&new_version, None).unwrap();
-        assert_eq!(updated.get_version(), Some(&new_version));
+        assert_eq!(updated.get_version(), Some(new_version));
     }
 }

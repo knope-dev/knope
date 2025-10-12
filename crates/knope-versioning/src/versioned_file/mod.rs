@@ -130,9 +130,7 @@ impl VersionedFile {
         match self {
             VersionedFile::Cargo(cargo) => cargo.get_version().map_err(Error::Cargo),
             VersionedFile::CargoLock(_) | VersionedFile::DenoLock(_) => Err(Error::NoVersion),
-            VersionedFile::DenoJson(deno_json) => {
-                deno_json.get_version().cloned().ok_or(Error::NoVersion)
-            }
+            VersionedFile::DenoJson(deno_json) => deno_json.get_version().ok_or(Error::NoVersion),
             VersionedFile::PyProject(pyproject) => Ok(pyproject.version.clone()),
             VersionedFile::PubSpec(pubspec) => Ok(pubspec.get_version().clone()),
             VersionedFile::Gleam(gleam) => Ok(gleam.get_version().map_err(Error::Gleam)?),

@@ -1085,6 +1085,7 @@ dependencies = [
  "futures",
  "git-conventional",
  "itertools",
+ "jsonc-parser",
  "miette",
  "pretty_assertions",
  "relative-path",
