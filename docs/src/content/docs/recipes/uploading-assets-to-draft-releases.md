@@ -59,7 +59,7 @@ jobs:
     if: needs.get-tag.outputs.tag_name != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Replace Me with actual artifact creation
         run: echo "example artifact" >> artifact.txt
       - name: Upload Artifact
@@ -75,7 +75,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: actions/download-artifact@v5.0.0
         with:
           path: artifacts
@@ -142,7 +142,7 @@ build-artifacts:
   if: needs.get-tag.outputs.tag_name != ''
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v5.0.0
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     - name: Replace Me with actual artifact creation
       run: echo "example artifact" >> artifact.txt
     - name: Upload Artifact
@@ -163,7 +163,7 @@ release:
   permissions:
     contents: write
   steps:
-    - uses: actions/checkout@v5.0.0
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     - uses: actions/download-artifact@v5.0.0
       with:
         path: artifacts
