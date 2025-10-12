@@ -6,6 +6,8 @@ on:
   pull_request: {}
   merge_group:
 
+permissions: {}
+
 jobs:
   checks:
     name: Run Checks

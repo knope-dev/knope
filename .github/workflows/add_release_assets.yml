@@ -6,6 +6,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions: {}
 jobs:
   get-tag:
     if: (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
