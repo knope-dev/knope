@@ -5,47 +5,33 @@ use std::{
     fmt::Write as _,
 };
 
-use async_trait::async_trait;
-use deno_lockfile::{
-    DeserializationError as LockfileDeserializationError, Lockfile, Lockfile5NpmInfo,
-    LockfileContent, LockfileError, LockfileErrorReason, NewLockfileOptions,
-    NpmPackageInfoProvider,
-};
+use deno_lockfile::{Lockfile, LockfileContent};
 use deno_semver::{
     Version as DenoVersion,
     jsr::JsrDepPackageReq,
     package::{PackageKind, PackageNv},
 };
-use futures::executor::block_on;
 use relative_path::RelativePathBuf;
 use serde_json::Value;
 use thiserror::Error;
 
 use crate::{action::Action, semver::Version};
 
-type JsonObject = serde_json::Map<String, Value>;
-
 #[derive(Clone, Debug)]
 pub struct DenoLock {
     path: RelativePathBuf,
-    json: JsonObject,
-    content: LockfileContent,
+    json: Value,
     diff: Option<String>,
 }
 
 impl DenoLock {
     pub(crate) fn new(path: RelativePathBuf, content: &str) -> Result<Self, Error> {
-        let json_value: Value =
-            serde_json::from_str(content).map_err(|source| Error::Deserialize {
-                path: path.clone(),
-                source,
-            })?;
+        let json: Value = serde_json::from_str(content).map_err(|source| Error::Deserialize {
+            path: path.clone(),
+            source,
+        })?;
 
-        let Value::Object(initial_map) = json_value else {
-            return Err(Error::UnexpectedStructure(path));
-        };
-
-        let version = initial_map
+        let version = json
             .get("version")
             .and_then(Value::as_str)
             .map(str::to_owned);
@@ -67,32 +53,9 @@ impl DenoLock {
             }
         }
 
-        let lockfile = block_on(Lockfile::new(
-            NewLockfileOptions {
-                file_path: path.to_path(""),
-                content,
-                overwrite: false,
-            },
-            &NoNpmInfoProvider,
-        ))
-        .map_err(|err| map_lockfile_error(*err, &path, version.clone()))?;
-
-        let canonical_value: Value =
-            serde_json::from_str(&lockfile.as_json_string()).map_err(|source| {
-                Error::Deserialize {
-                    path: path.clone(),
-                    source,
-                }
-            })?;
-
-        let Value::Object(map) = canonical_value else {
-            return Err(Error::UnexpectedStructure(path));
-        };
-
         Ok(Self {
             path,
-            json: map,
-            content: lockfile.content,
+            json,
             diff: None,
         })
     }
@@ -172,21 +135,11 @@ impl DenoLock {
         }
 
         update_workspace(
-            self.json
-                .get_mut("workspace")
-                .and_then(Value::as_object_mut),
+            self.json.get_mut("workspace"),
             dependency_name,
             &old_versions,
             &resolved_version,
         );
-
-        self.content =
-            LockfileContent::from_json(Value::Object(self.json.clone())).map_err(|source| {
-                Error::LockfileDeserialize {
-                    path: self.path.clone(),
-                    source: Box::new(source),
-                }
-            })?;
 
         let diff = self.diff.get_or_insert_with(String::new);
         if !diff.is_empty() {
@@ -198,65 +151,24 @@ impl DenoLock {
     }
 
     pub(crate) fn write(self) -> Option<Action> {
-        self.diff.map(|diff| {
-            let lockfile = Lockfile {
-                overwrite: false,
-                has_content_changed: true,
-                content: self.content,
-                filename: self.path.to_path(""),
-            };
-            Action::WriteToFile {
-                path: self.path,
-                content: lockfile.as_json_string(),
-                diff,
-            }
+        let diff = self.diff?;
+        let content = LockfileContent::from_json(self.json).ok()?;
+        let lockfile = Lockfile {
+            overwrite: false,
+            has_content_changed: true,
+            content,
+            filename: self.path.to_path(""),
+        };
+        Some(Action::WriteToFile {
+            path: self.path,
+            content: lockfile.as_json_string(),
+            diff,
         })
     }
 }
 
-fn map_lockfile_error(
-    error: LockfileError,
-    path: &RelativePathBuf,
-    version: Option<String>,
-) -> Error {
-    match error.source {
-        LockfileErrorReason::Empty => Error::UnexpectedStructure(path.clone()),
-        LockfileErrorReason::ParseError(source) => Error::Deserialize {
-            path: path.clone(),
-            source,
-        },
-        LockfileErrorReason::UnsupportedVersion {
-            version: lock_version,
-        } => Error::UnsupportedVersion {
-            path: path.clone(),
-            version: lock_version,
-        },
-        LockfileErrorReason::DeserializationError(source) => Error::LockfileDeserialize {
-            path: path.clone(),
-            source: Box::new(source),
-        },
-        LockfileErrorReason::TransformError(transform_error) => {
-            if transform_error
-                .source()
-                .and_then(|inner| inner.downcast_ref::<MissingNpmInfo>())
-                .is_some()
-            {
-                Error::LegacyLockfileNeedsNpmInfo {
-                    path: path.clone(),
-                    version: version.unwrap_or_else(|| "unknown".to_string()),
-                }
-            } else {
-                Error::Transform {
-                    path: path.clone(),
-                    source: Box::new(transform_error),
-                }
-            }
-        }
-    }
-}
-
 fn update_registry_packages(
-    root: &mut JsonObject,
+    root: &mut Value,
     section: &str,
     dependency_name: &str,
     old_versions: &HashSet<String>,
@@ -291,7 +203,7 @@ fn update_registry_packages(
 }
 
 fn update_workspace(
-    workspace: Option<&mut JsonObject>,
+    workspace: Option<&mut Value>,
     dependency_name: &str,
     old_versions: &HashSet<String>,
     resolved_version: &str,
@@ -304,14 +216,7 @@ fn update_workspace(
 
     if let Some(Value::Object(members)) = workspace.get_mut("members") {
         for member in members.values_mut() {
-            if let Value::Object(member_obj) = member {
-                update_dependency_arrays(
-                    member_obj,
-                    dependency_name,
-                    old_versions,
-                    resolved_version,
-                );
-            }
+            update_dependency_arrays(member, dependency_name, old_versions, resolved_version);
         }
     }
 
@@ -328,16 +233,14 @@ fn update_workspace(
             }
         }
         while let Some((new_key, mut value)) = key_updates.pop_front() {
-            if let Value::Object(link_obj) = &mut value {
-                update_dependency_arrays(link_obj, dependency_name, old_versions, resolved_version);
-            }
+            update_dependency_arrays(&mut value, dependency_name, old_versions, resolved_version);
             links.insert(new_key, value);
         }
     }
 }
 
 fn update_dependency_arrays(
-    object: &mut JsonObject,
+    object: &mut Value,
     dependency_name: &str,
     old_versions: &HashSet<String>,
     resolved_version: &str,
@@ -396,22 +299,6 @@ fn updated_specifier(
     ))
 }
 
-struct NoNpmInfoProvider;
-
-#[derive(Debug, Error)]
-#[error("Lockfile conversion requires npm metadata")]
-struct MissingNpmInfo;
-
-#[async_trait(?Send)]
-impl NpmPackageInfoProvider for NoNpmInfoProvider {
-    async fn get_npm_package_info(
-        &self,
-        _values: &[PackageNv],
-    ) -> Result<Vec<Lockfile5NpmInfo>, Box<dyn StdError + Send + Sync>> {
-        Err(Box::new(MissingNpmInfo))
-    }
-}
-
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 pub enum Error {
@@ -438,12 +325,6 @@ pub enum Error {
         path: RelativePathBuf,
         #[source]
         source: Box<dyn StdError + Send + Sync>,
-    },
-    #[error("Error deserializing lockfile content {path}: {source}")]
-    LockfileDeserialize {
-        path: RelativePathBuf,
-        #[source]
-        source: Box<LockfileDeserializationError>,
     },
     #[error("Lockfile {0} did not contain valid Deno packages structure")]
     UnexpectedStructure(RelativePathBuf),
@@ -566,106 +447,82 @@ mod tests {
             .set_version(&Version::new(1, 4, 0, None), Some("left-pad"))
             .unwrap();
         let write_action = updated.write().unwrap();
-        if let Action::WriteToFile { content, diff, .. } = write_action {
-            let value: Value = serde_json::from_str(&content).unwrap();
-            let specifiers = value
-                .get("specifiers")
-                .and_then(Value::as_object)
-                .expect("specifiers map");
-            assert_eq!(
-                specifiers
-                    .get("npm:left-pad@1")
-                    .and_then(Value::as_str)
-                    .unwrap(),
-                "1.4.0"
-            );
-            let npm = value
-                .get("npm")
-                .and_then(Value::as_object)
-                .expect("npm map");
-            assert!(npm.contains_key("left-pad@1.4.0"));
-            let workspace = value
-                .get("workspace")
-                .and_then(Value::as_object)
-                .expect("workspace map");
-            let workspace_deps = workspace
-                .get("dependencies")
-                .and_then(Value::as_array)
-                .expect("workspace dependencies");
-            assert!(
-                workspace_deps
-                    .iter()
-                    .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
-            );
-            let package_json_deps = workspace
-                .get("packageJson")
-                .and_then(Value::as_object)
-                .and_then(|obj| obj.get("dependencies"))
-                .and_then(Value::as_array)
-                .expect("packageJson dependencies");
-            assert!(
-                package_json_deps
-                    .iter()
-                    .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
-            );
-            let members = workspace
-                .get("members")
-                .and_then(Value::as_object)
-                .expect("members map");
-            let first = members
-                .get("first")
-                .and_then(Value::as_object)
-                .expect("first member");
-            let first_deps = first
-                .get("dependencies")
-                .and_then(Value::as_array)
-                .expect("first dependencies");
-            assert!(
-                first_deps
-                    .iter()
-                    .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
-            );
-            let first_package_json_deps = first
-                .get("packageJson")
-                .and_then(Value::as_object)
-                .and_then(|obj| obj.get("dependencies"))
-                .and_then(Value::as_array)
-                .expect("first packageJson dependencies");
-            assert!(
-                first_package_json_deps
-                    .iter()
-                    .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
-            );
-            let links = workspace
-                .get("links")
-                .and_then(Value::as_object)
-                .expect("links map");
-            let npm_link = links
-                .get("npm:left-pad@1.4.0")
-                .and_then(Value::as_object)
-                .expect("npm link");
-            let optional_deps = npm_link
-                .get("optionalDependencies")
-                .and_then(Value::as_array)
-                .expect("optional dependencies");
-            assert!(
-                optional_deps
-                    .iter()
-                    .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
-            );
-            let peer_deps = npm_link
-                .get("peerDependencies")
-                .and_then(Value::as_array)
-                .expect("peer dependencies");
-            assert!(
-                peer_deps
-                    .iter()
-                    .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
-            );
-            assert_eq!(diff, "left-pad = 1.4.0");
-        } else {
+        let Action::WriteToFile { content, diff, .. } = write_action else {
             panic!("Expected write action");
-        }
+        };
+        let value: Value = serde_json::from_str(&content).unwrap();
+        let specifiers = value.get("specifiers").expect("specifiers map");
+        assert_eq!(
+            specifiers
+                .get("npm:left-pad@1")
+                .and_then(Value::as_str)
+                .unwrap(),
+            "1.4.0"
+        );
+        let npm = value.get("npm").expect("npm map");
+        assert!(npm.get("left-pad@1.4.0").is_some());
+        let workspace = value.get("workspace").expect("workspace map");
+        let workspace_deps = workspace
+            .get("dependencies")
+            .and_then(Value::as_array)
+            .expect("workspace dependencies");
+        assert!(
+            workspace_deps
+                .iter()
+                .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
+        );
+        let package_json_deps = workspace
+            .get("packageJson")
+            .and_then(|obj| obj.get("dependencies"))
+            .and_then(Value::as_array)
+            .expect("packageJson dependencies");
+        assert!(
+            package_json_deps
+                .iter()
+                .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
+        );
+        let members = workspace.get("members").expect("members map");
+        let first = members.get("first").expect("first member");
+        let first_deps = first
+            .get("dependencies")
+            .and_then(Value::as_array)
+            .expect("first dependencies");
+        assert!(
+            first_deps
+                .iter()
+                .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
+        );
+        let first_package_json_deps = first
+            .get("packageJson")
+            .and_then(|obj| obj.get("dependencies"))
+            .and_then(Value::as_array)
+            .expect("first packageJson dependencies");
+        assert!(
+            first_package_json_deps
+                .iter()
+                .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
+        );
+        let links = workspace.get("links").expect("links map");
+        let npm_link = links.get("npm:left-pad@1.4.0").expect("npm link");
+        let optional_deps = npm_link
+            .get("optionalDependencies")
+            .and_then(Value::as_array)
+            .expect("optional dependencies");
+        assert!(
+            optional_deps
+                .iter()
+                .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
+        );
+        let peer_deps = npm_link
+            .get("peerDependencies")
+            .and_then(Value::as_array)
+            .expect("peer dependencies");
+        assert!(
+            peer_deps
+                .iter()
+                .any(|value| value.as_str() == Some("npm:left-pad@1.4.0"))
+        );
+        assert_eq!(diff, "left-pad = 1.4.0");
     }
 
     #[test]

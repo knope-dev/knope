@@ -20,6 +20,10 @@ base64 = "0.22.1"
 changesets = { workspace = true }
 clap = { version = "4.5.4", features = ["cargo", "string", "env"] }
 datta = "0.1.1"
+deno_config = { workspace = true }
+deno_package_json = "0.21.0"
+deno_path_util = "0.6.1"
+deno_semver = { workspace = true }
 dirs = "6.0.0"
 execute = "0.2.13"
 git2 = { version = "0.20.0", default-features = false }
@@ -32,14 +36,10 @@ itertools = { workspace = true }
 knope-config = { path = "../knope-config", version = "0.2.5" }
 knope-versioning = { workspace = true, features = ["miette"] }
 miette = { workspace = true, features = ["fancy"] }
-deno_config = { version = "0.68.0", features = ["workspace"] }
-sys_traits = { version = "0.1.17", features = ["real"] }
-deno_package_json = "0.20.0"
-deno_path_util = "0.6.1"
-deno_semver = "0.9.0"
 relative-path = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
+sys_traits = { version = "0.1.17", features = ["real"] }
 thiserror = { workspace = true }
 toml = { workspace = true }
 toml_edit = { workspace = true }
