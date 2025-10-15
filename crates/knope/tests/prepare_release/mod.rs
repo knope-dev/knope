@@ -4,6 +4,7 @@ mod cargo;
 mod changelog;
 mod changesets;
 mod custom_change_entries;
+mod deno;
 mod enable_prerelease;
 mod gleam_toml;
 mod go_modules;

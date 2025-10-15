@@ -5,9 +5,10 @@ use serde::{Serialize, Serializer};
 
 pub use self::go_mod::GoVersioning;
 use self::{
-    cargo::Cargo, cargo_lock::CargoLock, gleam::Gleam, go_mod::GoMod, maven_pom::MavenPom,
-    package_json::PackageJson, package_lock_json::PackageLockJson, pubspec::PubSpec,
-    pyproject::PyProject, tauri_conf_json::TauriConfJson,
+    cargo::Cargo, cargo_lock::CargoLock, deno_json::DenoJson, deno_lock::DenoLock, gleam::Gleam,
+    go_mod::GoMod, maven_pom::MavenPom, package_json::PackageJson,
+    package_lock_json::PackageLockJson, pubspec::PubSpec, pyproject::PyProject,
+    tauri_conf_json::TauriConfJson,
 };
 use crate::{
     Action,
@@ -17,6 +18,8 @@ use crate::{
 
 pub mod cargo;
 mod cargo_lock;
+mod deno_json;
+mod deno_lock;
 mod gleam;
 mod go_mod;
 mod maven_pom;
@@ -30,6 +33,8 @@ mod tauri_conf_json;
 pub enum VersionedFile {
     Cargo(Cargo),
     CargoLock(CargoLock),
+    DenoJson(DenoJson),
+    DenoLock(DenoLock),
     PubSpec(PubSpec),
     Gleam(Gleam),
     GoMod(GoMod),
@@ -62,6 +67,12 @@ impl VersionedFile {
             Format::CargoLock => CargoLock::new(config.as_path(), &content)
                 .map(VersionedFile::CargoLock)
                 .map_err(Error::CargoLock),
+            Format::DenoJson => DenoJson::new(config.as_path(), content)
+                .map(VersionedFile::DenoJson)
+                .map_err(Error::DenoJson),
+            Format::DenoLock => DenoLock::new(config.as_path(), &content)
+                .map(VersionedFile::DenoLock)
+                .map_err(Error::DenoLock),
             Format::PyProject => PyProject::new(config.as_path(), content)
                 .map(VersionedFile::PyProject)
                 .map_err(Error::PyProject),
@@ -94,6 +105,8 @@ impl VersionedFile {
         match self {
             VersionedFile::Cargo(cargo) => &cargo.path,
             VersionedFile::CargoLock(cargo_lock) => &cargo_lock.path,
+            VersionedFile::DenoJson(deno_json) => deno_json.get_path(),
+            VersionedFile::DenoLock(deno_lock) => deno_lock.get_path(),
             VersionedFile::PyProject(pyproject) => &pyproject.path,
             VersionedFile::PubSpec(pubspec) => pubspec.get_path(),
             VersionedFile::Gleam(gleam) => &gleam.path,
@@ -116,7 +129,8 @@ impl VersionedFile {
     pub fn version(&self) -> Result<Version, Error> {
         match self {
             VersionedFile::Cargo(cargo) => cargo.get_version().map_err(Error::Cargo),
-            VersionedFile::CargoLock(_) => Err(Error::NoVersion),
+            VersionedFile::CargoLock(_) | VersionedFile::DenoLock(_) => Err(Error::NoVersion),
+            VersionedFile::DenoJson(deno_json) => deno_json.get_version().ok_or(Error::NoVersion),
             VersionedFile::PyProject(pyproject) => Ok(pyproject.version.clone()),
             VersionedFile::PubSpec(pubspec) => Ok(pubspec.get_version().clone()),
             VersionedFile::Gleam(gleam) => Ok(gleam.get_version().map_err(Error::Gleam)?),
@@ -150,6 +164,14 @@ impl VersionedFile {
                 .set_version(new_version, dependency)
                 .map(Self::CargoLock)
                 .map_err(SetError::CargoLock),
+            Self::DenoJson(deno_json) => deno_json
+                .set_version(new_version, dependency)
+                .map_err(SetError::Json)
+                .map(Self::DenoJson),
+            Self::DenoLock(deno_lock) => deno_lock
+                .set_version(new_version, dependency)
+                .map_err(SetError::DenoLock)
+                .map(Self::DenoLock),
             Self::PyProject(pyproject) => Ok(Self::PyProject(pyproject.set_version(new_version))),
             Self::PubSpec(pubspec) => pubspec
                 .set_version(new_version)
@@ -194,12 +216,14 @@ impl VersionedFile {
         match self {
             Self::Cargo(cargo) => cargo.write().map(Single),
             Self::CargoLock(cargo_lock) => cargo_lock.write().map(Single),
+            Self::DenoJson(deno_json) => deno_json.write().map(Single),
             Self::PyProject(pyproject) => pyproject.write().map(Single),
             Self::PubSpec(pubspec) => pubspec.write().map(Single),
             Self::Gleam(gleam) => gleam.write().map(Single),
             Self::GoMod(gomod) => gomod.write().map(Two),
             Self::PackageJson(package_json) => package_json.write().map(Single),
             Self::PackageLockJson(package_lock_json) => package_lock_json.write().map(Single),
+            Self::DenoLock(deno_lock) => deno_lock.write().map(Single),
             Self::MavenPom(maven_pom) => maven_pom.write().map(Single),
             Self::TauriConf(tauri_conf)
             | Self::TauriMacosConf(tauri_conf)
@@ -241,6 +265,9 @@ pub enum SetError {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     MavenPom(#[from] maven_pom::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    DenoLock(#[from] deno_lock::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -262,6 +289,9 @@ pub enum Error {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     CargoLock(#[from] cargo_lock::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    DenoJson(#[from] deno_json::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     PyProject(#[from] pyproject::Error),
@@ -286,6 +316,9 @@ pub enum Error {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     TauriConfJson(#[from] tauri_conf_json::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    DenoLock(#[from] deno_lock::Error),
 }
 
 /// All the file types supported for versioning.
@@ -295,12 +328,15 @@ pub enum Error {
 pub(crate) enum Format {
     Cargo,
     CargoLock,
+    #[allow(dead_code)]
+    DenoJson,
     PyProject,
     PubSpec,
     Gleam,
     GoMod,
     PackageJson,
     PackageLockJson,
+    DenoLock,
     MavenPom,
     TauriConf,
 }
@@ -310,6 +346,8 @@ impl Format {
     const FILE_NAMES: &'static [(&'static str, Self)] = &[
         ("Cargo.toml", Format::Cargo),
         ("Cargo.lock", Format::CargoLock),
+        ("deno.json", Format::DenoJson),
+        ("deno.lock", Format::DenoLock),
         ("gleam.toml", Format::Gleam),
         ("go.mod", Format::GoMod),
         ("package.json", Format::PackageJson),

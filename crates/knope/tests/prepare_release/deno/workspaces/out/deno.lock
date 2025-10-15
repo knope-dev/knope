@@ -1,0 +1,48 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@scope/first-package@1": "1.1.0",
+    "jsr:@scope/second-package@0.1": "0.1.1"
+  },
+  "jsr": {
+    "@scope/first-package@1.1.0": {
+      "integrity": "sha256-first"
+    },
+    "@scope/second-package@0.1.1": {
+      "integrity": "sha256-second",
+      "dependencies": [
+        "jsr:@scope/first-package"
+      ]
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@scope/first-package@1.1.0",
+      "jsr:@scope/second-package@0.1.1"
+    ],
+    "packageJson": {
+      "dependencies": [
+        "jsr:@scope/first-package@1.1.0"
+      ]
+    },
+    "members": {
+      "second": {
+        "dependencies": [
+          "jsr:@scope/first-package@1.1.0"
+        ],
+        "packageJson": {
+          "dependencies": [
+            "jsr:@scope/first-package@1.1.0"
+          ]
+        }
+      }
+    },
+    "links": {
+      "jsr:@scope/first-package@1.1.0": {
+        "dependencies": [
+          "jsr:@scope/second-package@0.1"
+        ]
+      }
+    }
+  }
+}

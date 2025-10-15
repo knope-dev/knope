@@ -44,35 +44,48 @@ impl PackageJson {
         dependency: Option<&str>,
     ) -> serde_json::Result<Self> {
         let mut json = serde_json::from_str::<Map<String, Value>>(&self.raw)?;
-        let diff = self.diff.get_or_insert_default();
-        if !diff.is_empty() {
-            diff.push_str(", ");
-        }
 
         if let Some(dependency_name) = dependency {
-            write!(diff, "{dependency_name} = {new_version}").ok();
-            // Check dependencies
+            let mut diff_value: Option<String> = None;
+
             if let Some(Value::Object(deps)) = json.get_mut("dependencies") {
-                if let Some(dep_value) = deps.get_mut(dependency_name) {
-                    *dep_value = Value::String(new_version.to_string());
+                if let Some(updated) =
+                    Self::update_dependency_entry(deps, dependency_name, new_version)
+                {
+                    diff_value = Some(updated);
                 }
             }
 
-            // Check devDependencies
             if let Some(Value::Object(dev_deps)) = json.get_mut("devDependencies") {
-                if let Some(dep_value) = dev_deps.get_mut(dependency_name) {
-                    *dep_value = Value::String(new_version.to_string());
+                if let Some(updated) =
+                    Self::update_dependency_entry(dev_deps, dependency_name, new_version)
+                {
+                    diff_value = Some(updated);
                 }
+            }
+
+            if let Some(value) = diff_value {
+                self.raw = serde_json::to_string_pretty(&json)?;
+                let diff = self.diff.get_or_insert_default();
+                if !diff.is_empty() {
+                    diff.push_str(", ");
+                }
+                write!(diff, "{dependency_name} = {value}").ok();
             }
         } else {
             json.insert(
                 "version".to_string(),
                 Value::String(new_version.to_string()),
             );
-            write!(diff, "version = {new_version}").ok();
-        }
+            self.raw = serde_json::to_string_pretty(&json)?;
 
-        self.raw = serde_json::to_string_pretty(&json)?;
+            let diff = self.diff.get_or_insert_default();
+            if !diff.is_empty() {
+                diff.push_str(", ");
+            }
+            write!(diff, "version = {new_version}").ok();
+            self.parsed.version = new_version.clone();
+        }
 
         Ok(self)
     }
@@ -110,6 +123,45 @@ pub enum Error {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 struct Json {
     version: Version,
+}
+
+impl PackageJson {
+    fn update_dependency_entry(
+        deps: &mut Map<String, Value>,
+        dependency_name: &str,
+        new_version: &Version,
+    ) -> Option<String> {
+        let dep_value = deps.get_mut(dependency_name)?;
+        let existing = dep_value.as_str()?;
+
+        let new_value =
+            if let Some(updated) = Self::update_workspace_specifier(existing, new_version) {
+                updated
+            } else if existing.starts_with("workspace:") {
+                existing.to_string()
+            } else {
+                new_version.to_string()
+            };
+
+        if new_value == existing {
+            return None;
+        }
+
+        *dep_value = Value::String(new_value.clone());
+        Some(new_value)
+    }
+
+    fn update_workspace_specifier(existing: &str, new_version: &Version) -> Option<String> {
+        const PREFIX: &str = "workspace:";
+        if !existing.starts_with(PREFIX) {
+            return None;
+        }
+
+        let remainder = &existing[PREFIX.len()..];
+        let digits_index = remainder.find(|c: char| c.is_ascii_digit())?;
+        let (specifier_prefix, _) = remainder.split_at(digits_index);
+        Some(format!("{PREFIX}{specifier_prefix}{new_version}"))
+    }
 }
 
 #[cfg(test)]
@@ -265,6 +317,42 @@ mod tests {
             path: RelativePathBuf::new(),
             content: expected,
             diff: "@dev/dependency-name = 3.1.0".to_string(),
+        };
+        assert_eq!(new, expected);
+    }
+
+    #[test]
+    fn update_workspace_dependency() {
+        let content = r#"{
+            "name": "tester",
+            "version": "1.0.0",
+            "dependencies": {
+                "@scope/dependency": "workspace:^1.0.0"
+            }
+        }"#;
+
+        let new = PackageJson::new(RelativePathBuf::new(), content.to_string())
+            .unwrap()
+            .set_version(
+                &Version::from_str("2.0.0").unwrap(),
+                Some("@scope/dependency"),
+            )
+            .unwrap()
+            .write()
+            .expect("diff to write");
+
+        let expected = r#"{
+  "name": "tester",
+  "version": "1.0.0",
+  "dependencies": {
+    "@scope/dependency": "workspace:^2.0.0"
+  }
+}"#
+        .to_string();
+        let expected = Action::WriteToFile {
+            path: RelativePathBuf::new(),
+            content: expected,
+            diff: "@scope/dependency = workspace:^2.0.0".to_string(),
         };
         assert_eq!(new, expected);
     }

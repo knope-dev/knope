@@ -142,6 +142,51 @@ versioned_files = [
 scopes = ["second"]
 ```
 
+### Deno workspaces
+
+If there's a `deno.json` file in the current directory with a [`workspace`](https://docs.deno.com/runtime/fundamentals/workspaces/)
+array, Knope will create a package for each member that has both a `name` and a `version` in its `deno.json` (or `deno.jsonc`).
+Any `package.json` files living alongside those manifests are also considered so mixed JSR/NPM modules stay aligned.
+
+```json title="deno.json"
+{
+  "workspace": ["first", "packages/second"]
+}
+```
+
+{/* prettier-ignore */}
+<FileTree>
+  - deno.json # Workspace
+  - deno.lock
+  - first/
+    - deno.json # name = "@scope/first", depends on second
+  - packages/
+    - second/
+      - deno.json # name = "@scope/second"
+</FileTree>
+
+For this layout, the default `knope.toml` file looks like:
+
+```toml title="Default knope.toml"
+[packages."@scope/first"]
+versioned_files = [
+    "first/deno.json",
+    { path = "deno.lock", dependency = "@scope/first" },
+]
+scopes = ["@scope/first"]
+
+[packages."@scope/second"]
+versioned_files = [
+    "packages/second/deno.json",
+    { path = "deno.lock", dependency = "@scope/second" },
+    { path = "first/deno.json", dependency = "@scope/second" },
+]
+scopes = ["@scope/second"]
+```
+
+If a member also has a `package.json` with a version, Knope adds that file to the relevant package and keeps
+`deno.lock` entries aligned for both the Deno and Node manifests.
+
 ## Workflows
 
 When there are no workflows defined in a `knope.toml` file, Knope will use the default workflows.
