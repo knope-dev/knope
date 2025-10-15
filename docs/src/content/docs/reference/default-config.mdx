@@ -26,14 +26,11 @@ and add all of those to a single package:
 
 ```toml title="knope.toml"
 [package]
-versioned_files = ["Cargo.toml", "package.json", "deno.json"]
+versioned_files = ["Cargo.toml", "package.json"]
 changelog = "CHANGELOG.md"
 ```
 
 The `changelog` field is only set if there's a `CHANGELOG.md` file in the current directory.
-
-If the directory also contains a `deno.lock` file for the detected package, Knope will automatically add it with the
-correct `dependency` so lockfile entries stay aligned with releases.
 
 ### Cargo workspaces
 
@@ -147,7 +144,7 @@ scopes = ["second"]
 
 ### Deno workspaces
 
-If there's a `deno.json` file in the current directory with a [`workspace`](https://docs.deno.com/runtime/reference/workspaces/)
+If there's a `deno.json` file in the current directory with a [`workspace`](https://docs.deno.com/runtime/fundamentals/workspaces/)
 array, Knope will create a package for each member that has both a `name` and a `version` in its `deno.json` (or `deno.jsonc`).
 Any `package.json` files living alongside those manifests are also considered so mixed JSR/NPM modules stay aligned.
 
