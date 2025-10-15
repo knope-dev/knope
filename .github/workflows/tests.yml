@@ -6,6 +6,8 @@ on:
   pull_request: {}
   merge_group:
 
+permissions: {}
+
 jobs:
   checks:
     name: Run Checks
@@ -16,10 +18,9 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5.0.0
-      - uses: Swatinem/rust-cache@v2
-        if: matrix.os != 'windows-latest' # rust-cache is slower on windows than building from scratch every time
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         if: matrix.os == 'ubuntu-latest'
         with:
           node-version: 22
@@ -61,8 +62,8 @@ jobs:
     name: Vale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - run: npm install -g mdx2vast # Adds MDX support for Vale
-      - uses: errata-ai/vale-action@reviewdog
+      - uses: errata-ai/vale-action@dcded780f1ff68e2558e802a165a484a4a3e2fb8
         with:
           files: '["docs", "README.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md"]'

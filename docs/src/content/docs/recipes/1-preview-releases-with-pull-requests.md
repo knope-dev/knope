@@ -133,7 +133,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, 'chore: prepare release')" # Skip merges from releases
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
@@ -210,7 +210,7 @@ release:
   needs: [build-artifacts]
   runs-on: ubuntu-latest
   steps:
-    - uses: actions/checkout@v5.0.0
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     - uses: actions/download-artifact@v5.0.0
       with:
         path: artifacts
@@ -262,7 +262,7 @@ jobs:
     name: ${{ matrix.target }}
 
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: Swatinem/rust-cache@v2.8.1
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
@@ -300,7 +300,7 @@ jobs:
     needs: [build-artifacts]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: actions/download-artifact@v5.0.0
         with:
           path: artifacts
@@ -316,7 +316,7 @@ jobs:
     needs: [release]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: Swatinem/rust-cache@v2.8.1
       - uses: katyo/publish-crates@v2
         with:
