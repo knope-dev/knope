@@ -3,7 +3,24 @@ title: Versioning unsupported files
 ---
 
 Want to bump the version of a file that isn't [natively supported](/reference/config-file/packages#versioned_files)?
-[Request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version
+
+## Using regex patterns (Recommended)
+
+For text files like README.md or documentation, you can use regex patterns to find and replace version strings:
+
+```toml
+[package]
+versioned_files = [
+    "Cargo.toml",  # Your main versioned file
+    { path = "README.md", pattern = "version:\\s+(\\d+\\.\\d+\\.\\d+)" }
+]
+```
+
+The pattern should include a capture group `()` around the version number you want to replace. See the [Text files with regex patterns](/reference/config-file/packages#text-files-with-regex-patterns) section for more details.
+
+## Using a custom script
+
+If regex patterns don't work for your use case, [request it as a feature] and, in the meantime, you can write a script to manually bump that file with the version
 produced by [`BumpVersion`] or [`PrepareRelease`] using a [`Command`] step, like this:
 
 ```toml
