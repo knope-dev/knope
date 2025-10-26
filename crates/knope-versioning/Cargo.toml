@@ -19,6 +19,7 @@ git-conventional = "0.12.6"
 itertools = { workspace = true }
 jsonc-parser = { version = "0.26.3", features = ["serde"] }
 miette = { workspace = true, optional = true }
+regex = { workspace = true }
 relative-path = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }

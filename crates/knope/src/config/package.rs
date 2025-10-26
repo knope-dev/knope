@@ -115,7 +115,7 @@ impl Package {
 
         let cargo_lock_path = workspace_path.join("Cargo.lock");
         let cargo_lock = if cargo_lock_path.to_path("").exists() {
-            VersionedFileConfig::new(cargo_lock_path, None).ok()
+            VersionedFileConfig::new(cargo_lock_path, None, None).ok()
         } else {
             None
         };
@@ -125,7 +125,7 @@ impl Package {
             .map(|member_val| {
                 let member = member_val.as_str().ok_or(CargoWorkspaceError::Members)?;
                 let member_config =
-                    VersionedFileConfig::new(workspace_path.join(member).join("Cargo.toml"), None)?;
+                    VersionedFileConfig::new(workspace_path.join(member).join("Cargo.toml"), None, None)?;
                 let member_contents = read_to_string(member_config.as_path().to_path("."))?;
                 let document = DocumentMut::from_str(&member_contents)
                     .map_err(|err| CargoWorkspaceError::Toml(err, member_config.as_path()))?;
@@ -160,6 +160,7 @@ impl Package {
                         VersionedFileConfig::new(
                             cargo_toml_path.to_relative_path_buf(),
                             Some(member.name.clone()),
+                            None,
                         )
                         .ok(),
                     );
@@ -236,11 +237,12 @@ impl Package {
                     path: workspace.path.clone(),
                 })?
                 .to_string();
-            let mut versioned_files = vec![VersionedFileConfig::new(workspace.path.clone(), None)?];
+            let mut versioned_files = vec![VersionedFileConfig::new(workspace.path.clone(), None, None)?];
             if lock_file {
                 versioned_files.push(VersionedFileConfig::new(
                     "package-lock.json".into(),
                     Some(name.clone()),
+                    None,
                 )?);
             }
             for other_workspace in &workspaces {
@@ -262,6 +264,7 @@ impl Package {
                     versioned_files.push(VersionedFileConfig::new(
                         other_workspace.path.clone(),
                         Some(name.clone()),
+                        None,
                     )?);
                 }
             }
@@ -420,12 +423,14 @@ impl Package {
         let mut versioned_files = vec![VersionedFileConfig::new(
             package_info.config_relative.clone(),
             None,
+            None,
         )?];
 
         if let Some(lockfile) = lockfile_relative {
             versioned_files.push(VersionedFileConfig::new(
                 lockfile.clone(),
                 Some(package_info.name.clone()),
+                None,
             )?);
         }
 
@@ -438,6 +443,7 @@ impl Package {
                 versioned_files.push(VersionedFileConfig::new(
                     dependent.config_relative.clone(),
                     Some(package_info.name.clone()),
+                    None,
                 )?);
             }
         }

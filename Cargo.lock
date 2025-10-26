@@ -999,6 +999,7 @@ dependencies = [
  "jsonc-parser",
  "miette",
  "pretty_assertions",
+ "regex",
  "relative-path",
  "serde",
  "serde_json",
