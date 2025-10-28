@@ -24,6 +24,13 @@
         "toml",
         "toml_edit"
       ]
+    },
+    {
+      "groupName": "deno",
+      "matchPackageNames": [
+        "deno*",
+        "jsonc-parser"
+      ]
     }
   ],
   "customManagers": [
@@ -56,8 +63,8 @@
       "datasourceTemplate": "crate",
       "depNameTemplate": "knope",
       "fileMatch": [
-          "^docs/src/content/docs.*\\.md(x)?$",
-          "^README.md$"
+        "^docs/src/content/docs.*\\.md(x)?$",
+        "^README.md$"
       ],
       "matchStrings": [
         "with:\\n\\s+version: (?<currentValue>.+)"
