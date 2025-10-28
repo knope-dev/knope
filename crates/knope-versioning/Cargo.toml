@@ -17,7 +17,7 @@ deno_lockfile = "0.32.0"
 deno_semver = { workspace = true }
 git-conventional = "0.12.6"
 itertools = { workspace = true }
-jsonc-parser = { version = "0.26.3", features = ["serde"] }
+jsonc-parser = { version = "0.27.0", features = ["serde"] }
 miette = { workspace = true, optional = true }
 relative-path = { workspace = true }
 serde = { workspace = true }
