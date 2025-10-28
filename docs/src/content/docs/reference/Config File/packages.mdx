@@ -30,7 +30,7 @@ The files within a package that contain the current version.
 Each file must have the same version number as all the other files.
 
 An entry in this array can either be a string containing the path to a file, an object containing a `path` and
-specifying a `dependency` within the file to update, or an object with a `path` and `pattern` for regex-based version matching:
+specifying a `dependency` within the file to update, or an object with a `path` and `regex` for regex-based version matching:
 
 ```toml
 [package]
@@ -38,14 +38,14 @@ versioned_files = [
     "Cargo.toml",
     "package.json",
     { path = "crates/knope/Cargo.toml", dependency = "knope-versioning" },
-    { path = "README.md", pattern = "version:\\s+(\\d+\\.\\d+\\.\\d+)" }
+    { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" }
 ]
 ```
 
 All paths should be relative to the config file.
 
 Knope determines the type of the file using its name (independent of its path),
-so `blah/Cargo.toml` is a `Cargo.toml` file. If you specify a `pattern`, Knope will use
+so `blah/Cargo.toml` is a `Cargo.toml` file. If you specify a `regex`, Knope will use
 regex matching to find and replace the version in any text file.
 
 Knope supports the following file names:
@@ -350,17 +350,17 @@ Supports [Tauri configuration files](https://v1.tauri.app/v1/references/configur
 ### Text files with regex patterns
 
 For files that aren't in a recognized format, you can use regex patterns to find and replace version strings.
-Specify the file with a `path` and a `pattern` field containing a regular expression:
+Specify the file with a `path` and a `regex` field containing a regular expression with a named capture group:
 
 ```toml title="knope.toml"
 [package]
 versioned_files = [
-    { path = "README.md", pattern = "version:\\s+(\\d+\\.\\d+\\.\\d+)" }
+    { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" }
 ]
 ```
 
-The pattern should use a capture group `()` to identify the version number. If you don't use a capture group,
-Knope will replace the entire match. The pattern must match a valid semantic version.
+The regex pattern must include at least one named capture group called `version` using the syntax `(?<version>...)`.
+This capture group identifies the version number to replace. The matched string must be a valid semantic version.
 
 This is useful for keeping version numbers up to date in documentation files, like installation instructions in a README:
 
@@ -371,7 +371,7 @@ steps:
       version: 1.2.3
 ```
 
-With the pattern `version:\\s+(\\d+\\.\\d+\\.\\d+)`, Knope will find and update `1.2.3` to the new version
+With the regex `version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)`, Knope will find and update `1.2.3` to the new version
 while preserving the rest of the file structure.
 
 ## `changelog`

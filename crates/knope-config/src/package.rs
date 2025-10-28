@@ -34,17 +34,17 @@ pub enum VersionedFile {
         path: RelativePathBuf,
         dependency: String,
     },
-    Pattern {
+    Regex {
         path: RelativePathBuf,
-        pattern: String,
+        regex: String,
     },
 }
 
 impl From<VersionedFileConfig> for VersionedFile {
     fn from(config: VersionedFileConfig) -> Self {
-        let (path, dependency, pattern) = (config.as_path(), config.dependency, config.pattern);
-        if let Some(pattern) = pattern {
-            Self::Pattern { path, pattern }
+        let (path, dependency, regex) = (config.as_path(), config.dependency, config.regex);
+        if let Some(regex) = regex {
+            Self::Regex { path, regex }
         } else if let Some(dependency) = dependency {
             Self::Dependency { path, dependency }
         } else {
@@ -62,8 +62,8 @@ impl TryFrom<VersionedFile> for VersionedFileConfig {
             VersionedFile::Dependency { path, dependency } => {
                 VersionedFileConfig::new(path, Some(dependency), None)
             }
-            VersionedFile::Pattern { path, pattern } => {
-                VersionedFileConfig::new(path, None, Some(pattern))
+            VersionedFile::Regex { path, regex } => {
+                VersionedFileConfig::new(path, None, Some(regex))
             }
         }
     }

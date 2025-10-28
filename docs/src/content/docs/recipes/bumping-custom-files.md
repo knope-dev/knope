@@ -12,11 +12,11 @@ For text files like README.md or documentation, you can use regex patterns to fi
 [package]
 versioned_files = [
     "Cargo.toml",  # Your main versioned file
-    { path = "README.md", pattern = "version:\\s+(\\d+\\.\\d+\\.\\d+)" }
+    { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" }
 ]
 ```
 
-The pattern should include a capture group `()` around the version number you want to replace. See the [Text files with regex patterns](/reference/config-file/packages#text-files-with-regex-patterns) section for more details.
+The regex pattern must include a named capture group `(?<version>...)` around the version number you want to replace. See the [Text files with regex patterns](/reference/config-file/packages#text-files-with-regex-patterns) section for more details.
 
 ## Using a custom script
 

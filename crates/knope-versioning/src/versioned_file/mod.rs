@@ -100,15 +100,15 @@ impl VersionedFile {
                 .map(VersionedFile::TauriConf)
                 .map_err(Error::TauriConfJson),
             Format::TextFile => {
-                let pattern = config
-                    .pattern
+                let regex = config
+                    .regex
                     .as_ref()
                     .ok_or_else(|| Error::TextFile(text_file::Error::NoMatch {
-                        pattern: String::new(),
+                        regex: String::new(),
                         path: config.as_path(),
                     }))?
                     .clone();
-                TextFile::new(config.as_path(), content, pattern)
+                TextFile::new(config.as_path(), content, regex)
                     .map(VersionedFile::TextFile)
                     .map_err(Error::TextFile)
             }
@@ -417,7 +417,7 @@ pub struct Config {
     /// If, within the file, we're versioning a dependency (not the entire package)
     pub dependency: Option<String>,
     /// If set, use regex pattern matching to find and replace the version
-    pub pattern: Option<String>,
+    pub regex: Option<String>,
 }
 
 impl Config {
@@ -425,19 +425,25 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If the file name does not match a supported format and no pattern is provided
+    /// If the file name does not match a supported format and no regex is provided
+    /// If both dependency and regex are provided
     pub fn new(
         path: RelativePathBuf,
         dependency: Option<String>,
-        pattern: Option<String>,
+        regex: Option<String>,
     ) -> Result<Self, UnknownFile> {
-        // If a pattern is provided, use TextFile format
-        if pattern.is_some() {
+        // Check that both dependency and regex are not set
+        if dependency.is_some() && regex.is_some() {
+            return Err(UnknownFile { path });
+        }
+
+        // If a regex is provided, use TextFile format
+        if regex.is_some() {
             return Ok(Config {
                 path,
                 format: Format::TextFile,
                 dependency,
-                pattern,
+                regex,
             });
         }
 
@@ -451,7 +457,7 @@ impl Config {
             path,
             format,
             dependency,
-            pattern: None,
+            regex: None,
         })
     }
 
@@ -473,7 +479,7 @@ impl Config {
                 format,
                 path: RelativePathBuf::from(name),
                 dependency: None,
-                pattern: None,
+                regex: None,
             })
     }
 }
