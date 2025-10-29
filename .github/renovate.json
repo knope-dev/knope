@@ -49,20 +49,6 @@
       "matchStrings": [
         "BINSTALL_VERSION: (?<currentValue>.+)"
       ]
-    },
-    {
-      "description": "Update Knope in GitHub Action examples in docs",
-      "customType": "regex",
-      "datasourceTemplate": "crate",
-      "depNameTemplate": "knope",
-      "fileMatch": [
-          "^docs/src/content/docs.*\\.md(x)?$",
-          "^README.md$"
-      ],
-      "matchStrings": [
-        "with:\\n\\s+version: (?<currentValue>.+)"
-      ],
-      "versioningTemplate": "semver"
     }
   ]
 }
