@@ -39,7 +39,7 @@ For text files like README.md or documentation where a simple pattern can match 
 [package]
 versioned_files = [
     "Cargo.toml",  # Your main versioned file
-    { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" }
+    { path = "README.md", regex = "v(?<version>\\d+\\.\\d+\\.\\d+)" }
 ]
 ```
 
