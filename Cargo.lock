@@ -88,6 +88,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "autocfg"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+
+[[package]]
 name = "backtrace"
 version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,6 +194,16 @@ name = "changesets"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8acc4865b308e8998a2e7abfb4f87a01998a464d9f85f3ca9fec09d36c8556d"
+
+[[package]]
+name = "chrono"
+version = "0.4.42"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2"
+dependencies = [
+ "num-traits",
+ "serde",
+]
 
 [[package]]
 name = "clap"
@@ -312,12 +328,13 @@ dependencies = [
 
 [[package]]
 name = "deno_config"
-version = "0.69.0"
+version = "0.70.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b2cc4fda09f7b90c9dac43637e85e1cff3fe0ff6b79aa6bfecee05a280ab85f"
+checksum = "dae76ddbca707f803587e7b21ddbd57ed641bd26d69ac55dc7a2e94196290a60"
 dependencies = [
  "boxed_error",
  "capacity_builder",
+ "chrono",
  "deno_error",
  "deno_maybe_sync",
  "deno_package_json",
@@ -375,15 +392,15 @@ dependencies = [
 
 [[package]]
 name = "deno_maybe_sync"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "795407cb94c16ff7010fb3bf891d6987e39402c726f7d1bdc1ede7734526397b"
+checksum = "e8438b3d68b3d430c2b9806c19dbdf8687809777720d711b71d181951e43c22d"
 
 [[package]]
 name = "deno_package_json"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62afd647d83688fac93939d0c8e2f24449d4d418b0a6e788deb3b6bf6a355ff4"
+checksum = "e9215f92675d2c98180e7d3a805d6a867c4f7957cc2cec644b9fb8e15dc7ddf2"
 dependencies = [
  "boxed_error",
  "deno_error",
@@ -400,9 +417,9 @@ dependencies = [
 
 [[package]]
 name = "deno_path_util"
-version = "0.6.1"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfe02936964b2910719bd488841f6e884349360113c7abf6f4c6b28ca9cd7a19"
+checksum = "a4f70f7cbc884556f08781aaa75aef177d15bfee99e4fc40c25fa74514c678c0"
 dependencies = [
  "deno_error",
  "percent-encoding",
@@ -930,9 +947,9 @@ dependencies = [
 
 [[package]]
 name = "jsonc-parser"
-version = "0.26.3"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d6d80e6d70e7911a29f3cf3f44f452df85d06f73572b494ca99a2cad3fcf8f4"
+checksum = "7ec4ac49f13c7b00f435f8a5bb55d725705e2cf620df35a5859321595102eb7e"
 dependencies = [
  "serde_json",
 ]
@@ -1167,6 +1184,15 @@ name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+
+[[package]]
+name = "num-traits"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
+dependencies = [
+ "autocfg",
+]
 
 [[package]]
 name = "object"
