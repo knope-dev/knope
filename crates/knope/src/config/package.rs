@@ -18,7 +18,7 @@ use deno_semver::package::PackageKind;
 use glob::glob;
 use itertools::Itertools;
 use knope_config::{Assets, ChangelogSection};
-use knope_versioning::{UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
+use knope_versioning::{ConfigError, UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
 use miette::Diagnostic;
 use relative_path::{PathExt, RelativePath, RelativePathBuf};
 use serde_json::Value;
@@ -482,7 +482,7 @@ impl Package {
             .map(|spanned| {
                 let span = spanned.span();
                 VersionedFileConfig::try_from(spanned.into_inner())
-                    .map_err(|source| VersionedFileError::UnknownFile {
+                    .map_err(|source| VersionedFileError::ConfigError {
                         source,
                         span: span.clone(),
                         source_code: source_code.to_string(),
@@ -513,13 +513,13 @@ impl Package {
     }
 }
 
-fn relative_from_cwd(path: &Path, cwd: &Path) -> Result<RelativePathBuf, UnknownFile> {
+fn relative_from_cwd(path: &Path, cwd: &Path) -> Result<RelativePathBuf, ConfigError> {
     let stripped = path.strip_prefix(cwd).map_err(|_| UnknownFile {
         path: RelativePathBuf::from(path.to_string_lossy().to_string()),
     })?;
     RelativePathBuf::from_path(stripped).map_err(|_| UnknownFile {
         path: RelativePathBuf::from(path.to_string_lossy().to_string()),
-    })
+    }.into())
 }
 
 fn dependent_depends_on(target: &DenoPackageInfo, dependent: &DenoPackageInfo) -> bool {
@@ -606,9 +606,9 @@ struct WorkspaceMember {
 pub enum VersionedFileError {
     #[error("Problem with versioned file")]
     #[diagnostic()]
-    UnknownFile {
+    ConfigError {
         #[diagnostic_source]
-        source: UnknownFile,
+        source: ConfigError,
         #[source_code]
         source_code: String,
         #[label("Declared here")]
@@ -647,7 +647,7 @@ pub(crate) enum CargoWorkspaceError {
     Members,
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] UnknownFile),
+    ConfigError(#[from] ConfigError),
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -663,7 +663,7 @@ pub(crate) enum NPMWorkspaceError {
     NoName { path: RelativePathBuf },
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] UnknownFile),
+    ConfigError(#[from] ConfigError),
 }
 
 #[derive(Debug, Diagnostic, Error)]
@@ -698,7 +698,7 @@ pub(crate) enum DenoWorkspaceError {
     },
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] UnknownFile),
+    ConfigError(#[from] ConfigError),
 }
 
 #[derive(Debug, Diagnostic, Error)]

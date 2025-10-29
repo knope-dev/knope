@@ -394,6 +394,17 @@ impl Format {
 
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
+pub enum ConfigError {
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    UnknownFile(#[from] UnknownFile),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    ConflictingOptions(#[from] ConflictingOptions),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 #[error("Unknown file: {path}")]
 #[cfg_attr(
     feature = "miette",
@@ -404,6 +415,21 @@ impl Format {
     )
 )]
 pub struct UnknownFile {
+    pub path: RelativePathBuf,
+}
+
+#[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
+#[error("Cannot specify both 'dependency' and 'regex' for the same file: {path}")]
+#[cfg_attr(
+    feature = "miette",
+    diagnostic(
+        code(knope_versioning::versioned_file::conflicting_options),
+        help("Use 'dependency' to update a dependency version in a known file format, or 'regex' to match version strings in arbitrary text files, but not both."),
+        url("https://knope.tech/reference/config-file/packages#versioned_files")
+    )
+)]
+pub struct ConflictingOptions {
     pub path: RelativePathBuf,
 }
 
@@ -431,13 +457,11 @@ impl Config {
         path: RelativePathBuf,
         dependency: Option<String>,
         regex: Option<String>,
-    ) -> Result<Self, UnknownFile> {
-        // Check that both dependency and regex are not set
+    ) -> Result<Self, ConfigError> {
         if dependency.is_some() && regex.is_some() {
-            return Err(UnknownFile { path });
+            return Err(ConflictingOptions { path }.into());
         }
 
-        // If a regex is provided, use TextFile format
         if regex.is_some() {
             return Ok(Config {
                 path,
@@ -448,10 +472,10 @@ impl Config {
         }
 
         let Some(file_name) = path.file_name() else {
-            return Err(UnknownFile { path });
+            return Err(UnknownFile { path }.into());
         };
         let Some(format) = Format::try_from(file_name) else {
-            return Err(UnknownFile { path });
+            return Err(UnknownFile { path }.into());
         };
         Ok(Config {
             path,

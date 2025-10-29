@@ -1,6 +1,6 @@
 use std::ops::Not;
 
-use knope_versioning::{UnknownFile, VersionedFileConfig};
+use knope_versioning::{ConfigError, VersionedFileConfig};
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
@@ -54,7 +54,7 @@ impl From<VersionedFileConfig> for VersionedFile {
 }
 
 impl TryFrom<VersionedFile> for VersionedFileConfig {
-    type Error = UnknownFile;
+    type Error = ConfigError;
 
     fn try_from(value: VersionedFile) -> Result<Self, Self::Error> {
         match value {

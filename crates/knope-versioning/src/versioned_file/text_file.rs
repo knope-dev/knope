@@ -79,6 +79,8 @@ impl TextFile {
         
         // Replace all named "version" capture groups with the new version
         self.content = self.regex.replace_all(&self.content, |caps: &regex::Captures| {
+            // Get the full match text, then replace the "version" named group within it
+            // This preserves any surrounding context while only updating the version number
             let mut result = caps.get(0).map_or("", |m| m.as_str()).to_string();
             
             // Replace each "version" named group in the match
@@ -94,7 +96,7 @@ impl TextFile {
             .lines()
             .zip(self.content.lines())
             .find(|(old, new)| old != new)
-            .map(|(_, new)| new)
+            .map(|(_, new)| new.trim())
         {
             self.diff = Some(changed_line.to_string());
         }
