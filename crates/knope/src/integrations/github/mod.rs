@@ -14,7 +14,16 @@ fn initialize_state(state: state::GitHub) -> Result<(String, Agent), app_config:
         state::GitHub::Initialized { token, agent } => (token, agent),
         state::GitHub::New => {
             let token = get_or_prompt_for_github_token()?;
-            (token, Agent::new())
+            (
+                token,
+                Agent::new_with_config(
+                    Agent::config_builder()
+                        .http_status_as_error(false)
+                        .accept("application/vnd.github+json")
+                        .user_agent("Knope")
+                        .build(),
+                ),
+            )
         }
     })
 }

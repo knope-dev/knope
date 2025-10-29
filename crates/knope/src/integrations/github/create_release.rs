@@ -4,15 +4,14 @@ use knope_config::{Asset, AssetNameError, Assets};
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
 use tracing::info;
-use ureq::Response;
 
 use crate::{
     app_config, config,
     integrations::{
-        CreateReleaseInput, CreateReleaseResponse, github::initialize_state, ureq_err_to_string,
+        ApiRequestError, CreateReleaseInput, CreateReleaseResponse, github::initialize_state,
+        handle_response,
     },
-    state,
-    state::RunType,
+    state::{self, RunType},
 };
 
 pub(crate) fn create_release(
@@ -46,19 +45,22 @@ pub(crate) fn create_release(
 
     let response = agent
         .post(&url)
-        .set("Authorization", &token_header)
-        .send_json(github_release)
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "creating a release".to_string(),
-        })
-        .and_then(|resp| error_on_bad_http_status(resp, "creating a release".to_string()))?;
+        .header("Authorization", &token_header)
+        .send_json(github_release);
+    let response = handle_response(
+        response,
+        "GitHub".to_string(),
+        "creating a release".to_string(),
+    )?;
 
     let response: CreateReleaseResponse =
-        response.into_json().map_err(|source| Error::ApiResponse {
-            message: source.to_string(),
-            activity: "creating a release".to_string(),
-        })?;
+        response
+            .into_body()
+            .read_json()
+            .map_err(|source| Error::ApiResponse {
+                message: source.to_string(),
+                activity: "creating a release".to_string(),
+            })?;
 
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
@@ -71,56 +73,58 @@ pub(crate) fn create_release(
             })?;
             let asset_name = asset.name()?;
             let upload_url = upload_template.set("name", asset_name.as_str()).build();
-            agent
+            let upload_resp = agent
                 .post(&upload_url)
-                .set("Authorization", &token_header)
-                .set("Content-Type", "application/octet-stream")
-                .set("Content-Length", &file.len().to_string())
-                .send_bytes(&file)
-                .map_err(|source| Error::ApiRequest {
-                    err: ureq_err_to_string(source),
+                .header("Authorization", &token_header)
+                .header("Content-Type", "application/octet-stream")
+                .header("Content-Length", &file.len().to_string())
+                .send(&file);
+
+            let upload_resp = handle_response(
+                upload_resp,
+                "GitHub".to_string(),
+                format!(
+                    "uploading asset {asset_name}. Release has been created but not published!",
+                ),
+            )?;
+            if upload_resp.status().as_u16() >= 400 {
+                let num = upload_resp.status().as_u16();
+                return Err(Error::ApiResponse {
+                    message: format!("Got HTTP status {num}"),
                     activity: format!(
                         "uploading asset {asset_name}. Release has been created but not published!",
                     ),
-                })
-                .and_then(|resp| {
-                    error_on_bad_http_status(
-                        resp,
-                        format!(
-                            "uploading asset {asset_name}. Release has been created but not published!",
-                        ),
-                    )
-                })?;
+                });
+            }
         }
-        agent
+        let publish_resp = agent
             .patch(&response.url)
-            .set("Authorization", &token_header)
-            .send_json(ureq::json!({
+            .header("Authorization", &token_header)
+            .send_json(serde_json::json!({
                 "draft": false
             }))
-            .map_err(|source| Error::ApiRequest {
-                err: ureq_err_to_string(source),
+            .map_err(|source| ApiRequestError {
+                service: "GitHub".to_string(),
+                err: source.to_string(),
+                activity: "publishing release".into(),
+            })?;
+
+        if publish_resp.status().as_u16() >= 400 {
+            let num = publish_resp.status().as_u16();
+            return Err(Error::ApiResponse {
+                message: format!(
+                    "Got HTTP status {num} with body: {}",
+                    publish_resp
+                        .into_body()
+                        .read_to_string()
+                        .unwrap_or_default()
+                ),
                 activity: "publishing release".to_string(),
-            })
-            .and_then(|resp| error_on_bad_http_status(resp, "publishing release".to_string()))?;
+            });
+        }
     }
 
     Ok(state::GitHub::Initialized { token, agent })
-}
-
-fn error_on_bad_http_status(response: Response, activity: String) -> Result<Response, Error> {
-    if response.status() >= 400 {
-        let num = response.status();
-        let text = response.status_text().to_string();
-        let message = if let Ok(body) = response.into_string() {
-            format!("Got HTTP status {num} {text} with body {body}")
-        } else {
-            format!("Got HTTP status {num} {text}")
-        };
-        Err(Error::ApiResponse { message, activity })
-    } else {
-        Ok(response)
-    }
 }
 
 fn github_release_dry_run(
@@ -185,14 +189,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     AppConfig(#[from] app_config::Error),
-    #[error("Trouble communicating with GitHub while {activity}: {err}")]
-    #[diagnostic(
-        code(github::api_request_error),
-        help(
-            "There was a problem communicating with GitHub, this may be a network issue or a permissions issue."
-        )
-    )]
-    ApiRequest { err: String, activity: String },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ApiRequest(#[from] ApiRequestError),
     #[error("Trouble decoding the response from GitHub while {activity}: {message}")]
     #[diagnostic(
         code(github::api_response_error),

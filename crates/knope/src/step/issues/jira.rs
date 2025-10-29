@@ -129,14 +129,22 @@ pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>,
     let project = &jira_config.project;
     let jql = format!("status = {status} AND project = {project}");
     let url = format!("{}/rest/api/3/search", jira_config.url);
-    Ok(ureq::post(&url)
-        .set("Authorization", &auth)
-        .send_json(ureq::json!({"jql": jql, "fields": ["summary"]}))
+    let mut response = ureq::post(&url)
+        .header("Authorization", &auth)
+        .send_json(serde_json::json!({"jql": jql, "fields": ["summary"]}))
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "querying for issues",
-        })?
-        .into_json::<SearchResponse>()?
+        })?;
+    let search_response: SearchResponse =
+        response
+            .body_mut()
+            .read_json()
+            .map_err(|inner| Error::Api {
+                inner: Box::new(inner),
+                activity: "parsing search response",
+            })?;
+    Ok(search_response
         .issues
         .into_iter()
         .map(|jira_issue| Issue {
@@ -150,16 +158,23 @@ fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(
     let auth = get_auth()?; // TODO: get auth once and store in state
     let base_url = &jira_config.url;
     let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions",);
-    let agent = ureq::Agent::new();
-    let response = agent
+    let agent = ureq::Agent::new_with_defaults();
+    let mut response = agent
         .get(&url)
-        .set("Authorization", &auth)
+        .header("Authorization", &auth)
         .call()
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "getting transitions",
         })?;
-    let response = response.into_json::<GetTransitionResponse>()?;
+    let response: GetTransitionResponse =
+        response
+            .body_mut()
+            .read_json()
+            .map_err(|inner| Error::Api {
+                inner: Box::new(inner),
+                activity: "parsing transitions response",
+            })?;
     let transition = response
         .transitions
         .into_iter()
@@ -167,8 +182,8 @@ fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(
         .ok_or(Error::Transition)?;
     let _response = agent
         .post(&url)
-        .set("Authorization", &auth)
-        .send_json(ureq::json!({"transition": {"id": transition.id}}))
+        .header("Authorization", &auth)
+        .send_json(serde_json::json!({"transition": {"id": transition.id}}))
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "transitioning issue",
