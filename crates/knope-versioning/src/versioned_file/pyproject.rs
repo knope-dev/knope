@@ -122,8 +122,8 @@ impl Toml {
                     Ok(poetry_version.as_ref())
                 } else {
                     Err(Error::InconsistentVersions {
-                        poetry: poetry_version.as_ref().to_string(),
-                        project: project_version.as_ref().to_string(),
+                        poetry: poetry_version.as_ref().clone(),
+                        project: project_version.as_ref().clone(),
                         path: path.into(),
                     })
                 }
