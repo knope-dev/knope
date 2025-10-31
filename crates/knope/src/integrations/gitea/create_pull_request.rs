@@ -6,7 +6,7 @@ use ureq::Agent;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{PullRequest, git, ureq_err_to_string},
+    integrations::{ApiRequestError, PullRequest, git, handle_response},
     state,
     state::RunType,
 };
@@ -31,28 +31,30 @@ pub(crate) fn create_or_update_pull_request(
     };
     let (token, agent) = initialize_state(&config.host, state)?;
 
-    let existing_pulls: Vec<PullRequest> = agent
+    let resp = agent
         .get(&config.get_pulls_url())
-        .set("Accept", "application/json")
+        .header("Accept", "application/json")
         .query("state", "open")
         .query(
             "head",
-            &format!("{owner}:{current_branch}", owner = config.owner),
+            format!("{owner}:{current_branch}", owner = config.owner),
         )
         .query("base", base)
         .query("access_token", &token)
-        .call()
-        .map_err(|err| Error::ApiRequest {
-            err: ureq_err_to_string(err),
-            activity: "fetching existing pull requests".to_string(),
-            host: config.host.clone(),
-        })?
-        .into_json()
-        .map_err(|source| Error::ApiResponse {
-            source,
-            activity: "fetching existing pull requests",
-            host: config.host.clone(),
-        })?;
+        .call();
+    let resp = handle_response(
+        resp,
+        config.host.clone(),
+        "fetching existing pull requests".to_string(),
+    )?;
+    let existing_pulls: Vec<PullRequest> =
+        resp.into_body()
+            .read_json()
+            .map_err(|source| Error::ApiResponse {
+                source,
+                activity: "fetching existing pull requests",
+                host: config.host.clone(),
+            })?;
 
     // Update the existing PR
     if let Some(pr) = existing_pulls.first() {
@@ -75,19 +77,19 @@ fn update_pull_request(
     title: &str,
     body: &str,
 ) -> Result<(), Error> {
-    agent
+    let resp = agent
         .patch(&config.get_pull_url(number))
-        .set("Accept", "application/json")
+        .header("Accept", "application/json")
         .query("access_token", token)
         .send_json(json!({
             "body": body,
             "title": title
-        }))
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "updating pull request".to_string(),
-            host: config.host.clone(),
-        })?;
+        }));
+    handle_response(
+        resp,
+        config.host.clone(),
+        "updating pull request".to_string(),
+    )?;
     Ok(())
 }
 
@@ -100,22 +102,24 @@ fn create_pull_request(
     title: &str,
     body: &str,
 ) -> Result<(), Error> {
-    let new_pr = agent
+    let resp = agent
         .post(&config.get_pulls_url())
-        .set("Accept", "application/json")
+        .header("Accept", "application/json")
         .query("access_token", token)
         .send_json(json!({
             "title": title,
             "body": body,
             "head": head,
-            "base": base
-        }))
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "creating pull request".to_string(),
-            host: config.host.clone(),
-        })?
-        .into_json::<PullRequest>()
+            "base": base,
+        }));
+    let resp = handle_response(
+        resp,
+        config.host.clone(),
+        "creating pull request".to_string(),
+    )?;
+    let new_pr = resp
+        .into_body()
+        .read_json::<PullRequest>()
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating pull request",
@@ -128,18 +132,9 @@ fn create_pull_request(
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
-    #[error("Trouble communicating with the Gitea instance while {activity}: {err}")]
-    #[diagnostic(
-        code(gitea::api_request_error),
-        help(
-            "There was a problem communicating with the Gitea instance {host}, this may be a network issue or a permissions issue."
-        )
-    )]
-    ApiRequest {
-        err: String,
-        activity: String,
-        host: String,
-    },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ApiRequest(#[from] ApiRequestError),
     #[error("Trouble decoding the response from Gitea while {activity}: {source}")]
     #[diagnostic(
         code(gitea::api_response_error),
@@ -148,7 +143,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: ureq::Error,
         activity: &'static str,
         host: String,
     },

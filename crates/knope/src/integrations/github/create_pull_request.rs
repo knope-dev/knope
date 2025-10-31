@@ -5,9 +5,8 @@ use ureq::Agent;
 
 use crate::{
     app_config, config,
-    integrations::{PullRequest, git, github::initialize_state, ureq_err_to_string},
-    state,
-    state::RunType,
+    integrations::{ApiRequestError, PullRequest, git, github::initialize_state, handle_response},
+    state::{self, RunType},
 };
 
 pub(crate) fn create_or_update_pull_request(
@@ -33,18 +32,21 @@ pub(crate) fn create_or_update_pull_request(
     let base_url = format!("https://api.github.com/repos/{owner}/{repo}/pulls");
     let authorization_header = format!("Bearer {}", &token);
 
-    let existing_pulls: Vec<PullRequest> = agent
+    let existing_pulls_response = agent
         .get(&base_url)
-        .set("Accept", "application/vnd.github+json")
-        .set("Authorization", &authorization_header)
-        .query("head", &format!("{owner}:{current_branch}"))
+        .header("Authorization", &authorization_header)
+        .query("head", format!("{owner}:{current_branch}"))
         .query("base", base)
-        .call()
-        .map_err(|err| Error::ApiRequest {
-            err: ureq_err_to_string(err),
-            activity: "fetching existing pull requests".to_string(),
-        })?
-        .into_json()
+        .call();
+    let existing_pulls_response = handle_response(
+        existing_pulls_response,
+        "GitHub".to_string(),
+        "fetching existing pull requests".into(),
+    )?;
+
+    let existing_pulls: Vec<PullRequest> = existing_pulls_response
+        .into_body()
+        .read_json()
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "fetching existing pull requests",
@@ -74,18 +76,14 @@ fn update_pull_request(
     auth_header: &str,
     agent: Agent,
 ) -> Result<Agent, Error> {
-    agent
+    let resp = agent
         .patch(url)
-        .set("Accept", "application/vnd.github+json")
-        .set("Authorization", auth_header)
+        .header("Authorization", auth_header)
         .send_json(json!({
             "title": title,
             "body": body,
-        }))
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "updating pull request".to_string(),
-        })?;
+        }));
+    handle_response(resp, "GitHub".to_string(), "updating pull request".into())?;
     Ok(agent)
 }
 
@@ -100,20 +98,21 @@ fn create_pull_request(
 ) -> Result<Agent, Error> {
     let response = agent
         .post(url)
-        .set("Accept", "application/vnd.github+json")
-        .set("Authorization", auth_header)
+        .header("Authorization", auth_header)
         .send_json(json!({
             "title": title,
             "body": body,
             "head": current_branch,
             "base": base,
-        }))
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "creating pull request".to_string(),
-        })?;
+        }));
+    let response = handle_response(
+        response,
+        "GitHub".to_string(),
+        "creating pull request".to_string(),
+    )?;
     let json_data = response
-        .into_json::<serde_json::Value>()
+        .into_body()
+        .read_json::<serde_json::Value>()
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating pull request",
@@ -126,14 +125,9 @@ fn create_pull_request(
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub(crate) enum Error {
-    #[error("Trouble communicating with GitHub while {activity}: {err}")]
-    #[diagnostic(
-        code(github::api_request_error),
-        help(
-            "There was a problem communicating with GitHub, this may be a network issue or a permissions issue."
-        )
-    )]
-    ApiRequest { err: String, activity: String },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ApiRequest(#[from] ApiRequestError),
     #[error("Trouble decoding the response from GitHub while {activity}: {source}")]
     #[diagnostic(
         code(github::api_response_error),
@@ -142,7 +136,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: ureq::Error,
         activity: &'static str,
     },
     #[error(transparent)]

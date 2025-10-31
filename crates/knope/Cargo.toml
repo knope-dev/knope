@@ -47,7 +47,7 @@ tracing = { workspace = true }
 tracing-subscriber = { version = "0.3.18", default-features = false, features = [
   "fmt",
 ] }
-ureq = { version = "2.9.6", features = ["json"] }
+ureq = { version = "3.0", features = ["json"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
