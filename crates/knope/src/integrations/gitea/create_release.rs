@@ -4,7 +4,7 @@ use tracing::info;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{CreateReleaseInput, CreateReleaseResponse, ureq_err_to_string},
+    integrations::{ApiRequestError, CreateReleaseInput, CreateReleaseResponse, handle_response},
     state,
     state::RunType,
 };
@@ -29,16 +29,17 @@ pub(crate) fn create_release(
 
     let (token, agent) = initialize_state(&gitea_config.host, gitea_state)?;
 
-    agent
+    let resp = agent
         .post(&gitea_config.get_releases_url())
         .query("access_token", &token)
-        .send_json(gitea_release)
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "creating a release".to_string(),
-            host: gitea_config.host.clone(),
-        })?
-        .into_json::<CreateReleaseResponse>()
+        .send_json(gitea_release);
+    let resp = handle_response(
+        resp,
+        gitea_config.host.clone(),
+        "creating a release".to_string(),
+    )?;
+    resp.into_body()
+        .read_json::<CreateReleaseResponse>()
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating a release",
@@ -70,18 +71,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     AppConfig(#[from] app_config::Error),
-    #[error("Trouble communicating with the Gitea instance while {activity}: {err}")]
-    #[diagnostic(
-        code(gitea::api_request_error),
-        help(
-            "There was a problem communicating with the Gitea instance {host}, this may be a network issue or a permissions issue."
-        )
-    )]
-    ApiRequest {
-        err: String,
-        activity: String,
-        host: String,
-    },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ApiRequest(#[from] ApiRequestError),
     #[error("Trouble decoding the response from Gitea while {activity}: {source}")]
     #[diagnostic(
         code(gitea::api_response_error),
@@ -90,7 +82,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: ureq::Error,
         activity: &'static str,
         host: String,
     },

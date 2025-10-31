@@ -20,7 +20,7 @@ fn initialize_state(host: &str, state: state::Gitea) -> Result<(String, Agent), 
         state::Gitea::Initialized { token, agent } => (token, agent),
         state::Gitea::New => {
             let token = get_or_prompt_for_gitea_token(host)?;
-            (token, Agent::new())
+            (token, Agent::new_with_defaults())
         }
     })
 }

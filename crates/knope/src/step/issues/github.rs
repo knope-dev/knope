@@ -13,8 +13,8 @@ use crate::{
 };
 
 const ISSUES_QUERY: &str = r"
-query($repo: String!, $owner: String!, $labels: [String!]) { 
-  repository(name:$repo, owner:$owner) { 
+query($repo: String!, $owner: String!, $labels: [String!]) {
+  repository(name:$repo, owner:$owner) {
     issues(states:OPEN, first: 30, labels: $labels) {
       nodes {
         number,
@@ -114,12 +114,15 @@ fn list_issues(
 ) -> Result<(state::GitHub, Vec<Issue>), Error> {
     let (token, agent) = match github_state {
         state::GitHub::Initialized { token, agent } => (token, agent),
-        state::GitHub::New => (get_or_prompt_for_github_token()?, Agent::new()),
+        state::GitHub::New => (
+            get_or_prompt_for_github_token()?,
+            Agent::new_with_defaults(),
+        ),
     };
-    let response = agent
+    let json_value: serde_json::Value = agent
         .post("https://api.github.com/graphql")
-        .set("Authorization", &format!("bearer {token}"))
-        .send_json(ureq::json!({
+        .header("Authorization", &format!("bearer {token}"))
+        .send_json(serde_json::json!({
             "query": ISSUES_QUERY,
             "variables": {
                 "repo": github_config.repo,
@@ -130,9 +133,17 @@ fn list_issues(
         .map_err(|source| Error::Api {
             source: Box::new(source),
             context: "loading issues",
+        })?
+        .body_mut()
+        .read_json()
+        .map_err(|e| {
+            Error::ApiIo(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                e.to_string(),
+            ))
         })?;
 
-    let gh_issues = decode_github_response(response)?;
+    let gh_issues = decode_github_response(&json_value)?;
 
     let issues = gh_issues
         .into_iter()
@@ -145,8 +156,7 @@ fn list_issues(
     Ok((state::GitHub::Initialized { token, agent }, issues))
 }
 
-fn decode_github_response(response: ureq::Response) -> Result<Vec<ResponseIssue>, Error> {
-    let json_value: serde_json::Value = response.into_json().map_err(Error::ApiIo)?;
+fn decode_github_response(json_value: &serde_json::Value) -> Result<Vec<ResponseIssue>, Error> {
     let json_issues = json_value.pointer("/data/repository/issues/nodes");
     match json_issues {
         Some(value) => serde_json::from_value(value.clone()).map_err(Error::from),

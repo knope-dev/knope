@@ -3,7 +3,7 @@ use miette::Diagnostic;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{ResponseIssue, ureq_err_to_string},
+    integrations::{ApiRequestError, ResponseIssue, handle_response},
     prompt, state,
     step::issues::Issue,
 };
@@ -19,20 +19,19 @@ pub(crate) fn list_issues(
     let (token, agent) = initialize_state(&config.host, state)?;
     let labels = labels.unwrap_or(&[]).join(",");
 
-    let issues: Vec<Issue> = agent
+    let resp = agent
         .get(&config.get_issues_url())
-        .set("Accept", "aplication/json")
+        .header("Accept", "aplication/json")
         .query("access_token", &token)
         .query("labels", &labels)
         .query("state", "open")
         .query("limit", "30")
-        .call()
-        .map_err(|source| Error::ApiRequest {
-            err: ureq_err_to_string(source),
-            activity: "listing issues".to_string(),
-            host: config.host.clone(),
-        })?
-        .into_json::<Vec<ResponseIssue>>()
+        .call();
+    let resp = handle_response(resp, config.host.clone(), "listing issues".into())?;
+
+    let issues: Vec<Issue> = resp
+        .into_body()
+        .read_json::<Vec<ResponseIssue>>()
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "listing issues",
@@ -57,18 +56,9 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/gitea/")
     )]
     NotConfigured,
-    #[error("Trouble communicating with the Gitea instance while {activity}: {err}")]
-    #[diagnostic(
-        code(gitea::api_request_error),
-        help(
-            "There was a problem communicating with the Gitea instance {host}, this may be a network issue or a permissions issue."
-        )
-    )]
-    ApiRequest {
-        err: String,
-        activity: String,
-        host: String,
-    },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ApiRequest(#[from] ApiRequestError),
     #[error("Trouble decoding the response from Gitea while {activity}: {source}")]
     #[diagnostic(
         code(gitea::api_response_error),
@@ -77,7 +67,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: std::io::Error,
+        source: ureq::Error,
         activity: &'static str,
         host: String,
     },
