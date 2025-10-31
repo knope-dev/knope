@@ -1,6 +1,6 @@
 use std::ops::Not;
 
-use knope_versioning::{UnknownFile, VersionedFileConfig};
+use knope_versioning::{ConfigError, VersionedFileConfig};
 use relative_path::RelativePathBuf;
 use serde::{Deserialize, Serialize};
 use toml::Spanned;
@@ -34,12 +34,18 @@ pub enum VersionedFile {
         path: RelativePathBuf,
         dependency: String,
     },
+    Regex {
+        path: RelativePathBuf,
+        regex: String,
+    },
 }
 
 impl From<VersionedFileConfig> for VersionedFile {
     fn from(config: VersionedFileConfig) -> Self {
-        let (path, dependency) = (config.as_path(), config.dependency);
-        if let Some(dependency) = dependency {
+        let (path, dependency, regex) = (config.as_path(), config.dependency, config.regex);
+        if let Some(regex) = regex {
+            Self::Regex { path, regex }
+        } else if let Some(dependency) = dependency {
             Self::Dependency { path, dependency }
         } else {
             Self::Simple(path)
@@ -48,13 +54,16 @@ impl From<VersionedFileConfig> for VersionedFile {
 }
 
 impl TryFrom<VersionedFile> for VersionedFileConfig {
-    type Error = UnknownFile;
+    type Error = ConfigError;
 
     fn try_from(value: VersionedFile) -> Result<Self, Self::Error> {
         match value {
-            VersionedFile::Simple(path) => VersionedFileConfig::new(path, None),
+            VersionedFile::Simple(path) => VersionedFileConfig::new(path, None, None),
             VersionedFile::Dependency { path, dependency } => {
-                VersionedFileConfig::new(path, Some(dependency))
+                VersionedFileConfig::new(path, Some(dependency), None)
+            }
+            VersionedFile::Regex { path, regex } => {
+                VersionedFileConfig::new(path, None, Some(regex))
             }
         }
     }

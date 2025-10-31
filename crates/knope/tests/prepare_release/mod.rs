@@ -24,6 +24,7 @@ mod package_selection;
 mod prerelease_after_release;
 mod pubspec_yaml;
 mod pyproject_toml;
+mod readme_version;
 mod release_after_prerelease;
 mod scopes;
 mod second_prerelease;

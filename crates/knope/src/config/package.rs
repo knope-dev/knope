@@ -18,7 +18,7 @@ use deno_semver::package::PackageKind;
 use glob::glob;
 use itertools::Itertools;
 use knope_config::{Assets, ChangelogSection};
-use knope_versioning::{UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
+use knope_versioning::{ConfigError, UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
 use miette::Diagnostic;
 use relative_path::{PathExt, RelativePath, RelativePathBuf};
 use serde_json::Value;
@@ -115,7 +115,7 @@ impl Package {
 
         let cargo_lock_path = workspace_path.join("Cargo.lock");
         let cargo_lock = if cargo_lock_path.to_path("").exists() {
-            VersionedFileConfig::new(cargo_lock_path, None).ok()
+            VersionedFileConfig::new(cargo_lock_path, None, None).ok()
         } else {
             None
         };
@@ -125,7 +125,7 @@ impl Package {
             .map(|member_val| {
                 let member = member_val.as_str().ok_or(CargoWorkspaceError::Members)?;
                 let member_config =
-                    VersionedFileConfig::new(workspace_path.join(member).join("Cargo.toml"), None)?;
+                    VersionedFileConfig::new(workspace_path.join(member).join("Cargo.toml"), None, None)?;
                 let member_contents = read_to_string(member_config.as_path().to_path("."))?;
                 let document = DocumentMut::from_str(&member_contents)
                     .map_err(|err| CargoWorkspaceError::Toml(err, member_config.as_path()))?;
@@ -160,6 +160,7 @@ impl Package {
                         VersionedFileConfig::new(
                             cargo_toml_path.to_relative_path_buf(),
                             Some(member.name.clone()),
+                            None,
                         )
                         .ok(),
                     );
@@ -236,11 +237,12 @@ impl Package {
                     path: workspace.path.clone(),
                 })?
                 .to_string();
-            let mut versioned_files = vec![VersionedFileConfig::new(workspace.path.clone(), None)?];
+            let mut versioned_files = vec![VersionedFileConfig::new(workspace.path.clone(), None, None)?];
             if lock_file {
                 versioned_files.push(VersionedFileConfig::new(
                     "package-lock.json".into(),
                     Some(name.clone()),
+                    None,
                 )?);
             }
             for other_workspace in &workspaces {
@@ -262,6 +264,7 @@ impl Package {
                     versioned_files.push(VersionedFileConfig::new(
                         other_workspace.path.clone(),
                         Some(name.clone()),
+                        None,
                     )?);
                 }
             }
@@ -420,12 +423,14 @@ impl Package {
         let mut versioned_files = vec![VersionedFileConfig::new(
             package_info.config_relative.clone(),
             None,
+            None,
         )?];
 
         if let Some(lockfile) = lockfile_relative {
             versioned_files.push(VersionedFileConfig::new(
                 lockfile.clone(),
                 Some(package_info.name.clone()),
+                None,
             )?);
         }
 
@@ -438,6 +443,7 @@ impl Package {
                 versioned_files.push(VersionedFileConfig::new(
                     dependent.config_relative.clone(),
                     Some(package_info.name.clone()),
+                    None,
                 )?);
             }
         }
@@ -476,7 +482,7 @@ impl Package {
             .map(|spanned| {
                 let span = spanned.span();
                 VersionedFileConfig::try_from(spanned.into_inner())
-                    .map_err(|source| VersionedFileError::UnknownFile {
+                    .map_err(|source| VersionedFileError::ConfigError {
                         source,
                         span: span.clone(),
                         source_code: source_code.to_string(),
@@ -507,13 +513,13 @@ impl Package {
     }
 }
 
-fn relative_from_cwd(path: &Path, cwd: &Path) -> Result<RelativePathBuf, UnknownFile> {
+fn relative_from_cwd(path: &Path, cwd: &Path) -> Result<RelativePathBuf, ConfigError> {
     let stripped = path.strip_prefix(cwd).map_err(|_| UnknownFile {
         path: RelativePathBuf::from(path.to_string_lossy().to_string()),
     })?;
     RelativePathBuf::from_path(stripped).map_err(|_| UnknownFile {
         path: RelativePathBuf::from(path.to_string_lossy().to_string()),
-    })
+    }.into())
 }
 
 fn dependent_depends_on(target: &DenoPackageInfo, dependent: &DenoPackageInfo) -> bool {
@@ -600,9 +606,9 @@ struct WorkspaceMember {
 pub enum VersionedFileError {
     #[error("Problem with versioned file")]
     #[diagnostic()]
-    UnknownFile {
+    ConfigError {
         #[diagnostic_source]
-        source: UnknownFile,
+        source: ConfigError,
         #[source_code]
         source_code: String,
         #[label("Declared here")]
@@ -641,7 +647,7 @@ pub(crate) enum CargoWorkspaceError {
     Members,
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] UnknownFile),
+    ConfigError(#[from] ConfigError),
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -657,7 +663,7 @@ pub(crate) enum NPMWorkspaceError {
     NoName { path: RelativePathBuf },
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] UnknownFile),
+    ConfigError(#[from] ConfigError),
 }
 
 #[derive(Debug, Diagnostic, Error)]
@@ -692,7 +698,7 @@ pub(crate) enum DenoWorkspaceError {
     },
     #[error(transparent)]
     #[diagnostic(transparent)]
-    UnknownFile(#[from] UnknownFile),
+    ConfigError(#[from] ConfigError),
 }
 
 #[derive(Debug, Diagnostic, Error)]
