@@ -103,10 +103,12 @@ impl VersionedFile {
                 let regex = config
                     .regex
                     .as_ref()
-                    .ok_or_else(|| Error::TextFile(text_file::Error::NoMatch {
-                        regex: String::new(),
-                        path: config.as_path(),
-                    }))?
+                    .ok_or_else(|| {
+                        Error::TextFile(text_file::Error::NoMatch {
+                            regex: String::new(),
+                            path: config.as_path(),
+                        })
+                    })?
                     .clone();
                 TextFile::new(config.as_path(), content, regex)
                     .map(VersionedFile::TextFile)
@@ -425,7 +427,9 @@ pub struct UnknownFile {
     feature = "miette",
     diagnostic(
         code(knope_versioning::versioned_file::conflicting_options),
-        help("Use 'dependency' to update a dependency version in a known file format, or 'regex' to match version strings in arbitrary text files, but not both."),
+        help(
+            "Use 'dependency' to update a dependency version in a known file format, or 'regex' to match version strings in arbitrary text files, but not both."
+        ),
         url("https://knope.tech/reference/config-file/packages#versioned_files")
     )
 )]

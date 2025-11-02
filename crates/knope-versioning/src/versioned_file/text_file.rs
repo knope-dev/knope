@@ -15,7 +15,7 @@ pub struct TextFile {
 }
 
 impl TextFile {
-    /// Creates a new TextFile with the given regex pattern.
+    /// Creates a new `TextFile` with the given regex pattern.
     ///
     /// # Errors
     ///
@@ -50,10 +50,13 @@ impl TextFile {
     ///
     /// If the pattern doesn't match or the matched version is invalid
     pub(super) fn get_version(&self) -> Result<Version, Error> {
-        let caps = self.regex.captures(&self.content).ok_or_else(|| Error::NoMatch {
-            regex: self.regex.as_str().to_string(),
-            path: self.path.clone(),
-        })?;
+        let caps = self
+            .regex
+            .captures(&self.content)
+            .ok_or_else(|| Error::NoMatch {
+                regex: self.regex.as_str().to_string(),
+                path: self.path.clone(),
+            })?;
 
         // Get the named "version" capture group
         let version_str = caps
@@ -76,20 +79,23 @@ impl TextFile {
     pub(super) fn set_version(mut self, new_version: &Version) -> Self {
         let new_version_str = new_version.to_string();
         let old_content = self.content.clone();
-        
+
         // Replace all named "version" capture groups with the new version
-        self.content = self.regex.replace_all(&self.content, |caps: &regex::Captures| {
-            // Get the full match text, then replace the "version" named group within it
-            // This preserves any surrounding context while only updating the version number
-            let mut result = caps.get(0).map_or("", |m| m.as_str()).to_string();
-            
-            // Replace each "version" named group in the match
-            if let Some(version_match) = caps.name("version") {
-                result = result.replace(version_match.as_str(), &new_version_str);
-            }
-            
-            result
-        }).to_string();
+        self.content = self
+            .regex
+            .replace_all(&self.content, |caps: &regex::Captures| {
+                // Get the full match text, then replace the "version" named group within it
+                // This preserves any surrounding context while only updating the version number
+                let mut result = caps.get(0).map_or("", |m| m.as_str()).to_string();
+
+                // Replace each "version" named group in the match
+                if let Some(version_match) = caps.name("version") {
+                    result = result.replace(version_match.as_str(), &new_version_str);
+                }
+
+                result
+            })
+            .to_string();
 
         // Create a simple diff for display
         if let Some(changed_line) = old_content
@@ -132,7 +138,9 @@ pub enum Error {
         source: regex::Error,
     },
 
-    #[error("Regex pattern '{regex}' must contain at least one named capture group called 'version'")]
+    #[error(
+        "Regex pattern '{regex}' must contain at least one named capture group called 'version'"
+    )]
     #[cfg_attr(
         feature = "miette",
         diagnostic(
@@ -187,7 +195,7 @@ mod tests {
     fn test_simple_version_pattern() {
         let content = "version: 1.2.3\nother: stuff";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
-        
+
         let file = TextFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
@@ -203,7 +211,7 @@ mod tests {
     fn test_set_version() {
         let content = "version: 1.2.3\nother: stuff";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
-        
+
         let file = TextFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
@@ -220,12 +228,12 @@ mod tests {
 
     #[test]
     fn test_readme_example() {
-        let content = r#"steps:
+        let content = r"steps:
       - uses: knope-dev/action@v1
         with:
-          version: 0.21.4"#;
+          version: 0.21.4";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
-        
+
         let file = TextFile::new(
             RelativePathBuf::from("README.md"),
             content.to_string(),
@@ -246,7 +254,7 @@ mod tests {
     fn test_invalid_pattern() {
         let content = "version: 1.2.3";
         let regex = r"[invalid(regex";
-        
+
         let result = TextFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
@@ -260,7 +268,7 @@ mod tests {
     fn test_pattern_no_match() {
         let content = "no version here";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
-        
+
         let file = TextFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
@@ -275,8 +283,8 @@ mod tests {
     #[test]
     fn test_missing_named_group() {
         let content = "version: 1.2.3";
-        let regex = r"version:\s+(\d+\.\d+\.\d+)";  // No named group
-        
+        let regex = r"version:\s+(\d+\.\d+\.\d+)"; // No named group
+
         let result = TextFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),

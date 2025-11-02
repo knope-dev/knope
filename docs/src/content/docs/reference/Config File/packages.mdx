@@ -366,9 +366,10 @@ This is useful for keeping version numbers up to date in documentation files, li
 
 ```markdown title="README.md"
 steps:
-  - uses: knope-dev/action@v1
-    with:
-      version: 1.2.3
+
+- uses: knope-dev/action@v1
+  with:
+  version: 1.2.3
 ```
 
 With the regex `version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)`, Knope will find and update `1.2.3` to the new version

@@ -229,7 +229,9 @@ mod test_parse_changes {
         );
         assert_eq!(change.change_type, ChangeType::Feature);
     }
+
     #[test]
+    #[expect(clippy::indexing_slicing)]
     fn from_package_changes_with_commits() {
         let changes_with_commits = [
             (

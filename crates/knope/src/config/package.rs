@@ -18,7 +18,9 @@ use deno_semver::package::PackageKind;
 use glob::glob;
 use itertools::Itertools;
 use knope_config::{Assets, ChangelogSection};
-use knope_versioning::{ConfigError, UnknownFile, VersionedFileConfig, package, versioned_file::cargo};
+use knope_versioning::{
+    ConfigError, UnknownFile, VersionedFileConfig, package, versioned_file::cargo,
+};
 use miette::Diagnostic;
 use relative_path::{PathExt, RelativePath, RelativePathBuf};
 use serde_json::Value;
@@ -124,8 +126,11 @@ impl Package {
             .iter()
             .map(|member_val| {
                 let member = member_val.as_str().ok_or(CargoWorkspaceError::Members)?;
-                let member_config =
-                    VersionedFileConfig::new(workspace_path.join(member).join("Cargo.toml"), None, None)?;
+                let member_config = VersionedFileConfig::new(
+                    workspace_path.join(member).join("Cargo.toml"),
+                    None,
+                    None,
+                )?;
                 let member_contents = read_to_string(member_config.as_path().to_path("."))?;
                 let document = DocumentMut::from_str(&member_contents)
                     .map_err(|err| CargoWorkspaceError::Toml(err, member_config.as_path()))?;
@@ -237,7 +242,11 @@ impl Package {
                     path: workspace.path.clone(),
                 })?
                 .to_string();
-            let mut versioned_files = vec![VersionedFileConfig::new(workspace.path.clone(), None, None)?];
+            let mut versioned_files = vec![VersionedFileConfig::new(
+                workspace.path.clone(),
+                None,
+                None,
+            )?];
             if lock_file {
                 versioned_files.push(VersionedFileConfig::new(
                     "package-lock.json".into(),
@@ -517,9 +526,12 @@ fn relative_from_cwd(path: &Path, cwd: &Path) -> Result<RelativePathBuf, ConfigE
     let stripped = path.strip_prefix(cwd).map_err(|_| UnknownFile {
         path: RelativePathBuf::from(path.to_string_lossy().to_string()),
     })?;
-    RelativePathBuf::from_path(stripped).map_err(|_| UnknownFile {
-        path: RelativePathBuf::from(path.to_string_lossy().to_string()),
-    }.into())
+    RelativePathBuf::from_path(stripped).map_err(|_| {
+        UnknownFile {
+            path: RelativePathBuf::from(path.to_string_lossy().to_string()),
+        }
+        .into()
+    })
 }
 
 fn dependent_depends_on(target: &DenoPackageInfo, dependent: &DenoPackageInfo) -> bool {
