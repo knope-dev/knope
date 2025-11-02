@@ -27,8 +27,6 @@ jobs:
 
       - uses: jdx/mise-action@v2
         if: matrix.os == 'ubuntu-latest'
-        with:
-          experimental: true
 
       - name: Install mise
         if: matrix.os == 'windows-latest'

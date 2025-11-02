@@ -21,7 +21,7 @@ description = "Run all tests"
 run = "cargo test --workspace"
 
 [tasks.snapshot]
-description = "Update snapshots for specific tests"
+description = "Update snapshots for specific tests (pass test names as arguments)"
 run = "SNAPSHOTS=overwrite cargo test $@"
 
 [tasks.lint]
