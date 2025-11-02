@@ -26,14 +26,14 @@ jobs:
         run: rustup toolchain install nightly --component rustfmt
 
       - uses: jdx/mise-action@v2
-        if: matrix.os == 'ubuntu-latest'
 
-      - name: Install mise
-        if: matrix.os == 'windows-latest'
-        run: |
-          irm https://mise.jdx.dev/install.ps1 | iex
-          echo "$env:LOCALAPPDATA\mise\shims" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          echo "$env:LOCALAPPDATA\mise\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - uses: actions/cache@v4
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          path: docs/node_modules
+          key: ${{ runner.os }}-docs-deps-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-docs-deps-
 
       - name: Install docs dependencies
         if: matrix.os == 'ubuntu-latest'
