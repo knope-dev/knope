@@ -8,7 +8,7 @@ Add support for updating version numbers in arbitrary text files using regex pat
 [package]
 versioned_files = [
     "Cargo.toml",
-    { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" }
+    { path = "README.md", regex = 'version:\s+(?<version>\d+\.?\d+\.?\d+)' }
 ]
 ```
 

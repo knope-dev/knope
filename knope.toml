@@ -20,10 +20,10 @@ extra_changelog_sections = [{ name = "Notes", types = ["note"] }]
 versioned_files = [
   "crates/knope/Cargo.toml",
   "Cargo.lock",
-  { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" },
-  { path = "docs/src/content/docs/installation.mdx", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" },
-  { path = "docs/src/content/docs/recipes/1-preview-releases-with-pull-requests.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" },
-  { path = "docs/src/content/docs/recipes/workflow-dispatch-releases.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" },
+  { path = "README.md", regex = 'version:\s+(?<version>\d+\.?\d+\.?\d+)' },
+  { path = "docs/src/content/docs/installation.mdx", regex = 'version:\s+(?<version>\d+\.?\d+\.?\d+)' },
+  { path = "docs/src/content/docs/recipes/1-preview-releases-with-pull-requests.md", regex = 'version:\s+(?<version>\d+\.?\d+\.?\d+)' },
+  { path = "docs/src/content/docs/recipes/workflow-dispatch-releases.md", regex = 'version:\s+(?<version>\d+\.?\d+\.?\d+)' },
 ]
 changelog = "CHANGELOG.md"
 assets = "marker for GitHub bot"
