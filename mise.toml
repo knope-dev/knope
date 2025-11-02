@@ -22,7 +22,7 @@ run = "cargo test --workspace"
 
 [tasks.snapshot]
 description = "Update snapshots for specific tests"
-run = "SNAPSHOTS=overwrite cargo test {{arg(name='tests')}}"
+run = "SNAPSHOTS=overwrite cargo test $@"
 
 [tasks.lint]
 description = "Run all linters"
