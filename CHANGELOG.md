@@ -10,6 +10,22 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.21.5 (2025-11-03)
+
+### Features
+
+#### Add support for updating version numbers in arbitrary text files using regex patterns. You can now specify versioned files with a `regex` field containing a named capture group called `version`:
+
+```toml
+[package]
+versioned_files = [
+    "Cargo.toml",
+    { path = "README.md", regex = 'version:\s+(?<version>\d+\.?\d+\.?\d+)' }
+]
+```
+
+This allows Knope to automatically update version numbers in documentation, installation instructions, and other text files that don't have a structured format.
+
 ## 0.21.4 (2025-10-15)
 
 ### Features
