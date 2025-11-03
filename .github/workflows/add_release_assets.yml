@@ -5,6 +5,11 @@ on:
     types: [ closed ]
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Manual release tag name (e.g., v1.2.3). Leave empty to auto-detect from draft release.'
+        required: false
+        type: string
 
 permissions: {}
 jobs:
@@ -17,10 +22,25 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - run: echo "tag_name=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
+      - name: Get tag name
+        id: get-tag
+        run: |
+          # Use manual input if provided, otherwise auto-detect from draft releases
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            echo "Using manual tag name: ${{ inputs.tag_name }}"
+            echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "Auto-detecting tag from draft releases..."
+            TAG_NAME=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName' | head -1)
+            if [ -z "$TAG_NAME" ]; then
+              echo "Error: No draft release found and no manual tag provided"
+              exit 1
+            fi
+            echo "Found draft release: $TAG_NAME"
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        id: get-tag
     outputs:
       tag_name: ${{ steps.get-tag.outputs.tag_name }}
   build-artifacts:
