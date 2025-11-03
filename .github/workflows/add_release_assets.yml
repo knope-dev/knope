@@ -31,11 +31,46 @@ jobs:
             echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
           else
             echo "Auto-detecting tag from draft releases..."
-            TAG_NAME=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName' | head -1)
+            
+            # Ensure gh is authenticated
+            echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+            
+            # Debug: Check authentication status
+            gh auth status
+            
+            # Try to get draft releases with retry logic
+            MAX_RETRIES=3
+            RETRY_COUNT=0
+            TAG_NAME=""
+            
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$TAG_NAME" ]; do
+              if [ $RETRY_COUNT -gt 0 ]; then
+                echo "Retry attempt $RETRY_COUNT of $MAX_RETRIES..."
+                sleep 2
+              fi
+              
+              # Get draft releases and show raw output for debugging
+              echo "Fetching draft releases from ${{ github.repository }}..."
+              RELEASES_JSON=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' 2>&1) || true
+              echo "Raw response: $RELEASES_JSON"
+              
+              # Extract the first draft release tag
+              TAG_NAME=$(echo "$RELEASES_JSON" | jq -r '.[] | select(.isDraft == true) | .tagName' 2>/dev/null | head -1)
+              
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            done
+            
             if [ -z "$TAG_NAME" ]; then
-              echo "Error: No draft release found and no manual tag provided"
+              echo "Error: No draft release found after $MAX_RETRIES attempts and no manual tag provided"
+              echo "This could be because:"
+              echo "  1. No draft release exists in the repository"
+              echo "  2. API rate limiting or temporary GitHub API issues"
+              echo "  3. Authentication/permission issues"
+              echo ""
+              echo "To proceed manually, re-run this workflow with a tag_name input (e.g., v1.2.3)"
               exit 1
             fi
+            
             echo "Found draft release: $TAG_NAME"
             echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           fi
