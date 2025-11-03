@@ -26,9 +26,9 @@ run = "SNAPSHOTS=overwrite cargo test $@"
 [tasks.lint]
 description = "Run all linters"
 run = [
-    "cargo clippy --workspace -- -D warnings",
-    "cargo-deny check",
-    "npm run --prefix docs astro check"
+  "cargo clippy --workspace -- -D warnings",
+  "cargo-deny check",
+  "npm run --prefix docs astro check",
 ]
 
 [tasks.reformat]
@@ -46,8 +46,8 @@ run = "taplo format"
 [tasks.reformat-docs]
 description = "Reformat documentation"
 run = [
-    "prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern",
-    "npm --prefix docs run reformat"
+  "prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern",
+  "npm --prefix docs run reformat",
 ]
 
 [tasks.check-format]
@@ -65,8 +65,8 @@ run = "taplo format --check"
 [tasks.check-docs-format]
 description = "Check documentation formatting"
 run = [
-    "prettier *.md .changeset/*.md --list-different --no-error-on-unmatched-pattern",
-    "npm --prefix docs run check-format"
+  "prettier *.md .changeset/*.md --list-different --no-error-on-unmatched-pattern",
+  "npm --prefix docs run check-format",
 ]
 
 [tasks.serve-docs]
