@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Manual release tag name (e.g., v1.2.3). Leave empty to auto-detect from draft release.'
+        description: 'Manual release tag name (e.g., knope/v1.2.3). Leave empty to auto-detect from draft release.'
         required: false
         type: string
 
@@ -17,7 +17,7 @@ jobs:
     if: (github.head_ref == 'knope/release' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -31,41 +31,11 @@ jobs:
             echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
           else
             echo "Auto-detecting tag from draft releases..."
-            
-            # Try to get draft releases with retry logic
-            # Note: gh CLI automatically uses GITHUB_TOKEN from environment
-            MAX_RETRIES=3
-            RETRY_COUNT=0
-            TAG_NAME=""
-            
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ -z "$TAG_NAME" ]; do
-              if [ $RETRY_COUNT -gt 0 ]; then
-                echo "Retry attempt $RETRY_COUNT of $MAX_RETRIES..."
-                sleep 2
-              fi
-              
-              # Get draft releases and show raw output for debugging
-              echo "Fetching draft releases from ${{ github.repository }}..."
-              RELEASES_JSON=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' 2>&1) || true
-              echo "Raw response: $RELEASES_JSON"
-              
-              # Extract the first draft release tag
-              TAG_NAME=$(echo "$RELEASES_JSON" | jq -r '.[] | select(.isDraft == true) | .tagName' 2>/dev/null | head -1)
-              
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-            done
-            
+            TAG_NAME=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName' | head -1)
             if [ -z "$TAG_NAME" ]; then
-              echo "Error: No draft release found after $MAX_RETRIES attempts and no manual tag provided"
-              echo "This could be because:"
-              echo "  1. No draft release exists in the repository"
-              echo "  2. API rate limiting or temporary GitHub API issues"
-              echo "  3. Authentication/permission issues"
-              echo ""
-              echo "To proceed manually, re-run this workflow with a tag_name input (e.g., v1.2.3)"
+              echo "Error: No draft release found and no manual tag provided"
               exit 1
             fi
-            
             echo "Found draft release: $TAG_NAME"
             echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           fi
