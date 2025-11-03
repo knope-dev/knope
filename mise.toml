@@ -1,8 +1,8 @@
 [tools]
 node = "24"
-prettier = "latest"
-taplo = "latest"
-"cargo:cargo-deny" = "latest"
+prettier = "3.6.2"
+taplo = "0.10.0"
+"cargo:cargo-deny" = "0.16"
 
 [tasks.default]
 alias = "dev"
