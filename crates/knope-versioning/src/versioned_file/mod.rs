@@ -8,7 +8,7 @@ use self::{
     cargo::Cargo, cargo_lock::CargoLock, deno_json::DenoJson, deno_lock::DenoLock, gleam::Gleam,
     go_mod::GoMod, maven_pom::MavenPom, package_json::PackageJson,
     package_lock_json::PackageLockJson, pubspec::PubSpec, pyproject::PyProject,
-    tauri_conf_json::TauriConfJson, regex_file::RegexFile,
+    regex_file::RegexFile, tauri_conf_json::TauriConfJson,
 };
 use crate::{
     Action,
@@ -27,8 +27,8 @@ mod package_json;
 mod package_lock_json;
 mod pubspec;
 mod pyproject;
-mod tauri_conf_json;
 mod regex_file;
+mod tauri_conf_json;
 
 #[derive(Clone, Debug)]
 pub enum VersionedFile {
@@ -162,7 +162,9 @@ impl VersionedFile {
             | VersionedFile::TauriMacosConf(tauri_conf)
             | VersionedFile::TauriWindowsConf(tauri_conf)
             | VersionedFile::TauriLinuxConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
-            VersionedFile::RegexFile(regex_file) => regex_file.get_version().map_err(Error::RegexFile),
+            VersionedFile::RegexFile(regex_file) => {
+                regex_file.get_version().map_err(Error::RegexFile)
+            }
         }
     }
 
