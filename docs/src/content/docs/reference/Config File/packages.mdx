@@ -29,22 +29,24 @@ Or multiple packages:
 The files within a package that contain the current version.
 Each file must have the same version number as all the other files.
 
-An entry in this array can either be a string, containing the path to a file, or an object containing a `path` and
-specifying a `dependency` within the file to update:
+An entry in this array can either be a string containing the path to a file, an object containing a `path` and
+specifying a `dependency` within the file to update, or an object with a `path` and `regex` for regex-based version matching:
 
 ```toml
 [package]
 versioned_files = [
     "Cargo.toml",
     "package.json",
-    { path = "crates/knope/Cargo.toml", dependency = "knope-versioning" }
+    { path = "crates/knope/Cargo.toml", dependency = "knope-versioning" },
+    { path = "README.md", regex = "version: (?<version>\\d+\\.\\d+\\.\\d+)" }
 ]
 ```
 
 All paths should be relative to the config file.
 
 Knope determines the type of the file using its name (independent of its path),
-so `blah/Cargo.toml` is a `Cargo.toml` file.
+so `blah/Cargo.toml` is a `Cargo.toml` file. If you specify a `regex`, Knope will use
+regex matching to find and replace the version _instead of_ the built-in file support.
 
 Knope supports the following file names:
 
@@ -344,6 +346,37 @@ version: 1.0.0
 ### `tauri.conf.json`
 
 Supports [Tauri configuration files](https://v1.tauri.app/v1/references/configuration-files) in json format. Also supports `tauri.macos.conf.json`, `tauri.windows.conf.json`, and `tauri.linux.conf.json`.
+
+### Regex patterns
+
+For files that aren't in a recognized format, you can use regex patterns to find and replace version strings.
+Specify the file with a `path` and a `regex` field containing a regular expression:
+
+```toml title="knope.toml"
+[package]
+versioned_files = [
+    { path = "README.md", regex = 'https:\/\/example.com\/download\/v(?<version>\d+\.\d+\.\d+).tgz' }
+]
+```
+
+:::caution
+
+In TOML, make sure to either use single-quoted strings like `'\s'` or to escape all backslashes like `"\\s"`.
+
+:::
+
+The regex pattern must include a named capture group called `version` using the syntax `(?<version>...)`.
+This capture group identifies the version number to replace.
+The matched string must be a valid semantic version and must match all other versions from other `versioned_files`.
+
+You can use this for keeping version numbers up to date in documentation, CI or deployment configuration, custom scripts, or
+file types Knope doesn't support yet.
+
+:::note
+
+If you're adding custom support for a common file type, consider [contributing it to Knope](https://github.com/knope-dev/knope)!
+
+:::
 
 ## `changelog`
 

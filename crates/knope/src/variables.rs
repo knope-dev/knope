@@ -135,7 +135,8 @@ mod test_replace_variables {
 
     fn state() -> State {
         let changelog = Changelog::new(RelativePathBuf::default(), String::new());
-        let versioned_file_path = VersionedFileConfig::new("Cargo.toml".into(), None).unwrap();
+        let versioned_file_path =
+            VersionedFileConfig::new("Cargo.toml".into(), None, None).unwrap();
         let all_versioned_files = vec![
             VersionedFile::new(
                 &versioned_file_path,

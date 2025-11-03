@@ -1,0 +1,12 @@
+[package]
+versioned_files = [
+  "Cargo.toml",
+  { path = "README.md", regex = "version:\\s+(?<version>\\d+\\.\\d+\\.\\d+)" },
+]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

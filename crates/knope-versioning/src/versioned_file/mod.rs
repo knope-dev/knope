@@ -8,7 +8,7 @@ use self::{
     cargo::Cargo, cargo_lock::CargoLock, deno_json::DenoJson, deno_lock::DenoLock, gleam::Gleam,
     go_mod::GoMod, maven_pom::MavenPom, package_json::PackageJson,
     package_lock_json::PackageLockJson, pubspec::PubSpec, pyproject::PyProject,
-    tauri_conf_json::TauriConfJson,
+    regex_file::RegexFile, tauri_conf_json::TauriConfJson,
 };
 use crate::{
     Action,
@@ -27,6 +27,7 @@ mod package_json;
 mod package_lock_json;
 mod pubspec;
 mod pyproject;
+mod regex_file;
 mod tauri_conf_json;
 
 #[derive(Clone, Debug)]
@@ -46,6 +47,7 @@ pub enum VersionedFile {
     TauriMacosConf(TauriConfJson),
     TauriWindowsConf(TauriConfJson),
     TauriLinuxConf(TauriConfJson),
+    RegexFile(RegexFile),
 }
 
 impl VersionedFile {
@@ -97,6 +99,21 @@ impl VersionedFile {
             Format::TauriConf => TauriConfJson::new(config.as_path(), content)
                 .map(VersionedFile::TauriConf)
                 .map_err(Error::TauriConfJson),
+            Format::RegexFile => {
+                let regex = config
+                    .regex
+                    .as_ref()
+                    .ok_or_else(|| {
+                        Error::RegexFile(regex_file::Error::NoMatch {
+                            regex: String::new(),
+                            path: config.as_path(),
+                        })
+                    })?
+                    .clone();
+                RegexFile::new(config.as_path(), content, regex)
+                    .map(VersionedFile::RegexFile)
+                    .map_err(Error::RegexFile)
+            }
         }
     }
 
@@ -118,6 +135,7 @@ impl VersionedFile {
             | VersionedFile::TauriMacosConf(tauri_conf)
             | VersionedFile::TauriWindowsConf(tauri_conf)
             | VersionedFile::TauriLinuxConf(tauri_conf) => tauri_conf.get_path(),
+            VersionedFile::RegexFile(regex_file) => &regex_file.path,
         }
     }
 
@@ -144,6 +162,9 @@ impl VersionedFile {
             | VersionedFile::TauriMacosConf(tauri_conf)
             | VersionedFile::TauriWindowsConf(tauri_conf)
             | VersionedFile::TauriLinuxConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
+            VersionedFile::RegexFile(regex_file) => {
+                regex_file.get_version().map_err(Error::RegexFile)
+            }
         }
     }
 
@@ -209,6 +230,7 @@ impl VersionedFile {
                 .set_version(new_version)
                 .map_err(SetError::Json)
                 .map(Self::TauriLinuxConf),
+            Self::RegexFile(regex_file) => Ok(Self::RegexFile(regex_file.set_version(new_version))),
         }
     }
 
@@ -229,6 +251,7 @@ impl VersionedFile {
             | Self::TauriMacosConf(tauri_conf)
             | Self::TauriWindowsConf(tauri_conf)
             | Self::TauriLinuxConf(tauri_conf) => tauri_conf.write().map(Single),
+            Self::RegexFile(regex_file) => regex_file.write().map(Single),
         }
     }
 }
@@ -319,6 +342,9 @@ pub enum Error {
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     DenoLock(#[from] deno_lock::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    RegexFile(#[from] regex_file::Error),
 }
 
 /// All the file types supported for versioning.
@@ -339,6 +365,7 @@ pub(crate) enum Format {
     DenoLock,
     MavenPom,
     TauriConf,
+    RegexFile,
 }
 
 impl Format {
@@ -371,6 +398,17 @@ impl Format {
 
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
+pub enum ConfigError {
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    UnknownFile(#[from] UnknownFile),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    ConflictingOptions(#[from] ConflictingOptions),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
 #[error("Unknown file: {path}")]
 #[cfg_attr(
     feature = "miette",
@@ -384,6 +422,23 @@ pub struct UnknownFile {
     pub path: RelativePathBuf,
 }
 
+#[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "miette", derive(miette::Diagnostic))]
+#[error("Cannot specify both 'dependency' and 'regex' for the same file: {path}")]
+#[cfg_attr(
+    feature = "miette",
+    diagnostic(
+        code(knope_versioning::versioned_file::conflicting_options),
+        help(
+            "Use 'dependency' to update a dependency version in a known file format, or 'regex' to match version strings in arbitrary text files, but not both."
+        ),
+        url("https://knope.tech/reference/config-file/packages#versioned_files")
+    )
+)]
+pub struct ConflictingOptions {
+    pub path: RelativePathBuf,
+}
+
 /// The configuration of a versioned file.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -393,6 +448,8 @@ pub struct Config {
     pub(crate) format: Format,
     /// If, within the file, we're versioning a dependency (not the entire package)
     pub dependency: Option<String>,
+    /// If set, use regex pattern matching to find and replace the version
+    pub regex: Option<String>,
 }
 
 impl Config {
@@ -400,18 +457,37 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// If the file name does not match a supported format
-    pub fn new(path: RelativePathBuf, dependency: Option<String>) -> Result<Self, UnknownFile> {
+    /// If the file name does not match a supported format and no regex is provided
+    /// If both dependency and regex are provided
+    pub fn new(
+        path: RelativePathBuf,
+        dependency: Option<String>,
+        regex: Option<String>,
+    ) -> Result<Self, ConfigError> {
+        if dependency.is_some() && regex.is_some() {
+            return Err(ConflictingOptions { path }.into());
+        }
+
+        if regex.is_some() {
+            return Ok(Config {
+                path,
+                format: Format::RegexFile,
+                dependency,
+                regex,
+            });
+        }
+
         let Some(file_name) = path.file_name() else {
-            return Err(UnknownFile { path });
+            return Err(UnknownFile { path }.into());
         };
         let Some(format) = Format::try_from(file_name) else {
-            return Err(UnknownFile { path });
+            return Err(UnknownFile { path }.into());
         };
         Ok(Config {
             path,
             format,
             dependency,
+            regex: None,
         })
     }
 
@@ -433,6 +509,7 @@ impl Config {
                 format,
                 path: RelativePathBuf::from(name),
                 dependency: None,
+                regex: None,
             })
     }
 }

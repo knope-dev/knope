@@ -233,10 +233,12 @@ impl Package {
                 Name::Default,
                 &[""],
                 vec![
-                    knope_versioning::VersionedFileConfig::new("Cargo.toml".into(), None).unwrap(),
+                    knope_versioning::VersionedFileConfig::new("Cargo.toml".into(), None, None)
+                        .unwrap(),
                 ],
                 &[VersionedFile::new(
-                    &knope_versioning::VersionedFileConfig::new("Cargo.toml".into(), None).unwrap(),
+                    &knope_versioning::VersionedFileConfig::new("Cargo.toml".into(), None, None)
+                        .unwrap(),
                     r#"
                 [package]
                 name = "knope"
