@@ -25,7 +25,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: rustup toolchain install nightly --component rustfmt
 
-      - uses: jdx/mise-action@d2fecbdeca6d1984cd24cf44d3d3ec28c2c7f3e8 # v2.2.0
+      - uses: jdx/mise-action@be3be2260bc02bc3fbf94c5e2fed8b7964baf074 # v3.4.0
 
       - uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.1.2
         if: matrix.os == 'ubuntu-latest'
