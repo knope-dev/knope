@@ -17,9 +17,9 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - run: echo "tag_name=$(gh release list --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
+      - run: echo "tag_name=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName')" >> $GITHUB_OUTPUT
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         id: get-tag
     outputs:
       tag_name: ${{ steps.get-tag.outputs.tag_name }}
@@ -102,7 +102,7 @@ jobs:
       - name: Upload artifacts to release
         run: |
           cd artifacts
-          gh release upload ${{ needs.get-tag.outputs.tag_name }} *
-          gh release edit ${{ needs.get-tag.outputs.tag_name }} --draft=false --latest
+          gh release upload --repo ${{ github.repository }} ${{ needs.get-tag.outputs.tag_name }} *
+          gh release edit --repo ${{ github.repository }} ${{ needs.get-tag.outputs.tag_name }} --draft=false --latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
