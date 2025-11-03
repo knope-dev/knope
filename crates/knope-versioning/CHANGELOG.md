@@ -1,3 +1,9 @@
+## 0.6.0 (2025-11-03)
+
+### Breaking Changes
+
+- `VersionedFileConfig::new()` signature changed to support Regex files
+
 ## 0.5.3 (2025-10-15)
 
 ### Features

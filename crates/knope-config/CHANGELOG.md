@@ -1,3 +1,9 @@
+## 0.3.0 (2025-11-03)
+
+### Breaking Changes
+
+- `VersionedFile::TryFrom` now returns `ConfigError` instead of `UnknownFile`
+
 ## 0.2.5 (2025-08-10)
 
 ### Features
