@@ -32,13 +32,8 @@ jobs:
           else
             echo "Auto-detecting tag from draft releases..."
             
-            # Ensure gh is authenticated
-            echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-            
-            # Debug: Check authentication status
-            gh auth status
-            
             # Try to get draft releases with retry logic
+            # Note: gh CLI automatically uses GITHUB_TOKEN from environment
             MAX_RETRIES=3
             RETRY_COUNT=0
             TAG_NAME=""
