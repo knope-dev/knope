@@ -4,8 +4,8 @@ use std::{
 };
 
 use snapbox::{
-    Data,
-    cmd::{Command, OutputAssert, cargo_bin},
+    Data, cargo_bin,
+    cmd::{Command, OutputAssert},
 };
 use tempfile::TempDir;
 
