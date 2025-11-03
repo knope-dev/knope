@@ -1,7 +1,6 @@
 [tools]
 node = "24"
 prettier = "latest"
-cargo-binstall = "latest"
 taplo = "latest"
 "cargo:cargo-deny" = "latest"
 
@@ -47,7 +46,7 @@ run = "taplo format"
 [tasks.reformat-docs]
 description = "Reformat documentation"
 run = [
-    "npx prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern",
+    "prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern",
     "npm --prefix docs run reformat"
 ]
 
@@ -66,7 +65,7 @@ run = "taplo format --check"
 [tasks.check-docs-format]
 description = "Check documentation formatting"
 run = [
-    "npx prettier *.md .changeset/*.md --list-different --no-error-on-unmatched-pattern",
+    "prettier *.md .changeset/*.md --list-different --no-error-on-unmatched-pattern",
     "npm --prefix docs run check-format"
 ]
 
