@@ -7,14 +7,14 @@ use thiserror::Error;
 use crate::{Action, semver::Version};
 
 #[derive(Clone, Debug)]
-pub struct TextFile {
+pub struct RegexFile {
     pub(super) path: RelativePathBuf,
     content: String,
     regex: Regex,
     diff: Option<String>,
 }
 
-impl TextFile {
+impl RegexFile {
     /// Creates a new `TextFile` with the given regex pattern.
     ///
     /// # Errors
@@ -196,7 +196,7 @@ mod tests {
         let content = "version: 1.2.3\nother: stuff";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
 
-        let file = TextFile::new(
+        let file = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
             regex.to_string(),
@@ -212,7 +212,7 @@ mod tests {
         let content = "version: 1.2.3\nother: stuff";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
 
-        let file = TextFile::new(
+        let file = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
             regex.to_string(),
@@ -234,7 +234,7 @@ mod tests {
           version: 0.21.4";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
 
-        let file = TextFile::new(
+        let file = RegexFile::new(
             RelativePathBuf::from("README.md"),
             content.to_string(),
             regex.to_string(),
@@ -255,7 +255,7 @@ mod tests {
         let content = "version: 1.2.3";
         let regex = r"[invalid(regex";
 
-        let result = TextFile::new(
+        let result = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
             regex.to_string(),
@@ -269,7 +269,7 @@ mod tests {
         let content = "no version here";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
 
-        let file = TextFile::new(
+        let file = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
             regex.to_string(),
@@ -285,7 +285,7 @@ mod tests {
         let content = "version: 1.2.3";
         let regex = r"version:\s+(\d+\.\d+\.\d+)"; // No named group
 
-        let result = TextFile::new(
+        let result = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
             regex.to_string(),
@@ -297,5 +297,38 @@ mod tests {
         } else {
             panic!("Expected MissingVersionGroup error");
         }
+    }
+
+    #[test]
+    fn test_multiple_matches_all_updated() {
+        let content = r#"# Example
+version: 1.0.0
+
+## Installation
+Download version: 1.0.0
+
+## Usage
+Current version: 1.0.0
+"#;
+        let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
+
+        let file = RegexFile::new(
+            RelativePathBuf::from("README.md"),
+            content.to_string(),
+            regex.to_string(),
+        )
+        .unwrap();
+
+        // get_version should return the first match
+        let version = file.get_version().unwrap();
+        assert_eq!(version, Version::from_str("1.0.0").unwrap());
+
+        // set_version should update ALL matches
+        let new_version = Version::from_str("2.0.0").unwrap();
+        let updated = file.set_version(&new_version);
+
+        // All three occurrences should be updated
+        assert_eq!(updated.content.matches("version: 2.0.0").count(), 3);
+        assert_eq!(updated.content.matches("version: 1.0.0").count(), 0);
     }
 }

@@ -8,7 +8,7 @@ use self::{
     cargo::Cargo, cargo_lock::CargoLock, deno_json::DenoJson, deno_lock::DenoLock, gleam::Gleam,
     go_mod::GoMod, maven_pom::MavenPom, package_json::PackageJson,
     package_lock_json::PackageLockJson, pubspec::PubSpec, pyproject::PyProject,
-    tauri_conf_json::TauriConfJson, text_file::TextFile,
+    tauri_conf_json::TauriConfJson, regex_file::RegexFile,
 };
 use crate::{
     Action,
@@ -28,7 +28,7 @@ mod package_lock_json;
 mod pubspec;
 mod pyproject;
 mod tauri_conf_json;
-mod text_file;
+mod regex_file;
 
 #[derive(Clone, Debug)]
 pub enum VersionedFile {
@@ -47,7 +47,7 @@ pub enum VersionedFile {
     TauriMacosConf(TauriConfJson),
     TauriWindowsConf(TauriConfJson),
     TauriLinuxConf(TauriConfJson),
-    TextFile(TextFile),
+    RegexFile(RegexFile),
 }
 
 impl VersionedFile {
@@ -99,20 +99,20 @@ impl VersionedFile {
             Format::TauriConf => TauriConfJson::new(config.as_path(), content)
                 .map(VersionedFile::TauriConf)
                 .map_err(Error::TauriConfJson),
-            Format::TextFile => {
+            Format::RegexFile => {
                 let regex = config
                     .regex
                     .as_ref()
                     .ok_or_else(|| {
-                        Error::TextFile(text_file::Error::NoMatch {
+                        Error::RegexFile(regex_file::Error::NoMatch {
                             regex: String::new(),
                             path: config.as_path(),
                         })
                     })?
                     .clone();
-                TextFile::new(config.as_path(), content, regex)
-                    .map(VersionedFile::TextFile)
-                    .map_err(Error::TextFile)
+                RegexFile::new(config.as_path(), content, regex)
+                    .map(VersionedFile::RegexFile)
+                    .map_err(Error::RegexFile)
             }
         }
     }
@@ -135,7 +135,7 @@ impl VersionedFile {
             | VersionedFile::TauriMacosConf(tauri_conf)
             | VersionedFile::TauriWindowsConf(tauri_conf)
             | VersionedFile::TauriLinuxConf(tauri_conf) => tauri_conf.get_path(),
-            VersionedFile::TextFile(text_file) => &text_file.path,
+            VersionedFile::RegexFile(regex_file) => &regex_file.path,
         }
     }
 
@@ -162,7 +162,7 @@ impl VersionedFile {
             | VersionedFile::TauriMacosConf(tauri_conf)
             | VersionedFile::TauriWindowsConf(tauri_conf)
             | VersionedFile::TauriLinuxConf(tauri_conf) => Ok(tauri_conf.get_version().clone()),
-            VersionedFile::TextFile(text_file) => text_file.get_version().map_err(Error::TextFile),
+            VersionedFile::RegexFile(regex_file) => regex_file.get_version().map_err(Error::RegexFile),
         }
     }
 
@@ -228,7 +228,7 @@ impl VersionedFile {
                 .set_version(new_version)
                 .map_err(SetError::Json)
                 .map(Self::TauriLinuxConf),
-            Self::TextFile(text_file) => Ok(Self::TextFile(text_file.set_version(new_version))),
+            Self::RegexFile(regex_file) => Ok(Self::RegexFile(regex_file.set_version(new_version))),
         }
     }
 
@@ -249,7 +249,7 @@ impl VersionedFile {
             | Self::TauriMacosConf(tauri_conf)
             | Self::TauriWindowsConf(tauri_conf)
             | Self::TauriLinuxConf(tauri_conf) => tauri_conf.write().map(Single),
-            Self::TextFile(text_file) => text_file.write().map(Single),
+            Self::RegexFile(regex_file) => regex_file.write().map(Single),
         }
     }
 }
@@ -342,7 +342,7 @@ pub enum Error {
     DenoLock(#[from] deno_lock::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
-    TextFile(#[from] text_file::Error),
+    RegexFile(#[from] regex_file::Error),
 }
 
 /// All the file types supported for versioning.
@@ -363,7 +363,7 @@ pub(crate) enum Format {
     DenoLock,
     MavenPom,
     TauriConf,
-    TextFile,
+    RegexFile,
 }
 
 impl Format {
@@ -469,7 +469,7 @@ impl Config {
         if regex.is_some() {
             return Ok(Config {
                 path,
-                format: Format::TextFile,
+                format: Format::RegexFile,
                 dependency,
                 regex,
             });
