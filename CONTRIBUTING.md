@@ -11,20 +11,23 @@ at the bottom.
 
 ### Running locally
 
-`npm --prefix docs install`, then `npm --prefix docs start` (or `just serve-docs`).
+`npm --prefix docs install`, then `npm --prefix docs start` (or `mise run serve-docs`).
 
 ### Docs linting
 
 CI will fail if the docs are not formatted correctly or there are broken relative links.
-Use `just reformat` to reformat the docs and `just build-docs` to check for broken links.
+Use `mise run reformat` to reformat the docs and `mise run build-docs` to check for broken links.
 
-## `just` and `justfile`
+## `mise` and `mise.toml`
 
-[`just`](https://just.systems/man/en/chapter_1.html) is a command runner (like `make`) which makes it easier to run
+[`mise`](https://mise.jdx.dev) is a polyglot tool version manager and task runner (like `make`) which makes it easier to run
 common tasks the same way on many platforms. Specifically, you can run the same sorts of commands that CI does to
 replicate failures (or prevent them) locally! Start by installing
-via [your favorite method](https://just.systems/man/en/chapter_4.html) (like [`cargo binstall just`][cargo-binstall]).
-Then, run `just -l` to see all the available commands.
+via [your favorite method](https://mise.jdx.dev/getting-started.html#quickstart) (like `curl https://mise.run | sh`).
+Then, run `mise tasks` to see all the available tasks.
+
+Mise also manages tool versions like Node.js, cargo-deny, taplo, and prettier. When you run `mise install`, it will
+install all the tools defined in `mise.toml` at the specified versions.
 
 ## Formatting
 
@@ -33,8 +36,8 @@ You need to install the nightly toolchain (for example, with `rustup toolchain i
 code.
 
 [Prettier](https://prettier.io) formats Markdown (via [`npx`](https://docs.npmjs.com/cli/v7/commands/npx))
-and [Taplo](https://crates.io/crates/taplo-cli) formats TOML. `just install-all-dependencies` will install
-Taplo (via [cargo-binstall], which you must install manually), but won't install NPM.
+and [Taplo](https://crates.io/crates/taplo-cli) formats TOML. `mise install` will install
+all required tools including Taplo and Prettier. Node.js/NPM will also be installed by mise.
 
 ## Snapshot Tests
 
@@ -48,8 +51,8 @@ To create a new test:
 4. Change the contents of `out` to match what `in` should look like after running the command (for example, increased
    versions)
 5. Change `mod.rs` to have the setup & command invocation that you want
-6. Run the test with `just` (or `cargo test`)
-7. If the test fails, you can run `SNAPSHOTS=overwrite just` to update the snapshots
+6. Run the test with `mise run test` (or `cargo test`)
+7. If the test fails, you can run `SNAPSHOTS=overwrite mise run test` to update the snapshots
 
 ### How snapshot tests work
 
@@ -89,5 +92,3 @@ The setup functions (`new`, `git`, `env`) of `TestCase` are `const`,
 so you can define them once and reuse them in multiple cases,
 when slightly different setups should produce the same results
 (for example, in `tests/prepare_release/override_prerelease_label/mod.rs`).
-
-[cargo-binstall]: https://github.com/cargo-bins/cargo-binstall

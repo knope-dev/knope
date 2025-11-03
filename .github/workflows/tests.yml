@@ -11,8 +11,6 @@ permissions: {}
 jobs:
   checks:
     name: Run Checks
-    env:
-      BINSTALL_VERSION: 1.8.0
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -22,43 +20,32 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
-      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          node-version: 24
-          cache: 'npm'
-          cache-dependency-path: docs/package-lock.json
-      - name: Install cargo-binstall
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          gh release download "v${BINSTALL_VERSION}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-unknown-linux-musl.tgz"
-          tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-          cp cargo-binstall $HOME/.cargo/bin
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Install cargo-binstall
-        if: matrix.os == 'windows-latest'
-        run: |
-          gh release download "v${{ env.BINSTALL_VERSION }}" --repo "cargo-bins/cargo-binstall" --pattern "cargo-binstall-x86_64-pc-windows-msvc.zip"
-          unzip cargo-binstall-x86_64-pc-windows-msvc.zip
-          cp cargo-binstall.exe $HOME/.cargo/bin
-        env:
-          GH_TOKEN: ${{ github.token }}
-
+      
       - name: Install nightly toolchain (for formatting)
         if: matrix.os == 'ubuntu-latest'
         run: rustup toolchain install nightly --component rustfmt
 
-      - name: Install Just
-        run: cargo-binstall --no-confirm just --force
+      - uses: jdx/mise-action@be3be2260bc02bc3fbf94c5e2fed8b7964baf074 # v3.4.0
+
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          path: docs/node_modules
+          key: ${{ runner.os }}-docs-deps-${{ hashFiles('docs/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-docs-deps-
+
+      - name: Install docs dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: mise run install-docs-dependencies
 
       - name: Run CI
         if: matrix.os == 'ubuntu-latest'
-        run: just binstall_args="--force" install-all-dependencies ci
+        run: mise run ci
 
       - name: Run tests only
         if: matrix.os == 'windows-latest'
-        run: just test
+        run: mise run test
 
   vale:
     name: Vale

@@ -1,3 +1,82 @@
 [tools]
 node = "24"
-prettier = "latest"
+prettier = "3.6.2"
+taplo = "0.10.0"
+"cargo:cargo-deny" = "0.16"
+
+[tasks.default]
+alias = "dev"
+
+[tasks.dev]
+description = "Basic development tasks (test, reformat, lint)"
+depends = ["test", "reformat", "lint"]
+
+[tasks.ci]
+description = "Run things the same way CI does"
+depends = ["test", "lint", "check-format"]
+
+[tasks.test]
+description = "Run all tests"
+run = "cargo test --workspace"
+
+[tasks.snapshot]
+description = "Update snapshots for specific tests (pass test names as arguments)"
+run = "SNAPSHOTS=overwrite cargo test $@"
+
+[tasks.lint]
+description = "Run all linters"
+run = [
+  "cargo clippy --workspace -- -D warnings",
+  "cargo-deny check",
+  "npm run --prefix docs astro check",
+]
+
+[tasks.reformat]
+description = "Reformat all files"
+depends = ["reformat-rust", "reformat-toml", "reformat-docs"]
+
+[tasks.reformat-rust]
+description = "Reformat Rust code"
+run = "cargo +nightly fmt"
+
+[tasks.reformat-toml]
+description = "Reformat TOML files"
+run = "taplo format"
+
+[tasks.reformat-docs]
+description = "Reformat documentation"
+run = [
+  "prettier *.md .changeset/*.md --write --no-error-on-unmatched-pattern",
+  "npm --prefix docs run reformat",
+]
+
+[tasks.check-format]
+description = "Check formatting of all files"
+depends = ["check-rust-format", "check-toml-format", "check-docs-format"]
+
+[tasks.check-rust-format]
+description = "Check Rust code formatting"
+run = "cargo +nightly fmt -- --check"
+
+[tasks.check-toml-format]
+description = "Check TOML formatting"
+run = "taplo format --check"
+
+[tasks.check-docs-format]
+description = "Check documentation formatting"
+run = [
+  "prettier *.md .changeset/*.md --list-different --no-error-on-unmatched-pattern",
+  "npm --prefix docs run check-format",
+]
+
+[tasks.serve-docs]
+description = "Run a local webserver for testing the docs"
+run = "npm run --prefix docs start"
+
+[tasks.build-docs]
+description = "Build the docs, checking for broken links"
+run = "npm run --prefix docs build"
+
+[tasks.install-docs-dependencies]
+description = "Install documentation dependencies"
+run = "npm install --prefix docs"
