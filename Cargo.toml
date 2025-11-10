@@ -23,7 +23,7 @@ thiserror = "2.0.0"
 toml = { version = "0.9.0", features = ["preserve_order"] }
 toml_edit = "0.23.0"
 tracing = "0.1.40"
-xmltree = "0.11.0"
+xmltree = "0.12.0"
 xml-rs = "0.8.25"
 
 [workspace.lints.rust]
