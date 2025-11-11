@@ -26,12 +26,12 @@ jobs:
         id: get-tag
         run: |
           # Use manual input if provided, otherwise auto-detect from draft releases
-          if [ -n "${{ inputs.tag_name }}" ]; then
-            echo "Using manual tag name: ${{ inputs.tag_name }}"
-            echo "tag_name=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          if [ -n "$MANUAL_TAG_NAME" ]; then
+            echo "Using manual tag name: $MANUAL_TAG_NAME"
+            echo "tag_name=$MANUAL_TAG_NAME" >> $GITHUB_OUTPUT
           else
             echo "Auto-detecting tag from draft releases..."
-            TAG_NAME=$(gh release list --repo ${{ github.repository }} --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName' | head -1)
+            TAG_NAME=$(gh release list --repo "$GITHUB_REPOSITORY" --json 'isDraft,tagName' --jq '.[] | select(.isDraft) | .tagName' | head -1)
             if [ -z "$TAG_NAME" ]; then
               echo "Error: No draft release found and no manual tag provided"
               exit 1
@@ -41,6 +41,8 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANUAL_TAG_NAME: ${{ inputs.tag_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
     outputs:
       tag_name: ${{ steps.get-tag.outputs.tag_name }}
   build-artifacts:
@@ -122,7 +124,9 @@ jobs:
       - name: Upload artifacts to release
         run: |
           cd artifacts
-          gh release upload --repo ${{ github.repository }} ${{ needs.get-tag.outputs.tag_name }} *
-          gh release edit --repo ${{ github.repository }} ${{ needs.get-tag.outputs.tag_name }} --draft=false --latest
+          gh release upload --repo "$GITHUB_REPOSITORY" "$TAG_NAME" *
+          gh release edit --repo "$GITHUB_REPOSITORY" "$TAG_NAME" --draft=false --latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.get-tag.outputs.tag_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
