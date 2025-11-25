@@ -40,7 +40,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
-      - uses: knope-dev/action@v1 # Install Knope
+      - uses: knope-dev/action@v2.1.0 # Install Knope
         with:
           version: 0.21.5
       - run: knope release
