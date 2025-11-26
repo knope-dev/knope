@@ -265,7 +265,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: Swatinem/rust-cache@v2.8.1
+      - uses: Swatinem/rust-cache@v2.8.2
       - name: Install host target
         run: rustup target add ${{ matrix.target }}
 
@@ -321,7 +321,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: Swatinem/rust-cache@v2.8.1
+      - uses: Swatinem/rust-cache@v2.8.2
       - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CARGO_TOKEN }}

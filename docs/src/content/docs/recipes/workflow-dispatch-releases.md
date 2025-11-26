@@ -85,7 +85,7 @@ jobs:
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
         run: sudo apt-get install -y musl-tools
 
-      - uses: Swatinem/rust-cache@v2.8.1
+      - uses: Swatinem/rust-cache@v2.8.2
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
