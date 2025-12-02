@@ -1,3 +1,9 @@
+## 0.3.1 (2025-12-02)
+
+### Fixes
+
+- #1678 cant have a prerelease label with a 'v' in it. (#1680)
+
 ## 0.3.0 (2025-11-03)
 
 ### Breaking Changes

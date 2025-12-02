@@ -10,6 +10,12 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.21.6 (2025-12-02)
+
+### Fixes
+
+- #1678 cant have a prerelease label with a 'v' in it. (#1680)
+
 ## 0.21.5 (2025-11-03)
 
 ### Features
