@@ -43,7 +43,7 @@ impl PackageVersions {
 
         let mut current_versions = Self::default();
         for tag in tags {
-            let version_string = tag.as_ref().replace(&pattern, "");
+            let version_string = tag.as_ref().replacen(&pattern, "", 1);
             if let Ok(version) = Version::from_str(version_string.as_str()) {
                 match version {
                     Version::Stable(stable) => {
