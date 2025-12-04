@@ -22,6 +22,8 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@1780873c7b576612439a134613cc4cc74ce5538c # v1.15.2
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
-      - run: cargo publish --workspace
+      - name: Install cargo-release
+        run: cargo install cargo-release
+      - run: cargo release publish --workspace --execute --no-confirm
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
