@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
 use changesets::{UniqueId, Versioning};
-use inquire::{MultiSelect, Select};
+use inquire::{
+    MultiSelect, Select,
+    list_option::ListOption,
+    validator::{ErrorMessage, Validation},
+};
 use itertools::Itertools;
 use knope_versioning::changes::{CHANGESET_DIR, ChangeType};
 use miette::Diagnostic;
@@ -10,6 +14,7 @@ use tracing::info;
 use crate::{
     fs, prompt,
     state::{RunType, State},
+    step::releases::Package,
 };
 
 pub(crate) fn run(state: RunType<State>) -> Result<RunType<State>, Error> {
@@ -28,6 +33,15 @@ pub(crate) fn run(state: RunType<State>) -> Result<RunType<State>, Error> {
             "Which packages does this change affect?",
             state.packages.iter().collect(),
         )
+        .with_validator(|res: &[ListOption<&&Package>]| {
+            if res.is_empty() {
+                Ok(Validation::Invalid(ErrorMessage::Custom(
+                    "At least one package must be selected".to_string(),
+                )))
+            } else {
+                Ok(Validation::Valid)
+            }
+        })
         .prompt()
         .map_err(prompt::Error::from)?
     };
