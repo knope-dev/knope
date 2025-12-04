@@ -10,6 +10,14 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.21.7 (2025-12-04)
+
+### Fixes
+
+#### Require at least one package to be selected to create a change file
+
+Fixes #1686. Thanks for the report @t-moe!
+
 ## 0.21.6 (2025-12-02)
 
 ### Fixes
