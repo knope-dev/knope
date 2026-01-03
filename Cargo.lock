@@ -363,9 +363,9 @@ dependencies = [
 
 [[package]]
 name = "deno_config"
-version = "0.71.0"
+version = "0.75.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84876b6327594a920f3e70d0be8635224e0ba595e3e825e4d3a976a76d8c32b2"
+checksum = "cd54b18c86212b30b80415f8032aeca881f839401768e21b35b621e2c363a561"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -379,7 +379,7 @@ dependencies = [
  "ignore",
  "import_map",
  "indexmap",
- "jsonc-parser",
+ "jsonc-parser 0.27.1",
  "log",
  "serde",
  "serde_json",
@@ -390,9 +390,9 @@ dependencies = [
 
 [[package]]
 name = "deno_error"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dde60bd153886964234c5012d3d9caf788287f28d81fb24a884436904101ef10"
+checksum = "bfafd2219b29886a71aecbb3449e462deed1b2c474dc5b12f855f0e58c478931"
 dependencies = [
  "deno_error_macro",
  "libc",
@@ -403,9 +403,9 @@ dependencies = [
 
 [[package]]
 name = "deno_error_macro"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "409f265785bd946d3006756955aaf40b0e4deb25752eae6a990afe54a31cfd83"
+checksum = "1c28ede88783f14cd8aae46ca89f230c226b40e4a81ab06fa52ed72af84beb2f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -427,15 +427,15 @@ dependencies = [
 
 [[package]]
 name = "deno_maybe_sync"
-version = "0.8.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e25c998a7e998c03dbbb43e0b5b0605bcbed794a0de77d35aed5f4d7499effb"
+checksum = "d7db9b7ff34ebec11a55dcddbc4db8f1e6557db8c16abd5e2076b3f784ff1f3e"
 
 [[package]]
 name = "deno_package_json"
-version = "0.23.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c50de22717cef9b6d2e194eaa1efce670aebc17619f1fdffaf2bc6341855f4b"
+checksum = "7e950a04ac3574720fbe90124884b6abbc6717ebab79dd7c37e6b833d05d0bac"
 dependencies = [
  "boxed_error",
  "deno_error",
@@ -465,9 +465,9 @@ dependencies = [
 
 [[package]]
 name = "deno_semver"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2625b7107cc3f61a462886d5fa77c23e063c1fd15b90e3d5ee2646e9f6178d55"
+checksum = "92d46d2fd6959170a6e9f6607a6f79683868fa82ceac56ca520ab014e4fa5b21"
 dependencies = [
  "capacity_builder",
  "deno_error",
@@ -1002,6 +1002,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonc-parser"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b187b7e06feb2c205d8ec71f12cd8f553e33477ec155ebfc34f8daa7f3ae4eab"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "knope"
 version = "0.21.7"
 dependencies = [
@@ -1060,7 +1069,7 @@ dependencies = [
  "deno_semver",
  "git-conventional",
  "itertools",
- "jsonc-parser",
+ "jsonc-parser 0.28.0",
  "miette",
  "pretty_assertions",
  "regex",
