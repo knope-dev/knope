@@ -19,12 +19,15 @@ pub(crate) fn replace_variables(template: &Template, state: &mut State) -> Resul
             } else {
                 first_package(state)?
             };
-            let version = package
-                .versioning
-                .versions
-                .clone()
-                .into_latest()
-                .ok_or(Error::NoVersion)?;
+
+            let version = package.override_version.clone().unwrap_or(
+                package
+                    .versioning
+                    .versions
+                    .clone()
+                    .into_latest()
+                    .ok_or(Error::NoVersion)?,
+            );
             package_cache = Some(package);
             Ok(version.to_string())
         }
@@ -126,6 +129,7 @@ mod test_replace_variables {
         Action, VersionedFile, VersionedFileConfig,
         package::Name,
         release_notes::{Changelog, ReleaseNotes, Sections},
+        semver::Prerelease,
     };
     use pretty_assertions::assert_eq;
     use relative_path::RelativePathBuf;
@@ -187,6 +191,32 @@ mod test_replace_variables {
             replace_variables(&Template::new(template, Some(variables)), &mut state).unwrap();
 
         assert_eq!(result, format!("blah {version} other blah"));
+    }
+
+    #[test]
+    fn replace_override_version() {
+        let template = "blah $$ other blah".to_string();
+        let mut variables = IndexMap::new();
+        variables.insert(Cow::Borrowed("$$"), Variable::Version);
+        let mut state = state();
+        let version = Version::new(1, 2, 3, None);
+        let override_version = Version::new(
+            1,
+            3,
+            0,
+            Some(Prerelease {
+                label: "experimental".into(),
+                version: 0,
+            }),
+        );
+        let package_versions = version.clone().into();
+        state.packages[0].versioning.versions = package_versions;
+        state.packages[0].override_version = Some(override_version.clone());
+
+        let result =
+            replace_variables(&Template::new(template, Some(variables)), &mut state).unwrap();
+
+        assert_eq!(result, format!("blah {override_version} other blah"));
     }
 
     #[test]
