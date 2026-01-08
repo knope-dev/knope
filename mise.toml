@@ -2,7 +2,7 @@
 node = "24"
 prettier = "3.6.2"
 taplo = "0.10.0"
-"cargo:cargo-deny" = "0.18.9"
+"cargo:cargo-deny" = "0.19.0"
 
 [tasks.default]
 alias = "dev"
