@@ -9,7 +9,7 @@ Would add the following to CHANGELOG.md:
 Would add files to git:
   Cargo.toml
   CHANGELOG.md
-Would create a release on Gitea [https://codeberg.org] with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
+Would create a release on Gitea [https://codeberg.org] with name 1.1.0 ([DATE]) and tag v1.1.0 at commit [COMMIT] and body:
 ## Features
 
 - New feature

@@ -1,7 +1,7 @@
 use snapbox::{Assert, Redactions};
 use time::{OffsetDateTime, macros::format_description};
 
-/// Assert that includes [DATE] substitution
+/// Assert that includes [DATE] and [COMMIT] substitutions
 pub fn assert(normalize_paths: bool) -> Assert {
     let mut redactions = Redactions::default();
     let time_format = format_description!("[year]-[month]-[day]");
@@ -13,6 +13,10 @@ pub fn assert(normalize_paths: bool) -> Assert {
         .unwrap();
     redactions
         .insert("[EXE]", std::env::consts::EXE_SUFFIX)
+        .unwrap();
+    // Git commit SHA (40 hex characters)
+    redactions
+        .insert("[COMMIT]", regex::Regex::new("[0-9a-f]{40}").unwrap())
         .unwrap();
     Assert::new()
         .redact_with(redactions)

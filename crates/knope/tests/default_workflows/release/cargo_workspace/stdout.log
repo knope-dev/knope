@@ -5,11 +5,11 @@ Would add files to git:
   second/Cargo.toml
 Would run git commit -m "chore: prepare releases"
 Would run git push
-Would create a release on GitHub with name first-package 1.1.0 ([DATE]) and tag first-package/v1.1.0 and body:
+Would create a release on GitHub with name first-package 1.1.0 ([DATE]) and tag first-package/v1.1.0 at commit [COMMIT] and body:
 ## Features
 
 - New Feature
-Would create a release on GitHub with name second-package 0.1.1 ([DATE]) and tag second-package/v0.1.1 and body:
+Would create a release on GitHub with name second-package 0.1.1 ([DATE]) and tag second-package/v0.1.1 at commit [COMMIT] and body:
 ## Features
 
 - New Feature
