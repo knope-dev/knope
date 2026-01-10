@@ -2,4 +2,6 @@
 knope: major
 ---
 
-# Knope now provides a target_commitish when creating releases instead of always using the default branch
+# Knope now specifies the current local commit when creating releases on GitHub or Gitea
+
+Previously, releases were created at the head of the default branch.
