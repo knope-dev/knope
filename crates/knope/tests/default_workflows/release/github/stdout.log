@@ -3,7 +3,7 @@ Would add files to git:
   Cargo.toml
 Would run git commit -m "chore: prepare release 1.1.0"
 Would run git push
-Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
+Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 at commit [COMMIT] and body:
 ## Features
 
 - New Feature

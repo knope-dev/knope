@@ -25,10 +25,20 @@ struct CreateReleaseInput<'a> {
     generate_release_notes: bool,
     /// true to create a draft (unpublished) release, false to create a published one.
     draft: bool,
+    /// The commitish value that determines where the Git tag is created from.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    target_commitish: Option<&'a str>,
 }
 
 impl<'a> CreateReleaseInput<'a> {
-    fn new(tag_name: &'a str, name: &'a str, body: &'a str, prerelease: bool, draft: bool) -> Self {
+    fn new(
+        tag_name: &'a str,
+        name: &'a str,
+        body: &'a str,
+        prerelease: bool,
+        draft: bool,
+        target_commitish: Option<&'a str>,
+    ) -> Self {
         let body = if body.is_empty() { None } else { Some(body) };
         Self {
             generate_release_notes: body.is_none(),
@@ -37,6 +47,7 @@ impl<'a> CreateReleaseInput<'a> {
             body,
             prerelease,
             draft,
+            target_commitish,
         }
     }
 }

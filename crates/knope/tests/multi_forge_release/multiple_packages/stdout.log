@@ -21,19 +21,19 @@ Would add files to git:
   package.json
   FIRST_CHANGELOG.md
   SECOND_CHANGELOG.md
-Would create a release on GitHub with name first 2.0.0 ([DATE]) and tag first/v2.0.0 and body:
+Would create a release on GitHub with name first 2.0.0 ([DATE]) and tag first/v2.0.0 at commit [COMMIT] and body:
 ## Breaking Changes
 
 - New breaking feature
-Would create a release on Gitea [https://codeberg.org] with name first 2.0.0 ([DATE]) and tag first/v2.0.0 and body:
+Would create a release on Gitea [https://codeberg.org] with name first 2.0.0 ([DATE]) and tag first/v2.0.0 at commit [COMMIT] and body:
 ## Breaking Changes
 
 - New breaking feature
-Would create a release on GitHub with name second 0.5.0 ([DATE]) and tag second/v0.5.0 and body:
+Would create a release on GitHub with name second 0.5.0 ([DATE]) and tag second/v0.5.0 at commit [COMMIT] and body:
 ## Breaking Changes
 
 - New breaking feature
-Would create a release on Gitea [https://codeberg.org] with name second 0.5.0 ([DATE]) and tag second/v0.5.0 and body:
+Would create a release on Gitea [https://codeberg.org] with name second 0.5.0 ([DATE]) and tag second/v0.5.0 at commit [COMMIT] and body:
 ## Breaking Changes
 
 - New breaking feature

@@ -15,7 +15,7 @@ Would add files to git:
   Cargo.toml
   .changeset/changeset.md
   CHANGELOG.md
-Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 and body:
+Would create a release on GitHub with name 1.1.0 ([DATE]) and tag v1.1.0 at commit [COMMIT] and body:
 ## Features
 
 - We support custom header levels now 🎉

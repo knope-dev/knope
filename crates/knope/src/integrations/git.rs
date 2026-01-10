@@ -450,6 +450,14 @@ pub(crate) fn create_tag(name: RunType<&str>) -> Result<(), Error> {
     }
 }
 
+/// Get the SHA of the current HEAD commit.
+pub(crate) fn get_head_commit_sha() -> Result<String, Error> {
+    let repo = Repository::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
+    let head = repo.head()?;
+    let head_commit = head.peel_to_commit()?;
+    Ok(head_commit.id().to_string())
+}
+
 /// Get all tags on the current branch.
 pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
     let repo = Repository::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
