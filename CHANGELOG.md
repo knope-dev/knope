@@ -10,6 +10,14 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.22.0 (2026-01-12)
+
+### Breaking Changes
+
+#### Knope now specifies the current local commit when creating releases on GitHub or Gitea
+
+Previously, releases were created at the head of the default branch.
+
 ## 0.21.7 (2025-12-04)
 
 ### Fixes
