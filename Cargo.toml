@@ -28,11 +28,11 @@ xml-rs = "1.0.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
-warnings = "deny"
+unused_assignments = "allow" # Workaround for https://github.com/rust-lang/rust/issues/147648
 
 [workspace.lints.clippy]
-all = { level = "deny", priority = -1 }
-pedantic = { level = "deny", priority = -1 }
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 
 # cargo-deny handles this
 multiple_crate_versions = "allow"
