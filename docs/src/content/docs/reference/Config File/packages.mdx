@@ -372,6 +372,23 @@ The matched string must be a valid semantic version and must match all other ver
 You can use this for keeping version numbers up to date in documentation, CI or deployment configuration, custom scripts, or
 file types Knope doesn't support yet.
 
+#### Multiple patterns
+
+If you need to update multiple version strings in the same file with different formats, you can provide an array of patterns:
+
+```toml title="knope.toml"
+[package]
+versioned_files = [
+    { path = "config.json", regex = [
+        '"version": "(?<version>\d+\.\d+\.\d+)"',
+        'image: app:v(?<version>\d+\.\d+\.\d+)'
+    ]}
+]
+```
+
+When multiple patterns are provided, all patterns must match for version detection to succeed.
+All matching patterns will be updated when the version changes.
+
 :::note
 
 If you're adding custom support for a common file type, consider [contributing it to Knope](https://github.com/knope-dev/knope)!
