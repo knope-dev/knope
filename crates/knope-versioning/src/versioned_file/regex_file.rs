@@ -10,101 +10,131 @@ use crate::{Action, semver::Version};
 pub struct RegexFile {
     pub(super) path: RelativePathBuf,
     content: String,
-    regex: Regex,
+    regexes: Vec<Regex>,
     diff: Option<String>,
 }
 
 impl RegexFile {
-    /// Creates a new `TextFile` with the given regex pattern.
+    /// Creates a new `RegexFile` with the given regex patterns.
     ///
     /// # Errors
     ///
-    /// If the regex pattern is invalid or doesn't contain a named "version" capture group
-    pub fn new(path: RelativePathBuf, content: String, regex: String) -> Result<Self, Error> {
-        // Compile and validate the regex pattern
-        let re = Regex::new(&regex).map_err(|source| Error::InvalidPattern {
-            regex: regex.clone(),
-            path: path.clone(),
-            source,
-        })?;
+    /// If any regex pattern is invalid or doesn't contain a named "version" capture group
+    pub fn new(
+        path: RelativePathBuf,
+        content: String,
+        patterns: Vec<String>,
+    ) -> Result<Self, Error> {
+        let mut regexes = Vec::with_capacity(patterns.len());
 
-        // Check that the regex has at least one named capture group called "version"
-        if re.capture_names().all(|name| name != Some("version")) {
-            return Err(Error::MissingVersionGroup {
-                regex,
+        for regex in patterns {
+            // Compile and validate the regex pattern
+            let re = Regex::new(&regex).map_err(|source| Error::InvalidPattern {
+                regex: regex.clone(),
                 path: path.clone(),
-            });
+                source,
+            })?;
+
+            // Check that the regex has at least one named capture group called "version"
+            if re.capture_names().all(|name| name != Some("version")) {
+                return Err(Error::MissingVersionGroup {
+                    regex,
+                    path: path.clone(),
+                });
+            }
+
+            regexes.push(re);
         }
 
         Ok(Self {
             path,
             content,
-            regex: re,
+            regexes,
             diff: None,
         })
     }
 
-    /// Get the current version from the file using the regex pattern.
+    /// Get the current version from the file using the regex patterns.
     ///
     /// # Errors
     ///
-    /// If the pattern doesn't match or the matched version is invalid
+    /// If any pattern doesn't match or the matched version is invalid
     pub(super) fn get_version(&self) -> Result<Version, Error> {
-        let caps = self
-            .regex
-            .captures(&self.content)
-            .ok_or_else(|| Error::NoMatch {
-                regex: self.regex.as_str().to_string(),
+        let mut version: Option<Version> = None;
+
+        // All regexes must match
+        for regex in &self.regexes {
+            let caps = regex
+                .captures(&self.content)
+                .ok_or_else(|| Error::NoMatch {
+                    regex: regex.as_str().to_string(),
+                    path: self.path.clone(),
+                })?;
+
+            let version_match = caps.name("version").ok_or_else(|| Error::NoMatch {
+                regex: regex.as_str().to_string(),
                 path: self.path.clone(),
             })?;
 
-        // Get the named "version" capture group
-        let version_str = caps
-            .name("version")
-            .ok_or_else(|| Error::NoMatch {
-                regex: self.regex.as_str().to_string(),
+            let version_str = version_match.as_str();
+            let parsed: Version = version_str.parse().map_err(|err| Error::InvalidVersion {
+                version: version_str.to_string(),
                 path: self.path.clone(),
-            })?
-            .as_str();
+                source: err,
+            })?;
 
-        version_str.parse().map_err(|err| Error::InvalidVersion {
-            version: version_str.to_string(),
-            path: self.path.clone(),
-            source: err,
+            // Use the first matched version as the canonical version
+            if version.is_none() {
+                version = Some(parsed);
+            }
+        }
+
+        version.ok_or_else(|| {
+            let first_regex = self
+                .regexes
+                .first()
+                .map_or_else(String::new, |r| r.as_str().to_string());
+            Error::NoMatch {
+                regex: first_regex,
+                path: self.path.clone(),
+            }
         })
     }
 
-    /// Set the version in the file using the regex pattern.
+    /// Set the version in the file using all regex patterns.
     #[must_use]
     pub(super) fn set_version(mut self, new_version: &Version) -> Self {
         let new_version_str = new_version.to_string();
         let old_content = self.content.clone();
 
-        // Replace all named "version" capture groups with the new version
-        self.content = self
-            .regex
-            .replace_all(&self.content, |caps: &regex::Captures| {
-                // Get the full match text, then replace the "version" named group within it
-                // This preserves any surrounding context while only updating the version number
-                let mut result = caps.get(0).map_or("", |m| m.as_str()).to_string();
+        // Apply all regexes sequentially to the same content
+        for regex in &self.regexes {
+            self.content = regex
+                .replace_all(&self.content, |caps: &regex::Captures| {
+                    // Get the full match text, then replace the "version" named group within it
+                    // This preserves any surrounding context while only updating the version number
+                    let mut result = caps.get(0).map_or("", |m| m.as_str()).to_string();
 
-                // Replace each "version" named group in the match
-                if let Some(version_match) = caps.name("version") {
-                    result = result.replace(version_match.as_str(), &new_version_str);
-                }
+                    // Replace each "version" named group in the match
+                    if let Some(version_match) = caps.name("version") {
+                        result = result.replace(version_match.as_str(), &new_version_str);
+                    }
 
-                result
-            })
-            .to_string();
+                    result
+                })
+                .to_string();
+        }
 
-        // Create a simple diff for display
-        if let Some(changed_line) = old_content
+        // Collect all changed lines for the diff
+        let changed_lines: Vec<&str> = old_content
             .lines()
             .zip(self.content.lines())
-            .find(|(old, new)| old != new)
+            .filter(|(old, new)| old != new)
             .map(|(_, new)| new.trim())
-        {
-            self.diff = Some(changed_line.to_string());
+            .collect();
+
+        if !changed_lines.is_empty() {
+            self.diff = Some(changed_lines.join("\n"));
         }
 
         self
@@ -199,7 +229,7 @@ mod tests {
         let file = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         )
         .unwrap();
 
@@ -215,7 +245,7 @@ mod tests {
         let file = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         )
         .unwrap();
 
@@ -237,7 +267,7 @@ mod tests {
         let file = RegexFile::new(
             RelativePathBuf::from("README.md"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         )
         .unwrap();
 
@@ -258,7 +288,7 @@ mod tests {
         let result = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         );
 
         assert!(result.is_err());
@@ -272,7 +302,7 @@ mod tests {
         let file = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         )
         .unwrap();
 
@@ -288,7 +318,7 @@ mod tests {
         let result = RegexFile::new(
             RelativePathBuf::from("test.txt"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         );
 
         assert!(result.is_err());
@@ -315,7 +345,7 @@ Current version: 1.0.0
         let file = RegexFile::new(
             RelativePathBuf::from("README.md"),
             content.to_string(),
-            regex.to_string(),
+            vec![regex.to_string()],
         )
         .unwrap();
 
@@ -330,5 +360,28 @@ Current version: 1.0.0
         // All three occurrences should be updated
         assert_eq!(updated.content.matches("version: 2.0.0").count(), 3);
         assert_eq!(updated.content.matches("version: 1.0.0").count(), 0);
+    }
+
+    #[test]
+    fn test_multiple_regexes_same_file() {
+        let content = r#"{"version": "1.0.0", "image": "app:v1.0.0"}"#;
+        let regexes = vec![
+            r#""version": "(?<version>\d+\.\d+\.\d+)""#.to_string(),
+            r#"app:v(?<version>\d+\.\d+\.\d+)"#.to_string(),
+        ];
+
+        let file = RegexFile::new(
+            RelativePathBuf::from("test.json"),
+            content.to_string(),
+            regexes,
+        )
+        .unwrap();
+
+        let new_version = Version::from_str("2.0.0").unwrap();
+        let updated = file.set_version(&new_version);
+
+        // Both patterns should be updated
+        assert!(updated.content.contains(r#""version": "2.0.0""#));
+        assert!(updated.content.contains("app:v2.0.0"));
     }
 }

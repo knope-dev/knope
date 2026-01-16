@@ -16,7 +16,21 @@ versioned_files = [
 ]
 ```
 
-The regex pattern **must** include a named capture group `(?<version>...)` around the version number you want to replace. See the [Text files with regex patterns][regex] section for more details.
+The regex pattern **must** include a named capture group `(?<version>...)` around the version number you want to replace.
+
+If you need to update multiple version strings with different formats in the same file, you can provide an array of patterns:
+
+```toml
+[package]
+versioned_files = [
+    { path = "config.json", regex = [
+        '"version": "(?<version>\\d+\\.\\d+\\.\\d+)"',
+        'image: app:v(?<version>\\d+\\.\\d+\\.\\d+)'
+    ]}
+]
+```
+
+See the [Text files with regex patterns][regex] section for more details.
 
 ## Using a custom script
 
