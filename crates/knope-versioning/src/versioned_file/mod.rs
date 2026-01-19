@@ -354,7 +354,6 @@ pub enum Error {
 pub(crate) enum Format {
     Cargo,
     CargoLock,
-    #[allow(dead_code)]
     DenoJson,
     PyProject,
     PubSpec,
@@ -448,8 +447,7 @@ pub struct Config {
     pub(crate) format: Format,
     /// If, within the file, we're versioning a dependency (not the entire package)
     pub dependency: Option<String>,
-    /// If set, use regex pattern matching to find and replace the version.
-    /// Multiple patterns can be provided to match different version strings in the same file.
+    /// If set, use regex pattern matching to find and replace the versions.
     pub regex: Option<Vec<String>>,
 }
 

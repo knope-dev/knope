@@ -44,9 +44,11 @@ impl From<Regexes> for Vec<String> {
 }
 
 impl From<Vec<String>> for Regexes {
-    fn from(value: Vec<String>) -> Self {
-        if value.len() == 1 {
-            Self::Regex(value.into_iter().next().unwrap_or_default())
+    fn from(mut value: Vec<String>) -> Self {
+        if value.len() == 1
+            && let Some(only) = value.pop()
+        {
+            Self::Regex(only)
         } else {
             Self::List(value)
         }

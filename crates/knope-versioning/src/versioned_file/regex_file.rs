@@ -1,3 +1,4 @@
+use itertools::Itertools;
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use regex::Regex;
@@ -15,7 +16,7 @@ pub struct RegexFile {
 }
 
 impl RegexFile {
-    /// Creates a new `RegexFile` with the given regex patterns.
+    /// Creates a new [`RegexFile`] with the given regex patterns.
     ///
     /// # Errors
     ///
@@ -25,26 +26,26 @@ impl RegexFile {
         content: String,
         patterns: Vec<String>,
     ) -> Result<Self, Error> {
-        let mut regexes = Vec::with_capacity(patterns.len());
-
-        for regex in patterns {
-            // Compile and validate the regex pattern
-            let re = Regex::new(&regex).map_err(|source| Error::InvalidPattern {
-                regex: regex.clone(),
-                path: path.clone(),
-                source,
-            })?;
-
-            // Check that the regex has at least one named capture group called "version"
-            if re.capture_names().all(|name| name != Some("version")) {
-                return Err(Error::MissingVersionGroup {
-                    regex,
-                    path: path.clone(),
-                });
-            }
-
-            regexes.push(re);
-        }
+        let regexes = patterns
+            .into_iter()
+            .map(|regex| {
+                Regex::new(&regex)
+                    .map_err(|source| Error::InvalidPattern {
+                        regex: regex.clone(),
+                        path: path.clone(),
+                        source,
+                    })
+                    .and_then(|re| {
+                        re.capture_names()
+                            .any(|name| name == Some("version"))
+                            .then_some(re)
+                            .ok_or_else(|| Error::MissingVersionGroup {
+                                regex,
+                                path: path.clone(),
+                            })
+                    })
+            })
+            .try_collect()?;
 
         Ok(Self {
             path,
@@ -67,7 +68,7 @@ impl RegexFile {
             let caps = regex
                 .captures(&self.content)
                 .ok_or_else(|| Error::NoMatch {
-                    regex: regex.as_str().to_string(),
+                    regex: regex.to_string(),
                     path: self.path.clone(),
                 })?;
 
@@ -126,15 +127,15 @@ impl RegexFile {
         }
 
         // Collect all changed lines for the diff
-        let changed_lines: Vec<&str> = old_content
+        let changed_lines: String = old_content
             .lines()
             .zip(self.content.lines())
             .filter(|(old, new)| old != new)
             .map(|(_, new)| new.trim())
-            .collect();
+            .join("\n");
 
         if !changed_lines.is_empty() {
-            self.diff = Some(changed_lines.join("\n"));
+            self.diff = Some(changed_lines);
         }
 
         self
@@ -331,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_multiple_matches_all_updated() {
-        let content = r#"# Example
+        let content = r"# Example
 version: 1.0.0
 
 ## Installation
@@ -339,7 +340,7 @@ Download version: 1.0.0
 
 ## Usage
 Current version: 1.0.0
-"#;
+";
         let regex = r"version:\s+(?<version>\d+\.\d+\.\d+)";
 
         let file = RegexFile::new(
@@ -367,7 +368,7 @@ Current version: 1.0.0
         let content = r#"{"version": "1.0.0", "image": "app:v1.0.0"}"#;
         let regexes = vec![
             r#""version": "(?<version>\d+\.\d+\.\d+)""#.to_string(),
-            r#"app:v(?<version>\d+\.\d+\.\d+)"#.to_string(),
+            r"app:v(?<version>\d+\.\d+\.\d+)".to_string(),
         ];
 
         let file = RegexFile::new(
