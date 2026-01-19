@@ -26,6 +26,35 @@ pub struct Package {
     pub ignore_go_major_versioning: bool,
 }
 
+/// A type that deserializes from either a single regex string or an array of regex strings.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum Regexes {
+    Regex(String),
+    List(Vec<String>),
+}
+
+impl From<Regexes> for Vec<String> {
+    fn from(value: Regexes) -> Self {
+        match value {
+            Regexes::Regex(s) => vec![s],
+            Regexes::List(v) => v,
+        }
+    }
+}
+
+impl From<Vec<String>> for Regexes {
+    fn from(mut value: Vec<String>) -> Self {
+        if value.len() == 1
+            && let Some(only) = value.pop()
+        {
+            Self::Regex(only)
+        } else {
+            Self::List(value)
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum VersionedFile {
@@ -36,15 +65,18 @@ pub enum VersionedFile {
     },
     Regex {
         path: RelativePathBuf,
-        regex: String,
+        regex: Regexes,
     },
 }
 
 impl From<VersionedFileConfig> for VersionedFile {
     fn from(config: VersionedFileConfig) -> Self {
         let (path, dependency, regex) = (config.as_path(), config.dependency, config.regex);
-        if let Some(regex) = regex {
-            Self::Regex { path, regex }
+        if let Some(patterns) = regex {
+            Self::Regex {
+                path,
+                regex: patterns.into(),
+            }
         } else if let Some(dependency) = dependency {
             Self::Dependency { path, dependency }
         } else {
@@ -63,7 +95,7 @@ impl TryFrom<VersionedFile> for VersionedFileConfig {
                 VersionedFileConfig::new(path, Some(dependency), None)
             }
             VersionedFile::Regex { path, regex } => {
-                VersionedFileConfig::new(path, None, Some(regex))
+                VersionedFileConfig::new(path, None, Some(regex.into()))
             }
         }
     }

@@ -100,7 +100,7 @@ impl VersionedFile {
                 .map(VersionedFile::TauriConf)
                 .map_err(Error::TauriConfJson),
             Format::RegexFile => {
-                let regex = config
+                let patterns = config
                     .regex
                     .as_ref()
                     .ok_or_else(|| {
@@ -110,7 +110,7 @@ impl VersionedFile {
                         })
                     })?
                     .clone();
-                RegexFile::new(config.as_path(), content, regex)
+                RegexFile::new(config.as_path(), content, patterns)
                     .map(VersionedFile::RegexFile)
                     .map_err(Error::RegexFile)
             }
@@ -354,7 +354,6 @@ pub enum Error {
 pub(crate) enum Format {
     Cargo,
     CargoLock,
-    #[allow(dead_code)]
     DenoJson,
     PyProject,
     PubSpec,
@@ -448,8 +447,8 @@ pub struct Config {
     pub(crate) format: Format,
     /// If, within the file, we're versioning a dependency (not the entire package)
     pub dependency: Option<String>,
-    /// If set, use regex pattern matching to find and replace the version
-    pub regex: Option<String>,
+    /// If set, use regex pattern matching to find and replace the versions.
+    pub regex: Option<Vec<String>>,
 }
 
 impl Config {
@@ -462,7 +461,7 @@ impl Config {
     pub fn new(
         path: RelativePathBuf,
         dependency: Option<String>,
-        regex: Option<String>,
+        regex: Option<Vec<String>>,
     ) -> Result<Self, ConfigError> {
         if dependency.is_some() && regex.is_some() {
             return Err(ConflictingOptions { path }.into());
