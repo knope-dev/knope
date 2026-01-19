@@ -15,9 +15,9 @@ impl PrereleaseMap {
     }
 
     #[allow(clippy::unwrap_used)] // Map is not allowed to be empty ever
-    pub(crate) fn into_last(mut self) -> Prerelease {
+    pub(crate) fn last(&self) -> &Prerelease {
         self.0
-            .pop_last()
+            .last_key_value()
             .map(|(_label, prerelease)| prerelease)
             .unwrap()
     }
