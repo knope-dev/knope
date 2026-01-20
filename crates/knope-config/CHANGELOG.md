@@ -1,3 +1,9 @@
+## 0.4.0 (2026-01-20)
+
+### Breaking Changes
+
+- Add support for [multiple regex patterns](https://knope.tech/reference/config-file/packages/#multiple-patterns) when versioning a single file
+
 ## 0.3.2 (2026-01-12)
 
 ### Notes
