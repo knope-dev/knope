@@ -21,9 +21,7 @@ pub(crate) fn replace_variables(template: &Template, state: &mut State) -> Resul
             };
             let version = package
                 .versioning
-                .versions
-                .clone()
-                .into_latest()
+                .latest_version()
                 .ok_or(Error::NoVersion)?;
             package_cache = Some(package);
             Ok(version.to_string())
@@ -46,9 +44,7 @@ pub(crate) fn replace_variables(template: &Template, state: &mut State) -> Resul
             } else {
                 let version = package
                     .versioning
-                    .versions
-                    .clone()
-                    .into_latest()
+                    .latest_version()
                     .ok_or(Error::NoVersion)?;
                 let release = package
                     .versioning
@@ -123,7 +119,7 @@ mod test_replace_variables {
 
     use indexmap::IndexMap;
     use knope_versioning::{
-        Action, VersionedFile, VersionedFileConfig,
+        Action, GoVersioning, VersionedFile, VersionedFileConfig,
         package::Name,
         release_notes::{Changelog, ReleaseNotes, Sections},
     };
@@ -180,8 +176,10 @@ mod test_replace_variables {
         variables.insert(Cow::Borrowed("$$"), Variable::Version);
         let mut state = state();
         let version = Version::new(1, 2, 3, None);
-        let package_versions = version.clone().into();
-        state.packages[0].versioning.versions = package_versions;
+        state.packages[0]
+            .versioning
+            .set_version(version.clone(), GoVersioning::Standard, Vec::new())
+            .unwrap();
 
         let result =
             replace_variables(&Template::new(template, Some(variables)), &mut state).unwrap();

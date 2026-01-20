@@ -23,14 +23,14 @@ pub(crate) fn bump_version_and_update_state(
             (version, GoVersioning::BumpMajor)
         } else {
             (
-                package.versioning.versions.bump(rule.clone())?,
+                package.versioning.calculate_new_version(rule.clone())?,
                 package.go_versioning,
             )
         };
         state.all_versioned_files =
             package
                 .versioning
-                .bump_version(&version, go_versioning, state.all_versioned_files)?;
+                .set_version(version, go_versioning, state.all_versioned_files)?;
     }
     let write_files = state
         .all_versioned_files

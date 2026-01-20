@@ -3,7 +3,14 @@ name = "replace-version"
 
 [[workflows.steps]]
 type = "Command"
-command = "echo blah blah $$$$"
+command = "echo current version is $$$$"
 
 [workflows.steps.variables]
 "$$$$" = "Version"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "echo new version is $version"

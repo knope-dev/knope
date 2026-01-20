@@ -30,7 +30,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Package {
     pub name: Name,
-    pub versions: PackageVersions,
+    versions: PackageVersions,
     versioned_files: Vec<Config>,
     pub release_notes: ReleaseNotes,
     scopes: Option<Vec<String>>,
@@ -81,13 +81,13 @@ impl Package {
     ///
     /// If the [`Rule::Release`] is specified, but there is no current prerelease, that's an
     /// error too.
-    pub fn bump_version(
+    pub fn set_version(
         &mut self,
-        version: &Version,
+        version: Version,
         go_versioning: GoVersioning,
         versioned_files: Vec<VersionedFile>,
     ) -> Result<Vec<VersionedFile>, BumpError> {
-        versioned_files
+        let versioned_files = versioned_files
             .into_iter()
             .map(|mut file| {
                 let configs = self
@@ -97,12 +97,14 @@ impl Package {
                     .collect_vec();
                 for config in configs {
                     file = file
-                        .set_version(version, config.dependency.as_deref(), go_versioning)
+                        .set_version(&version, config.dependency.as_deref(), go_versioning)
                         .map_err(BumpError::SetError)?;
                 }
-                Ok(file)
+                Ok::<VersionedFile, BumpError>(file)
             })
-            .collect()
+            .try_collect()?;
+        self.versions = version.into();
+        Ok(versioned_files)
     }
 
     #[must_use]
@@ -156,11 +158,11 @@ impl Package {
                 } else {
                     stable_rule.into()
                 };
-                (self.versions.bump(rule)?, go_versioning)
+                (self.versions.calculate_new_version(rule)?, go_versioning)
             }
         };
 
-        let updated = self.bump_version(&version, go_versioning, versioned_files)?;
+        let updated = self.set_version(version.clone(), go_versioning, versioned_files)?;
         let mut actions: Vec<Action> = changes
             .iter()
             .filter_map(|change| {
@@ -184,6 +186,29 @@ impl Package {
         );
 
         Ok((updated, actions))
+    }
+
+    #[must_use]
+    pub fn latest_version(&self) -> Option<Version> {
+        self.versions.latest()
+    }
+
+    /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.
+    ///
+    /// # Versions 0.x
+    ///
+    /// Versions with major component 0 have special meaning in Semantic Versioning and therefore have
+    /// different behavior:
+    /// 1. [`Rule::Major`] will bump the minor component.
+    /// 2. [`Stable(Minor)`] will bump the patch component.
+    ///
+    /// # Errors
+    ///
+    /// Can fail if trying to run [`Rule::Release`] when there is no pre-release.
+    pub fn calculate_new_version(&self, rule: Rule) -> Result<Version, BumpError> {
+        self.versions
+            .calculate_new_version(rule)
+            .map_err(BumpError::PreReleaseNotFound)
     }
 }
 
