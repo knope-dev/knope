@@ -10,6 +10,21 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.22.1 (2026-01-20)
+
+### Features
+
+- Add support for [multiple regex patterns](https://knope.tech/reference/config-file/packages/#multiple-patterns) when versioning a single file
+
+### Fixes
+
+#### Fix `$version` variable used after `--override-version`
+
+Previously, if you used `BumpVersion` or `PrepareRelease` with `--override-version` and _then_ used a `$version` variable with
+a `Command`, the variable would still be set to the original version (pre-bump).
+
+Thanks @andrewmcgivery for the report!
+
 ## 0.22.0 (2026-01-12)
 
 ### Breaking Changes
