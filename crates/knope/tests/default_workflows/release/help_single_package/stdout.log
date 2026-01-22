@@ -1,6 +1,6 @@
 Prepare and create a new release (update changelog, bump version, create release)
 
-Usage: knope release [OPTIONS]
+Usage: knope[EXE] release [OPTIONS]
 
 Options:
       --dry-run
