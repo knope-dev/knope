@@ -8,6 +8,7 @@ scopes = ["second-package"]
 
 [[workflows]]
 name = "release"
+help_text = "Prepare and create a new release (update changelog, bump version, create release)"
 
 [[workflows.steps]]
 type = "PrepareRelease"
@@ -29,6 +30,7 @@ command = "git push --tags"
 
 [[workflows]]
 name = "document-change"
+help_text = "Create a new change file to be included in the next release"
 
 [[workflows.steps]]
 type = "CreateChangeFile"
