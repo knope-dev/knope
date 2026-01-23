@@ -343,12 +343,16 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
     let mut workflows = vec![
         Workflow {
             name: String::from("release"),
-            help_text: None,
+            help_text: Some(String::from(
+                "Prepare and create a new release (update changelog, bump version, create release)",
+            )),
             steps: release_steps,
         },
         Workflow {
             name: String::from("document-change"),
-            help_text: None,
+            help_text: Some(String::from(
+                "Create a new change file to be included in the next release",
+            )),
             steps: vec![Step::CreateChangeFile],
         },
     ];

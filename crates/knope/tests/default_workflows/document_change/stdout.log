@@ -1,3 +1,5 @@
+Create a new change file to be included in the next release
+
 Usage: knope[EXE] document-change [OPTIONS]
 
 Options:
