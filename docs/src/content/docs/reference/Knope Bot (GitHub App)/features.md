@@ -69,6 +69,15 @@ Add the following to a `knope.toml` file in the root of the repository to disabl
 enabled = false
 ```
 
+If you want to _skip_ this check for a specific pull request, you can set up one or more labels that the Bot will ignore:
+
+```toml
+[bot.checks]
+skip_labels = ["not user facing", "no changelog", "internal"]
+```
+
+If _any_ of those labels are present on a pull request, Knope Bot will skip the check.
+
 ## Creating change files
 
 When a check fails, the details of that check will contain instructions for creating a changeset:
