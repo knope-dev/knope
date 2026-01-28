@@ -10,6 +10,12 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.22.2 (2026-01-28)
+
+### Fixes
+
+- add help text to release and document-change workflows
+
 ## 0.22.1 (2026-01-20)
 
 ### Features
