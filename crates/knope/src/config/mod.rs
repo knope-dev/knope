@@ -38,6 +38,8 @@ pub(crate) struct Config {
     pub(crate) github: Option<GitHub>,
     /// Optional configuration to communicate with a Gitea instance
     pub(crate) gitea: Option<Gitea>,
+    /// If set to true, conventional commits are ignored across all workflows
+    pub(crate) ignore_conventional_commits: bool,
 }
 
 impl Config {
@@ -165,6 +167,7 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
+            ignore_conventional_commits: config.shared.ignore_conventional_commits,
         })
     }
 }
@@ -294,6 +297,7 @@ pub(crate) fn generate() -> Result<Config, package::Error> {
         github,
         gitea,
         packages,
+        ignore_conventional_commits: false,
     })
 }
 

@@ -48,6 +48,7 @@ pub(crate) fn prepare_release(
             &state.all_git_tags,
             state.all_versioned_files,
             &changeset,
+            state.ignore_conventional_commits,
         )?;
         state.all_versioned_files = all_versioned_files;
         state.pending_actions.extend(actions);

@@ -101,6 +101,7 @@ impl Package {
         all_tags: &[String],
         versioned_files: Vec<VersionedFile>,
         changeset: &[changesets::Release],
+        global_ignore_conventional_commits: bool,
     ) -> Result<(Vec<VersionedFile>, Vec<Action>), Error> {
         let PrepareRelease {
             prerelease_label,
@@ -108,7 +109,19 @@ impl Package {
             ..
         } = prepare_release;
 
-        let commit_messages = if *ignore_conventional_commits {
+        // Emit deprecation warning if step-level setting is used
+        if *ignore_conventional_commits {
+            tracing::warn!(
+                "The `ignore_conventional_commits` option on the PrepareRelease step is deprecated. \
+                 Use the top-level `ignore_conventional_commits` config setting instead. \
+                 Run `knope --upgrade` to automatically migrate your config."
+            );
+        }
+
+        // Use step-level setting if present, otherwise use global setting
+        let should_ignore = *ignore_conventional_commits || global_ignore_conventional_commits;
+
+        let commit_messages = if should_ignore {
             Vec::new()
         } else {
             conventional_commits::get_conventional_commits_after_last_stable_version(
