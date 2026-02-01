@@ -24,6 +24,28 @@ Or multiple packages:
 # package config here
 ```
 
+## `ignore_conventional_commits`
+
+This top-level config setting disables [Conventional Commits] parsing across all workflows.
+When set to `true`, Knope will only consider [Changesets] when determining version bumps and changelog entries.
+
+```toml title="knope.toml"
+ignore_conventional_commits = true
+
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+```
+
+:::note
+This replaces the deprecated `ignore_conventional_commits` option on the [`PrepareRelease` step].
+To migrate from the old step-level setting to this top-level setting, run `knope --upgrade`.
+:::
+
+[Conventional Commits]: /reference/concepts/conventional-commits
+[Changesets]: /reference/concepts/changeset
+[`PrepareRelease` step]: /reference/config-file/steps/prepare-release
+
 ## `versioned_files`
 
 The files within a package that contain the current version.
