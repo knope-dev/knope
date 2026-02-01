@@ -267,7 +267,15 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, gitea, packages, versioned_files, git_tags, ignore_conventional_commits);
+    let state = State::new(
+        jira,
+        github,
+        gitea,
+        packages,
+        versioned_files,
+        git_tags,
+        ignore_conventional_commits,
+    );
     Ok((state, workflows))
 }
 
