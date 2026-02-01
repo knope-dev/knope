@@ -77,7 +77,7 @@ pub fn main() -> Result<()> {
 
     if let Ok(Some(true)) = matches.try_get_one("upgrade") {
         // If adding new upgrade, make a function to detect and call here.
-        let upgraded = false;
+        let upgraded = config.upgrade();
         return if upgraded {
             config.write_out()
         } else {

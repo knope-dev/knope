@@ -67,10 +67,33 @@ impl Config {
         }
     }
 
+    /// Upgrade the config to the latest format, returning true if any upgrades were made.
+    pub(crate) fn upgrade(&mut self) -> bool {
+        let mut upgraded = false;
+
+        // Check if any PrepareRelease steps have ignore_conventional_commits set to true
+        for workflow in &mut self.workflows {
+            for step in &mut workflow.steps {
+                if let Step::PrepareRelease(prepare_release) = step {
+                    if prepare_release.ignore_conventional_commits {
+                        // Move to top-level config
+                        self.ignore_conventional_commits = true;
+                        prepare_release.ignore_conventional_commits = false;
+                        upgraded = true;
+                    }
+                }
+            }
+        }
+
+        upgraded
+    }
+
     /// Write out the Config to `knope.toml`.
     pub(crate) fn write_out(mut self) -> Result<()> {
         #[derive(Serialize)]
         struct SimpleConfig {
+            #[serde(skip_serializing_if = "std::ops::Not::not")]
+            ignore_conventional_commits: bool,
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<knope_config::Package>,
             #[serde(skip_serializing_if = "IndexMap::is_empty")]
@@ -96,6 +119,7 @@ impl Config {
         };
 
         let config = SimpleConfig {
+            ignore_conventional_commits: self.ignore_conventional_commits,
             package,
             packages,
             workflows: self.workflows,

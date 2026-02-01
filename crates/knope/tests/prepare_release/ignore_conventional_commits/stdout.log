@@ -1,0 +1,1 @@
+The `ignore_conventional_commits` option on the PrepareRelease step is deprecated. Use the top-level `ignore_conventional_commits` config setting instead. Run `knope --upgrade` to automatically migrate your config.
