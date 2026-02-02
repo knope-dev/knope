@@ -113,7 +113,7 @@ impl Package {
         if *ignore_conventional_commits {
             tracing::warn!(
                 "The `ignore_conventional_commits` option on the PrepareRelease step is deprecated. \
-                 Use the top-level `ignore_conventional_commits` config setting instead. \
+                 Use `ignore_conventional_commits` in the `[changes]` config section instead. \
                  Run `knope --upgrade` to automatically migrate your config."
             );
         }

@@ -92,8 +92,8 @@ impl Config {
     pub(crate) fn write_out(mut self) -> Result<()> {
         #[derive(Serialize)]
         struct SimpleConfig {
-            #[serde(skip_serializing_if = "std::ops::Not::not")]
-            ignore_conventional_commits: bool,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            changes: Option<knope_config::Changes>,
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<knope_config::Package>,
             #[serde(skip_serializing_if = "IndexMap::is_empty")]
@@ -118,8 +118,16 @@ impl Config {
             )
         };
 
+        let changes = if self.ignore_conventional_commits {
+            Some(knope_config::Changes {
+                ignore_conventional_commits: true,
+            })
+        } else {
+            None
+        };
+
         let config = SimpleConfig {
-            ignore_conventional_commits: self.ignore_conventional_commits,
+            changes,
             package,
             packages,
             workflows: self.workflows,
@@ -191,7 +199,10 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
-            ignore_conventional_commits: config.shared.ignore_conventional_commits,
+            ignore_conventional_commits: config
+                .shared
+                .changes
+                .is_some_and(|c| c.ignore_conventional_commits),
         })
     }
 }

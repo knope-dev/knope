@@ -24,12 +24,16 @@ Or multiple packages:
 # package config here
 ```
 
-## `ignore_conventional_commits`
+## `[changes]`
 
-This top-level config setting disables [Conventional Commits] parsing across all workflows.
-When set to `true`, Knope will only consider [Changesets] when determining version bumps and changelog entries.
+This top-level section controls how Knope processes changes to your project.
+
+### `ignore_conventional_commits`
+
+When set to `true`, Knope will only consider [Changesets] when determining version bumps and changelog entries, ignoring [Conventional Commits].
 
 ```toml title="knope.toml"
+[changes]
 ignore_conventional_commits = true
 
 [package]
