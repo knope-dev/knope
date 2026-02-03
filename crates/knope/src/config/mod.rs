@@ -38,6 +38,8 @@ pub(crate) struct Config {
     pub(crate) github: Option<GitHub>,
     /// Optional configuration to communicate with a Gitea instance
     pub(crate) gitea: Option<Gitea>,
+    /// If set to true, conventional commits are ignored across all workflows
+    pub(crate) ignore_conventional_commits: bool,
 }
 
 impl Config {
@@ -65,10 +67,33 @@ impl Config {
         }
     }
 
+    /// Upgrade the config to the latest format, returning true if any upgrades were made.
+    pub(crate) fn upgrade(&mut self) -> bool {
+        let mut upgraded = false;
+
+        // Check if any PrepareRelease steps have ignore_conventional_commits set to true
+        for workflow in &mut self.workflows {
+            for step in &mut workflow.steps {
+                if let Step::PrepareRelease(prepare_release) = step {
+                    if prepare_release.ignore_conventional_commits {
+                        // Move to top-level config
+                        self.ignore_conventional_commits = true;
+                        prepare_release.ignore_conventional_commits = false;
+                        upgraded = true;
+                    }
+                }
+            }
+        }
+
+        upgraded
+    }
+
     /// Write out the Config to `knope.toml`.
     pub(crate) fn write_out(mut self) -> Result<()> {
         #[derive(Serialize)]
         struct SimpleConfig {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            changes: Option<knope_config::Changes>,
             #[serde(skip_serializing_if = "Option::is_none")]
             package: Option<knope_config::Package>,
             #[serde(skip_serializing_if = "IndexMap::is_empty")]
@@ -93,7 +118,16 @@ impl Config {
             )
         };
 
+        let changes = if self.ignore_conventional_commits {
+            Some(knope_config::Changes {
+                ignore_conventional_commits: true,
+            })
+        } else {
+            None
+        };
+
         let config = SimpleConfig {
+            changes,
             package,
             packages,
             workflows: self.workflows,
@@ -165,6 +199,10 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
+            ignore_conventional_commits: config
+                .shared
+                .changes
+                .is_some_and(|c| c.ignore_conventional_commits),
         })
     }
 }
@@ -294,6 +332,7 @@ pub(crate) fn generate() -> Result<Config, package::Error> {
         github,
         gitea,
         packages,
+        ignore_conventional_commits: false,
     })
 }
 

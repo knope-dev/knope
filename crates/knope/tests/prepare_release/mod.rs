@@ -10,6 +10,7 @@ mod gleam_toml;
 mod go_modules;
 mod handle_pre_versions_that_are_too_new;
 mod ignore_conventional_commits;
+mod ignore_conventional_commits_toplevel;
 mod inconsistent_versions;
 mod invalid_versioned_files;
 mod missing_versioned_files;

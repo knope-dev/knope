@@ -166,6 +166,7 @@ mod test_replace_variables {
             vec![package],
             all_versioned_files,
             Vec::new(),
+            false,
         )
     }
 
@@ -208,6 +209,7 @@ mod test_replace_variables {
             all_git_tags: Vec::new(),
             all_versioned_files: Vec::new(),
             pending_actions: Vec::new(),
+            ignore_conventional_commits: false,
         };
 
         let result =

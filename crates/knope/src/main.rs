@@ -77,7 +77,7 @@ pub fn main() -> Result<()> {
 
     if let Ok(Some(true)) = matches.try_get_one("upgrade") {
         // If adding new upgrade, make a function to detect and call here.
-        let upgraded = false;
+        let upgraded = config.upgrade();
         return if upgraded {
             config.write_out()
         } else {
@@ -215,6 +215,7 @@ fn create_state(
         jira,
         github,
         gitea,
+        ignore_conventional_commits,
     } = config;
     let git_tags = if packages.is_empty() {
         // Don't mess with Git if there aren't any packages defined
@@ -266,7 +267,15 @@ fn create_state(
         }
     }
 
-    let state = State::new(jira, github, gitea, packages, versioned_files, git_tags);
+    let state = State::new(
+        jira,
+        github,
+        gitea,
+        packages,
+        versioned_files,
+        git_tags,
+        ignore_conventional_commits,
+    );
     Ok((state, workflows))
 }
 
