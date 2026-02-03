@@ -46,4 +46,5 @@ The reasons this can fail:
 [`--prerelease-label` command line argument]: /reference/command-line-arguments#--prerelease-label
 [`--override-version` command line argument]: /reference/command-line-arguments#--override-version
 [changelog files]: /reference/concepts/changelog
+
 [`[changes]` section `ignore_conventional_commits` setting]: /reference/config-file/changes#ignore_conventional_commits
