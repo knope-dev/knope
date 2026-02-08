@@ -1,3 +1,9 @@
+## 0.7.1 (2026-02-08)
+
+### Features
+
+- Build binaries for ARM Linux (#1772)
+
 ## 0.7.0 (2026-01-20)
 
 ### Breaking Changes
