@@ -746,9 +746,9 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "git-conventional"
-version = "0.12.9"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6a949b7fcc81df22526032dcddb006e78c8575e47b0e7ba57d9960570a57bc4"
+checksum = "8e309a81911009e578fdd9bdac9839c6a2675c197ced418e21ecd6cefc05cd41"
 dependencies = [
  "unicase",
  "winnow",
