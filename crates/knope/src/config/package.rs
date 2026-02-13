@@ -581,12 +581,18 @@ fn package_json_dep_matches(
                 || resolved.join("package.json") == target.config_absolute
         }
         PackageJsonDepValue::Req(req) => {
-            target.package_json.is_some() && req.name.as_str() == target.name
+            // JSR packages are now represented with @jsr/scope__name format
+            let req_name = req.name.as_str();
+            if let Some(jsr_part) = req_name.strip_prefix("@jsr/") {
+                // Convert @jsr/scope__name back to @scope/name
+                let original_name = jsr_part.replace("__", "/");
+                let full_name = format!("@{}", original_name);
+                target.deno_json.is_some() && full_name == target.name
+            } else {
+                target.package_json.is_some() && req_name == target.name
+            }
         }
         PackageJsonDepValue::Workspace(_) => alias == target.name,
-        PackageJsonDepValue::JsrReq(req) => {
-            target.deno_json.is_some() && req.name.as_str() == target.name
-        }
     }
 }
 
