@@ -141,7 +141,7 @@ jobs:
         run: |
           git config --global user.name GitHub Actions
           git config user.email github-actions@github.com
-      - uses: knope-dev/action@v2.1.1
+      - uses: knope-dev/action@v2.1.2
         with:
           version: 0.22.2
       - run: knope prepare-release --verbose
@@ -217,7 +217,7 @@ release:
       with:
         path: artifacts
         merge-multiple: true
-    - uses: knope-dev/action@v2.1.1
+    - uses: knope-dev/action@v2.1.2
       with:
         version: 0.22.2
     - run: knope release
@@ -309,7 +309,7 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - uses: knope-dev/action@v2.1.1
+      - uses: knope-dev/action@v2.1.2
         with:
           version: 0.22.2
       - run: knope release
