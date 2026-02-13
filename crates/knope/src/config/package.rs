@@ -585,8 +585,8 @@ fn package_json_dep_matches(
             let req_name = req.name.as_str();
             if let Some(jsr_part) = req_name.strip_prefix("@jsr/") {
                 // Convert @jsr/scope__name back to @scope/name
-                let original_name = jsr_part.replace("__", "/");
-                let full_name = format!("@{original_name}");
+                // Use replacen to only replace the first __ separator between scope and name
+                let full_name = format!("@{}", jsr_part.replacen("__", "/", 1));
                 target.deno_json.is_some() && full_name == target.name
             } else {
                 target.package_json.is_some() && req_name == target.name
