@@ -44,7 +44,7 @@ jobs:
           git config --global user.name GitHub Actions
           git config user.email github-actions@github.com
       - name: Install Knope
-        uses: knope-dev/action@v2.1.1
+        uses: knope-dev/action@v2.1.2
         with:
           version: 0.22.2
       - run: knope prepare-release --verbose
@@ -123,7 +123,7 @@ jobs:
           path: artifacts
           merge-multiple: true
       - name: Install the latest Knope
-        uses: knope-dev/action@v2.1.1
+        uses: knope-dev/action@v2.1.2
         with:
           version: 0.22.2
       - run: knope release --verbose
