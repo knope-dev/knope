@@ -1,3 +1,9 @@
+## 0.4.2 (2026-02-16)
+
+### Features
+
+- Build binaries for ARM Linux (#1772)
+
 ## 0.4.1 (2026-02-03)
 
 ### Features

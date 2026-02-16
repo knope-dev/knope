@@ -42,7 +42,7 @@ jobs:
           token: ${{ secrets.PAT }}
       - uses: knope-dev/action@v2.1.0 # Install Knope
         with:
-          version: 0.22.2
+          version: 0.22.3
       - run: knope release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}

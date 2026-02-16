@@ -10,6 +10,12 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.22.3 (2026-02-16)
+
+### Features
+
+- Build binaries for ARM Linux (#1772)
+
 ## 0.22.2 (2026-02-03)
 
 ### Features
