@@ -143,7 +143,7 @@ jobs:
           git config user.email github-actions@github.com
       - uses: knope-dev/action@v2.1.2
         with:
-          version: 0.22.2
+          version: 0.22.3
       - run: knope prepare-release --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -219,7 +219,7 @@ release:
         merge-multiple: true
     - uses: knope-dev/action@v2.1.2
       with:
-        version: 0.22.2
+        version: 0.22.3
     - run: knope release
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
@@ -311,7 +311,7 @@ jobs:
           merge-multiple: true
       - uses: knope-dev/action@v2.1.2
         with:
-          version: 0.22.2
+          version: 0.22.3
       - run: knope release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
