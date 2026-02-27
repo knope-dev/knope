@@ -6,7 +6,7 @@ use itertools::Itertools;
 use knope_config::{Assets, changelog_section::convert_to_versioning};
 use knope_versioning::{
     Action, GoVersioning, PackageNewError, VersionedFile, VersionedFileError,
-    changes::CHANGESET_DIR,
+    changes::{CHANGESET_DIR, Change},
     package::{BumpError, ChangeConfig, Name},
     release_notes::{ReleaseNotes, TimeError},
     semver::Version,
@@ -102,6 +102,7 @@ impl Package {
         versioned_files: Vec<VersionedFile>,
         changeset: &[changesets::Release],
         global_ignore_conventional_commits: bool,
+        enrich_git_info: impl FnOnce(&mut [Change]),
     ) -> Result<(Vec<VersionedFile>, Vec<Action>), Error> {
         let PrepareRelease {
             prerelease_label,
@@ -158,11 +159,13 @@ impl Package {
                 .collect_vec()
         };
 
-        let changes = self.versioning.get_changes(change_files, &commit_messages);
+        let mut changes = self.versioning.get_changes(change_files, &commit_messages);
 
         if changes.is_empty() && self.override_version.is_none() {
             return Ok((versioned_files, Vec::new()));
         }
+
+        enrich_git_info(&mut changes);
 
         let change_config = match self.override_version.take() {
             Some(version) => ChangeConfig::Force(version),

@@ -9,12 +9,12 @@ use knope_versioning::{
     semver::{PackageVersions, Rule},
 };
 use miette::Diagnostic;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub(crate) use self::{package::Package, semver::bump_version_and_update_state};
 use crate::{
     RunType, fs,
-    integrations::{git, git::create_tag},
+    integrations::{git, git::create_tag, github as github_api},
     state::State,
     step::{PrepareRelease, releases::package::execute_prepare_actions},
 };
@@ -35,6 +35,11 @@ pub(crate) fn prepare_release(
         return Err(package::Error::NoDefinedPackages.into());
     }
 
+    let needs_forge_data = state
+        .packages
+        .iter()
+        .any(|pkg| pkg.versioning.release_notes.needs_forge_data());
+
     let changeset_path = PathBuf::from(CHANGESET_DIR);
     let changeset = if changeset_path.exists() {
         ChangeSet::from_directory(&changeset_path)?.into()
@@ -49,6 +54,24 @@ pub(crate) fn prepare_release(
             state.all_versioned_files,
             &changeset,
             state.ignore_conventional_commits,
+            |changes| {
+                if needs_forge_data {
+                    if let Some(github_config) = state.github_config.as_ref() {
+                        match github_api::enrich_git_info(
+                            changes,
+                            github_config,
+                            state.github.clone(),
+                        ) {
+                            Ok(new_state) => {
+                                state.github = new_state;
+                            }
+                            Err(e) => {
+                                warn!("Failed to enrich git info from GitHub: {e}");
+                            }
+                        }
+                    }
+                }
+            },
         )?;
         state.all_versioned_files = all_versioned_files;
         state.pending_actions.extend(actions);

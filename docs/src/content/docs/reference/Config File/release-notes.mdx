@@ -56,6 +56,30 @@ The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of
 
 Knope will skip templates containing this variable for [change file]s that aren't committed.
 
+#### `$commit_author_login`
+
+The GitHub username of the author of a [conventional commits] or the commit which introduced a [change file].
+
+This variable requires [`[github]`](/reference/config-file/github) to be configured. Knope will fetch the
+associated pull request from the GitHub API to determine the author's login.
+Knope will skip templates containing this variable when the login isn't available.
+
+:::note
+
+Using this variable (or `$pr_number`) in any template will cause Knope to make GitHub API calls during
+`PrepareRelease`, which requires a `GITHUB_TOKEN` environment variable or a stored token.
+If you don't use these variables, no API calls are made.
+
+:::
+
+#### `$pr_number`
+
+The pull request number that introduced a [conventional commit] or a [change file].
+
+This variable requires [`[github]`](/reference/config-file/github) to be configured. Knope will look up the
+pull request associated with each commit via the GitHub API.
+Knope will skip templates containing this variable when no associated pull request is found.
+
 [change]: /reference/concepts/change
 [changelog]: /reference/concepts/changelog
 [change file]: /reference/concepts/change-file
