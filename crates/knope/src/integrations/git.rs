@@ -426,6 +426,8 @@ fn commit_info(commit: &git2::Commit) -> Option<GitInfo> {
     Some(GitInfo {
         author_name: commit.author().name().map(String::from)?,
         hash: commit.id().to_string().get(..7).map(String::from)?,
+        pr_number: None,
+        author_login: None,
     })
 }
 

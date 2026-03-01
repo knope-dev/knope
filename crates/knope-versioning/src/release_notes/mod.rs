@@ -22,6 +22,15 @@ pub struct ReleaseNotes {
 }
 
 impl ReleaseNotes {
+    /// Returns `true` if any configured `change_templates` use forge-specific variables
+    /// (e.g., `$pr_number`, `$commit_author_login`) that require API calls to populate.
+    #[must_use]
+    pub fn needs_forge_data(&self) -> bool {
+        self.change_templates
+            .iter()
+            .any(ChangeTemplate::needs_forge_data)
+    }
+
     /// Create new release notes for use in changelogs / forges.
     ///
     /// # Errors
@@ -131,10 +140,12 @@ fn release_title(version: &Version) -> Result<String, TimeError> {
 pub struct ChangeTemplate(Cow<'static, str>);
 
 impl ChangeTemplate {
+    const COMMIT_AUTHOR_LOGIN: &'static str = "$commit_author_login";
     const COMMIT_AUTHOR_NAME: &'static str = "$commit_author_name";
     const COMMIT_HASH: &'static str = "$commit_hash";
-    const SUMMARY: &'static str = "$summary";
     const DETAILS: &'static str = "$details";
+    const PR_NUMBER: &'static str = "$pr_number";
+    const SUMMARY: &'static str = "$summary";
 
     fn write(&self, change: &Change, out: &mut String) -> bool {
         let mut result = self.0.to_string();
@@ -143,7 +154,22 @@ impl ChangeTemplate {
                 result = result.replace(Self::COMMIT_AUTHOR_NAME, &git.author_name);
                 result = result.replace(Self::COMMIT_HASH, &git.hash);
             } else {
-                // Change doesn't have commit info, template not applicable
+                return false;
+            }
+        }
+
+        if result.contains(Self::COMMIT_AUTHOR_LOGIN) {
+            if let Some(login) = change.git.as_ref().and_then(|g| g.author_login.as_deref()) {
+                result = result.replace(Self::COMMIT_AUTHOR_LOGIN, login);
+            } else {
+                return false;
+            }
+        }
+
+        if result.contains(Self::PR_NUMBER) {
+            if let Some(pr) = change.git.as_ref().and_then(|g| g.pr_number) {
+                result = result.replace(Self::PR_NUMBER, &pr.to_string());
+            } else {
                 return false;
             }
         }
@@ -160,6 +186,13 @@ impl ChangeTemplate {
         out.push_str(&result);
 
         true
+    }
+
+    /// Returns `true` if this template references any forge-specific variables
+    /// that require API calls to populate.
+    #[must_use]
+    pub fn needs_forge_data(&self) -> bool {
+        self.0.contains(Self::COMMIT_AUTHOR_LOGIN) || self.0.contains(Self::PR_NUMBER)
     }
 }
 
@@ -287,6 +320,8 @@ mod test_release_notes {
                 git: Some(GitInfo {
                     author_name: "Sushi".into(),
                     hash: "1234".into(),
+                    pr_number: None,
+                    author_login: None,
                 }),
             },
         ];
@@ -358,6 +393,8 @@ mod test_release_notes {
                 git: Some(GitInfo {
                     author_name: "Sushi".into(),
                     hash: "1234".into(),
+                    pr_number: None,
+                    author_login: None,
                 }),
             },
         ];
@@ -407,6 +444,8 @@ mod test_release_notes {
                 git: Some(GitInfo {
                     author_name: "Alice".into(),
                     hash: "abc123".into(),
+                    pr_number: None,
+                    author_login: None,
                 }),
             },
             // Committed change file without details - should use second template (commit only)
@@ -420,6 +459,8 @@ mod test_release_notes {
                 git: Some(GitInfo {
                     author_name: "Bob".into(),
                     hash: "def456".into(),
+                    pr_number: None,
+                    author_login: None,
                 }),
             },
             // Uncommitted change file with details - should use third template (details only)
@@ -453,6 +494,8 @@ mod test_release_notes {
                 git: Some(GitInfo {
                     author_name: "Charlie".into(),
                     hash: "ghi789".into(),
+                    pr_number: None,
+                    author_login: None,
                 }),
             },
         ];
@@ -473,5 +516,130 @@ mod test_release_notes {
             release.notes,
             "## Features\n\n* a committed simple feature by Bob (def456)\n* an uncommitted simple feature\n* conventional commit feature by Charlie (ghi789)\n\n* a committed feature with details by Alice (abc123)\n\nsome implementation details\n\n### an uncommitted feature with details\n\nsome more details"
         );
+    }
+
+    #[test]
+    fn github_style_templates_with_pr_and_login() {
+        let change_templates = [
+            "* $summary by @$commit_author_login in #$pr_number",
+            "* $summary by @$commit_author_login",
+            "* $summary",
+        ]
+        .into_iter()
+        .map(ChangeTemplate::from)
+        .collect_vec();
+
+        let mut release_notes = ReleaseNotes {
+            change_templates,
+            ..ReleaseNotes::default()
+        };
+
+        let changes = &[
+            // Has PR info and login -> first template
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                },
+                summary: "add dark mode".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Dale Seo".into(),
+                    hash: "abc1234".into(),
+                    pr_number: Some(42),
+                    author_login: Some("DaleSeo".into()),
+                }),
+            },
+            // Has login but no PR -> second template
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                },
+                summary: "improve logging".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Alice".into(),
+                    hash: "def5678".into(),
+                    pr_number: None,
+                    author_login: Some("alice".into()),
+                }),
+            },
+            // No git info at all -> third template
+            Change {
+                change_type: ChangeType::Feature,
+                original_source: ChangeSource::ChangeFile {
+                    id: Arc::new(UniqueId::exact("")),
+                },
+                summary: "uncommitted feature".into(),
+                details: None,
+                git: None,
+            },
+            // Has git info but no login/PR -> third template
+            Change {
+                change_type: ChangeType::Fix,
+                original_source: ChangeSource::ConventionalCommit {
+                    description: String::new(),
+                },
+                summary: "fix crash".into(),
+                details: None,
+                git: Some(GitInfo {
+                    author_name: "Bob".into(),
+                    hash: "ghi9012".into(),
+                    pr_number: None,
+                    author_login: None,
+                }),
+            },
+        ];
+
+        let mut actions = release_notes
+            .create_release(
+                Version::new(1, 1, 0, None),
+                changes,
+                &package::Name::Default,
+            )
+            .expect("can create release notes");
+
+        let Some(Action::CreateRelease(release)) = actions.pop() else {
+            panic!("expected release action");
+        };
+
+        assert_eq!(
+            release.notes,
+            "## Features\n\n* add dark mode by @DaleSeo in #42\n* improve logging by @alice\n* uncommitted feature\n\n## Fixes\n\n* fix crash"
+        );
+    }
+
+    #[test]
+    fn needs_forge_data_false_for_local_only_template() {
+        let notes = ReleaseNotes {
+            change_templates: vec![ChangeTemplate::from("* $summary by $commit_author_name")],
+            ..ReleaseNotes::default()
+        };
+        assert!(!notes.needs_forge_data());
+    }
+
+    #[test]
+    fn needs_forge_data_true_for_pr_number() {
+        let notes = ReleaseNotes {
+            change_templates: vec![ChangeTemplate::from("* $summary in #$pr_number")],
+            ..ReleaseNotes::default()
+        };
+        assert!(notes.needs_forge_data());
+    }
+
+    #[test]
+    fn needs_forge_data_true_for_author_login() {
+        let notes = ReleaseNotes {
+            change_templates: vec![ChangeTemplate::from("* $summary by @$commit_author_login")],
+            ..ReleaseNotes::default()
+        };
+        assert!(notes.needs_forge_data());
+    }
+
+    #[test]
+    fn needs_forge_data_false_for_default() {
+        let notes = ReleaseNotes::default();
+        assert!(!notes.needs_forge_data());
     }
 }
