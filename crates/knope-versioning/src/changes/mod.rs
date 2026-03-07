@@ -10,11 +10,15 @@ pub mod conventional_commit;
 
 pub const CHANGESET_DIR: &str = ".changeset";
 
-/// Git commit information including hash and author.
+/// Git commit information including hash and author, optionally enriched with forge data.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GitInfo {
     pub hash: String,
     pub author_name: String,
+    /// The PR/MR number that introduced this commit, if fetched from a forge.
+    pub pr_number: Option<u64>,
+    /// The forge login/username of the commit author, if fetched from a forge.
+    pub author_login: Option<String>,
 }
 
 /// A change to one or more packages.
@@ -243,6 +247,8 @@ mod test_parse_changes {
                 Some(GitInfo {
                     author_name: "Bob".to_string(),
                     hash: "def456".to_string(),
+                    pr_number: None,
+                    author_login: None,
                 }),
             ),
             (
