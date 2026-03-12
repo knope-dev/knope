@@ -159,6 +159,46 @@ You currently can't customize the order of changes in a section.
 
 :::
 
+### GitHub-style release notes
+
+If you have [`[github]`](/reference/config-file/github) configured, you can use `$pr_number` and `$commit_author_login` to generate release notes
+similar to the format GitHub produces by default:
+
+```toml
+[github]
+owner = "my-org"
+repo = "my-repo"
+
+[release_notes]
+change_templates = [
+    "* $summary by @$commit_author_login in #$pr_number",
+    "* $summary by @$commit_author_login",
+    "* $summary",
+]
+```
+
+This produces entries like:
+
+```markdown
+## Features
+
+- Add dark mode by @DaleSeo in #42
+- Improve logging by @alice
+- An uncommitted feature
+```
+
+The first template is used when both the PR number and author login are available.
+The second is a fallback for commits not associated with a PR.
+The third covers uncommitted change files or commits without GitHub data.
+
+:::note
+
+Using `$pr_number` or `$commit_author_login` causes Knope to call the GitHub API during `PrepareRelease`.
+This requires a `GITHUB_TOKEN` environment variable.
+If you don't use these variables, no API calls are made and no token is needed.
+
+:::
+
 ## Changing the header level
 
 :::note
