@@ -55,6 +55,6 @@ jobs:
         with:
           persist-credentials: false
       - run: npm install -g mdx2vast # Adds MDX support for Vale
-      - uses: errata-ai/vale-action@dcded780f1ff68e2558e802a165a484a4a3e2fb8
+      - uses: errata-ai/vale-action@0135b9fe2b3107365569cc3142b9a1c85221ea2f
         with:
           files: '["docs", "README.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md"]'
