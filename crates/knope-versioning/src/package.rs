@@ -248,9 +248,9 @@ fn validate_versioned_files(
             if *first_version != version {
                 return Err(NewError::InconsistentVersions {
                     first_path: first_versioned_file.path().clone(),
-                    first_version: first_version.clone(),
+                    first_version: Box::new(first_version.clone()),
                     second_path: versioned_file.path().clone(),
-                    second_version: version,
+                    second_version: Box::new(version),
                 }
                 .into());
             }
@@ -326,9 +326,9 @@ pub enum NewError {
     )]
     InconsistentVersions {
         first_path: RelativePathBuf,
-        first_version: Version,
+        first_version: Box<Version>,
         second_path: RelativePathBuf,
-        second_version: Version,
+        second_version: Box<Version>,
     },
     #[error("Versioned file not found: {0}")]
     #[cfg_attr(
