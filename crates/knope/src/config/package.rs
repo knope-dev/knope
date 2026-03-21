@@ -581,12 +581,21 @@ fn package_json_dep_matches(
                 || resolved.join("package.json") == target.config_absolute
         }
         PackageJsonDepValue::Req(req) => {
-            target.package_json.is_some() && req.name.as_str() == target.name
+            let name = req.name.as_str();
+            if name.starts_with("@jsr/") {
+                target.deno_json.is_some()
+                    && target
+                        .name
+                        .strip_prefix('@')
+                        .and_then(|s| s.split_once('/'))
+                        .map(|(scope, pkg)| format!("@jsr/{scope}__{pkg}"))
+                        .as_deref()
+                        == Some(name)
+            } else {
+                target.package_json.is_some() && name == target.name
+            }
         }
         PackageJsonDepValue::Workspace(_) => alias == target.name,
-        PackageJsonDepValue::JsrReq(req) => {
-            target.deno_json.is_some() && req.name.as_str() == target.name
-        }
     }
 }
 
