@@ -46,20 +46,36 @@ Only a [change file] can have details, they're any content after the title line.
 
 #### `$commit_author_name`
 
-The name of the author of a [conventional commits] or the commit which introduced a [change file].
+The name of the author of a [conventional commit] or the commit which introduced a [change file].
 
 Knope will skip templates containing this variable for [change file]s that aren't committed.
 
 #### `$commit_hash`
 
-The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of a [conventional commit] of the commit that introduced a [change file].
+The [short hash](https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection) of a [conventional commit] or the commit that introduced a [change file].
 
 Knope will skip templates containing this variable for [change file]s that aren't committed.
+
+### Variables referencing GitHub
+
+Using any of these variables with Knope CLI requires configuring [`[github]`](/reference/config-file/github).
+Knope will make GitHub API calls during `PrepareRelease` to resolve the variable.
+If the `GITHUB_TOKEN` environment variable is not set, this will only work for public repositories
+and will have a very low rate limit.
+
+#### `$commit_author_login` <Badge text="Knope 0.23.0+" variant="tip" />
+
+The GitHub username of the author of a [conventional commit] or the commit which introduced a [change file].
+
+#### `$pr_number` <Badge text="Knope 0.23.0+" variant="tip" />
+
+The pull request number that introduced a [conventional commit] or a [change file].
 
 [change]: /reference/concepts/change
 [changelog]: /reference/concepts/changelog
 [change file]: /reference/concepts/change-file
 [conventional commits]: /reference/concepts/conventional-commits
+[conventional commit]: /reference/concepts/conventional-commits
 [conventional commit footer]: /reference/concepts/conventional-commits#footers
 [forge]: /reference/concepts/forge
 [release notes]: /reference/concepts/release-notes

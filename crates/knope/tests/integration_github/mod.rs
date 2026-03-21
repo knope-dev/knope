@@ -7,10 +7,11 @@
 //!
 //! All tests clean up after themselves by deleting any resources they create.
 
-use std::{path::Path, process::Command, time::Duration};
+use std::{fs::write, path::Path, process::Command, time::Duration};
 
 use reqwest::Client;
 use serde::Deserialize;
+use tokio::fs::create_dir_all;
 
 #[derive(Debug, Deserialize)]
 struct Release {
@@ -31,6 +32,13 @@ fn github_env() -> (String, String, String) {
     let repo = std::env::var("KNOPE_INTEGRATION_GITHUB_REPO")
         .expect("KNOPE_INTEGRATION_GITHUB_REPO must be set");
     (token, owner, repo)
+}
+
+fn ensure_gh_installed() {
+    Command::new("gh")
+        .arg("--version")
+        .output()
+        .expect("GitHub CLI (gh) is not installed or not in PATH");
 }
 
 use super::integration_helpers::{push_branch, redact_url_credentials};
@@ -426,4 +434,163 @@ repo = "{repo}"
         !stderr.is_empty(),
         "Expected error output when using a bad token"
     );
+}
+
+/// Tests a few different related API calls for GitHub:
+/// 1. Creating a pull request
+/// 2. Looking up PR info for a commit
+#[tokio::test]
+#[ignore = "requires external service credentials"]
+async fn pull_request_creation_and_info_lookup() {
+    let base_branch = "integration-test-prs-base";
+    let extra_knope_config = format!(
+        r#"
+    [release_notes]
+    change_templates = [
+        "* $summary by @$commit_author_login in #$pr_number",
+        "* $summary by @$commit_author_login",
+        "* $summary",
+    ]
+    [[workflows]]
+    name = "pr"
+    [[workflows.steps]]
+    type = "CreatePullRequest"
+    base = "{base_branch}"
+    title = {{template = "Integration test PR"}}
+    body = {{template = "This is an integration test PR for knope"}}
+
+    [[workflows]]
+    name = "prepare"
+    [[workflows.steps]]
+    type = "PrepareRelease"
+    "#
+    );
+
+    let (token, owner, repo) = github_env();
+    ensure_gh_installed();
+    let client = http_client();
+
+    let branch = "integration-test-prs-head";
+
+    // Clean up leftovers
+    delete_branch(&client, &token, &owner, &repo, branch).await;
+    delete_branch(&client, &token, &owner, &repo, base_branch).await;
+
+    let dir = setup_test_repo(
+        "0.3.0",
+        &token,
+        &owner,
+        &repo,
+        base_branch,
+        &extra_knope_config,
+    );
+    let path = dir.path();
+    push_branch(path, base_branch);
+
+    assert_git(path, &["checkout", "-b", branch]);
+    create_dir_all(path.join(".changeset"))
+        .await
+        .expect("Failed to create .changeset dir");
+    write(
+        path.join(".changeset/test.md"),
+        r"---
+default: minor
+---
+# Test changeset",
+    )
+    .unwrap();
+
+    assert_git(path, &["add", ".changeset/test.md"]);
+    assert_git(path, &["commit", "-m", "feat: test changeset"]);
+
+    push_branch(path, branch);
+
+    let output = Command::new(env!("CARGO_BIN_EXE_knope"))
+        .current_dir(path)
+        .env("GITHUB_TOKEN", &token)
+        .args(["pr"])
+        .output()
+        .expect("Failed to run knope");
+
+    assert!(
+        output.status.success(),
+        "knope pr command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let pr = get_pr_info(&token, &owner, &repo);
+    merge_pr(&token, &owner, &repo, pr.number);
+
+    // Run PrepareRelease and verify that the PR info is included in the changelog
+    assert_git(path, &["checkout", branch]);
+    assert_git(path, &["pull", "--rebase"]);
+    let output = Command::new(env!("CARGO_BIN_EXE_knope"))
+        .current_dir(path)
+        .env("GITHUB_TOKEN", token)
+        .args(["prepare"])
+        .output()
+        .expect("Failed to run knope");
+    assert!(
+        output.status.success(),
+        "knope prepare command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let changelog = std::fs::read_to_string(path.join("CHANGELOG.md")).unwrap();
+    assert!(
+        changelog.contains(pr.number.to_string().as_str()),
+        "PR number should be included in the changelog, got {changelog}"
+    );
+    assert!(
+        changelog.contains(pr.author.login.as_str()),
+        "PR author should be included in the changelog, got {changelog}"
+    );
+}
+
+fn merge_pr(token: &str, owner: &str, repo: &str, pr_number: u64) {
+    let output = Command::new("gh")
+        .arg("pr")
+        .arg("merge")
+        .arg("--repo")
+        .arg(format!("{owner}/{repo}"))
+        .arg("--squash")
+        .arg(pr_number.to_string())
+        .env("GITHUB_TOKEN", token)
+        .output()
+        .expect("Failed to run gh");
+
+    assert!(
+        output.status.success(),
+        "gh pr merge failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn get_pr_info(token: &str, owner: &str, repo: &str) -> PrInfo {
+    let output = Command::new("gh")
+        .arg("pr")
+        .arg("list")
+        .arg("--repo")
+        .arg(format!("{owner}/{repo}"))
+        .arg("--json")
+        .arg("number,author")
+        .arg("--head")
+        .arg("integration-test-prs-head")
+        .env("GITHUB_TOKEN", token)
+        .output()
+        .expect("Failed to run gh");
+
+    serde_json::from_slice::<Vec<PrInfo>>(&output.stdout)
+        .expect("Failed to parse gh output")
+        .remove(0)
+}
+
+#[derive(serde::Deserialize)]
+struct PrInfo {
+    number: u64,
+    author: PrAuthor,
+}
+
+#[derive(serde::Deserialize)]
+struct PrAuthor {
+    login: String,
 }
