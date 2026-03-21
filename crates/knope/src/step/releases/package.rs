@@ -95,23 +95,17 @@ impl Package {
         })
     }
 
-    pub(crate) fn prepare_release(
-        &mut self,
+    pub(crate) fn gather_changes(
+        &self,
         prepare_release: &PrepareRelease,
         all_tags: &[String],
-        versioned_files: Vec<VersionedFile>,
         changeset: &[changesets::Release],
         global_ignore_conventional_commits: bool,
-        enrich_git_info: impl FnOnce(&mut [Change]),
-    ) -> Result<(Vec<VersionedFile>, Vec<Action>), Error> {
-        let PrepareRelease {
-            prerelease_label,
-            ignore_conventional_commits,
-            ..
-        } = prepare_release;
+    ) -> Result<Vec<Change>, Error> {
+        let ignore_conventional_commits = prepare_release.ignore_conventional_commits;
 
         // Emit deprecation warning if step-level setting is used
-        if *ignore_conventional_commits {
+        if ignore_conventional_commits {
             tracing::warn!(
                 "The `ignore_conventional_commits` option on the PrepareRelease step is deprecated. \
                  Use `ignore_conventional_commits` in the `[changes]` config section instead. \
@@ -120,7 +114,7 @@ impl Package {
         }
 
         // Use step-level setting if present, otherwise use global setting
-        let should_ignore = *ignore_conventional_commits || global_ignore_conventional_commits;
+        let should_ignore = ignore_conventional_commits || global_ignore_conventional_commits;
 
         let commit_messages = if should_ignore {
             Vec::new()
@@ -159,24 +153,29 @@ impl Package {
                 .collect_vec()
         };
 
-        let mut changes = self.versioning.get_changes(change_files, &commit_messages);
+        Ok(self.versioning.get_changes(change_files, &commit_messages))
+    }
 
+    pub(crate) fn apply_release(
+        &mut self,
+        changes: &[Change],
+        prepare_release: &PrepareRelease,
+        versioned_files: Vec<VersionedFile>,
+    ) -> Result<(Vec<VersionedFile>, Vec<Action>), Error> {
         if changes.is_empty() && self.override_version.is_none() {
             return Ok((versioned_files, Vec::new()));
         }
 
-        enrich_git_info(&mut changes);
-
         let change_config = match self.override_version.take() {
             Some(version) => ChangeConfig::Force(version),
             None => ChangeConfig::Calculate {
-                prerelease_label: prerelease_label.clone(),
+                prerelease_label: prepare_release.prerelease_label.clone(),
                 go_versioning: self.go_versioning,
             },
         };
 
         self.versioning
-            .apply_changes(&changes, versioned_files, change_config)
+            .apply_changes(changes, versioned_files, change_config)
             .map_err(Error::Bump)
     }
 }

@@ -48,31 +48,29 @@ pub(crate) fn prepare_release(
     };
 
     for package in &mut state.packages {
-        let (all_versioned_files, actions) = package.prepare_release(
+        let mut changes = package.gather_changes(
             prepare_release,
             &state.all_git_tags,
-            state.all_versioned_files,
             &changeset,
             state.ignore_conventional_commits,
-            |changes| {
-                if needs_forge_data {
-                    if let Some(github_config) = state.github_config.as_ref() {
-                        match github_api::enrich_git_info(
-                            changes,
-                            github_config,
-                            state.github.clone(),
-                        ) {
-                            Ok(new_state) => {
-                                state.github = new_state;
-                            }
-                            Err(e) => {
-                                warn!("Failed to enrich git info from GitHub: {e}");
-                            }
-                        }
+        )?;
+
+        if !changes.is_empty() && needs_forge_data {
+            if let Some(github_config) = state.github_config.as_ref() {
+                match github_api::enrich_git_info(&mut changes, github_config, state.github.clone())
+                {
+                    Ok(new_state) => {
+                        state.github = new_state;
+                    }
+                    Err(e) => {
+                        warn!("Failed to enrich git info from GitHub: {e}");
                     }
                 }
-            },
-        )?;
+            }
+        }
+
+        let (all_versioned_files, actions) =
+            package.apply_release(&changes, prepare_release, state.all_versioned_files)?;
         state.all_versioned_files = all_versioned_files;
         state.pending_actions.extend(actions);
     }
