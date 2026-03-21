@@ -63,7 +63,7 @@ extra_changelog_sections = [
 ```
 
 You can add as many sections as you want, they will appear in order _after_ the built-in sections.
-Each section can be added to from any number of [conventional commit footers](/reference/concepts/conventional-commits/#footers) and [changeset types](https://github.com/knope-dev/changesets?tab=readme-ov-file#change-type).
+Each section accepts any number of [conventional commit footers](/reference/concepts/conventional-commits/#footers) and [Changeset types](https://github.com/knope-dev/changesets?tab=readme-ov-file#change-type).
 The semantic version impact of any custom changes is `patch`.
 
 ## Overriding built-in sections
@@ -187,7 +187,7 @@ This produces entries like:
 - An uncommitted feature
 ```
 
-The first template is used when both the PR number and author login are available.
+Knope uses the first template when both the PR number and author login are available.
 The second is a fallback for commits not associated with a PR.
 The third covers uncommitted change files or commits without GitHub data.
 
@@ -195,7 +195,7 @@ The third covers uncommitted change files or commits without GitHub data.
 
 Using `$pr_number` or `$commit_author_login` causes Knope to call the GitHub API during `PrepareRelease`.
 This requires a `GITHUB_TOKEN` environment variable.
-If you don't use these variables, no API calls are made and no token is needed.
+If you don't use these variables, Knope makes no API calls and requires no token.
 
 :::
 
