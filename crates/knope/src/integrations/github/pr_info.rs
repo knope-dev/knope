@@ -30,30 +30,15 @@ pub(crate) fn enrich_git_info(
     github_config: &config::GitHub,
     github_state: state::GitHub,
 ) -> Result<state::GitHub, Error> {
-    let indices: Vec<usize> = changes
-        .iter()
-        .enumerate()
-        .filter_map(|(i, change)| change.git.as_ref().map(|_| i))
-        .collect();
-
-    if indices.is_empty() {
-        return Ok(github_state);
-    }
-
     let (token, agent) = initialize_state(github_state)?;
-    let authorization = format!("token {token}");
+    let authorization = format!("Bearer {token}");
 
-    for idx in indices {
-        let short_hash = match changes.get(idx).and_then(|c| c.git.as_ref()) {
-            Some(g) => g.hash.clone(),
-            None => continue,
-        };
-        match fetch_pr_for_commit(&agent, &authorization, github_config, &short_hash) {
+    for git_info in changes.iter_mut().filter_map(|change| change.git.as_mut()) {
+        let short_hash = &git_info.hash;
+        match fetch_pr_for_commit(&agent, &authorization, github_config, short_hash) {
             Ok(Some((pr_number, author_login))) => {
-                if let Some(info) = changes.get_mut(idx).and_then(|c| c.git.as_mut()) {
-                    info.pr_number = Some(pr_number);
-                    info.author_login = Some(author_login);
-                }
+                git_info.pr_number = Some(pr_number);
+                git_info.author_login = Some(author_login);
             }
             Ok(None) => {
                 debug!("No PR found for commit {short_hash}");
