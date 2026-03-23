@@ -111,9 +111,8 @@ skip = [
 # by default infinite
 skip-tree = [
   { name = "windows-sys", version = "0.52", depth = 5 },  # so many things... it'll be a while
-  { name = "windows-sys", version = "0.60", depth = 5 },  # so many things... it'll be a while
+  { name = "windows-sys", version = "0.61", depth = 5 },  # so many things... it'll be a while
   { name = "getrandom", version = "0.2", depth = 1 },     # Waiting on ring
-  { name = "wasi", version = "*", depth = 1 },            # We don't compile for wasi, so don't care
   { name = "unicode-width", version = "0.1", depth = 1 }, # inquire
 ]
 
