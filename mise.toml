@@ -1,6 +1,6 @@
 [tools]
 node = "24"
-prettier = "3.6.2"
+prettier = "3.8.1"
 taplo = "0.10.0"
 "cargo:cargo-deny" = "0.19.0"
 
