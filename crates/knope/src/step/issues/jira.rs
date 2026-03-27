@@ -8,13 +8,17 @@ use crate::{
     app_config,
     app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token},
     config::Jira,
+    integrations::http::{ClientCreationError, http_client},
     prompt,
     prompt::select,
     state,
     state::{RunType, State},
 };
 
-pub(crate) fn select_issue(status: &str, state: RunType<State>) -> Result<RunType<State>, Error> {
+pub(crate) async fn select_issue(
+    status: &str,
+    state: RunType<State>,
+) -> Result<RunType<State>, Error> {
     let (run_type, mut state) = state.take();
     let jira_config = state.jira_config.as_ref().ok_or(Error::NotConfigured)?;
 
@@ -28,14 +32,14 @@ pub(crate) fn select_issue(status: &str, state: RunType<State>) -> Result<RunTyp
         return Ok(RunType::DryRun(state));
     }
 
-    let issues = get_issues(jira_config, status)?;
+    let issues = get_issues(jira_config, status).await?;
     let issue = select(issues, "Select an Issue")?;
     info!("Selected item : {}", &issue);
     state.issue = state::Issue::Selected(issue);
     Ok(RunType::Real(state))
 }
 
-pub(crate) fn transition_issue(
+pub(crate) async fn transition_issue(
     status: &str,
     state: RunType<State>,
 ) -> Result<RunType<State>, Error> {
@@ -51,7 +55,7 @@ pub(crate) fn transition_issue(
         return Ok(RunType::DryRun(state));
     }
 
-    run_transition(jira_config, &issue.key, status)?;
+    run_transition(jira_config, &issue.key, status).await?;
     let key = &issue.key;
     info!("{key} transitioned to {status}");
     Ok(RunType::Real(state))
@@ -72,7 +76,7 @@ pub(crate) enum Error {
     Api {
         activity: &'static str,
         #[source]
-        inner: Box<ureq::Error>,
+        inner: Box<reqwest::Error>,
     },
     #[error("The specified transition name was not found in the Jira project")]
     #[diagnostic(
@@ -97,6 +101,9 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ClientCreation(#[from] ClientCreationError),
 }
 
 #[derive(Deserialize, Debug)]
@@ -124,26 +131,25 @@ fn get_auth() -> Result<String, Error> {
     ))
 }
 
-pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>, Error> {
+pub(crate) async fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>, Error> {
     let auth = get_auth()?;
     let project = &jira_config.project;
     let jql = format!("status = {status} AND project = {project}");
     let url = format!("{}/rest/api/3/search", jira_config.url);
-    let mut response = ureq::post(&url)
+    let response = http_client()?
+        .post(&url)
         .header("Authorization", &auth)
-        .send_json(serde_json::json!({"jql": jql, "fields": ["summary"]}))
+        .json(&serde_json::json!({"jql": jql, "fields": ["summary"]}))
+        .send()
+        .await
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "querying for issues",
         })?;
-    let search_response: SearchResponse =
-        response
-            .body_mut()
-            .read_json()
-            .map_err(|inner| Error::Api {
-                inner: Box::new(inner),
-                activity: "parsing search response",
-            })?;
+    let search_response: SearchResponse = response.json().await.map_err(|inner| Error::Api {
+        inner: Box::new(inner),
+        activity: "parsing search response",
+    })?;
     Ok(search_response
         .issues
         .into_iter()
@@ -154,36 +160,35 @@ pub(crate) fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<Issue>,
         .collect())
 }
 
-fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(), Error> {
+async fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(), Error> {
     let auth = get_auth()?; // TODO: get auth once and store in state
     let base_url = &jira_config.url;
     let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions",);
-    let agent = ureq::Agent::new_with_defaults();
-    let mut response = agent
+    let client = http_client()?;
+    let response = client
         .get(&url)
         .header("Authorization", &auth)
-        .call()
+        .send()
+        .await
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "getting transitions",
         })?;
-    let response: GetTransitionResponse =
-        response
-            .body_mut()
-            .read_json()
-            .map_err(|inner| Error::Api {
-                inner: Box::new(inner),
-                activity: "parsing transitions response",
-            })?;
+    let response: GetTransitionResponse = response.json().await.map_err(|inner| Error::Api {
+        inner: Box::new(inner),
+        activity: "parsing transitions response",
+    })?;
     let transition = response
         .transitions
         .into_iter()
         .find(|transition| transition.name == status)
         .ok_or(Error::Transition)?;
-    let _response = agent
+    let _response = client
         .post(&url)
         .header("Authorization", &auth)
-        .send_json(serde_json::json!({"transition": {"id": transition.id}}))
+        .json(&serde_json::json!({"transition": {"id": transition.id}}))
+        .send()
+        .await
         .map_err(|inner| Error::Api {
             inner: Box::new(inner),
             activity: "transitioning issue",

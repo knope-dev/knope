@@ -38,7 +38,8 @@ mod workflow;
 /// 2. `knope.toml` not valid
 /// 3. Selected workflow not found
 /// 4. Passthrough errors of selected workflow
-pub fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let config = Config::load()?;
 
     let mut matches = build_cli(&config).get_matches();
@@ -101,7 +102,7 @@ pub fn main() -> Result<()> {
     let (state, workflows) = create_state(config, sub_matches.as_mut())?;
 
     if validate {
-        workflow::validate(workflows, state)?;
+        workflow::validate(workflows, state).await?;
         return Ok(());
     }
 
@@ -119,7 +120,7 @@ pub fn main() -> Result<()> {
         RunType::Real(state)
     };
 
-    workflow::run(workflow, state)?;
+    workflow::run(workflow, state).await?;
     Ok(())
 }
 

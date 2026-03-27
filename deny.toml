@@ -110,10 +110,11 @@ skip = [
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite
 skip-tree = [
-  { name = "windows-sys", version = "0.52", depth = 5 },  # so many things... it'll be a while
-  { name = "windows-sys", version = "0.61", depth = 5 },  # so many things... it'll be a while
-  { name = "getrandom", version = "0.2", depth = 1 },     # Waiting on ring
-  { name = "unicode-width", version = "0.1", depth = 1 }, # inquire
+  { name = "windows-sys", version = "0.61", depth = 5 },                                            # so many things... it'll be a while
+  { name = "getrandom", version = "0.2", depth = 1 },                                               # Waiting on ring
+  { name = "unicode-width", version = "0.1", depth = 1 },                                           # inquire
+  { name = "thiserror", version = "1", depth = 2, reason = "rustls -> jni" },
+  { name = "core-foundation", version = "0.9", depth = 2, reason = "reqwest includes 2 versions" },
 ]
 
 # This section is considered when running `cargo deny check sources`.

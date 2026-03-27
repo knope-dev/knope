@@ -4,7 +4,7 @@ use knope_versioning::{ReleaseTag, release_notes::Release};
 
 use crate::{config::GitHub, integrations::github as api, state, state::RunType};
 
-pub(crate) fn release(
+pub(crate) async fn release(
     release: &Release,
     github_state: RunType<state::GitHub>,
     github_config: &GitHub,
@@ -28,4 +28,5 @@ pub(crate) fn release(
         github_config,
         assets,
     )
+    .await
 }

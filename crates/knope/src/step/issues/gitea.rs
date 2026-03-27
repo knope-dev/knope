@@ -8,7 +8,7 @@ use crate::{
     state::{self, RunType, State},
 };
 
-pub(crate) fn select_issue(
+pub(crate) async fn select_issue(
     labels: Option<&[String]>,
     state: RunType<State>,
 ) -> Result<RunType<State>, ListIssuesError> {
@@ -38,7 +38,7 @@ pub(crate) fn select_issue(
 
         RunType::Real(state) => {
             let config = state.gitea_config;
-            let (gitea, issues) = list_issues(config.as_ref(), state.gitea, labels)?;
+            let (gitea, issues) = list_issues(config.as_ref(), state.gitea, labels).await?;
             let issue = prompt::select(issues, "Select an Issue")?;
             info!("Selected item: {issue}");
             Ok(RunType::Real(State {

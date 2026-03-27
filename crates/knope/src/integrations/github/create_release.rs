@@ -9,12 +9,12 @@ use crate::{
     app_config, config,
     integrations::{
         ApiRequestError, CreateReleaseInput, CreateReleaseResponse, git, github::initialize_state,
-        handle_response,
+        http::handle_response,
     },
     state::{self, RunType},
 };
 
-pub(crate) fn create_release(
+pub(crate) async fn create_release(
     name: &str,
     tag_name: &str,
     body: &str,
@@ -41,7 +41,7 @@ pub(crate) fn create_release(
         RunType::Real(github_state) => github_state,
     };
 
-    let (token, agent) = initialize_state(github_state)?;
+    let (token, client) = initialize_state(github_state)?;
 
     let url = format!(
         "https://api.github.com/repos/{owner}/{repo}/releases",
@@ -50,24 +50,25 @@ pub(crate) fn create_release(
     );
     let token_header = format!("token {}", &token);
 
-    let response = agent
+    let response = client
         .post(&url)
         .header("Authorization", &token_header)
-        .send_json(github_release);
+        .header("Accept", "application/vnd.github+json")
+        .json(&github_release)
+        .send()
+        .await;
     let response = handle_response(
         response,
         "GitHub".to_string(),
         "creating a release".to_string(),
-    )?;
+    )
+    .await?;
 
     let response: CreateReleaseResponse =
-        response
-            .into_body()
-            .read_json()
-            .map_err(|source| Error::ApiResponse {
-                message: source.to_string(),
-                activity: "creating a release".to_string(),
-            })?;
+        response.json().await.map_err(|source| Error::ApiResponse {
+            message: source.to_string(),
+            activity: "creating a release".to_string(),
+        })?;
 
     if let Some(assets) = assets {
         let mut upload_template = UriTemplate::new(&response.upload_url);
@@ -80,58 +81,44 @@ pub(crate) fn create_release(
             })?;
             let asset_name = asset.name()?;
             let upload_url = upload_template.set("name", asset_name.as_str()).build();
-            let upload_resp = agent
+            let upload_resp = client
                 .post(&upload_url)
                 .header("Authorization", &token_header)
+                .header("Accept", "application/vnd.github+json")
                 .header("Content-Type", "application/octet-stream")
                 .header("Content-Length", &file.len().to_string())
-                .send(&file);
+                .body(file)
+                .send()
+                .await;
 
-            let upload_resp = handle_response(
+            handle_response(
                 upload_resp,
                 "GitHub".to_string(),
                 format!(
                     "uploading asset {asset_name}. Release has been created but not published!",
                 ),
-            )?;
-            if upload_resp.status().as_u16() >= 400 {
-                let num = upload_resp.status().as_u16();
-                return Err(Error::ApiResponse {
-                    message: format!("Got HTTP status {num}"),
-                    activity: format!(
-                        "uploading asset {asset_name}. Release has been created but not published!",
-                    ),
-                });
-            }
+            )
+            .await?;
         }
-        let publish_resp = agent
+        let publish_resp = client
             .patch(&response.url)
+            .header("Accept", "application/vnd.github+json")
             .header("Authorization", &token_header)
-            .send_json(serde_json::json!({
+            .json(&serde_json::json!({
                 "draft": false
             }))
-            .map_err(|source| ApiRequestError {
-                service: "GitHub".to_string(),
-                err: source.to_string(),
-                activity: "publishing release".into(),
-            })?;
+            .send()
+            .await;
 
-        if publish_resp.status().as_u16() >= 400 {
-            let num = publish_resp.status().as_u16();
-            return Err(Error::ApiResponse {
-                message: format!(
-                    "Got HTTP status {num} with body: {}",
-                    publish_resp
-                        .into_body()
-                        .read_to_string()
-                        .unwrap_or_default()
-                ),
-                activity: "publishing release".to_string(),
-            });
-        }
+        handle_response(
+            publish_resp,
+            "GitHub".to_string(),
+            "publishing release".into(),
+        )
+        .await?;
     }
 
-    Ok(state::GitHub::Initialized { token, agent })
+    Ok(state::GitHub::Initialized { token, client })
 }
 
 fn github_release_dry_run(

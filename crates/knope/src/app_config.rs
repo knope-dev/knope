@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use dirs::config_dir;
 use miette::Diagnostic;
 
-use crate::{prompt, prompt::get_input};
+use crate::{integrations::http::ClientCreationError, prompt, prompt::get_input};
 
 /// For managing configuration of knope globally
 pub(crate) fn get_or_prompt_for_email() -> Result<String, Error> {
@@ -84,4 +84,7 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     Prompt(#[from] prompt::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ClientCreation(#[from] ClientCreationError),
 }
