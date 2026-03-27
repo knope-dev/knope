@@ -130,16 +130,18 @@ impl From<Rule> for knope_versioning::semver::Rule {
 }
 
 impl Step {
-    pub(crate) fn run(self, state: RunType<State>) -> Result<RunType<State>, Error> {
+    pub(crate) async fn run(self, state: RunType<State>) -> Result<RunType<State>, Error> {
         debug!("Running step {self:?}");
         Ok(match self {
-            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, state)?,
-            Step::TransitionJiraIssue { status } => issues::jira::transition_issue(&status, state)?,
+            Step::SelectJiraIssue { status } => issues::jira::select_issue(&status, state).await?,
+            Step::TransitionJiraIssue { status } => {
+                issues::jira::transition_issue(&status, state).await?
+            }
             Step::SelectGitHubIssue { labels } => {
-                issues::github::select_issue(labels.as_deref(), state)?
+                issues::github::select_issue(labels.as_deref(), state).await?
             }
             Step::SelectGiteaIssue { labels } => {
-                issues::gitea::select_issue(labels.as_deref(), state)?
+                issues::gitea::select_issue(labels.as_deref(), state).await?
             }
             Step::SwitchBranches => git::switch_branches(state)?,
             Step::RebaseBranch { to } => {
@@ -156,10 +158,10 @@ impl Step {
                 releases::prepare_release(state, &prepare_release)?
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(state)?,
-            Step::Release => releases::release(state)?,
+            Step::Release => releases::release(state).await?,
             Step::CreateChangeFile => create_change_file::run(state)?,
             Step::CreatePullRequest { base, title, body } => {
-                create_pull_request::run(&base, &title, &body, state)?
+                create_pull_request::run(&base, &title, &body, state).await?
             }
         })
     }

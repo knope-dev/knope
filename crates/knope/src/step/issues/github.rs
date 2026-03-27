@@ -1,12 +1,13 @@
 use miette::Diagnostic;
 use tracing::info;
-use ureq::Agent;
 
 use super::Issue;
 use crate::{
     app_config,
     app_config::get_or_prompt_for_github_token,
-    config, prompt,
+    config,
+    integrations::http::{ClientCreationError, http_client},
+    prompt,
     prompt::select,
     state,
     state::{RunType, State},
@@ -31,7 +32,7 @@ struct ResponseIssue {
     title: String,
 }
 
-pub(crate) fn select_issue(
+pub(crate) async fn select_issue(
     labels: Option<&[String]>,
     state: RunType<State>,
 ) -> Result<RunType<State>, Error> {
@@ -57,7 +58,7 @@ pub(crate) fn select_issue(
         }
         RunType::Real(state) => {
             let github_config = state.github_config.as_ref().ok_or(Error::NotConfigured)?;
-            let (github, issues) = list_issues(github_config, state.github, labels)?;
+            let (github, issues) = list_issues(github_config, state.github, labels).await?;
             let issue = select(issues, "Select an Issue")?;
             info!("Selected item : {}", &issue);
             Ok(RunType::Real(State {
@@ -85,7 +86,7 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/github/")
     )]
     Api {
-        source: Box<ureq::Error>,
+        source: Box<reqwest::Error>,
         context: &'static str,
     },
     #[error("I/O error encountered when communicating with GitHub: {0}")]
@@ -105,24 +106,24 @@ pub(crate) enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     AppConfig(#[from] app_config::Error),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    ClientCreation(#[from] ClientCreationError),
 }
 
-fn list_issues(
+async fn list_issues(
     github_config: &config::GitHub,
     github_state: state::GitHub,
     labels: Option<&[String]>,
 ) -> Result<(state::GitHub, Vec<Issue>), Error> {
-    let (token, agent) = match github_state {
-        state::GitHub::Initialized { token, agent } => (token, agent),
-        state::GitHub::New => (
-            get_or_prompt_for_github_token()?,
-            Agent::new_with_defaults(),
-        ),
+    let (token, client) = match github_state {
+        state::GitHub::Initialized { token, client } => (token, client),
+        state::GitHub::New => (get_or_prompt_for_github_token()?, http_client()?),
     };
-    let json_value: serde_json::Value = agent
+    let json_value: serde_json::Value = client
         .post("https://api.github.com/graphql")
         .header("Authorization", &format!("bearer {token}"))
-        .send_json(serde_json::json!({
+        .json(&serde_json::json!({
             "query": ISSUES_QUERY,
             "variables": {
                 "repo": github_config.repo,
@@ -130,12 +131,14 @@ fn list_issues(
                 "labels": labels
             }
         }))
+        .send()
+        .await
         .map_err(|source| Error::Api {
             source: Box::new(source),
             context: "loading issues",
         })?
-        .body_mut()
-        .read_json()
+        .json()
+        .await
         .map_err(|e| {
             Error::ApiIo(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
@@ -153,7 +156,7 @@ fn list_issues(
         })
         .collect();
 
-    Ok((state::GitHub::Initialized { token, agent }, issues))
+    Ok((state::GitHub::Initialized { token, client }, issues))
 }
 
 fn decode_github_response(json_value: &serde_json::Value) -> Result<Vec<ResponseIssue>, Error> {

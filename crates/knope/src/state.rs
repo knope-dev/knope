@@ -92,11 +92,17 @@ pub(crate) enum Issue {
 #[derive(Clone, Debug)]
 pub(crate) enum GitHub {
     New,
-    Initialized { token: String, agent: ureq::Agent },
+    Initialized {
+        token: String,
+        client: reqwest::Client,
+    },
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum Gitea {
     New,
-    Initialized { token: String, agent: ureq::Agent },
+    Initialized {
+        token: String,
+        client: reqwest::Client,
+    },
 }
