@@ -170,7 +170,7 @@ easy to identify if cleanup fails.
 
 ### CI
 
-The integration tests run in `.github/workflows/integration_tests.yml`,
+The integration tests run in `.github/workflows/integration_tests.yaml`,
 triggered by `workflow_dispatch` (manual run). Secrets are scoped to the
 `integration-tests` GitHub environment — create it in
 **Settings → Environments** and add the secrets listed above.

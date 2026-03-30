@@ -1,11 +1,7 @@
 name: Integration Tests
 
 on:
-  # Run manually with workflow_dispatch (provides secrets from repo settings)
   workflow_dispatch: {}
-  # Optionally run on a schedule to catch regressions
-  # schedule:
-  #   - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
 
 permissions: {}
 

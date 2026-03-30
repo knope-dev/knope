@@ -1,9 +1,9 @@
-//! Integration tests that exercise real HTTP calls against GitHub and Gitea APIs.
+//! Integration tests that exercise Knope workflows against real GitHub and Gitea APIs.
 //!
 //! These tests are `#[ignore]`d by default and only run in dedicated CI jobs
 //! where the required secrets (tokens, repo config) are available.
 //!
-//! Run with: `cargo test --test integration -- --ignored`
+//! Run with: `mise run integration-test`
 //!
 //! Required environment variables:
 //!
