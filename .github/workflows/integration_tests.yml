@@ -1,0 +1,50 @@
+name: Integration Tests
+
+on:
+  # Run manually with workflow_dispatch (provides secrets from repo settings)
+  workflow_dispatch: {}
+  # Optionally run on a schedule to catch regressions
+  # schedule:
+  #   - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+
+permissions: {}
+
+jobs:
+  github-integration:
+    name: GitHub Integration Tests
+    runs-on: ubuntu-latest
+    # Only run when GitHub integration secrets are configured
+    if: ${{ vars.INTEGRATION_TESTS_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
+
+      - name: Run GitHub integration tests
+        env:
+          KNOPE_INTEGRATION_GITHUB_TOKEN: ${{ secrets.INTEGRATION_GITHUB_TOKEN }}
+          KNOPE_INTEGRATION_GITHUB_OWNER: ${{ secrets.INTEGRATION_GITHUB_OWNER }}
+          KNOPE_INTEGRATION_GITHUB_REPO: ${{ secrets.INTEGRATION_GITHUB_REPO }}
+        run: cargo test --test integration -- --ignored integration_github
+
+  gitea-integration:
+    name: Gitea Integration Tests
+    runs-on: ubuntu-latest
+    # Only run when Gitea integration secrets are configured
+    if: ${{ vars.INTEGRATION_TESTS_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
+
+      - name: Run Gitea integration tests
+        env:
+          KNOPE_INTEGRATION_GITEA_TOKEN: ${{ secrets.INTEGRATION_GITEA_TOKEN }}
+          KNOPE_INTEGRATION_GITEA_HOST: ${{ secrets.INTEGRATION_GITEA_HOST }}
+          KNOPE_INTEGRATION_GITEA_OWNER: ${{ secrets.INTEGRATION_GITEA_OWNER }}
+          KNOPE_INTEGRATION_GITEA_REPO: ${{ secrets.INTEGRATION_GITEA_REPO }}
+        run: cargo test --test integration -- --ignored integration_gitea
