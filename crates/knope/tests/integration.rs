@@ -20,5 +20,5 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-mod integration_github;
 mod integration_gitea;
+mod integration_github;

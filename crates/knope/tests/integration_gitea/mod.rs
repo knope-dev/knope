@@ -6,10 +6,10 @@
 //!
 //! All tests clean up after themselves by deleting any resources they create.
 
+use std::{path::Path, process::Command};
+
 use reqwest::Client;
 use serde::Deserialize;
-use std::path::Path;
-use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 struct Release {
@@ -81,7 +81,10 @@ fn setup_test_repo(
     let path = dir.path();
 
     assert_git(path, &["init", "-b", branch]);
-    assert_git(path, &["config", "user.email", "integration-test@knope.dev"]);
+    assert_git(
+        path,
+        &["config", "user.email", "integration-test@knope.dev"],
+    );
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
     let remote_url = gitea_remote_url(token, host, owner, repo);
@@ -264,7 +267,10 @@ async fn gitea_error_bad_token() {
     let path = dir.path();
 
     assert_git(path, &["init"]);
-    assert_git(path, &["config", "user.email", "integration-test@knope.dev"]);
+    assert_git(
+        path,
+        &["config", "user.email", "integration-test@knope.dev"],
+    );
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
     // Workflow without push step — Release will fail at the API call

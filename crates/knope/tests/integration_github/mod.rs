@@ -7,10 +7,10 @@
 //!
 //! All tests clean up after themselves by deleting any resources they create.
 
+use std::{path::Path, process::Command};
+
 use reqwest::Client;
 use serde::Deserialize;
-use std::path::Path;
-use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 struct Release {
@@ -74,7 +74,10 @@ fn setup_test_repo(
     let path = dir.path();
 
     assert_git(path, &["init", "-b", branch]);
-    assert_git(path, &["config", "user.email", "integration-test@knope.dev"]);
+    assert_git(
+        path,
+        &["config", "user.email", "integration-test@knope.dev"],
+    );
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
     let remote_url = format!("https://x-access-token:{token}@github.com/{owner}/{repo}.git");
@@ -160,13 +163,7 @@ async fn delete_branch(client: &Client, token: &str, owner: &str, repo: &str, br
         .await;
 }
 
-async fn cleanup_release_by_tag(
-    client: &Client,
-    token: &str,
-    owner: &str,
-    repo: &str,
-    tag: &str,
-) {
+async fn cleanup_release_by_tag(client: &Client, token: &str, owner: &str, repo: &str, tag: &str) {
     let url = format!("https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}");
     if let Ok(resp) = client
         .get(&url)
@@ -321,10 +318,7 @@ async fn github_release_with_assets() {
         .await
         .expect("Failed to fetch release");
 
-    assert!(
-        resp.status().is_success(),
-        "Release should exist on GitHub"
-    );
+    assert!(resp.status().is_success(), "Release should exist on GitHub");
 
     let release: Release = resp.json().await.expect("Failed to deserialize release");
 
@@ -367,7 +361,10 @@ async fn github_error_bad_token() {
     let path = dir.path();
 
     assert_git(path, &["init"]);
-    assert_git(path, &["config", "user.email", "integration-test@knope.dev"]);
+    assert_git(
+        path,
+        &["config", "user.email", "integration-test@knope.dev"],
+    );
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
     // Workflow without push step — Release will fail at the API call
