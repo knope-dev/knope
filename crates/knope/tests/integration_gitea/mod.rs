@@ -208,30 +208,19 @@ async fn gitea_create_and_update_pull_request() {
     // Clean up leftover branch/PR
     delete_branch(&client, &token, &base, test_branch).await;
 
-    // Get default branch HEAD SHA to verify the branch exists
+    // Get default branch to verify it exists
     let branch_url = format!("{base}/branches/main");
-    let resp = client
+    let branch_data: Branch = client
         .get(&branch_url)
         .query(&[("access_token", token.as_str())])
         .send()
         .await
-        .unwrap();
-
-    assert!(
-        resp.status().is_success(),
-        "Failed to get main branch (does the test repo have a 'main' branch?): {}",
-        resp.text().await.unwrap_or_default()
-    );
-
-    let branch_data: Branch = {
-        let resp = client
-            .get(&branch_url)
-            .query(&[("access_token", token.as_str())])
-            .send()
-            .await
-            .unwrap();
-        resp.json().await.expect("Should deserialize branch data")
-    };
+        .expect("Network error fetching main branch")
+        .error_for_status()
+        .expect("Failed to get main branch (does the test repo have a 'main' branch?)")
+        .json()
+        .await
+        .expect("Should deserialize branch data");
     assert!(
         !branch_data.commit.id.is_empty(),
         "Branch should have a commit SHA"

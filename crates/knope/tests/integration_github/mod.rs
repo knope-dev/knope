@@ -337,30 +337,18 @@ async fn github_create_and_update_pull_request() {
 
     // Get the default branch's HEAD SHA
     let refs_url = format!("https://api.github.com/repos/{owner}/{repo}/git/ref/heads/main");
-    let resp = client
+    let ref_data: GitRef = client
         .get(&refs_url)
         .header("Authorization", &auth)
         .header("Accept", "application/vnd.github+json")
         .send()
         .await
-        .unwrap();
-
-    assert!(
-        resp.status().is_success(),
-        "Failed to get main branch ref (does the test repo have a 'main' branch?): {}",
-        resp.text().await.unwrap_or_default()
-    );
-
-    let ref_data: GitRef = {
-        let resp = client
-            .get(&refs_url)
-            .header("Authorization", &auth)
-            .header("Accept", "application/vnd.github+json")
-            .send()
-            .await
-            .unwrap();
-        resp.json().await.expect("Should deserialize git ref")
-    };
+        .expect("Network error fetching main branch ref")
+        .error_for_status()
+        .expect("Failed to get main branch ref (does the test repo have a 'main' branch?)")
+        .json()
+        .await
+        .expect("Should deserialize git ref");
 
     // Create the test branch pointing at the same commit
     let create_ref_url = format!("https://api.github.com/repos/{owner}/{repo}/git/refs");
