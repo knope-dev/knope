@@ -3,6 +3,8 @@ name: Integration Tests
 on:
   workflow_dispatch: {}
 
+concurrency: integration-tests
+
 permissions: {}
 
 jobs:

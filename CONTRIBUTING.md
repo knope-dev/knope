@@ -118,7 +118,7 @@ mise run integration-test-gitea
 
 | Variable                         | Description                                |
 | -------------------------------- | ------------------------------------------ |
-| `KNOPE_INTEGRATION_GITHUB_TOKEN` | Personal access token with `repo` scope    |
+| `KNOPE_INTEGRATION_GITHUB_TOKEN` | Fine-grained personal access token (see below) |
 | `KNOPE_INTEGRATION_GITHUB_OWNER` | Owner (user or org) of the test repository |
 | `KNOPE_INTEGRATION_GITHUB_REPO`  | Name of the test repository                |
 
@@ -139,8 +139,10 @@ mise run integration-test-gitea
    (e.g. `knope-dev/knope-integration-tests`). It can be public or private.
 2. The repository must have a **`main` branch** with at least one commit
    (an initial commit with a README is sufficient).
-3. **Create a fine-grained personal access token** (or classic token) with
-   `repo` scope that has access to the test repository.
+3. **Create a fine-grained personal access token** scoped to the test repository
+   with the following permissions:
+   - **Contents**: Read and write (for pushing branches, creating tags and releases)
+   - **Pull requests**: Read and write (for creating and closing PRs)
 4. No webhooks, branch protection rules, or special settings are required.
 
 #### Gitea (e.g. Codeberg)
