@@ -1,17 +1,19 @@
 use miette::Diagnostic;
 use serde_json::json;
 use tracing::{debug, info};
-use ureq::Agent;
 
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{ApiRequestError, PullRequest, git, handle_response},
+    integrations::{
+        ApiRequestError, PullRequest, git,
+        http::{Client, handle_response},
+    },
     state,
     state::RunType,
 };
 
-pub(crate) fn create_or_update_pull_request(
+pub(crate) async fn create_or_update_pull_request(
     title: &str,
     body: &str,
     base: &str,
@@ -29,72 +31,77 @@ pub(crate) fn create_or_update_pull_request(
         }
         RunType::Real(state) => state,
     };
-    let (token, agent) = initialize_state(&config.host, state)?;
+    let (token, client) = initialize_state(&config.host, state)?;
 
-    let resp = agent
-        .get(&config.get_pulls_url())
+    let resp = client
+        .get(config.get_pulls_url())
         .header("Accept", "application/json")
-        .query("state", "open")
-        .query(
-            "head",
-            format!("{owner}:{current_branch}", owner = config.owner),
-        )
-        .query("base", base)
-        .query("access_token", &token)
-        .call();
+        .query(&[
+            ("state", "open"),
+            (
+                "head",
+                &format!("{owner}:{current_branch}", owner = config.owner),
+            ),
+            ("base", base),
+            ("access_token", &token),
+        ])
+        .send()
+        .await;
     let resp = handle_response(
         resp,
         config.host.clone(),
         "fetching existing pull requests".to_string(),
-    )?;
+    )
+    .await?;
     let existing_pulls: Vec<PullRequest> =
-        resp.into_body()
-            .read_json()
-            .map_err(|source| Error::ApiResponse {
-                source,
-                activity: "fetching existing pull requests",
-                host: config.host.clone(),
-            })?;
+        resp.json().await.map_err(|source| Error::ApiResponse {
+            source,
+            activity: "fetching existing pull requests",
+            host: config.host.clone(),
+        })?;
 
     // Update the existing PR
     if let Some(pr) = existing_pulls.first() {
         debug!("Updating existing pull request: {}", pr.url);
-        update_pull_request(&agent, config, &token, pr.number, title, body)?;
+        update_pull_request(&client, config, &token, pr.number, title, body).await?;
     // Create a new PR
     } else {
         debug!("No matching existing pull request found, creating a new one.");
-        create_pull_request(&agent, config, &token, base, current_branch, title, body)?;
+        create_pull_request(&client, config, &token, base, current_branch, title, body).await?;
     }
 
-    Ok(state::Gitea::Initialized { token, agent })
+    Ok(state::Gitea::Initialized { token, client })
 }
 
-fn update_pull_request(
-    agent: &Agent,
+async fn update_pull_request(
+    client: &Client,
     config: &config::Gitea,
     token: &str,
     number: u32,
     title: &str,
     body: &str,
 ) -> Result<(), Error> {
-    let resp = agent
-        .patch(&config.get_pull_url(number))
+    let resp = client
+        .patch(config.get_pull_url(number))
         .header("Accept", "application/json")
-        .query("access_token", token)
-        .send_json(json!({
+        .query(&[("access_token", token)])
+        .json(&json!({
             "body": body,
             "title": title
-        }));
+        }))
+        .send()
+        .await;
     handle_response(
         resp,
         config.host.clone(),
         "updating pull request".to_string(),
-    )?;
+    )
+    .await?;
     Ok(())
 }
 
-fn create_pull_request(
-    agent: &Agent,
+async fn create_pull_request(
+    client: &Client,
     config: &config::Gitea,
     token: &str,
     base: &str,
@@ -102,24 +109,27 @@ fn create_pull_request(
     title: &str,
     body: &str,
 ) -> Result<(), Error> {
-    let resp = agent
-        .post(&config.get_pulls_url())
+    let resp = client
+        .post(config.get_pulls_url())
         .header("Accept", "application/json")
-        .query("access_token", token)
-        .send_json(json!({
+        .query(&[("access_token", token)])
+        .json(&json!({
             "title": title,
             "body": body,
             "head": head,
             "base": base,
-        }));
+        }))
+        .send()
+        .await;
     let resp = handle_response(
         resp,
         config.host.clone(),
         "creating pull request".to_string(),
-    )?;
+    )
+    .await?;
     let new_pr = resp
-        .into_body()
-        .read_json::<PullRequest>()
+        .json::<PullRequest>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating pull request",
@@ -143,7 +153,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: ureq::Error,
+        source: reqwest::Error,
         activity: &'static str,
         host: String,
     },

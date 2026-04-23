@@ -8,7 +8,7 @@ use crate::{
     variables::replace_variables,
 };
 
-pub(super) fn run(
+pub(super) async fn run(
     base: &str,
     title: &Template,
     body: &Template,
@@ -29,7 +29,8 @@ pub(super) fn run(
             base,
             run_type.of(state.github),
             github_config,
-        )?;
+        )
+        .await?;
     }
 
     if let Some(gitea_config) = &state.gitea_config {
@@ -39,7 +40,8 @@ pub(super) fn run(
             base,
             run_type.of(state.gitea),
             gitea_config,
-        )?;
+        )
+        .await?;
     }
     Ok(run_type.of(state))
 }

@@ -5,6 +5,9 @@ members = ["crates/knope-config", "crates/knope-versioning", "crates/knope"]
 
 [profile.release]
 strip = true
+opt-level = "s"
+lto = "fat"
+panic = "abort"
 
 [workspace.dependencies]
 changesets = "0.4.0"

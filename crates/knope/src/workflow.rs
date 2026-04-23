@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use itertools::Itertools;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -45,9 +44,9 @@ pub struct Error {
 }
 
 /// Run a series of [`Step`], each of which updates `state`.
-pub(crate) fn run(workflow: Workflow, mut state: RunType<State>) -> Result<(), Error> {
+pub(crate) async fn run(workflow: Workflow, mut state: RunType<State>) -> Result<(), Error> {
     for step in workflow.steps {
-        state = match step.run(state) {
+        state = match step.run(state).await {
             Ok(state) => state,
             Err(err) => {
                 return Err(Error {
@@ -61,14 +60,15 @@ pub(crate) fn run(workflow: Workflow, mut state: RunType<State>) -> Result<(), E
 }
 
 #[allow(clippy::needless_pass_by_value)] // Lifetime errors if State is passed by ref.
-pub(crate) fn validate(
+pub(crate) async fn validate(
     workflows: Vec<Workflow>,
     state: State,
 ) -> Result<(), ValidationErrorCollection> {
-    let errors = workflows
-        .into_iter()
-        .filter_map(|workflow| run(workflow, RunType::DryRun(state.clone())).err())
-        .collect_vec();
+    let mut errors = Vec::new();
+
+    for workflow in workflows {
+        errors.extend(run(workflow, RunType::DryRun(state.clone())).await.err());
+    }
 
     if errors.is_empty() {
         Ok(())

@@ -3,12 +3,12 @@ use miette::Diagnostic;
 use super::initialize_state;
 use crate::{
     app_config, config,
-    integrations::{ApiRequestError, ResponseIssue, handle_response},
+    integrations::{ApiRequestError, ResponseIssue, http::handle_response},
     prompt, state,
     step::issues::Issue,
 };
 
-pub(crate) fn list_issues(
+pub(crate) async fn list_issues(
     config: Option<&config::Gitea>,
     state: state::Gitea,
     labels: Option<&[String]>,
@@ -16,22 +16,25 @@ pub(crate) fn list_issues(
     let Some(config) = config else {
         return Err(Error::NotConfigured);
     };
-    let (token, agent) = initialize_state(&config.host, state)?;
+    let (token, client) = initialize_state(&config.host, state)?;
     let labels = labels.unwrap_or(&[]).join(",");
 
-    let resp = agent
-        .get(&config.get_issues_url())
-        .header("Accept", "aplication/json")
-        .query("access_token", &token)
-        .query("labels", &labels)
-        .query("state", "open")
-        .query("limit", "30")
-        .call();
-    let resp = handle_response(resp, config.host.clone(), "listing issues".into())?;
+    let resp = client
+        .get(config.get_issues_url())
+        .header("Accept", "application/json")
+        .query(&[
+            ("access_token", token.as_str()),
+            ("labels", labels.as_str()),
+            ("state", "open"),
+            ("limit", "30"),
+        ])
+        .send()
+        .await;
+    let resp = handle_response(resp, config.host.clone(), "listing issues".into()).await?;
 
     let issues: Vec<Issue> = resp
-        .into_body()
-        .read_json::<Vec<ResponseIssue>>()
+        .json::<Vec<ResponseIssue>>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "listing issues",
@@ -44,7 +47,7 @@ pub(crate) fn list_issues(
         })
         .collect();
 
-    Ok((state::Gitea::Initialized { token, agent }, issues))
+    Ok((state::Gitea::Initialized { token, client }, issues))
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -67,7 +70,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: ureq::Error,
+        source: reqwest::Error,
         activity: &'static str,
         host: String,
     },

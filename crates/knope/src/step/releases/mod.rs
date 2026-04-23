@@ -122,7 +122,7 @@ pub(crate) enum Error {
 /// Create a release for the package.
 ///
 /// If GitHub config is present, this creates a GitHub release. Otherwise, it tags the Git repo.
-pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
+pub(crate) async fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
     let (run_type, mut state) = state.take();
 
     if state.pending_actions.is_empty() {
@@ -181,11 +181,13 @@ pub(crate) fn release(state: RunType<State>) -> Result<RunType<State>, Error> {
                     .find(|package| package.name() == &release.package_name)
                     .and_then(|package| package.assets.as_ref()),
                 &tag,
-            )?;
+            )
+            .await?;
         }
 
         if let Some(gitea_config) = gitea_config {
-            state.gitea = gitea::release(&release, run_type.of(state.gitea), gitea_config, &tag)?;
+            state.gitea =
+                gitea::release(&release, run_type.of(state.gitea), gitea_config, &tag).await?;
         }
 
         // if neither is present, we fall back to just creating a tag
