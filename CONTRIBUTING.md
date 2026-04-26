@@ -133,42 +133,44 @@ mise run integration-test-gitea
 
 ### Setting up test repositories
 
+Each test pushes its own branch and creates a `v0.1.0` release from scratch,
+then cleans everything up at the end. The repos themselves require no
+pre-existing content beyond being initialised — they act as empty canvases.
+
 #### GitHub
 
 1. **Create a dedicated test repository** under a user or organization
    (e.g. `knope-dev/knope-integration-tests`). It can be public or private.
-2. The repository must have a **`main` branch** with at least one commit
-   (an initial commit with a README is sufficient).
-3. **Create a fine-grained personal access token** scoped to the test repository
+   An empty repository (no initial commit) is fine.
+2. **Create a fine-grained personal access token** scoped to the test repository
    with the following permissions:
    - **Contents**: Read and write (for pushing branches, creating tags and releases)
-   - **Pull requests**: Read and write (for creating and closing PRs)
-4. No webhooks, branch protection rules, or special settings are required.
+   - **Pull requests**: Read and write
+3. No webhooks, branch protection rules, or special settings are required.
 
 #### Gitea (e.g. Codeberg)
 
 1. **Create an account** on the Gitea instance you want to test against
    (e.g. [Codeberg](https://codeberg.org)).
 2. **Create a dedicated test repository** (e.g. `knope-integration-tests`).
-   It should have a **`main` branch** with at least one commit.
-3. **Create a personal access token** in your Gitea account settings.
-   The token needs permissions to create/delete releases, branches, and
-   pull requests.
+   An empty repository is fine.
+3. **Create a personal access token** in your Gitea account settings with
+   permissions to create/delete releases, branches, and tags.
 4. No special repository settings are required.
 
 ### What the tests do
 
-The tests create and immediately clean up the following resources:
+Each test:
 
-- **Releases**: Created with a tag like `integration-test-release-v0.0.0`,
-  then deleted (including the tag).
-- **Pull requests**: A branch is created from `main`, a PR is opened and
-  updated, then the PR is closed and the branch is deleted.
-- **Asset uploads** (GitHub only): A small text file is uploaded to a
-  draft release, then the entire release is deleted.
+1. Creates a temporary local git repository pre-configured at `version = "0.1.0"`.
+2. Pushes a test branch (e.g. `integration-test-release`) to the remote.
+3. Runs `knope release`, which calls the GitHub/Gitea API to create a `v0.1.0`
+   release and tag on the remote.
+4. Verifies the release was created via the API.
+5. Deletes the release, tag, and branch to leave the repository clean.
 
-All test resources use names prefixed with `integration-test-` so they are
-easy to identify if cleanup fails.
+If a test fails partway through, the next run will detect and clean up any
+leftover resources before proceeding.
 
 ### CI
 
