@@ -92,3 +92,89 @@ The setup functions (`new`, `git`, `env`) of `TestCase` are `const`,
 so you can define them once and reuse them in multiple cases,
 when slightly different setups should produce the same results
 (for example, in `tests/prepare_release/override_prerelease_label/mod.rs`).
+
+## Integration Tests
+
+In addition to the snapshot tests, there are integration tests that exercise real HTTP calls against
+the GitHub and Gitea APIs. These validate that the HTTP client works correctly end-to-end and are
+**not** part of the default test suite.
+
+### Running locally
+
+```bash
+# Run all integration tests (requires all env vars below)
+mise run integration-test
+
+# Run only GitHub tests
+mise run integration-test-github
+
+# Run only Gitea tests
+mise run integration-test-gitea
+```
+
+### Required environment variables
+
+#### GitHub tests
+
+| Variable                         | Description                                |
+| -------------------------------- | ------------------------------------------ |
+| `KNOPE_INTEGRATION_GITHUB_TOKEN` | Fine-grained personal access token (see below) |
+| `KNOPE_INTEGRATION_GITHUB_OWNER` | Owner (user or org) of the test repository |
+| `KNOPE_INTEGRATION_GITHUB_REPO`  | Name of the test repository                |
+
+#### Gitea tests
+
+| Variable                        | Description                                                  |
+| ------------------------------- | ------------------------------------------------------------ |
+| `KNOPE_INTEGRATION_GITEA_TOKEN` | Personal access token for the Gitea instance                 |
+| `KNOPE_INTEGRATION_GITEA_HOST`  | Full URL of the Gitea instance (e.g. `https://codeberg.org`) |
+| `KNOPE_INTEGRATION_GITEA_OWNER` | Owner (user or org) of the test repository                   |
+| `KNOPE_INTEGRATION_GITEA_REPO`  | Name of the test repository                                  |
+
+### Setting up test repositories
+
+Each test pushes its own branch and creates a `v0.1.0` release from scratch,
+then cleans everything up at the end. The repos themselves require no
+pre-existing content beyond being initialised — they act as empty canvases.
+
+#### GitHub
+
+1. **Create a dedicated test repository** under a user or organization
+   (e.g. `knope-dev/knope-integration-tests`). It can be public or private.
+   An empty repository (no initial commit) is fine.
+2. **Create a fine-grained personal access token** scoped to the test repository
+   with the following permissions:
+   - **Contents**: Read and write (for pushing branches, creating tags and releases)
+   - **Pull requests**: Read and write
+3. No webhooks, branch protection rules, or special settings are required.
+
+#### Gitea (e.g. Codeberg)
+
+1. **Create an account** on the Gitea instance you want to test against
+   (e.g. [Codeberg](https://codeberg.org)).
+2. **Create a dedicated test repository** (e.g. `knope-integration-tests`).
+   An empty repository is fine.
+3. **Create a personal access token** in your Gitea account settings with
+   permissions to create/delete releases, branches, and tags.
+4. No special repository settings are required.
+
+### What the tests do
+
+Each test:
+
+1. Creates a temporary local git repository pre-configured at `version = "0.1.0"`.
+2. Pushes a test branch (e.g. `integration-test-release`) to the remote.
+3. Runs `knope release`, which calls the GitHub/Gitea API to create a `v0.1.0`
+   release and tag on the remote.
+4. Verifies the release was created via the API.
+5. Deletes the release, tag, and branch to leave the repository clean.
+
+If a test fails partway through, the next run will detect and clean up any
+leftover resources before proceeding.
+
+### CI
+
+The integration tests run in `.github/workflows/integration_tests.yaml`,
+triggered by `workflow_dispatch` (manual run). Secrets are scoped to the
+`integration-tests` GitHub environment — create it in
+**Settings → Environments** and add the secrets listed above.
