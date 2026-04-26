@@ -7,7 +7,7 @@
 //!
 //! All tests clean up after themselves by deleting any resources they create.
 
-use std::{path::Path, process::Command};
+use std::{path::Path, process::Command, time::Duration};
 
 use reqwest::Client;
 use serde::Deserialize;
@@ -219,29 +219,41 @@ async fn github_release_workflow() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        output.status.success(),
-        "knope release failed:\nstdout: {stdout}\nstderr: {stderr}"
-    );
+    if !output.status.success() {
+        cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+        delete_tag(&client, &token, &owner, &repo, initial_tag).await;
+        delete_branch(&client, &token, &owner, &repo, branch).await;
+        panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
+    }
 
-    // Verify the release was created on GitHub
-    let resp = client
-        .get(format!(
-            "https://api.github.com/repos/{owner}/{repo}/releases/tags/{expected_tag}"
-        ))
-        .header("Authorization", format!("token {token}"))
-        .header("Accept", "application/vnd.github+json")
-        .send()
-        .await
-        .expect("Failed to fetch release");
+    // GitHub may take a moment to finalise a new release; poll with retries.
+    let mut release_opt = None;
+    for _ in 0..5 {
+        let resp = client
+            .get(format!(
+                "https://api.github.com/repos/{owner}/{repo}/releases/tags/{expected_tag}"
+            ))
+            .header("Authorization", format!("token {token}"))
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await
+            .expect("Failed to fetch release");
+        if resp.status().is_success() {
+            release_opt = Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(3)).await;
+    }
 
-    assert!(
-        resp.status().is_success(),
-        "Release {expected_tag} should exist on GitHub, got status {}",
-        resp.status()
-    );
-
-    let release: Release = resp.json().await.expect("Failed to deserialize release");
+    let release = match release_opt {
+        Some(r) => r,
+        None => {
+            cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+            delete_tag(&client, &token, &owner, &repo, initial_tag).await;
+            delete_branch(&client, &token, &owner, &repo, branch).await;
+            panic!("Release {expected_tag} should exist on GitHub after retries");
+        }
+    };
     assert_eq!(release.tag_name, expected_tag);
 
     // Cleanup
@@ -302,25 +314,41 @@ async fn github_release_with_assets() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        output.status.success(),
-        "knope release with assets failed:\nstdout: {stdout}\nstderr: {stderr}"
-    );
+    if !output.status.success() {
+        cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+        delete_tag(&client, &token, &owner, &repo, initial_tag).await;
+        delete_branch(&client, &token, &owner, &repo, branch).await;
+        panic!("knope release with assets failed:\nstdout: {stdout}\nstderr: {stderr}");
+    }
 
-    // Verify the release and asset exist
-    let resp = client
-        .get(format!(
-            "https://api.github.com/repos/{owner}/{repo}/releases/tags/{expected_tag}"
-        ))
-        .header("Authorization", format!("token {token}"))
-        .header("Accept", "application/vnd.github+json")
-        .send()
-        .await
-        .expect("Failed to fetch release");
+    // Poll for the release to appear.
+    let mut release_opt = None;
+    for _ in 0..5 {
+        let resp = client
+            .get(format!(
+                "https://api.github.com/repos/{owner}/{repo}/releases/tags/{expected_tag}"
+            ))
+            .header("Authorization", format!("token {token}"))
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await
+            .expect("Failed to fetch release");
+        if resp.status().is_success() {
+            release_opt = Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(3)).await;
+    }
 
-    assert!(resp.status().is_success(), "Release should exist on GitHub");
-
-    let release: Release = resp.json().await.expect("Failed to deserialize release");
+    let release = match release_opt {
+        Some(r) => r,
+        None => {
+            cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+            delete_tag(&client, &token, &owner, &repo, initial_tag).await;
+            delete_branch(&client, &token, &owner, &repo, branch).await;
+            panic!("Release {expected_tag} should exist on GitHub after retries");
+        }
+    };
 
     // Check assets
     let assets_url = format!(
@@ -336,16 +364,17 @@ async fn github_release_with_assets() {
         .expect("Failed to fetch release assets");
 
     let assets: Vec<Asset> = resp.json().await.expect("Failed to deserialize assets");
-    assert!(
-        assets.iter().any(|a| a.name == "test-asset.txt"),
-        "Uploaded asset should appear in the release assets list"
-    );
 
     // Cleanup
     delete_release(&client, &token, &owner, &repo, release.id).await;
     delete_tag(&client, &token, &owner, &repo, expected_tag).await;
     delete_tag(&client, &token, &owner, &repo, initial_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
+
+    assert!(
+        assets.iter().any(|a| a.name == "test-asset.txt"),
+        "Uploaded asset should appear in the release assets list"
+    );
 }
 
 /// Test that Knope handles authentication errors gracefully.

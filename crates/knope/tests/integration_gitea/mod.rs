@@ -6,7 +6,7 @@
 //!
 //! All tests clean up after themselves by deleting any resources they create.
 
-use std::{path::Path, process::Command};
+use std::{path::Path, process::Command, time::Duration};
 
 use reqwest::Client;
 use serde::Deserialize;
@@ -224,27 +224,39 @@ async fn gitea_release_workflow() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        output.status.success(),
-        "knope release failed:\nstdout: {stdout}\nstderr: {stderr}"
-    );
+    if !output.status.success() {
+        cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
+        delete_tag(&client, &token, &base, initial_tag).await;
+        delete_branch(&client, &token, &base, branch).await;
+        panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
+    }
 
-    // Verify the release was created on Gitea
+    // Gitea may take a moment to finalise a new release; poll with retries.
     let url = format!("{base}/releases/tags/{expected_tag}");
-    let resp = client
-        .get(&url)
-        .query(&[("access_token", token.as_str())])
-        .send()
-        .await
-        .expect("Failed to fetch release");
+    let mut release_opt = None;
+    for _ in 0..5 {
+        let resp = client
+            .get(&url)
+            .query(&[("access_token", token.as_str())])
+            .send()
+            .await
+            .expect("Failed to fetch release");
+        if resp.status().is_success() {
+            release_opt = Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            break;
+        }
+        tokio::time::sleep(Duration::from_secs(3)).await;
+    }
 
-    assert!(
-        resp.status().is_success(),
-        "Release {expected_tag} should exist on Gitea, got status {}",
-        resp.status()
-    );
-
-    let release: Release = resp.json().await.expect("Failed to deserialize release");
+    let release = match release_opt {
+        Some(r) => r,
+        None => {
+            cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
+            delete_tag(&client, &token, &base, initial_tag).await;
+            delete_branch(&client, &token, &base, branch).await;
+            panic!("Release {expected_tag} should exist on Gitea after retries");
+        }
+    };
     assert_eq!(release.tag_name, expected_tag);
 
     // Cleanup
