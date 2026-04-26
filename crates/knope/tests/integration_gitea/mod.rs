@@ -17,16 +17,24 @@ struct Release {
     tag_name: String,
 }
 
-fn gitea_env() -> (String, String, String, String) {
-    let token = std::env::var("KNOPE_INTEGRATION_GITEA_TOKEN")
-        .expect("KNOPE_INTEGRATION_GITEA_TOKEN must be set");
-    let host = std::env::var("KNOPE_INTEGRATION_GITEA_HOST")
-        .expect("KNOPE_INTEGRATION_GITEA_HOST must be set");
-    let owner = std::env::var("KNOPE_INTEGRATION_GITEA_OWNER")
-        .expect("KNOPE_INTEGRATION_GITEA_OWNER must be set");
-    let repo = std::env::var("KNOPE_INTEGRATION_GITEA_REPO")
-        .expect("KNOPE_INTEGRATION_GITEA_REPO must be set");
-    (token, host, owner, repo)
+struct GiteaEnv {
+    token: String,
+    host: String,
+    owner: String,
+    repo: String,
+}
+
+fn gitea_env() -> GiteaEnv {
+    GiteaEnv {
+        token: std::env::var("KNOPE_INTEGRATION_GITEA_TOKEN")
+            .expect("KNOPE_INTEGRATION_GITEA_TOKEN must be set"),
+        host: std::env::var("KNOPE_INTEGRATION_GITEA_HOST")
+            .expect("KNOPE_INTEGRATION_GITEA_HOST must be set"),
+        owner: std::env::var("KNOPE_INTEGRATION_GITEA_OWNER")
+            .expect("KNOPE_INTEGRATION_GITEA_OWNER must be set"),
+        repo: std::env::var("KNOPE_INTEGRATION_GITEA_REPO")
+            .expect("KNOPE_INTEGRATION_GITEA_REPO must be set"),
+    }
 }
 
 fn http_client() -> Client {
@@ -53,6 +61,17 @@ fn assert_git(dir: &Path, args: &[&str]) {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+/// Add a git remote without including the URL in any panic message, so that
+/// tokens embedded in the URL are not leaked into test logs.
+fn set_git_remote(dir: &Path, remote_url: &str) {
+    let output = Command::new("git")
+        .args(["remote", "add", "origin", remote_url])
+        .current_dir(dir)
+        .output()
+        .expect("Failed to run git remote add");
+    assert!(output.status.success(), "git remote add failed");
 }
 
 /// Build a git remote URL for a Gitea instance with embedded token auth.
@@ -92,7 +111,7 @@ fn setup_test_repo(
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
     let remote_url = gitea_remote_url(token, host, owner, repo);
-    assert_git(path, &["remote", "add", "origin", &remote_url]);
+    set_git_remote(path, &remote_url);
 
     // Workflow contains only the Release step: the repo is already at the right version,
     // so no PrepareRelease or git push is needed inside the knope workflow.
@@ -133,7 +152,7 @@ async fn delete_release(client: &Client, token: &str, base: &str, release_id: u6
     let url = format!("{base}/releases/{release_id}");
     let _ = client
         .delete(&url)
-        .query(&[("access_token", token)])
+        .header("Authorization", format!("token {token}"))
         .send()
         .await;
 }
@@ -142,7 +161,7 @@ async fn delete_tag(client: &Client, token: &str, base: &str, tag: &str) {
     let url = format!("{base}/tags/{tag}");
     let _ = client
         .delete(&url)
-        .query(&[("access_token", token)])
+        .header("Authorization", format!("token {token}"))
         .send()
         .await;
 }
@@ -151,7 +170,7 @@ async fn delete_branch(client: &Client, token: &str, base: &str, branch: &str) {
     let url = format!("{base}/branches/{branch}");
     let _ = client
         .delete(&url)
-        .query(&[("access_token", token)])
+        .header("Authorization", format!("token {token}"))
         .send()
         .await;
 }
@@ -160,7 +179,7 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
     let url = format!("{base}/releases/tags/{tag}");
     if let Ok(resp) = client
         .get(&url)
-        .query(&[("access_token", token)])
+        .header("Authorization", format!("token {token}"))
         .send()
         .await
     {
@@ -181,17 +200,17 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
 #[tokio::test]
 #[ignore = "requires external service credentials"]
 async fn gitea_release_workflow() {
-    let (token, host, owner, repo) = gitea_env();
+    let env = gitea_env();
     let client = http_client();
-    let base = api_base(&host, &owner, &repo);
+    let base = api_base(&env.host, &env.owner, &env.repo);
     let branch = "integration-test-release";
     let expected_tag = "v0.1.0";
 
     // Clean up any leftover resources from a previous failed run
-    cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
-    delete_branch(&client, &token, &base, branch).await;
+    cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
+    delete_branch(&client, &env.token, &base, branch).await;
 
-    let dir = setup_test_repo(&token, &host, &owner, &repo, branch);
+    let dir = setup_test_repo(&env.token, &env.host, &env.owner, &env.repo, branch);
     let path = dir.path();
 
     // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
@@ -203,7 +222,7 @@ async fn gitea_release_workflow() {
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
         .current_dir(path)
-        .env("GITEA_TOKEN", &token)
+        .env("GITEA_TOKEN", &env.token)
         .args(["release"])
         .output()
         .expect("Failed to run knope");
@@ -211,8 +230,8 @@ async fn gitea_release_workflow() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
-        cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
-        delete_branch(&client, &token, &base, branch).await;
+        cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
+        delete_branch(&client, &env.token, &base, branch).await;
         panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
 
@@ -222,7 +241,7 @@ async fn gitea_release_workflow() {
     for _ in 0..5 {
         let resp = client
             .get(&url)
-            .query(&[("access_token", token.as_str())])
+            .header("Authorization", format!("token {}", env.token.as_str()))
             .send()
             .await
             .expect("Failed to fetch release");
@@ -237,17 +256,17 @@ async fn gitea_release_workflow() {
     let release = match release_opt {
         Some(r) => r,
         None => {
-            cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
-            delete_branch(&client, &token, &base, branch).await;
+            cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
+            delete_branch(&client, &env.token, &base, branch).await;
             panic!("Release {expected_tag} should exist on Gitea after retries");
         }
     };
     assert_eq!(release.tag_name, expected_tag);
 
     // Cleanup
-    delete_release(&client, &token, &base, release.id).await;
-    delete_tag(&client, &token, &base, expected_tag).await;
-    delete_branch(&client, &token, &base, branch).await;
+    delete_release(&client, &env.token, &base, release.id).await;
+    delete_tag(&client, &env.token, &base, expected_tag).await;
+    delete_branch(&client, &env.token, &base, branch).await;
 }
 
 /// Test that Knope handles authentication errors gracefully on Gitea.
@@ -257,7 +276,7 @@ async fn gitea_release_workflow() {
 #[tokio::test]
 #[ignore = "requires external service credentials"]
 async fn gitea_error_bad_token() {
-    let (_token, host, owner, repo) = gitea_env();
+    let env = gitea_env();
 
     let dir = tempfile::tempdir().expect("Failed to create temp dir");
     let path = dir.path();
@@ -285,7 +304,10 @@ type = "Release"
 owner = "{owner}"
 repo = "{repo}"
 host = "{host}"
-"#
+"#,
+        owner = env.owner,
+        repo = env.repo,
+        host = env.host,
     );
     std::fs::write(path.join("knope.toml"), knope_toml).expect("Failed to write knope.toml");
     std::fs::write(

@@ -59,6 +59,17 @@ fn assert_git(dir: &Path, args: &[&str]) {
     );
 }
 
+/// Add a git remote without including the URL in any panic message, so that
+/// tokens embedded in the URL are not leaked into test logs.
+fn set_git_remote(dir: &Path, remote_url: &str) {
+    let output = Command::new("git")
+        .args(["remote", "add", "origin", remote_url])
+        .current_dir(dir)
+        .output()
+        .expect("Failed to run git remote add");
+    assert!(output.status.success(), "git remote add failed");
+}
+
 /// Set up a temporary directory with a Git repo, knope.toml, Cargo.toml, and CHANGELOG.md.
 ///
 /// The repo is pre-configured at version `0.1.0` so that the `Release` step can immediately
@@ -82,7 +93,7 @@ fn setup_test_repo(
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
     let remote_url = format!("https://x-access-token:{token}@github.com/{owner}/{repo}.git");
-    assert_git(path, &["remote", "add", "origin", &remote_url]);
+    set_git_remote(path, &remote_url);
 
     // Workflow contains only the Release step: the repo is already at the right version,
     // so no PrepareRelease or git push is needed inside the knope workflow.
