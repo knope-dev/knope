@@ -61,8 +61,9 @@ fn assert_git(dir: &Path, args: &[&str]) {
 
 /// Set up a temporary directory with a Git repo, knope.toml, Cargo.toml, and CHANGELOG.md.
 ///
-/// The repo is configured with a remote pointing to the real test repository and has
-/// an initial commit tagged `v0.0.0` followed by a conventional commit.
+/// The repo is pre-configured at version `0.1.0` so that the `Release` step can immediately
+/// create a GitHub release without needing `PrepareRelease` or a `git push` inside knope.
+/// The caller is responsible for pushing the branch to the remote before running knope.
 fn setup_test_repo(
     token: &str,
     owner: &str,
@@ -83,6 +84,8 @@ fn setup_test_repo(
     let remote_url = format!("https://x-access-token:{token}@github.com/{owner}/{repo}.git");
     assert_git(path, &["remote", "add", "origin", &remote_url]);
 
+    // Workflow contains only the Release step: the repo is already at the right version,
+    // so no PrepareRelease or git push is needed inside the knope workflow.
     let knope_toml = format!(
         r#"[package]
 versioned_files = ["Cargo.toml"]
@@ -90,17 +93,6 @@ changelog = "CHANGELOG.md"
 {extra_knope_config}
 [[workflows]]
 name = "release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m 'chore: release'"
-
-[[workflows.steps]]
-type = "Command"
-command = "git push"
 
 [[workflows.steps]]
 type = "Release"
@@ -111,24 +103,17 @@ repo = "{repo}"
 "#
     );
     std::fs::write(path.join("knope.toml"), knope_toml).expect("Failed to write knope.toml");
+    // Version is already at 0.1.0; the Release step will detect there is no v0.1.0 tag yet
+    // and create a GitHub release pointing at the current HEAD commit.
     std::fs::write(
         path.join("Cargo.toml"),
-        "[package]\nname = \"integration-test\"\nversion = \"0.0.0\"\n",
+        "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
     std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "-m", "feat: Initial setup"]);
-    assert_git(path, &["tag", "v0.0.0"]);
-
-    std::fs::write(path.join("test.txt"), "integration test content")
-        .expect("Failed to write test file");
-    assert_git(path, &["add", "."]);
-    assert_git(
-        path,
-        &["commit", "-m", "feat: New feature for integration test"],
-    );
+    assert_git(path, &["commit", "-m", "chore: release"]);
 
     dir
 }
@@ -183,33 +168,31 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, owner: &str, repo:
 
 /// Test that `knope release` creates a GitHub release via the real API.
 ///
-/// Sets up a git repository with conventional commits, runs `knope release`,
-/// then verifies the release was actually created on GitHub.
+/// Sets up a git repository pre-configured at version `0.1.0`, pushes the branch to
+/// the remote, runs `knope release` (Release step only), then verifies the release
+/// was actually created on GitHub.
 #[tokio::test]
 #[ignore = "requires external service credentials"]
 async fn github_release_workflow() {
     let (token, owner, repo) = github_env();
     let client = http_client();
     let branch = "integration-test-release";
-    let initial_tag = "v0.0.0";
     let expected_tag = "v0.1.0";
 
     // Clean up any leftover resources from a previous failed run
     cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-    delete_tag(&client, &token, &owner, &repo, initial_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 
     let dir = setup_test_repo(&token, &owner, &repo, branch, "");
     let path = dir.path();
 
-    // Push to remote so knope's git push and release API calls succeed
+    // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
     assert_git(
         path,
         &["push", "--set-upstream", "origin", branch, "--force"],
     );
-    assert_git(path, &["push", "origin", initial_tag, "--force"]);
 
-    // Run knope release
+    // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
         .current_dir(path)
         .env("GITHUB_TOKEN", &token)
@@ -221,7 +204,6 @@ async fn github_release_workflow() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
         cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-        delete_tag(&client, &token, &owner, &repo, initial_tag).await;
         delete_branch(&client, &token, &owner, &repo, branch).await;
         panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
@@ -239,7 +221,8 @@ async fn github_release_workflow() {
             .await
             .expect("Failed to fetch release");
         if resp.status().is_success() {
-            release_opt = Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            release_opt =
+                Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
             break;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
@@ -249,7 +232,6 @@ async fn github_release_workflow() {
         Some(r) => r,
         None => {
             cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-            delete_tag(&client, &token, &owner, &repo, initial_tag).await;
             delete_branch(&client, &token, &owner, &repo, branch).await;
             panic!("Release {expected_tag} should exist on GitHub after retries");
         }
@@ -259,7 +241,6 @@ async fn github_release_workflow() {
     // Cleanup
     delete_release(&client, &token, &owner, &repo, release.id).await;
     delete_tag(&client, &token, &owner, &repo, expected_tag).await;
-    delete_tag(&client, &token, &owner, &repo, initial_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 }
 
@@ -273,19 +254,17 @@ async fn github_release_with_assets() {
     let (token, owner, repo) = github_env();
     let client = http_client();
     let branch = "integration-test-assets";
-    let initial_tag = "v0.0.0";
     let expected_tag = "v0.1.0";
 
     // Clean up leftovers
     cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-    delete_tag(&client, &token, &owner, &repo, initial_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 
     let asset_config = "\n[[package.assets]]\npath = \"dist/test-asset.txt\"\n";
     let dir = setup_test_repo(&token, &owner, &repo, branch, asset_config);
     let path = dir.path();
 
-    // Create the asset file
+    // Create the asset file (it only needs to exist locally when knope runs, not in git).
     std::fs::create_dir_all(path.join("dist")).expect("Failed to create dist dir");
     std::fs::write(
         path.join("dist/test-asset.txt"),
@@ -293,18 +272,13 @@ async fn github_release_with_assets() {
     )
     .expect("Failed to write asset");
 
-    // Re-commit to include the asset in git
-    assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "--amend", "--no-edit"]);
-
-    // Push to remote
+    // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
     assert_git(
         path,
         &["push", "--set-upstream", "origin", branch, "--force"],
     );
-    assert_git(path, &["push", "origin", initial_tag, "--force"]);
 
-    // Run knope release
+    // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
         .current_dir(path)
         .env("GITHUB_TOKEN", &token)
@@ -316,7 +290,6 @@ async fn github_release_with_assets() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
         cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-        delete_tag(&client, &token, &owner, &repo, initial_tag).await;
         delete_branch(&client, &token, &owner, &repo, branch).await;
         panic!("knope release with assets failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
@@ -334,7 +307,8 @@ async fn github_release_with_assets() {
             .await
             .expect("Failed to fetch release");
         if resp.status().is_success() {
-            release_opt = Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            release_opt =
+                Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
             break;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
@@ -344,7 +318,6 @@ async fn github_release_with_assets() {
         Some(r) => r,
         None => {
             cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-            delete_tag(&client, &token, &owner, &repo, initial_tag).await;
             delete_branch(&client, &token, &owner, &repo, branch).await;
             panic!("Release {expected_tag} should exist on GitHub after retries");
         }
@@ -368,7 +341,6 @@ async fn github_release_with_assets() {
     // Cleanup
     delete_release(&client, &token, &owner, &repo, release.id).await;
     delete_tag(&client, &token, &owner, &repo, expected_tag).await;
-    delete_tag(&client, &token, &owner, &repo, initial_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 
     assert!(
@@ -396,7 +368,7 @@ async fn github_error_bad_token() {
     );
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
-    // Workflow without push step — Release will fail at the API call
+    // Workflow with only the Release step — it will fail at the API call due to the bad token.
     let knope_toml = format!(
         r#"[package]
 versioned_files = ["Cargo.toml"]
@@ -404,13 +376,6 @@ changelog = "CHANGELOG.md"
 
 [[workflows]]
 name = "release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m 'chore: release'"
 
 [[workflows.steps]]
 type = "Release"
@@ -423,18 +388,13 @@ repo = "{repo}"
     std::fs::write(path.join("knope.toml"), knope_toml).expect("Failed to write knope.toml");
     std::fs::write(
         path.join("Cargo.toml"),
-        "[package]\nname = \"integration-test\"\nversion = \"0.0.0\"\n",
+        "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
     std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "-m", "feat: Initial setup"]);
-    assert_git(path, &["tag", "v0.0.0"]);
-
-    std::fs::write(path.join("test.txt"), "test").expect("Failed to write test file");
-    assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "-m", "feat: New feature"]);
+    assert_git(path, &["commit", "-m", "chore: release"]);
 
     // Run knope release with a bad token
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))

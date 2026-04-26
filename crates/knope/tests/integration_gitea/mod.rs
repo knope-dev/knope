@@ -70,6 +70,10 @@ fn api_base(host: &str, owner: &str, repo: &str) -> String {
 
 /// Set up a temporary directory with a Git repo, knope.toml, Cargo.toml, and CHANGELOG.md
 /// configured for a Gitea release workflow.
+///
+/// The repo is pre-configured at version `0.1.0` so that the `Release` step can immediately
+/// create a Gitea release without needing `PrepareRelease` or a `git push` inside knope.
+/// The caller is responsible for pushing the branch to the remote before running knope.
 fn setup_test_repo(
     token: &str,
     host: &str,
@@ -90,6 +94,8 @@ fn setup_test_repo(
     let remote_url = gitea_remote_url(token, host, owner, repo);
     assert_git(path, &["remote", "add", "origin", &remote_url]);
 
+    // Workflow contains only the Release step: the repo is already at the right version,
+    // so no PrepareRelease or git push is needed inside the knope workflow.
     let knope_toml = format!(
         r#"[package]
 versioned_files = ["Cargo.toml"]
@@ -97,17 +103,6 @@ changelog = "CHANGELOG.md"
 
 [[workflows]]
 name = "release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m 'chore: release'"
-
-[[workflows.steps]]
-type = "Command"
-command = "git push"
 
 [[workflows.steps]]
 type = "Release"
@@ -119,24 +114,17 @@ host = "{host}"
 "#
     );
     std::fs::write(path.join("knope.toml"), knope_toml).expect("Failed to write knope.toml");
+    // Version is already at 0.1.0; the Release step will detect there is no v0.1.0 tag yet
+    // and create a Gitea release pointing at the current HEAD commit.
     std::fs::write(
         path.join("Cargo.toml"),
-        "[package]\nname = \"integration-test\"\nversion = \"0.0.0\"\n",
+        "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
     std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "-m", "feat: Initial setup"]);
-    assert_git(path, &["tag", "v0.0.0"]);
-
-    std::fs::write(path.join("test.txt"), "integration test content")
-        .expect("Failed to write test file");
-    assert_git(path, &["add", "."]);
-    assert_git(
-        path,
-        &["commit", "-m", "feat: New feature for integration test"],
-    );
+    assert_git(path, &["commit", "-m", "chore: release"]);
 
     dir
 }
@@ -187,8 +175,9 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
 
 /// Test that `knope release` creates a Gitea release via the real API.
 ///
-/// Sets up a git repository with conventional commits, runs `knope release`,
-/// then verifies the release was actually created on the Gitea instance.
+/// Sets up a git repository pre-configured at version `0.1.0`, pushes the branch to
+/// the remote, runs `knope release` (Release step only), then verifies the release
+/// was actually created on the Gitea instance.
 #[tokio::test]
 #[ignore = "requires external service credentials"]
 async fn gitea_release_workflow() {
@@ -196,25 +185,22 @@ async fn gitea_release_workflow() {
     let client = http_client();
     let base = api_base(&host, &owner, &repo);
     let branch = "integration-test-release";
-    let initial_tag = "v0.0.0";
     let expected_tag = "v0.1.0";
 
     // Clean up any leftover resources from a previous failed run
     cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
-    delete_tag(&client, &token, &base, initial_tag).await;
     delete_branch(&client, &token, &base, branch).await;
 
     let dir = setup_test_repo(&token, &host, &owner, &repo, branch);
     let path = dir.path();
 
-    // Push to remote so knope's git push and release API calls succeed
+    // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
     assert_git(
         path,
         &["push", "--set-upstream", "origin", branch, "--force"],
     );
-    assert_git(path, &["push", "origin", initial_tag, "--force"]);
 
-    // Run knope release
+    // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
         .current_dir(path)
         .env("GITEA_TOKEN", &token)
@@ -226,7 +212,6 @@ async fn gitea_release_workflow() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
         cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
-        delete_tag(&client, &token, &base, initial_tag).await;
         delete_branch(&client, &token, &base, branch).await;
         panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
@@ -242,7 +227,8 @@ async fn gitea_release_workflow() {
             .await
             .expect("Failed to fetch release");
         if resp.status().is_success() {
-            release_opt = Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            release_opt =
+                Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
             break;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
@@ -252,7 +238,6 @@ async fn gitea_release_workflow() {
         Some(r) => r,
         None => {
             cleanup_release_by_tag(&client, &token, &base, expected_tag).await;
-            delete_tag(&client, &token, &base, initial_tag).await;
             delete_branch(&client, &token, &base, branch).await;
             panic!("Release {expected_tag} should exist on Gitea after retries");
         }
@@ -262,7 +247,6 @@ async fn gitea_release_workflow() {
     // Cleanup
     delete_release(&client, &token, &base, release.id).await;
     delete_tag(&client, &token, &base, expected_tag).await;
-    delete_tag(&client, &token, &base, initial_tag).await;
     delete_branch(&client, &token, &base, branch).await;
 }
 
@@ -285,7 +269,7 @@ async fn gitea_error_bad_token() {
     );
     assert_git(path, &["config", "user.name", "Knope Integration Test"]);
 
-    // Workflow without push step — Release will fail at the API call
+    // Workflow with only the Release step — it will fail at the API call due to the bad token.
     let knope_toml = format!(
         r#"[package]
 versioned_files = ["Cargo.toml"]
@@ -293,13 +277,6 @@ changelog = "CHANGELOG.md"
 
 [[workflows]]
 name = "release"
-
-[[workflows.steps]]
-type = "PrepareRelease"
-
-[[workflows.steps]]
-type = "Command"
-command = "git commit -m 'chore: release'"
 
 [[workflows.steps]]
 type = "Release"
@@ -313,18 +290,13 @@ host = "{host}"
     std::fs::write(path.join("knope.toml"), knope_toml).expect("Failed to write knope.toml");
     std::fs::write(
         path.join("Cargo.toml"),
-        "[package]\nname = \"integration-test\"\nversion = \"0.0.0\"\n",
+        "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
     std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "-m", "feat: Initial setup"]);
-    assert_git(path, &["tag", "v0.0.0"]);
-
-    std::fs::write(path.join("test.txt"), "test").expect("Failed to write test file");
-    assert_git(path, &["add", "."]);
-    assert_git(path, &["commit", "-m", "feat: New feature"]);
+    assert_git(path, &["commit", "-m", "chore: release"]);
 
     // Run knope release with a bad token
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
