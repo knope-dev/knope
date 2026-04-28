@@ -363,9 +363,9 @@ dependencies = [
 
 [[package]]
 name = "deno_config"
-version = "0.90.0"
+version = "0.97.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1867fd102d222ce82ed3095227d67b507ae1be19273800630c258f91b67a99f0"
+checksum = "26bd4881a2385ab360e81e040a9de805d9e5f5cfbea7c345b6a3cd46f02264bb"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -414,9 +414,9 @@ dependencies = [
 
 [[package]]
 name = "deno_lockfile"
-version = "0.42.0"
+version = "0.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f4714150069061a71f0a2edaf261accc6943dd270313967a298d912a3122ce3"
+checksum = "1984f4d97a53842dd99937185707224cb6f5ce60d6f04bf7d68dd93a68b866eb"
 dependencies = [
  "async-trait",
  "deno_semver",
@@ -427,15 +427,15 @@ dependencies = [
 
 [[package]]
 name = "deno_maybe_sync"
-version = "0.27.0"
+version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c57f87a54f23fa6a5d37c0caf80181e7cb244cb7b4d3ae3f6dc1f121779f585a"
+checksum = "eb2ce6efdde2e0314c3c450eb386a65ccde6497fe4f40d0314c094e32b1bbfc3"
 
 [[package]]
 name = "deno_package_json"
-version = "0.42.0"
+version = "0.49.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b91407cb939690000107086b9f86ddc6a4de3cf95bc215962b6159b7734fb102"
+checksum = "4d3b3383e1e1e5817312e766374d1bdaa131e00b0bc17ee10f0a448f6db6ef1e"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -994,11 +994,11 @@ dependencies = [
 
 [[package]]
 name = "jsonc-parser"
-version = "0.28.0"
+version = "0.32.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b187b7e06feb2c205d8ec71f12cd8f553e33477ec155ebfc34f8daa7f3ae4eab"
+checksum = "8c2e5dea04f54739ca5694ee06e4448ffda065a55b3427d2b131bd5ea697ea2c"
 dependencies = [
- "serde_json",
+ "serde",
 ]
 
 [[package]]
@@ -1787,9 +1787,9 @@ dependencies = [
 
 [[package]]
 name = "sys_traits"
-version = "0.1.25"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24954f769b36305ab4dc502d095da5cfd9c697c73a8f2c0636a7fca76ff1f24b"
+checksum = "5a79feaa49de4a6c8191bdbd5fb3eada50671e9367d874d1c12e3d36db131414"
 dependencies = [
  "sys_traits_macros",
 ]
