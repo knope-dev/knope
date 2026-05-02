@@ -26,6 +26,8 @@ jobs:
         run: rustup toolchain install nightly --component rustfmt
 
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          install: ${{ matrix.os == 'ubuntu-latest' }}
 
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         if: matrix.os == 'ubuntu-latest'
