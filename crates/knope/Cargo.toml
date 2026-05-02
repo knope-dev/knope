@@ -37,17 +37,18 @@ knope-config = { path = "../knope-config", version = "0.4.2" }
 knope-versioning = { workspace = true, features = ["miette"] }
 miette = { workspace = true, features = ["fancy"] }
 relative-path = { workspace = true }
+reqwest = { version = "0.13.2", features = ["gzip", "json", "query"] }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 sys_traits = { version = "0.1.17", features = ["real"] }
 thiserror = { workspace = true }
+tokio = { version = "1.50.0", features = ["full"] }
 toml = { workspace = true }
 toml_edit = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { version = "0.3.18", default-features = false, features = [
   "fmt",
 ] }
-ureq = { version = "3.0", features = ["json"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

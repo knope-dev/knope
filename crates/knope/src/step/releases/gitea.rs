@@ -3,7 +3,7 @@ use knope_versioning::{ReleaseTag, package, release_notes::Release};
 
 use crate::{config, integrations::gitea as api, state, state::RunType};
 
-pub(crate) fn release(
+pub(crate) async fn release(
     release: &Release,
     gitea_state: RunType<state::Gitea>,
     gitea_config: &config::Gitea,
@@ -25,4 +25,5 @@ pub(crate) fn release(
         gitea_state,
         gitea_config,
     )
+    .await
 }

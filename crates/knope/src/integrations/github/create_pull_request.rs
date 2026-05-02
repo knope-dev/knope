@@ -1,15 +1,18 @@
 use miette::Diagnostic;
 use serde_json::json;
 use tracing::{debug, info};
-use ureq::Agent;
 
 use crate::{
     app_config, config,
-    integrations::{ApiRequestError, PullRequest, git, github::initialize_state, handle_response},
+    integrations::{
+        ApiRequestError, PullRequest, git,
+        github::initialize_state,
+        http::{Client, handle_response},
+    },
     state::{self, RunType},
 };
 
-pub(crate) fn create_or_update_pull_request(
+pub(crate) async fn create_or_update_pull_request(
     title: &str,
     body: &str,
     base: &str,
@@ -27,33 +30,39 @@ pub(crate) fn create_or_update_pull_request(
         RunType::Real(state) => state,
     };
 
-    let (token, agent) = initialize_state(state)?;
+    let (token, client) = initialize_state(state)?;
     let config::GitHub { owner, repo } = config;
     let base_url = format!("https://api.github.com/repos/{owner}/{repo}/pulls");
     let authorization_header = format!("Bearer {}", &token);
 
-    let existing_pulls_response = agent
+    let existing_pulls_response = client
         .get(&base_url)
         .header("Authorization", &authorization_header)
-        .query("head", format!("{owner}:{current_branch}"))
-        .query("base", base)
-        .call();
+        .header("Accept", "application/vnd.github+json")
+        .query(&[
+            ("head", format!("{owner}:{current_branch}").as_str()),
+            ("base", base),
+        ])
+        .send()
+        .await;
     let existing_pulls_response = handle_response(
         existing_pulls_response,
         "GitHub".to_string(),
         "fetching existing pull requests".into(),
-    )?;
+    )
+    .await?;
 
-    let existing_pulls: Vec<PullRequest> = existing_pulls_response
-        .into_body()
-        .read_json()
-        .map_err(|source| Error::ApiResponse {
-            source,
-            activity: "fetching existing pull requests",
-        })?;
-    let agent = if let Some(existing) = existing_pulls.first() {
+    let existing_pulls: Vec<PullRequest> =
+        existing_pulls_response
+            .json()
+            .await
+            .map_err(|source| Error::ApiResponse {
+                source,
+                activity: "fetching existing pull requests",
+            })?;
+    let client = if let Some(existing) = existing_pulls.first() {
         debug!("Updating existing pull request: {}", existing.url);
-        update_pull_request(&existing.url, title, body, &authorization_header, agent)
+        update_pull_request(&existing.url, title, body, &authorization_header, client).await
     } else {
         debug!("No matching existing pull request found, creating a new one.");
         create_pull_request(
@@ -63,56 +72,64 @@ pub(crate) fn create_or_update_pull_request(
             base,
             &current_branch,
             &authorization_header,
-            agent,
+            client,
         )
+        .await
     }?;
-    Ok(state::GitHub::Initialized { token, agent })
+    Ok(state::GitHub::Initialized { token, client })
 }
 
-fn update_pull_request(
+async fn update_pull_request(
     url: &str,
     title: &str,
     body: &str,
     auth_header: &str,
-    agent: Agent,
-) -> Result<Agent, Error> {
-    let resp = agent
+    client: Client,
+) -> Result<Client, Error> {
+    let resp = client
         .patch(url)
         .header("Authorization", auth_header)
-        .send_json(json!({
+        .header("Accept", "application/vnd.github+json")
+        .json(&json!({
             "title": title,
             "body": body,
-        }));
-    handle_response(resp, "GitHub".to_string(), "updating pull request".into())?;
-    Ok(agent)
+        }))
+        .send()
+        .await;
+    handle_response(resp, "GitHub".to_string(), "updating pull request".into()).await?;
+    Ok(client)
 }
 
-fn create_pull_request(
+async fn create_pull_request(
     url: &str,
     title: &str,
     body: &str,
     base: &str,
     current_branch: &str,
     auth_header: &str,
-    agent: Agent,
-) -> Result<Agent, Error> {
-    let response = agent
+    client: Client,
+) -> Result<Client, Error> {
+    let response = client
         .post(url)
         .header("Authorization", auth_header)
-        .send_json(json!({
+        .header("Accept", "application/vnd.github+json")
+        .json(&json!({
             "title": title,
             "body": body,
             "head": current_branch,
             "base": base,
-        }));
+        }))
+        .send()
+        .await;
     let response = handle_response(
         response,
         "GitHub".to_string(),
         "creating pull request".to_string(),
-    )?;
+    )
+    .await?;
     let json_data = response
-        .into_body()
-        .read_json::<serde_json::Value>()
+        .json::<serde_json::Value>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating pull request",
@@ -120,7 +137,7 @@ fn create_pull_request(
     if let Some(new_pr_url) = json_data.get("url") {
         debug!("Created new pull request: {new_pr_url}");
     }
-    Ok(agent)
+    Ok(client)
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]
@@ -136,7 +153,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: ureq::Error,
+        source: reqwest::Error,
         activity: &'static str,
     },
     #[error(transparent)]

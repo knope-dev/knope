@@ -5,13 +5,13 @@ use super::initialize_state;
 use crate::{
     app_config, config,
     integrations::{
-        ApiRequestError, CreateReleaseInput, CreateReleaseResponse, git, handle_response,
+        ApiRequestError, CreateReleaseInput, CreateReleaseResponse, git, http::handle_response,
     },
     state,
     state::RunType,
 };
 
-pub(crate) fn create_release(
+pub(crate) async fn create_release(
     name: &str,
     tag_name: &str,
     body: &str,
@@ -37,26 +37,29 @@ pub(crate) fn create_release(
         RunType::Real(gitea_state) => gitea_state,
     };
 
-    let (token, agent) = initialize_state(&gitea_config.host, gitea_state)?;
+    let (token, client) = initialize_state(&gitea_config.host, gitea_state)?;
 
-    let resp = agent
-        .post(&gitea_config.get_releases_url())
-        .query("access_token", &token)
-        .send_json(gitea_release);
+    let resp = client
+        .post(gitea_config.get_releases_url())
+        .query(&[("access_token", &token)])
+        .json(&gitea_release)
+        .send()
+        .await;
     let resp = handle_response(
         resp,
         gitea_config.host.clone(),
         "creating a release".to_string(),
-    )?;
-    resp.into_body()
-        .read_json::<CreateReleaseResponse>()
+    )
+    .await?;
+    resp.json::<CreateReleaseResponse>()
+        .await
         .map_err(|source| Error::ApiResponse {
             source,
             activity: "creating a release",
             host: gitea_config.host.clone(),
         })?;
 
-    Ok(state::Gitea::Initialized { token, agent })
+    Ok(state::Gitea::Initialized { token, client })
 }
 
 fn gitea_release_dry_run(name: &str, config: &config::Gitea, gitea_release: &CreateReleaseInput) {
@@ -95,7 +98,7 @@ pub(crate) enum Error {
         )
     )]
     ApiResponse {
-        source: ureq::Error,
+        source: reqwest::Error,
         activity: &'static str,
         host: String,
     },
