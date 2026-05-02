@@ -8,7 +8,8 @@
 //! Required environment variables:
 //!
 //! **GitHub tests:**
-//! - `KNOPE_INTEGRATION_GITHUB_TOKEN` — A GitHub personal access token with `repo` scope
+//! - `KNOPE_INTEGRATION_GITHUB_TOKEN` — A GitHub fine-grained personal access token for
+//!   the test repository, with the permissions documented in `CONTRIBUTING.md`
 //! - `KNOPE_INTEGRATION_GITHUB_OWNER` — Owner of the test repository (user or org)
 //! - `KNOPE_INTEGRATION_GITHUB_REPO`  — Name of the test repository
 //!

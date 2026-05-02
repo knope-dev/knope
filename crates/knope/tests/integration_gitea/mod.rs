@@ -40,6 +40,7 @@ fn gitea_env() -> GiteaEnv {
 fn http_client() -> Client {
     Client::builder()
         .user_agent("Knope")
+        .timeout(Duration::from_secs(30))
         .build()
         .expect("Failed to build HTTP client")
 }
@@ -47,9 +48,27 @@ fn http_client() -> Client {
 fn git(dir: &Path, args: &[&str]) -> std::process::Output {
     Command::new("git")
         .args(args)
+        .env("GIT_TERMINAL_PROMPT", "0")
         .current_dir(dir)
         .output()
         .expect("Failed to run git command")
+}
+
+/// Redact any embedded credentials from text that may contain URLs,
+/// to avoid leaking tokens in test failure messages.
+fn redact_url_credentials(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut remaining = s;
+    while let Some(scheme_end) = remaining.find("://") {
+        result.push_str(&remaining[..scheme_end + 3]);
+        remaining = &remaining[scheme_end + 3..];
+        if let Some(at_pos) = remaining.find('@') {
+            result.push_str("<redacted>");
+            remaining = &remaining[at_pos..];
+        }
+    }
+    result.push_str(remaining);
+    result
 }
 
 fn assert_git(dir: &Path, args: &[&str]) {
@@ -58,8 +77,37 @@ fn assert_git(dir: &Path, args: &[&str]) {
         output.status.success(),
         "git {} failed:\nstdout: {}\nstderr: {}",
         args.join(" "),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        redact_url_credentials(&String::from_utf8_lossy(&output.stdout)),
+        redact_url_credentials(&String::from_utf8_lossy(&output.stderr))
+    );
+}
+
+/// Push the current branch to the remote origin with network timeout settings so that
+/// a slow or unresponsive host does not block the test indefinitely.
+fn push_branch(dir: &Path, branch: &str) {
+    let output = Command::new("git")
+        .args([
+            "-c",
+            "http.connectTimeout=30",
+            "-c",
+            "http.lowSpeedLimit=1000",
+            "-c",
+            "http.lowSpeedTime=30",
+            "push",
+            "--set-upstream",
+            "origin",
+            branch,
+            "--force",
+        ])
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .current_dir(dir)
+        .output()
+        .expect("Failed to run git push");
+    assert!(
+        output.status.success(),
+        "git push failed:\nstdout: {}\nstderr: {}",
+        redact_url_credentials(&String::from_utf8_lossy(&output.stdout)),
+        redact_url_credentials(&String::from_utf8_lossy(&output.stderr))
     );
 }
 
@@ -214,10 +262,7 @@ async fn gitea_release_workflow() {
     let path = dir.path();
 
     // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
-    assert_git(
-        path,
-        &["push", "--set-upstream", "origin", branch, "--force"],
-    );
+    push_branch(path, branch);
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
@@ -236,6 +281,10 @@ async fn gitea_release_workflow() {
     }
 
     // Gitea may take a moment to finalise a new release; poll with retries.
+    // Note: these verification calls use the `Authorization: token` header, which is the
+    // standard Gitea API authentication method for test helpers. Knope's own production
+    // Gitea API calls use `?access_token=` query params internally — both are valid and
+    // accepted by Gitea. The test validates the release creation result, not the auth path.
     let url = format!("{base}/releases/tags/{expected_tag}");
     let mut release_opt = None;
     for _ in 0..5 {
