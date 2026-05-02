@@ -246,20 +246,20 @@ async fn gitea_release_workflow() {
             .await
             .expect("Failed to fetch release");
         if resp.status().is_success() {
-            release_opt =
-                Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            release_opt = Some(
+                resp.json::<Release>()
+                    .await
+                    .expect("Failed to deserialize release"),
+            );
             break;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
     }
 
-    let release = match release_opt {
-        Some(r) => r,
-        None => {
-            cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
-            delete_branch(&client, &env.token, &base, branch).await;
-            panic!("Release {expected_tag} should exist on Gitea after retries");
-        }
+    let Some(release) = release_opt else {
+        cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
+        delete_branch(&client, &env.token, &base, branch).await;
+        panic!("Release {expected_tag} should exist on Gitea after retries");
     };
     assert_eq!(release.tag_name, expected_tag);
 

@@ -155,7 +155,7 @@ pre-existing content beyond being initialised — they act as empty canvases.
 2. **Create a dedicated test repository** (e.g. `knope-integration-tests`).
    An empty repository is fine.
 3. **Create a personal access token** in your Gitea account settings with
-   permissions to create/delete releases, branches, and tags.
+   repository read/write permissions.
 4. No special repository settings are required.
 
 ### What the tests do

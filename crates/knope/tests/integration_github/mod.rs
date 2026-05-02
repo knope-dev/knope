@@ -76,6 +76,7 @@ fn set_git_remote(dir: &Path, remote_url: &str) {
 /// create a GitHub release without needing `PrepareRelease` or a `git push` inside knope.
 /// The caller is responsible for pushing the branch to the remote before running knope.
 fn setup_test_repo(
+    version: &str,
     token: &str,
     owner: &str,
     repo: &str,
@@ -118,7 +119,7 @@ repo = "{repo}"
     // and create a GitHub release pointing at the current HEAD commit.
     std::fs::write(
         path.join("Cargo.toml"),
-        "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
+        format!("[package]\nname = \"integration-test\"\nversion = \"{version}\"\n"),
     )
     .expect("Failed to write Cargo.toml");
     std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
@@ -188,13 +189,14 @@ async fn github_release_workflow() {
     let (token, owner, repo) = github_env();
     let client = http_client();
     let branch = "integration-test-release";
-    let expected_tag = "v0.1.0";
+    let version = "0.1.0";
+    let expected_tag = format!("v{version}");
 
     // Clean up any leftover resources from a previous failed run
-    cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+    cleanup_release_by_tag(&client, &token, &owner, &repo, &expected_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 
-    let dir = setup_test_repo(&token, &owner, &repo, branch, "");
+    let dir = setup_test_repo(version, &token, &owner, &repo, branch, "");
     let path = dir.path();
 
     // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
@@ -214,7 +216,7 @@ async fn github_release_workflow() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
-        cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+        cleanup_release_by_tag(&client, &token, &owner, &repo, &expected_tag).await;
         delete_branch(&client, &token, &owner, &repo, branch).await;
         panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
@@ -232,26 +234,26 @@ async fn github_release_workflow() {
             .await
             .expect("Failed to fetch release");
         if resp.status().is_success() {
-            release_opt =
-                Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            release_opt = Some(
+                resp.json::<Release>()
+                    .await
+                    .expect("Failed to deserialize release"),
+            );
             break;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
     }
 
-    let release = match release_opt {
-        Some(r) => r,
-        None => {
-            cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-            delete_branch(&client, &token, &owner, &repo, branch).await;
-            panic!("Release {expected_tag} should exist on GitHub after retries");
-        }
+    let Some(release) = release_opt else {
+        cleanup_release_by_tag(&client, &token, &owner, &repo, &expected_tag).await;
+        delete_branch(&client, &token, &owner, &repo, branch).await;
+        panic!("Release {expected_tag} should exist on GitHub after retries");
     };
     assert_eq!(release.tag_name, expected_tag);
 
     // Cleanup
     delete_release(&client, &token, &owner, &repo, release.id).await;
-    delete_tag(&client, &token, &owner, &repo, expected_tag).await;
+    delete_tag(&client, &token, &owner, &repo, &expected_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 }
 
@@ -265,14 +267,15 @@ async fn github_release_with_assets() {
     let (token, owner, repo) = github_env();
     let client = http_client();
     let branch = "integration-test-assets";
-    let expected_tag = "v0.1.0";
+    let version = "0.2.0";
+    let expected_tag = format!("v{version}");
 
     // Clean up leftovers
-    cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+    cleanup_release_by_tag(&client, &token, &owner, &repo, &expected_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 
     let asset_config = "\n[[package.assets]]\npath = \"dist/test-asset.txt\"\n";
-    let dir = setup_test_repo(&token, &owner, &repo, branch, asset_config);
+    let dir = setup_test_repo(version, &token, &owner, &repo, branch, asset_config);
     let path = dir.path();
 
     // Create the asset file (it only needs to exist locally when knope runs, not in git).
@@ -300,7 +303,7 @@ async fn github_release_with_assets() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
-        cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
+        cleanup_release_by_tag(&client, &token, &owner, &repo, &expected_tag).await;
         delete_branch(&client, &token, &owner, &repo, branch).await;
         panic!("knope release with assets failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
@@ -318,20 +321,20 @@ async fn github_release_with_assets() {
             .await
             .expect("Failed to fetch release");
         if resp.status().is_success() {
-            release_opt =
-                Some(resp.json::<Release>().await.expect("Failed to deserialize release"));
+            release_opt = Some(
+                resp.json::<Release>()
+                    .await
+                    .expect("Failed to deserialize release"),
+            );
             break;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
     }
 
-    let release = match release_opt {
-        Some(r) => r,
-        None => {
-            cleanup_release_by_tag(&client, &token, &owner, &repo, expected_tag).await;
-            delete_branch(&client, &token, &owner, &repo, branch).await;
-            panic!("Release {expected_tag} should exist on GitHub after retries");
-        }
+    let Some(release) = release_opt else {
+        cleanup_release_by_tag(&client, &token, &owner, &repo, &expected_tag).await;
+        delete_branch(&client, &token, &owner, &repo, branch).await;
+        panic!("Release {expected_tag} should exist on GitHub after retries");
     };
 
     // Check assets
@@ -351,7 +354,7 @@ async fn github_release_with_assets() {
 
     // Cleanup
     delete_release(&client, &token, &owner, &repo, release.id).await;
-    delete_tag(&client, &token, &owner, &repo, expected_tag).await;
+    delete_tag(&client, &token, &owner, &repo, &expected_tag).await;
     delete_branch(&client, &token, &owner, &repo, branch).await;
 
     assert!(
