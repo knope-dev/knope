@@ -23,3 +23,4 @@
 
 mod integration_gitea;
 mod integration_github;
+mod integration_helpers;
