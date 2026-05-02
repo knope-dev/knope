@@ -1,0 +1,84 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  group: integration-tests
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  github-integration:
+    name: GitHub Integration Tests
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    environment: integration-tests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+
+      - name: Run GitHub integration tests
+        env:
+          KNOPE_INTEGRATION_GITHUB_TOKEN: ${{ secrets.INTEGRATION_GITHUB_TOKEN }}
+          KNOPE_INTEGRATION_GITHUB_OWNER: ${{ secrets.INTEGRATION_GITHUB_OWNER }}
+          KNOPE_INTEGRATION_GITHUB_REPO: ${{ secrets.INTEGRATION_GITHUB_REPO }}
+        run: mise run integration-test-github
+
+  gitea-integration:
+    name: Gitea Integration Tests
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    environment: integration-tests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+
+      - name: Run Gitea integration tests
+        env:
+          KNOPE_INTEGRATION_GITEA_TOKEN: ${{ secrets.INTEGRATION_GITEA_TOKEN }}
+          KNOPE_INTEGRATION_GITEA_HOST: https://gitea.com
+          KNOPE_INTEGRATION_GITEA_OWNER: ${{ secrets.INTEGRATION_GITEA_OWNER }}
+          KNOPE_INTEGRATION_GITEA_REPO: ${{ secrets.INTEGRATION_GITEA_REPO }}
+        run: mise run integration-test-gitea
+  codeberg-integration:
+    name: Codeberg Integration Tests
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    environment: integration-tests
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
+
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+
+      - name: Run Gitea integration tests
+        env:
+          KNOPE_INTEGRATION_GITEA_TOKEN: ${{ secrets.INTEGRATION_CODEBERG_TOKEN }}
+          KNOPE_INTEGRATION_GITEA_HOST: https://codeberg.org
+          KNOPE_INTEGRATION_GITEA_OWNER: ${{ secrets.INTEGRATION_CODEBERG_OWNER }}
+          KNOPE_INTEGRATION_GITEA_REPO: ${{ secrets.INTEGRATION_CODEBERG_REPO }}
+        run: mise run integration-test-gitea

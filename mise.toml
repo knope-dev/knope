@@ -80,3 +80,15 @@ run = "npm run --prefix docs build"
 [tasks.install-docs-dependencies]
 description = "Install documentation dependencies"
 run = "npm install --prefix docs"
+
+[tasks.integration-test-github]
+description = "Run GitHub integration tests (requires KNOPE_INTEGRATION_GITHUB_* env vars)"
+run = "cargo test --test integration -- --ignored integration_github"
+
+[tasks.integration-test-gitea]
+description = "Run Gitea integration tests (requires KNOPE_INTEGRATION_GITEA_* env vars)"
+run = "cargo test --test integration -- --ignored integration_gitea"
+
+[tasks.integration-test]
+description = "Run all integration tests (requires all KNOPE_INTEGRATION_* env vars)"
+run = "cargo test --test integration -- --ignored"
