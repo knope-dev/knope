@@ -19,12 +19,11 @@ pub struct DenoJson {
 
 impl DenoJson {
     pub(crate) fn new(path: RelativePathBuf, content: String) -> Result<Self, Error> {
-        let parsed = parse_to_serde_value(&content, &ParseOptions::default())
+        let parsed = parse_to_serde_value::<Value>(&content, &ParseOptions::default())
             .map_err(|source| Error::Parse {
                 source,
                 path: path.clone(),
-            })?
-            .ok_or_else(|| Error::NoContent { path: path.clone() })?;
+            })?;
 
         Ok(DenoJson {
             path,
@@ -100,12 +99,6 @@ pub enum Error {
         source: jsonc_parser::errors::ParseError,
         path: RelativePathBuf,
     },
-    #[error("File {path} was empty or contained only comments.")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(code(knope_versioning::versioned_file::deno_json::no_content),)
-    )]
-    NoContent { path: RelativePathBuf },
 }
 
 #[cfg(test)]
