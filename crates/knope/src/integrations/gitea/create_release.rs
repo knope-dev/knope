@@ -17,44 +17,30 @@ pub(crate) async fn create_release(
     gitea_state: RunType<state::Gitea>,
     gitea_config: &config::Gitea,
 ) -> Result<state::Gitea, Error> {
-    // Dry-run: use commit SHA for display so snapshot [COMMIT] placeholders still match.
-    if let RunType::DryRun(state) = gitea_state {
-        let display_target = git::get_head_commit_sha().ok();
-        let dry_run_release = CreateReleaseInput::new(
-            tag_name,
-            name,
-            body,
-            prerelease,
-            false,
-            display_target.as_deref(),
-        );
-        gitea_release_dry_run(name, gitea_config, &dry_run_release);
-        return Ok(state);
-    }
-
-    let RunType::Real(gitea_state) = gitea_state else {
-        unreachable!("non-dry-run branch already handled above")
-    };
-    let (token, client) = initialize_state(&gitea_config.host, gitea_state)?;
-
-    // For the actual API call, prefer the branch short name over a raw commit SHA.
-    // Forgejo resolves branch names reliably via `git rev-parse`, whereas some Forgejo
-    // versions (including Codeberg's) fail to look up a bare commit SHA when creating
-    // the repository's very first tag.
-    let api_target = git::get_gitea_target_commitish();
-    let api_release = CreateReleaseInput::new(
+    let target_commitish = git::get_head_commit_sha().ok();
+    let gitea_release = CreateReleaseInput::new(
         tag_name,
         name,
         body,
         prerelease,
         false,
-        api_target.as_deref(),
+        target_commitish.as_deref(),
     );
+
+    let gitea_state = match gitea_state {
+        RunType::DryRun(state) => {
+            gitea_release_dry_run(name, gitea_config, &gitea_release);
+            return Ok(state);
+        }
+        RunType::Real(gitea_state) => gitea_state,
+    };
+
+    let (token, client) = initialize_state(&gitea_config.host, gitea_state)?;
 
     let resp = client
         .post(gitea_config.get_releases_url())
         .header("Authorization", format!("Bearer {token}"))
-        .json(&api_release)
+        .json(&gitea_release)
         .send()
         .await;
     handle_response(
