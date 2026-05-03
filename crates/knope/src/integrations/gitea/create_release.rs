@@ -12,8 +12,10 @@ use crate::{
 
 /// Release creation payload for the Gitea/Forgejo API.
 ///
-/// Intentionally omits `generate_release_notes` (a GitHub-specific field) since sending
-/// it to Forgejo can cause the API to fail when trying to process that field.
+/// Intentionally omits `generate_release_notes`: knope always supplies release notes via
+/// the `body` field (from the changelog), so auto-generation is unnecessary. Forgejo
+/// supports the field but fails with "The target couldn't be found" when it cannot locate
+/// the previous release tag to diff against (e.g., the very first release in a repo).
 #[derive(Serialize)]
 struct GiteaReleaseInput<'a> {
     tag_name: &'a str,
