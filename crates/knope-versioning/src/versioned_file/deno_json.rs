@@ -19,11 +19,12 @@ pub struct DenoJson {
 
 impl DenoJson {
     pub(crate) fn new(path: RelativePathBuf, content: String) -> Result<Self, Error> {
-        let parsed = parse_to_serde_value::<Value>(&content, &ParseOptions::default())
-            .map_err(|source| Error::Parse {
+        let parsed = parse_to_serde_value::<Value>(&content, &ParseOptions::default()).map_err(
+            |source| Error::Parse {
                 source,
                 path: path.clone(),
-            })?;
+            },
+        )?;
 
         Ok(DenoJson {
             path,
