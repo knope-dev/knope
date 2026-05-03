@@ -458,6 +458,22 @@ pub(crate) fn get_head_commit_sha() -> Result<String, Error> {
     Ok(head_commit.id().to_string())
 }
 
+/// Get the best `target_commitish` value for creating a release tag on a Gitea/Forgejo instance.
+///
+/// Returns the short branch name (e.g. `"main"`) when HEAD is on a named branch, falling back
+/// to the raw commit SHA when HEAD is detached.  Using a branch name is preferred because
+/// Forgejo resolves branch names reliably via `git rev-parse`, whereas some Forgejo versions
+/// (including Codeberg's) fail to look up a bare commit SHA as the first tag in a repository.
+pub(crate) fn get_gitea_target_commitish() -> Option<String> {
+    let repo = Repository::open(current_dir().ok()?).ok()?;
+    let head = repo.head().ok()?;
+    if head.is_branch() {
+        head.shorthand().map(String::from)
+    } else {
+        head.peel_to_commit().ok().map(|c| c.id().to_string())
+    }
+}
+
 /// Get all tags on the current branch.
 pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
     let repo = Repository::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;

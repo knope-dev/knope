@@ -17,14 +17,15 @@ pub(crate) async fn create_release(
     gitea_state: RunType<state::Gitea>,
     gitea_config: &config::Gitea,
 ) -> Result<state::Gitea, Error> {
-    let target_commitish = git::get_head_commit_sha().ok();
+    // Use commit SHA for dry-run display so that snapshot tests match the [COMMIT] placeholder.
+    let display_target = git::get_head_commit_sha().ok();
     let gitea_release = CreateReleaseInput::new(
         tag_name,
         name,
         body,
         prerelease,
         false,
-        target_commitish.as_deref(),
+        display_target.as_deref(),
     );
 
     let gitea_state = match gitea_state {
@@ -37,10 +38,24 @@ pub(crate) async fn create_release(
 
     let (token, client) = initialize_state(&gitea_config.host, gitea_state)?;
 
+    // For the actual API call, prefer the branch short name over a raw commit SHA.
+    // Forgejo resolves branch names reliably via `git rev-parse`, whereas some Forgejo
+    // versions (including Codeberg's) fail to look up a bare commit SHA when creating
+    // the repository's very first tag.
+    let api_target = git::get_gitea_target_commitish();
+    let api_release = CreateReleaseInput::new(
+        tag_name,
+        name,
+        body,
+        prerelease,
+        false,
+        api_target.as_deref(),
+    );
+
     let resp = client
         .post(gitea_config.get_releases_url())
         .header("Authorization", format!("Bearer {token}"))
-        .json(&gitea_release)
+        .json(&api_release)
         .send()
         .await;
     handle_response(
