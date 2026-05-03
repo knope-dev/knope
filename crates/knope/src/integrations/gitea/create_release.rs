@@ -41,7 +41,7 @@ pub(crate) async fn create_release(
 
     let resp = client
         .post(gitea_config.get_releases_url())
-        .query(&[("access_token", &token)])
+        .header("Authorization", format!("token {token}"))
         .json(&gitea_release)
         .send()
         .await;
