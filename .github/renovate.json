@@ -10,6 +10,7 @@
   "lockFileMaintenance": {
     "enabled": true
   },
+  "minimumReleaseAge": "7 days",
   "packageRules": [
     {
       "groupName": "Astro",
@@ -43,18 +44,6 @@
       ],
       "matchStrings": [
         "uses: (?<depName>.+)@(?<currentValue>.+)"
-      ]
-    },
-    {
-      "description": "Update cargo-binstall in GitHub Actions",
-      "customType": "regex",
-      "datasourceTemplate": "crate",
-      "depNameTemplate": "cargo-binstall",
-      "fileMatch": [
-        "^\\.github/workflows/.*\\.yml$"
-      ],
-      "matchStrings": [
-        "BINSTALL_VERSION: (?<currentValue>.+)"
       ]
     }
   ]
