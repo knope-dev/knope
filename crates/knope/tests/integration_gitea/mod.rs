@@ -144,7 +144,15 @@ host = "{host}"
         "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
-    std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
+    // Provide release notes for v0.1.0 so knope sends a non-empty body.
+    // Without this, CreateReleaseInput sets generate_release_notes=true, which causes
+    // Forgejo to attempt auto-generation and fail with "The target couldn't be found"
+    // when there is no prior release to diff against.
+    std::fs::write(
+        path.join("CHANGELOG.md"),
+        "## 0.1.0\n\n### Features\n\n- Initial release\n",
+    )
+    .expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
     assert_git(path, &["commit", "-m", "chore: release"]);
@@ -316,7 +324,11 @@ host = "{host}"
         "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
-    std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
+    std::fs::write(
+        path.join("CHANGELOG.md"),
+        "## 0.1.0\n\n### Features\n\n- Initial release\n",
+    )
+    .expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
     assert_git(path, &["commit", "-m", "chore: release"]);
