@@ -22,7 +22,7 @@ pub(crate) async fn list_issues(
     let resp = client
         .get(config.get_issues_url())
         .header("Accept", "application/json")
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .query(&[
             ("labels", labels.as_str()),
             ("state", "open"),

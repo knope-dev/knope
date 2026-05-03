@@ -41,7 +41,7 @@ pub(crate) async fn create_release(
 
     let resp = client
         .post(gitea_config.get_releases_url())
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .json(&gitea_release)
         .send()
         .await;
