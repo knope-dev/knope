@@ -47,7 +47,7 @@ jobs:
 
       - name: Run tests only
         if: matrix.os == 'windows-latest'
-        run: mise run test
+        run: mise run --skip-tools test
 
   vale:
     name: Vale
