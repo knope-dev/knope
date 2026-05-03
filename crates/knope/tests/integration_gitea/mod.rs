@@ -156,7 +156,7 @@ async fn delete_release(client: &Client, token: &str, base: &str, release_id: u6
     let url = format!("{base}/releases/{release_id}");
     let _ = client
         .delete(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await;
 }
@@ -165,7 +165,7 @@ async fn delete_tag(client: &Client, token: &str, base: &str, tag: &str) {
     let url = format!("{base}/tags/{tag}");
     let _ = client
         .delete(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await;
 }
@@ -174,7 +174,7 @@ async fn delete_branch(client: &Client, token: &str, base: &str, branch: &str) {
     let url = format!("{base}/branches/{branch}");
     let _ = client
         .delete(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await;
 }
@@ -183,7 +183,7 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
     let url = format!("{base}/releases/tags/{tag}");
     if let Ok(resp) = client
         .get(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await
     {
@@ -237,16 +237,12 @@ async fn gitea_release_workflow() {
     }
 
     // Gitea may take a moment to finalise a new release; poll with retries.
-    // Note: these verification calls use the `Authorization: token` header, which is the
-    // standard Gitea API authentication method for test helpers. Knope's own production
-    // Gitea API calls use `?access_token=` query params internally — both are valid and
-    // accepted by Gitea. The test validates the release creation result, not the auth path.
     let url = format!("{base}/releases/tags/{expected_tag}");
     let mut release_opt = None;
     for _ in 0..5 {
         let resp = client
             .get(&url)
-            .header("Authorization", format!("token {}", env.token.as_str()))
+            .header("Authorization", format!("Bearer {}", env.token.as_str()))
             .send()
             .await
             .expect("Failed to fetch release");
