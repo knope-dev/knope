@@ -346,7 +346,7 @@ fn generate_workflows(has_forge: bool, packages: &[Package]) -> Vec<Workflow> {
     let mut release_steps = if has_forge {
         vec![
             Step::Command {
-                command: format!("git commit -m \"{commit_message}\"",),
+                command: format!("git commit -m \"{commit_message}\""),
                 variables: None,
                 shell: None,
             },

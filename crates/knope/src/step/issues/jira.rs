@@ -163,7 +163,7 @@ pub(crate) async fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<I
 async fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Result<(), Error> {
     let auth = get_auth()?; // TODO: get auth once and store in state
     let base_url = &jira_config.url;
-    let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions",);
+    let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions");
     let client = http_client()?;
     let response = client
         .get(&url)
