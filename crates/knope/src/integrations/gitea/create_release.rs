@@ -17,25 +17,24 @@ pub(crate) async fn create_release(
     gitea_state: RunType<state::Gitea>,
     gitea_config: &config::Gitea,
 ) -> Result<state::Gitea, Error> {
-    // Use commit SHA for dry-run display so that snapshot tests match the [COMMIT] placeholder.
-    let display_target = git::get_head_commit_sha().ok();
-    let gitea_release = CreateReleaseInput::new(
-        tag_name,
-        name,
-        body,
-        prerelease,
-        false,
-        display_target.as_deref(),
-    );
+    // Dry-run: use commit SHA for display so snapshot [COMMIT] placeholders still match.
+    if let RunType::DryRun(state) = gitea_state {
+        let display_target = git::get_head_commit_sha().ok();
+        let dry_run_release = CreateReleaseInput::new(
+            tag_name,
+            name,
+            body,
+            prerelease,
+            false,
+            display_target.as_deref(),
+        );
+        gitea_release_dry_run(name, gitea_config, &dry_run_release);
+        return Ok(state);
+    }
 
-    let gitea_state = match gitea_state {
-        RunType::DryRun(state) => {
-            gitea_release_dry_run(name, gitea_config, &gitea_release);
-            return Ok(state);
-        }
-        RunType::Real(gitea_state) => gitea_state,
+    let RunType::Real(gitea_state) = gitea_state else {
+        unreachable!("non-dry-run branch already handled above")
     };
-
     let (token, client) = initialize_state(&gitea_config.host, gitea_state)?;
 
     // For the actual API call, prefer the branch short name over a raw commit SHA.

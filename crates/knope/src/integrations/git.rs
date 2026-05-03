@@ -464,9 +464,23 @@ pub(crate) fn get_head_commit_sha() -> Result<String, Error> {
 /// to the raw commit SHA when HEAD is detached.  Using a branch name is preferred because
 /// Forgejo resolves branch names reliably via `git rev-parse`, whereas some Forgejo versions
 /// (including Codeberg's) fail to look up a bare commit SHA as the first tag in a repository.
+///
+/// Returns `None` if neither value can be determined (e.g. repository not found).
 pub(crate) fn get_gitea_target_commitish() -> Option<String> {
-    let repo = Repository::open(current_dir().ok()?).ok()?;
-    let head = repo.head().ok()?;
+    let repo = match Repository::open(current_dir().ok()?) {
+        Ok(repo) => repo,
+        Err(e) => {
+            tracing::debug!("Could not open git repository for target_commitish: {e}");
+            return None;
+        }
+    };
+    let head = match repo.head() {
+        Ok(head) => head,
+        Err(e) => {
+            tracing::debug!("Could not read HEAD for target_commitish: {e}");
+            return None;
+        }
+    };
     if head.is_branch() {
         head.shorthand().map(String::from)
     } else {
