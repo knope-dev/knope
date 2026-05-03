@@ -209,7 +209,7 @@ impl Display for Version {
             Self::Pre(PreVersion {
                 stable_component,
                 pre_component,
-            }) => write!(f, "{stable_component}-{pre_component}",),
+            }) => write!(f, "{stable_component}-{pre_component}"),
         }
     }
 }

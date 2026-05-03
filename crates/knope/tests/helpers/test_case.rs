@@ -200,7 +200,7 @@ impl TestCase {
     }
 
     fn data_path(&self) -> &Path {
-        let prefix = format!("crates{MAIN_SEPARATOR}knope{MAIN_SEPARATOR}",);
+        let prefix = format!("crates{MAIN_SEPARATOR}knope{MAIN_SEPARATOR}");
         Path::new(self.file_name.strip_prefix(&prefix).unwrap())
             .parent()
             .unwrap()
