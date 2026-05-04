@@ -17,6 +17,16 @@ struct Release {
     tag_name: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct BranchCommit {
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BranchInfo {
+    commit: BranchCommit,
+}
+
 struct GiteaEnv {
     token: String,
     host: String,
@@ -204,6 +214,46 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
     delete_tag(client, token, base, tag).await;
 }
 
+/// Poll the Forgejo branch API until the branch shows the expected commit SHA, or panic.
+///
+/// Forgejo may process a newly-pushed branch asynchronously. Knope sends the HEAD commit SHA
+/// as `target_commitish` when creating a release; if that SHA is not yet visible to the API,
+/// Forgejo returns "The target couldn't be found." Polling here ensures the commit is
+/// accessible before we invoke `knope release`.
+async fn wait_for_commit_on_branch(
+    client: &Client,
+    token: &str,
+    base: &str,
+    branch: &str,
+    expected_sha: &str,
+) {
+    const MAX_ATTEMPTS: u32 = 15;
+    const POLL_INTERVAL_SECS: u64 = 2;
+    let url = format!("{base}/branches/{branch}");
+    for attempt in 0..MAX_ATTEMPTS {
+        if let Ok(resp) = client
+            .get(&url)
+            .header("Authorization", format!("Bearer {token}"))
+            .send()
+            .await
+        {
+            if resp.status().is_success() {
+                if let Ok(info) = resp.json::<BranchInfo>().await {
+                    if info.commit.id == expected_sha {
+                        return;
+                    }
+                }
+            }
+        }
+        if attempt == MAX_ATTEMPTS - 1 {
+            panic!(
+                "Commit {expected_sha} not visible on branch {branch} after {MAX_ATTEMPTS} attempts"
+            );
+        }
+        tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_SECS)).await;
+    }
+}
+
 /// Test that `knope release` creates a Gitea release via the real API.
 ///
 /// Sets up a git repository pre-configured at version `0.1.0`, pushes the branch to
@@ -227,6 +277,16 @@ async fn gitea_release_workflow() {
 
     // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
     push_branch(path, branch);
+
+    // Get the local HEAD SHA and wait for it to be visible on the remote.
+    // Forgejo may process a newly-pushed commit asynchronously; sending the SHA as
+    // target_commitish before it's indexed causes a "The target couldn't be found" 404.
+    let head_sha = {
+        let output = git(path, &["rev-parse", "HEAD"]);
+        assert!(output.status.success(), "git rev-parse HEAD failed");
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
+    };
+    wait_for_commit_on_branch(&client, &env.token, &base, branch, &head_sha).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
