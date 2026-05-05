@@ -25,20 +25,7 @@ pub(crate) fn redact_url_credentials(s: &str) -> String {
 #[allow(clippy::expect_used)]
 pub(crate) fn push_branch(dir: &Path, branch: &str) {
     let output = Command::new("git")
-        .args([
-            "-c",
-            "http.connectTimeout=30",
-            "-c",
-            "http.lowSpeedLimit=1000",
-            "-c",
-            "http.lowSpeedTime=30",
-            "push",
-            "--set-upstream",
-            "origin",
-            branch,
-            "--force",
-        ])
-        .env("GIT_TERMINAL_PROMPT", "0")
+        .args(["push", "--set-upstream", "origin", branch, "--force"])
         .current_dir(dir)
         .output()
         .expect("Failed to run git push");

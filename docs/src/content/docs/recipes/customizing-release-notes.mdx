@@ -63,7 +63,7 @@ extra_changelog_sections = [
 ```
 
 You can add as many sections as you want, they will appear in order _after_ the built-in sections.
-Each section can be added to from any number of [conventional commit footers](/reference/concepts/conventional-commits/#footers) and [changeset types](https://github.com/knope-dev/changesets?tab=readme-ov-file#change-type).
+Each section accepts any number of [conventional commit footers](/reference/concepts/conventional-commits/#footers) and [changeset types](https://github.com/knope-dev/changesets?tab=readme-ov-file#change-type).
 The semantic version impact of any custom changes is `patch`.
 
 ## Overriding built-in sections
@@ -156,6 +156,46 @@ change_templates = [
 
 The order of the templates _only_ determines their precedence, not the order that changes appear in a section.
 You currently can't customize the order of changes in a section.
+
+:::
+
+### GitHub-style release notes
+
+If you have [`[github]`](/reference/config-file/github) configured, you can use `$pr_number` and `$commit_author_login` to generate release notes
+similar to the format GitHub produces by default:
+
+```toml
+[github]
+owner = "my-org"
+repo = "my-repo"
+
+[release_notes]
+change_templates = [
+    "* $summary by @$commit_author_login in #$pr_number",
+    "* $summary by @$commit_author_login",
+    "* $summary",
+]
+```
+
+This produces entries like:
+
+```markdown
+## Features
+
+- Add dark mode by @DaleSeo in #42
+- Improve logging by @alice
+- An uncommitted feature
+```
+
+Knope uses the first template when both the PR number and author login are available.
+The second is a fallback for commits not associated with a PR.
+The third covers uncommitted change files or commits without GitHub data.
+
+:::note
+
+Using `$pr_number` or `$commit_author_login` causes Knope to call the GitHub API during `PrepareRelease`.
+This requires a `GITHUB_TOKEN` environment variable for private repositories.
+If you don't use these variables, Knope makes no API calls and requires no token.
 
 :::
 
