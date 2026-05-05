@@ -231,16 +231,35 @@ async fn wait_for_commit_on_branch(
     const POLL_INTERVAL_SECS: u64 = 2;
     let url = format!("{base}/branches/{branch}");
     for attempt in 0..MAX_ATTEMPTS {
-        if let Ok(resp) = client
+        match client
             .get(&url)
             .header("Authorization", format!("Bearer {token}"))
             .send()
             .await
         {
-            if resp.status().is_success() {
-                if let Ok(info) = resp.json::<BranchInfo>().await {
-                    if info.commit.id == expected_sha {
-                        return;
+            Err(e) => {
+                eprintln!(
+                    "[debug] wait_for_commit attempt {attempt}: network error: {e}"
+                );
+            }
+            Ok(resp) => {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                eprintln!(
+                    "[debug] wait_for_commit attempt {attempt}: HTTP {status}, body: {body}"
+                );
+                if status.is_success() {
+                    if let Ok(info) = serde_json::from_str::<BranchInfo>(&body) {
+                        eprintln!(
+                            "[debug] wait_for_commit: branch tip SHA = {}, want = {expected_sha}",
+                            info.commit.id
+                        );
+                        if info.commit.id == expected_sha {
+                            eprintln!(
+                                "[debug] wait_for_commit: SHA matched after {attempt} attempts"
+                            );
+                            return;
+                        }
                     }
                 }
             }
@@ -251,6 +270,26 @@ async fn wait_for_commit_on_branch(
             );
         }
         tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_SECS)).await;
+    }
+}
+
+/// Query the Forgejo git/commits API to check whether the commit SHA is directly reachable.
+/// Prints the full response for debugging.
+async fn debug_check_commit(client: &Client, token: &str, base: &str, sha: &str) {
+    let url = format!("{base}/git/commits/{sha}");
+    eprintln!("[debug] checking commit directly via {url}");
+    match client
+        .get(&url)
+        .header("Authorization", format!("Bearer {token}"))
+        .send()
+        .await
+    {
+        Err(e) => eprintln!("[debug] commit lookup network error: {e}"),
+        Ok(resp) => {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            eprintln!("[debug] commit lookup HTTP {status}, body: {body}");
+        }
     }
 }
 
@@ -286,7 +325,16 @@ async fn gitea_release_workflow() {
         assert!(output.status.success(), "git rev-parse HEAD failed");
         String::from_utf8_lossy(&output.stdout).trim().to_string()
     };
+    eprintln!("[debug] HEAD SHA: {head_sha}");
+    eprintln!(
+        "[debug] CHANGELOG.md: {}",
+        std::fs::read_to_string(path.join("CHANGELOG.md")).unwrap_or_default()
+    );
+
     wait_for_commit_on_branch(&client, &env.token, &base, branch, &head_sha).await;
+
+    // Verify the commit is also directly reachable via the git/commits API.
+    debug_check_commit(&client, &env.token, &base, &head_sha).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
@@ -298,6 +346,8 @@ async fn gitea_release_workflow() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
+    eprintln!("[debug] knope stdout: {stdout}");
+    eprintln!("[debug] knope stderr: {stderr}");
     if !output.status.success() {
         cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
         delete_branch(&client, &env.token, &base, branch).await;
