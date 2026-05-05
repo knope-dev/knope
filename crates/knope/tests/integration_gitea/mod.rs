@@ -204,65 +204,6 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
     delete_tag(client, token, base, tag).await;
 }
 
-/// Create a git tag on the remote via the Forgejo API, with retries.
-///
-/// Forgejo processes git pushes asynchronously. The branch API and git/commits API return
-/// results from a cached/indexed database view that is updated quickly. However, Forgejo's
-/// release creation service performs a real `git tag` operation on the pack files, which may
-/// not be fully indexed yet.
-///
-/// Creating the tag via the API first (with retries until success) confirms the git layer is
-/// ready. Once the tag exists, `knope release` takes the UpdateRelease code path (tag already
-/// present → no new tag creation → no "target not found" error).
-///
-/// A 409 Conflict response means the tag already exists (e.g. from cleanup or a previous run),
-/// which is also treated as success.
-async fn create_remote_tag(
-    client: &Client,
-    token: &str,
-    base: &str,
-    tag_name: &str,
-    target_sha: &str,
-) {
-    const MAX_ATTEMPTS: u32 = 20;
-    const POLL_INTERVAL_SECS: u64 = 3;
-    let url = format!("{base}/tags");
-    for attempt in 0..MAX_ATTEMPTS {
-        let resp = client
-            .post(&url)
-            .header("Authorization", format!("Bearer {token}"))
-            .json(&serde_json::json!({
-                "tag_name": tag_name,
-                "target": target_sha,
-                "message": "",
-            }))
-            .send()
-            .await;
-        match resp {
-            Ok(r) => {
-                let status = r.status();
-                let body = r.text().await.unwrap_or_default();
-                eprintln!(
-                    "[debug] create_remote_tag attempt {attempt}: HTTP {status}, body: {body}"
-                );
-                if status.is_success() || status.as_u16() == 409 {
-                    // success, or tag already exists — either way it is present
-                    return;
-                }
-            }
-            Err(e) => {
-                eprintln!("[debug] create_remote_tag attempt {attempt}: network error: {e}");
-            }
-        }
-        if attempt == MAX_ATTEMPTS - 1 {
-            panic!(
-                "Failed to create remote tag {tag_name} pointing at {target_sha} after {MAX_ATTEMPTS} attempts"
-            );
-        }
-        tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_SECS)).await;
-    }
-}
-
 /// Test that `knope release` creates a Gitea release via the real API.
 ///
 /// Sets up a git repository pre-configured at version `0.1.0`, pushes the branch to
@@ -287,22 +228,11 @@ async fn gitea_release_workflow() {
     // Push the branch so the commit is sent to Forgejo.
     push_branch(path, branch);
 
-    // Get the local HEAD SHA.
-    let head_sha = {
-        let output = git(path, &["rev-parse", "HEAD"]);
-        assert!(output.status.success(), "git rev-parse HEAD failed");
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    };
-
-    // Pre-create the git tag on Forgejo via the API (with retries).
-    //
-    // Forgejo processes git pushes asynchronously. The branch/commits API returns cached
-    // data quickly, but the internal git tag creation used by the releases API operates
-    // directly on the pack files, which may not be ready yet. Trying to create the tag
-    // via the API retries until the pack file is accessible, confirming the git layer is
-    // ready. Once the tag exists, `knope release` takes the UpdateRelease path (tag already
-    // present → no new tag creation → no "target not found" error).
-    create_remote_tag(&client, &env.token, &base, expected_tag, &head_sha).await;
+    // Give Forgejo time to fully index the pushed objects. The branch/commits API
+    // updates quickly from a cached view, but the git service that creates tags (used
+    // internally by the releases API) operates directly on pack files and may not be
+    // ready immediately after a push.
+    tokio::time::sleep(Duration::from_secs(5)).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
