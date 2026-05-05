@@ -17,16 +17,6 @@ struct Release {
     tag_name: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct BranchCommit {
-    id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct BranchInfo {
-    commit: BranchCommit,
-}
-
 struct GiteaEnv {
     token: String,
     host: String,
@@ -214,82 +204,62 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
     delete_tag(client, token, base, tag).await;
 }
 
-/// Poll the Forgejo branch API until the branch shows the expected commit SHA, or panic.
+/// Create a git tag on the remote via the Forgejo API, with retries.
 ///
-/// Forgejo may process a newly-pushed branch asynchronously. Knope sends the HEAD commit SHA
-/// as `target_commitish` when creating a release; if that SHA is not yet visible to the API,
-/// Forgejo returns "The target couldn't be found." Polling here ensures the commit is
-/// accessible before we invoke `knope release`.
-async fn wait_for_commit_on_branch(
+/// Forgejo processes git pushes asynchronously. The branch API and git/commits API return
+/// results from a cached/indexed database view that is updated quickly. However, Forgejo's
+/// release creation service performs a real `git tag` operation on the pack files, which may
+/// not be fully indexed yet.
+///
+/// Creating the tag via the API first (with retries until success) confirms the git layer is
+/// ready. Once the tag exists, `knope release` takes the UpdateRelease code path (tag already
+/// present → no new tag creation → no "target not found" error).
+///
+/// A 409 Conflict response means the tag already exists (e.g. from cleanup or a previous run),
+/// which is also treated as success.
+async fn create_remote_tag(
     client: &Client,
     token: &str,
     base: &str,
-    branch: &str,
-    expected_sha: &str,
+    tag_name: &str,
+    target_sha: &str,
 ) {
-    const MAX_ATTEMPTS: u32 = 15;
-    const POLL_INTERVAL_SECS: u64 = 2;
-    let url = format!("{base}/branches/{branch}");
+    const MAX_ATTEMPTS: u32 = 20;
+    const POLL_INTERVAL_SECS: u64 = 3;
+    let url = format!("{base}/tags");
     for attempt in 0..MAX_ATTEMPTS {
-        match client
-            .get(&url)
+        let resp = client
+            .post(&url)
             .header("Authorization", format!("Bearer {token}"))
+            .json(&serde_json::json!({
+                "tag_name": tag_name,
+                "target": target_sha,
+                "message": "",
+            }))
             .send()
-            .await
-        {
-            Err(e) => {
+            .await;
+        match resp {
+            Ok(r) => {
+                let status = r.status();
+                let body = r.text().await.unwrap_or_default();
                 eprintln!(
-                    "[debug] wait_for_commit attempt {attempt}: network error: {e}"
+                    "[debug] create_remote_tag attempt {attempt}: HTTP {status}, body: {body}"
                 );
-            }
-            Ok(resp) => {
-                let status = resp.status();
-                let body = resp.text().await.unwrap_or_default();
-                eprintln!(
-                    "[debug] wait_for_commit attempt {attempt}: HTTP {status}, body: {body}"
-                );
-                if status.is_success() {
-                    if let Ok(info) = serde_json::from_str::<BranchInfo>(&body) {
-                        eprintln!(
-                            "[debug] wait_for_commit: branch tip SHA = {}, want = {expected_sha}",
-                            info.commit.id
-                        );
-                        if info.commit.id == expected_sha {
-                            eprintln!(
-                                "[debug] wait_for_commit: SHA matched after {attempt} attempts"
-                            );
-                            return;
-                        }
-                    }
+                if status.is_success() || status.as_u16() == 409 {
+                    // success, or tag already exists — either way it is present
+                    return;
                 }
+            }
+            Err(e) => {
+                eprintln!("[debug] create_remote_tag attempt {attempt}: network error: {e}");
             }
         }
         if attempt == MAX_ATTEMPTS - 1 {
             panic!(
-                "Commit {expected_sha} not visible on branch {branch} after {MAX_ATTEMPTS} attempts"
+                "Failed to create remote tag {tag_name} pointing at {target_sha} after {MAX_ATTEMPTS} attempts"
             );
         }
         tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_SECS)).await;
-    }
-}
-
-/// Query the Forgejo git/commits API to check whether the commit SHA is directly reachable.
-/// Prints the full response for debugging.
-async fn debug_check_commit(client: &Client, token: &str, base: &str, sha: &str) {
-    let url = format!("{base}/git/commits/{sha}");
-    eprintln!("[debug] checking commit directly via {url}");
-    match client
-        .get(&url)
-        .header("Authorization", format!("Bearer {token}"))
-        .send()
-        .await
-    {
-        Err(e) => eprintln!("[debug] commit lookup network error: {e}"),
-        Ok(resp) => {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            eprintln!("[debug] commit lookup HTTP {status}, body: {body}");
-        }
     }
 }
 
@@ -314,27 +284,25 @@ async fn gitea_release_workflow() {
     let dir = setup_test_repo(&env.token, &env.host, &env.owner, &env.repo, branch);
     let path = dir.path();
 
-    // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
+    // Push the branch so the commit is sent to Forgejo.
     push_branch(path, branch);
 
-    // Get the local HEAD SHA and wait for it to be visible on the remote.
-    // Forgejo may process a newly-pushed commit asynchronously; sending the SHA as
-    // target_commitish before it's indexed causes a "The target couldn't be found" 404.
+    // Get the local HEAD SHA.
     let head_sha = {
         let output = git(path, &["rev-parse", "HEAD"]);
         assert!(output.status.success(), "git rev-parse HEAD failed");
         String::from_utf8_lossy(&output.stdout).trim().to_string()
     };
-    eprintln!("[debug] HEAD SHA: {head_sha}");
-    eprintln!(
-        "[debug] CHANGELOG.md: {}",
-        std::fs::read_to_string(path.join("CHANGELOG.md")).unwrap_or_default()
-    );
 
-    wait_for_commit_on_branch(&client, &env.token, &base, branch, &head_sha).await;
-
-    // Verify the commit is also directly reachable via the git/commits API.
-    debug_check_commit(&client, &env.token, &base, &head_sha).await;
+    // Pre-create the git tag on Forgejo via the API (with retries).
+    //
+    // Forgejo processes git pushes asynchronously. The branch/commits API returns cached
+    // data quickly, but the internal git tag creation used by the releases API operates
+    // directly on the pack files, which may not be ready yet. Trying to create the tag
+    // via the API retries until the pack file is accessible, confirming the git layer is
+    // ready. Once the tag exists, `knope release` takes the UpdateRelease path (tag already
+    // present → no new tag creation → no "target not found" error).
+    create_remote_tag(&client, &env.token, &base, expected_tag, &head_sha).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
@@ -344,11 +312,9 @@ async fn gitea_release_workflow() {
         .output()
         .expect("Failed to run knope");
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    eprintln!("[debug] knope stdout: {stdout}");
-    eprintln!("[debug] knope stderr: {stderr}");
     if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
         cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
         delete_branch(&client, &env.token, &base, branch).await;
         panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
