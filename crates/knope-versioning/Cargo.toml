@@ -13,7 +13,7 @@ readme = "README.md"
 
 [dependencies]
 changesets = { workspace = true }
-deno_lockfile = "0.48.0"
+deno_lockfile = "0.49.0"
 deno_semver = { workspace = true }
 git-conventional = "1.0.0"
 itertools = { workspace = true }
