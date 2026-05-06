@@ -36,6 +36,7 @@ pub(crate) async fn create_or_update_pull_request(
     let resp = client
         .get(config.get_pulls_url())
         .header("Accept", "application/json")
+        .header("Authorization", format!("Bearer {token}"))
         .query(&[
             ("state", "open"),
             (
@@ -43,7 +44,6 @@ pub(crate) async fn create_or_update_pull_request(
                 &format!("{owner}:{current_branch}", owner = config.owner),
             ),
             ("base", base),
-            ("access_token", &token),
         ])
         .send()
         .await;
@@ -84,7 +84,7 @@ async fn update_pull_request(
     let resp = client
         .patch(config.get_pull_url(number))
         .header("Accept", "application/json")
-        .query(&[("access_token", token)])
+        .header("Authorization", format!("Bearer {token}"))
         .json(&json!({
             "body": body,
             "title": title
@@ -112,7 +112,7 @@ async fn create_pull_request(
     let resp = client
         .post(config.get_pulls_url())
         .header("Accept", "application/json")
-        .query(&[("access_token", token)])
+        .header("Authorization", format!("Bearer {token}"))
         .json(&json!({
             "title": title,
             "body": body,

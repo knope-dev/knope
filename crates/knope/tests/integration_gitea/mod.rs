@@ -144,7 +144,15 @@ host = "{host}"
         "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
-    std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
+    // Provide release notes for v0.1.0 so knope sends a non-empty body.
+    // Without this, CreateReleaseInput sets generate_release_notes=true, which causes
+    // Forgejo to attempt auto-generation and fail with "The target couldn't be found"
+    // when there is no prior release to diff against.
+    std::fs::write(
+        path.join("CHANGELOG.md"),
+        "## 0.1.0\n\n### Features\n\n- Initial release\n",
+    )
+    .expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
     assert_git(path, &["commit", "-m", "chore: release"]);
@@ -156,7 +164,7 @@ async fn delete_release(client: &Client, token: &str, base: &str, release_id: u6
     let url = format!("{base}/releases/{release_id}");
     let _ = client
         .delete(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await;
 }
@@ -165,7 +173,7 @@ async fn delete_tag(client: &Client, token: &str, base: &str, tag: &str) {
     let url = format!("{base}/tags/{tag}");
     let _ = client
         .delete(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await;
 }
@@ -174,7 +182,7 @@ async fn delete_branch(client: &Client, token: &str, base: &str, branch: &str) {
     let url = format!("{base}/branches/{branch}");
     let _ = client
         .delete(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await;
 }
@@ -183,7 +191,7 @@ async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &
     let url = format!("{base}/releases/tags/{tag}");
     if let Ok(resp) = client
         .get(&url)
-        .header("Authorization", format!("token {token}"))
+        .header("Authorization", format!("Bearer {token}"))
         .send()
         .await
     {
@@ -217,8 +225,14 @@ async fn gitea_release_workflow() {
     let dir = setup_test_repo(&env.token, &env.host, &env.owner, &env.repo, branch);
     let path = dir.path();
 
-    // Push the branch so knope can resolve the HEAD commit SHA when creating the release.
+    // Push the branch so the commit is sent to Forgejo.
     push_branch(path, branch);
+
+    // Give Forgejo time to fully index the pushed objects. The branch/commits API
+    // updates quickly from a cached view, but the git service that creates tags (used
+    // internally by the releases API) operates directly on pack files and may not be
+    // ready immediately after a push.
+    tokio::time::sleep(Duration::from_secs(5)).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
@@ -228,25 +242,21 @@ async fn gitea_release_workflow() {
         .output()
         .expect("Failed to run knope");
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
         cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
         delete_branch(&client, &env.token, &base, branch).await;
         panic!("knope release failed:\nstdout: {stdout}\nstderr: {stderr}");
     }
 
     // Gitea may take a moment to finalise a new release; poll with retries.
-    // Note: these verification calls use the `Authorization: token` header, which is the
-    // standard Gitea API authentication method for test helpers. Knope's own production
-    // Gitea API calls use `?access_token=` query params internally — both are valid and
-    // accepted by Gitea. The test validates the release creation result, not the auth path.
     let url = format!("{base}/releases/tags/{expected_tag}");
     let mut release_opt = None;
     for _ in 0..5 {
         let resp = client
             .get(&url)
-            .header("Authorization", format!("token {}", env.token.as_str()))
+            .header("Authorization", format!("Bearer {}", env.token.as_str()))
             .send()
             .await
             .expect("Failed to fetch release");
@@ -320,7 +330,11 @@ host = "{host}"
         "[package]\nname = \"integration-test\"\nversion = \"0.1.0\"\n",
     )
     .expect("Failed to write Cargo.toml");
-    std::fs::write(path.join("CHANGELOG.md"), "").expect("Failed to write CHANGELOG.md");
+    std::fs::write(
+        path.join("CHANGELOG.md"),
+        "## 0.1.0\n\n### Features\n\n- Initial release\n",
+    )
+    .expect("Failed to write CHANGELOG.md");
 
     assert_git(path, &["add", "."]);
     assert_git(path, &["commit", "-m", "chore: release"]);
