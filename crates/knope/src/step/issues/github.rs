@@ -6,7 +6,10 @@ use crate::{
     app_config,
     app_config::get_or_prompt_for_github_token,
     config,
-    integrations::http::{ClientCreationError, http_client},
+    integrations::{
+        http,
+        http::{ClientCreationError, http_client},
+    },
     prompt,
     prompt::select,
     state,
@@ -86,7 +89,7 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/github/")
     )]
     Api {
-        source: Box<reqwest::Error>,
+        source: Box<http::Error>,
         context: &'static str,
     },
     #[error("I/O error encountered when communicating with GitHub: {0}")]

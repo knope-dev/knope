@@ -4,6 +4,7 @@ use knope_versioning::{Action, VersionedFile};
 
 use crate::{
     config,
+    integrations::http::Client,
     step::{issues, releases},
 };
 
@@ -92,17 +93,11 @@ pub(crate) enum Issue {
 #[derive(Clone, Debug)]
 pub(crate) enum GitHub {
     New,
-    Initialized {
-        token: String,
-        client: reqwest::Client,
-    },
+    Initialized { token: String, client: Client },
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum Gitea {
     New,
-    Initialized {
-        token: String,
-        client: reqwest::Client,
-    },
+    Initialized { token: String, client: Client },
 }

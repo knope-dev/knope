@@ -11,7 +11,7 @@ use std::{fs::write, path::Path, process::Command, time::Duration};
 
 use reqwest::Client;
 use serde::Deserialize;
-use tokio::fs::create_dir_all;
+use tokio::{fs::create_dir_all, time::sleep};
 
 #[derive(Debug, Deserialize)]
 struct Release {
@@ -501,7 +501,7 @@ default: minor
     .unwrap();
 
     assert_git(path, &["add", ".changeset/test.md"]);
-    assert_git(path, &["commit", "-m", "feat: test changeset"]);
+    assert_git(path, &["commit", "-m", "feat: test commit"]);
 
     push_branch(path, branch);
 
@@ -524,8 +524,10 @@ default: minor
     // Run PrepareRelease and verify that the PR info is included in the changelog
     assert_git(path, &["checkout", branch]);
     assert_git(path, &["pull", "--rebase"]);
+    wait_for_github_to_be_ready(&token, owner, repo, client, &pr).await;
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
         .current_dir(path)
+        .env("RUST_LOG", "knope=debug")
         .env("GITHUB_TOKEN", token)
         .args(["prepare"])
         .output()
@@ -538,12 +540,49 @@ default: minor
     let changelog = std::fs::read_to_string(path.join("CHANGELOG.md")).unwrap();
     assert!(
         changelog.contains(pr.number.to_string().as_str()),
-        "PR number should be included in the changelog, got {changelog}"
+        "PR number should be included in the changelog, got {changelog}.\n Knope output: {}",
+        String::from_utf8_lossy(&output.stdout)
     );
     assert!(
         changelog.contains(pr.author.login.as_str()),
-        "PR author should be included in the changelog, got {changelog}"
+        "PR author should be included in the changelog, got {changelog}.\n Knope output: {}",
+        String::from_utf8_lossy(&output.stdout)
     );
+}
+
+async fn wait_for_github_to_be_ready(
+    token: &String,
+    owner: String,
+    repo: String,
+    client: Client,
+    pr: &PrInfo,
+) {
+    for attempt in 0..10u32 {
+        sleep(Duration::from_secs(1)).await;
+        let resp = client
+            .get(format!(
+                "https://api.github.com/repos/{owner}/{repo}/pulls/{}",
+                pr.number
+            ))
+            .header("Authorization", format!("token {token}"))
+            .header("Accept", "application/vnd.github+json")
+            .send()
+            .await
+            .expect("Failed to fetch PR state");
+        let pr_data: serde_json::Value = resp.json().await.expect("Failed to deserialize PR");
+        if pr_data
+            .get("merged")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+        {
+            break;
+        }
+        assert!(
+            attempt < 9,
+            "PR {} did not show as merged after retries",
+            pr.number
+        );
+    }
 }
 
 fn merge_pr(token: &str, owner: &str, repo: &str, pr_number: u64) {

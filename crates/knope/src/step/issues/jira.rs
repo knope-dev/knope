@@ -8,7 +8,7 @@ use crate::{
     app_config,
     app_config::{get_or_prompt_for_email, get_or_prompt_for_jira_token},
     config::Jira,
-    integrations::http::{ClientCreationError, http_client},
+    integrations::http::{self, ClientCreationError, http_client},
     prompt,
     prompt::select,
     state,
@@ -75,9 +75,10 @@ pub(crate) enum Error {
     #[error("Problem communicating with Jira while {activity}: {inner}")]
     Api {
         activity: &'static str,
-        #[source]
-        inner: Box<reqwest::Error>,
+        inner: Box<http::Error>,
     },
+    #[error("Could not deserialize response from Jira into JSON: {0}")]
+    Deserialize(#[from] reqwest::Error),
     #[error("The specified transition name was not found in the Jira project")]
     #[diagnostic(
         code(issues::jira::transition),
@@ -146,10 +147,7 @@ pub(crate) async fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<I
             inner: Box::new(inner),
             activity: "querying for issues",
         })?;
-    let search_response: SearchResponse = response.json().await.map_err(|inner| Error::Api {
-        inner: Box::new(inner),
-        activity: "parsing search response",
-    })?;
+    let search_response: SearchResponse = response.json().await.map_err(Error::Deserialize)?;
     Ok(search_response
         .issues
         .into_iter()
@@ -174,10 +172,7 @@ async fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Re
             inner: Box::new(inner),
             activity: "getting transitions",
         })?;
-    let response: GetTransitionResponse = response.json().await.map_err(|inner| Error::Api {
-        inner: Box::new(inner),
-        activity: "parsing transitions response",
-    })?;
+    let response: GetTransitionResponse = response.json().await.map_err(Error::Deserialize)?;
     let transition = response
         .transitions
         .into_iter()
