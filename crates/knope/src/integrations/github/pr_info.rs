@@ -1,4 +1,3 @@
-use futures::{StreamExt, stream};
 use knope_versioning::changes::Change;
 use miette::Diagnostic;
 use tracing::{debug, warn};
@@ -29,29 +28,21 @@ pub(crate) async fn enrich_git_info(
     let (token, client) = initialize_state(github_state)?;
     let authorization = format!("Bearer {token}");
 
-    let git_info = changes.iter_mut().filter_map(|change| change.git.as_mut());
-    stream::iter(git_info)
-        // GitHub limits concurrency on their end. Their recommendation is actually to make all
-        // requests serially, but that can take a long time for big releases, so we do some
-        // _mild_ concurrency.
-        .for_each_concurrent(5, async |git_info| {
-            let short_hash = &git_info.hash;
-            let pr_info =
-                fetch_pr_for_commit(&client, &authorization, github_config, short_hash).await;
-            match pr_info {
-                Ok(Some((pr_number, author_login))) => {
-                    git_info.pr_number = Some(pr_number);
-                    git_info.author_login = Some(author_login);
-                }
-                Ok(None) => {
-                    debug!("No PR found for commit {short_hash}");
-                }
-                Err(e) => {
-                    warn!("Failed to fetch PR info for commit {short_hash}: {e}");
-                }
+    for git_info in changes.iter_mut().filter_map(|change| change.git.as_mut()) {
+        let short_hash = &git_info.hash;
+        match fetch_pr_for_commit(&client, &authorization, github_config, short_hash).await {
+            Ok(Some((pr_number, author_login))) => {
+                git_info.pr_number = Some(pr_number);
+                git_info.author_login = Some(author_login);
             }
-        })
-        .await;
+            Ok(None) => {
+                debug!("No PR found for commit {short_hash}");
+            }
+            Err(e) => {
+                warn!("Failed to fetch PR info for commit {short_hash}: {e}");
+            }
+        }
+    }
 
     Ok(state::GitHub::Initialized { token, client })
 }
