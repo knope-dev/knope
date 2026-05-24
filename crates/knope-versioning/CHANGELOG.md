@@ -1,3 +1,20 @@
+## 0.8.0 (2026-05-24)
+
+### Breaking Changes
+
+#### `NewError::InconsistentVersions` fields are now `Box<Version>`
+
+The `first_version` and `second_version` fields of `NewError::InconsistentVersions` (re-exported as `PackageNewError`) changed from `Version` to `Box<Version>` to reduce the variant's size and satisfy the `clippy::result_large_err` lint introduced in Rust 1.94.0.
+
+### Features
+
+#### Add `$pr_author_login` and `$pr_number` change template variables
+
+You can now reference GitHub usernames and pull request numbers when generating changelog entries.
+This is only supported for GitHub for now.
+
+Thanks to @DaleSeo for PR #1804!
+
 ## 0.7.1 (2026-02-16)
 
 ### Features

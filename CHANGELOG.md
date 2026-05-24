@@ -10,6 +10,28 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.23.0 (2026-05-24)
+
+### Breaking Changes
+
+#### `$pr_author_login` and `$pr_number` are now reserved strings in change templates
+
+If you previously had these literal strings in `[release_notes.change_templates]`, they will now be treated like the new variables for looking up GitHub info.
+
+### Features
+
+#### Add `$pr_author_login` and `$pr_number` change template variables
+
+You can now reference GitHub usernames and pull request numbers when generating changelog entries.
+This is only supported for GitHub for now.
+
+Thanks to @DaleSeo for PR #1804!
+
+### Fixes
+
+- Fix cargo-binstall installation
+- Retry rate-limited requests to GitHub
+
 ## 0.22.4 (2026-03-21)
 
 ### Fixes
