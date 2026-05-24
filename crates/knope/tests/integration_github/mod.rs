@@ -447,8 +447,8 @@ async fn pull_request_creation_and_info_lookup() {
         r#"
     [release_notes]
     change_templates = [
-        "* $summary by @$commit_author_login in #$pr_number",
-        "* $summary by @$commit_author_login",
+        "* $summary by @$pr_author_login in #$pr_number",
+        "* $summary by @$pr_author_login",
         "* $summary",
     ]
     [[workflows]]

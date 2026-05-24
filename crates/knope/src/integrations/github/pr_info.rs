@@ -34,7 +34,7 @@ pub(crate) async fn enrich_git_info(
         );
         for git_info in changes.iter_mut().filter_map(|change| change.git.as_mut()) {
             git_info.pr_number = Some(1234);
-            git_info.author_login = Some("some-user".to_string());
+            git_info.pr_author_login = Some("some-user".to_string());
         }
         return Ok(github_state);
     }
@@ -49,7 +49,7 @@ pub(crate) async fn enrich_git_info(
         {
             Ok(Some((pr_number, author_login))) => {
                 git_info.pr_number = Some(pr_number);
-                git_info.author_login = Some(author_login);
+                git_info.pr_author_login = author_login;
             }
             Ok(None) => {
                 debug!("No PR found for commit {short_hash}");
@@ -72,7 +72,7 @@ async fn fetch_pr_for_commit(
     authorization: Option<&str>,
     config: &config::GitHub,
     commit_sha: &str,
-) -> Result<Option<(u64, String)>, Error> {
+) -> Result<Option<(u64, Option<String>)>, Error> {
     let url = format!(
         "https://api.github.com/repos/{owner}/{repo}/commits/{commit_sha}/pulls",
         owner = config.owner,
@@ -102,7 +102,7 @@ async fn fetch_pr_for_commit(
         })?;
 
     Ok(pulls.into_iter().next().map(|pr| {
-        let login = pr.user.map_or_else(String::new, |u| u.login);
+        let login = pr.user.map(|u| u.login);
         (pr.number, login)
     }))
 }

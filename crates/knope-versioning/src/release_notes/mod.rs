@@ -23,7 +23,7 @@ pub struct ReleaseNotes {
 
 impl ReleaseNotes {
     /// Returns the first if any forge-specific variable in `Self::change_templates`
-    /// (for example, `$pr_number`, `$commit_author_login`).
+    /// (for example, `$pr_number`, `$pr_author_login`).
     #[must_use]
     pub fn first_variable_needing_forge_data(&self) -> Option<&'static str> {
         self.change_templates
@@ -140,7 +140,7 @@ fn release_title(version: &Version) -> Result<String, TimeError> {
 pub struct ChangeTemplate(Cow<'static, str>);
 
 impl ChangeTemplate {
-    const COMMIT_AUTHOR_LOGIN: &'static str = "$commit_author_login";
+    const PR_AUTHOR_LOGIN: &'static str = "$pr_author_login";
     const COMMIT_AUTHOR_NAME: &'static str = "$commit_author_name";
     const COMMIT_HASH: &'static str = "$commit_hash";
     const DETAILS: &'static str = "$details";
@@ -158,9 +158,13 @@ impl ChangeTemplate {
             }
         }
 
-        if result.contains(Self::COMMIT_AUTHOR_LOGIN) {
-            if let Some(login) = change.git.as_ref().and_then(|g| g.author_login.as_deref()) {
-                result = result.replace(Self::COMMIT_AUTHOR_LOGIN, login);
+        if result.contains(Self::PR_AUTHOR_LOGIN) {
+            if let Some(login) = change
+                .git
+                .as_ref()
+                .and_then(|g| g.pr_author_login.as_deref())
+            {
+                result = result.replace(Self::PR_AUTHOR_LOGIN, login);
             } else {
                 return false;
             }
@@ -189,10 +193,10 @@ impl ChangeTemplate {
     }
 
     /// Returns any forge-specific variables int this template that require API calls to populate
-    /// (for example, `$pr_number`, `$commit_author_login`).
+    /// (for example, `$pr_number`, `$pr_author_login`).
     #[must_use]
     pub fn first_variable_needing_forge_data(&self) -> Option<&'static str> {
-        [Self::COMMIT_AUTHOR_LOGIN, Self::PR_NUMBER]
+        [Self::PR_AUTHOR_LOGIN, Self::PR_NUMBER]
             .into_iter()
             .find(|&variable| self.0.contains(variable))
     }
@@ -323,7 +327,7 @@ mod test_release_notes {
                     author_name: "Sushi".into(),
                     hash: "1234".into(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             },
         ];
@@ -396,7 +400,7 @@ mod test_release_notes {
                     author_name: "Sushi".into(),
                     hash: "1234".into(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             },
         ];
@@ -447,7 +451,7 @@ mod test_release_notes {
                     author_name: "Alice".into(),
                     hash: "abc123".into(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             },
             // Committed change file without details - should use second template (commit only)
@@ -462,7 +466,7 @@ mod test_release_notes {
                     author_name: "Bob".into(),
                     hash: "def456".into(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             },
             // Uncommitted change file with details - should use third template (details only)
@@ -497,7 +501,7 @@ mod test_release_notes {
                     author_name: "Charlie".into(),
                     hash: "ghi789".into(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             },
         ];
@@ -523,8 +527,8 @@ mod test_release_notes {
     #[test]
     fn github_style_templates_with_pr_and_login() {
         let change_templates = [
-            "* $summary by @$commit_author_login in #$pr_number",
-            "* $summary by @$commit_author_login",
+            "* $summary by @$pr_author_login in #$pr_number",
+            "* $summary by @$pr_author_login",
             "* $summary",
         ]
         .into_iter()
@@ -549,7 +553,7 @@ mod test_release_notes {
                     author_name: "Dale Seo".into(),
                     hash: "abc1234".into(),
                     pr_number: Some(42),
-                    author_login: Some("DaleSeo".into()),
+                    pr_author_login: Some("DaleSeo".into()),
                 }),
             },
             // Has login but no PR -> second template
@@ -564,7 +568,7 @@ mod test_release_notes {
                     author_name: "Alice".into(),
                     hash: "def5678".into(),
                     pr_number: None,
-                    author_login: Some("alice".into()),
+                    pr_author_login: Some("alice".into()),
                 }),
             },
             // No git info at all -> third template
@@ -589,7 +593,7 @@ mod test_release_notes {
                     author_name: "Bob".into(),
                     hash: "ghi9012".into(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             },
         ];
@@ -633,7 +637,7 @@ mod test_release_notes {
     #[test]
     fn needs_forge_data_true_for_author_login() {
         let notes = ReleaseNotes {
-            change_templates: vec![ChangeTemplate::from("* $summary by @$commit_author_login")],
+            change_templates: vec![ChangeTemplate::from("* $summary by @$pr_author_login")],
             ..ReleaseNotes::default()
         };
         assert!(notes.first_variable_needing_forge_data().is_some());

@@ -161,7 +161,7 @@ You currently can't customize the order of changes in a section.
 
 ### GitHub-style release notes
 
-If you have [`[github]`](/reference/config-file/github) configured, you can use `$pr_number` and `$commit_author_login` to generate release notes
+If you have [`[github]`](/reference/config-file/github) configured, you can use `$pr_number` and `$pr_author_login` to generate release notes
 similar to the format GitHub produces by default:
 
 ```toml
@@ -171,8 +171,8 @@ repo = "my-repo"
 
 [release_notes]
 change_templates = [
-    "* $summary by @$commit_author_login in #$pr_number",
-    "* $summary by @$commit_author_login",
+    "* $summary by @$pr_author_login in #$pr_number",
+    "* $summary by @$pr_author_login",
     "* $summary",
 ]
 ```
@@ -193,7 +193,7 @@ The third covers uncommitted change files or commits without GitHub data.
 
 :::note
 
-Using `$pr_number` or `$commit_author_login` causes Knope to call the GitHub API during `PrepareRelease`.
+Using `$pr_number` or `$pr_author_login` causes Knope to call the GitHub API during `PrepareRelease`.
 This requires a `GITHUB_TOKEN` environment variable for private repositories.
 If you don't use these variables, Knope makes no API calls and requires no token.
 

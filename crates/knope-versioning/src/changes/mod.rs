@@ -17,8 +17,8 @@ pub struct GitInfo {
     pub author_name: String,
     /// The PR/MR number that introduced this commit, if fetched from a forge.
     pub pr_number: Option<u64>,
-    /// The forge login/username of the commit author, if fetched from a forge.
-    pub author_login: Option<String>,
+    /// The forge login/username of the author of the PR which introduced this commit, if fetched from a forge.
+    pub pr_author_login: Option<String>,
 }
 
 /// A change to one or more packages.
@@ -248,7 +248,7 @@ mod test_parse_changes {
                     author_name: "Bob".to_string(),
                     hash: "def456".to_string(),
                     pr_number: None,
-                    author_login: None,
+                    pr_author_login: None,
                 }),
             ),
             (
