@@ -20,8 +20,6 @@ pub(crate) fn redact_url_credentials(s: &str) -> String {
     result
 }
 
-/// Push the current branch to the remote origin with network timeout settings so that
-/// a slow or unresponsive host does not block the test indefinitely.
 #[allow(clippy::expect_used)]
 pub(crate) fn push_branch(dir: &Path, branch: &str) {
     let output = Command::new("git")
