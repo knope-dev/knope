@@ -10,6 +10,7 @@ use std::{path::Path, process::Command, time::Duration};
 
 use reqwest::Client;
 use serde::Deserialize;
+use serde_json::json;
 
 #[derive(Debug, Deserialize)]
 struct Release {
@@ -187,6 +188,74 @@ async fn delete_branch(client: &Client, token: &str, base: &str, branch: &str) {
         .await;
 }
 
+/// Return the full SHA of HEAD in the given repository directory.
+fn get_head_sha(dir: &Path) -> String {
+    let output = Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir)
+        .output()
+        .expect("Failed to run git rev-parse HEAD");
+    assert!(output.status.success(), "git rev-parse HEAD failed");
+    String::from_utf8(output.stdout)
+        .expect("Invalid UTF-8 in git output")
+        .trim()
+        .to_string()
+}
+
+/// Poll Forgejo until its git layer has fully indexed the pushed commit.
+///
+/// Forgejo updates its database cache quickly after a `git push` (the branch and
+/// git/commits REST APIs are served from this cache), but the release service
+/// creates tags by accessing the git pack files directly, which may not be
+/// fully written yet.  A `POST /releases` request that arrives before the pack
+/// files are ready returns 404 "The target couldn't be found".
+///
+/// We probe readiness by attempting to create a lightweight temporary tag
+/// (`knope-probe`) at the known HEAD SHA.  A 201 response means the git layer
+/// can resolve the SHA, so we delete the probe tag and return.  Any other
+/// response (typically 404) means the pack files are not ready yet; we wait
+/// and retry.  Once this function returns, `knope release` can safely create
+/// the real tag and release.
+async fn wait_for_gitea_git_layer(client: &Client, token: &str, base: &str, head_sha: &str) {
+    const PROBE_TAG: &str = "knope-probe";
+    let url = format!("{base}/tags");
+
+    for attempt in 0..20u32 {
+        if attempt > 0 {
+            tokio::time::sleep(Duration::from_secs(3)).await;
+        }
+
+        let body = json!({
+            "tag_name": PROBE_TAG,
+            "target": head_sha,
+            "message": ""
+        });
+
+        let resp = client
+            .post(&url)
+            .header("Authorization", format!("Bearer {token}"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to call Gitea tags API");
+
+        let status = resp.status();
+        if status.as_u16() == 201 || status.as_u16() == 409 {
+            // 201 = created successfully → git layer is ready.
+            // 409 = tag already exists (leftover from a previous run) → treat as ready.
+            delete_tag(client, token, base, PROBE_TAG).await;
+            return;
+        }
+        // Any other status (e.g. 404 "target not found") → not ready yet, keep retrying.
+    }
+
+    // Clean up if somehow the probe tag ended up created on the last attempt.
+    delete_tag(client, token, base, PROBE_TAG).await;
+    panic!(
+        "Timed out waiting for Forgejo's git layer to index the pushed commit (SHA: {head_sha})"
+    );
+}
+
 async fn cleanup_release_by_tag(client: &Client, token: &str, base: &str, tag: &str) {
     let url = format!("{base}/releases/tags/{tag}");
     if let Ok(resp) = client
@@ -221,6 +290,7 @@ async fn gitea_release_workflow() {
     // Clean up any leftover resources from a previous failed run
     cleanup_release_by_tag(&client, &env.token, &base, expected_tag).await;
     delete_branch(&client, &env.token, &base, branch).await;
+    delete_tag(&client, &env.token, &base, "knope-probe").await;
 
     let dir = setup_test_repo(&env.token, &env.host, &env.owner, &env.repo, branch);
     let path = dir.path();
@@ -228,11 +298,12 @@ async fn gitea_release_workflow() {
     // Push the branch so the commit is sent to Forgejo.
     push_branch(path, branch);
 
-    // Give Forgejo time to fully index the pushed objects. The branch/commits API
-    // updates quickly from a cached view, but the git service that creates tags (used
-    // internally by the releases API) operates directly on pack files and may not be
-    // ready immediately after a push.
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    // Wait until Forgejo's git layer (pack files) has the pushed commit indexed.
+    // The branch/commits API updates quickly from a database cache, but the
+    // releases service creates tags directly from pack files and may not be ready
+    // immediately after a push.  We confirm readiness by polling with a probe tag.
+    let head_sha = get_head_sha(path);
+    wait_for_gitea_git_layer(&client, &env.token, &base, &head_sha).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
     let output = Command::new(env!("CARGO_BIN_EXE_knope"))
