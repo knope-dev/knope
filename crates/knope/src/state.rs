@@ -107,11 +107,7 @@ impl GitHub {
     pub(crate) fn require_authentication(self) -> Result<(String, Client), app_config::Error> {
         Ok(match self {
             Self::Authenticated { token, client } => (token, client),
-            Self::Unauthenticated { client } => {
-                let token = get_or_prompt_for_github_token()?;
-                (token, client)
-            }
-            Self::New => {
+            Self::Unauthenticated { .. } | Self::New => {
                 let token = get_or_prompt_for_github_token()?;
                 (token, http_client(None)?)
             }
