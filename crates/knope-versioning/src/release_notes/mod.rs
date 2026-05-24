@@ -22,13 +22,13 @@ pub struct ReleaseNotes {
 }
 
 impl ReleaseNotes {
-    /// Returns `true` if any configured `change_templates` use forge-specific variables
-    /// (e.g., `$pr_number`, `$commit_author_login`) that require API calls to populate.
+    /// Returns the first if any forge-specific variable in `Self::change_templates`
+    /// (for example, `$pr_number`, `$commit_author_login`).
     #[must_use]
-    pub fn needs_forge_data(&self) -> bool {
+    pub fn first_variable_needing_forge_data(&self) -> Option<&'static str> {
         self.change_templates
             .iter()
-            .any(ChangeTemplate::needs_forge_data)
+            .find_map(ChangeTemplate::first_variable_needing_forge_data)
     }
 
     /// Create new release notes for use in changelogs / forges.
@@ -188,11 +188,13 @@ impl ChangeTemplate {
         true
     }
 
-    /// Returns `true` if this template references any forge-specific variables
-    /// that require API calls to populate.
+    /// Returns any forge-specific variables int this template that require API calls to populate
+    /// (for example, `$pr_number`, `$commit_author_login`).
     #[must_use]
-    pub fn needs_forge_data(&self) -> bool {
-        self.0.contains(Self::COMMIT_AUTHOR_LOGIN) || self.0.contains(Self::PR_NUMBER)
+    pub fn first_variable_needing_forge_data(&self) -> Option<&'static str> {
+        [Self::COMMIT_AUTHOR_LOGIN, Self::PR_NUMBER]
+            .into_iter()
+            .find(|&variable| self.0.contains(variable))
     }
 }
 
@@ -616,7 +618,7 @@ mod test_release_notes {
             change_templates: vec![ChangeTemplate::from("* $summary by $commit_author_name")],
             ..ReleaseNotes::default()
         };
-        assert!(!notes.needs_forge_data());
+        assert!(notes.first_variable_needing_forge_data().is_none());
     }
 
     #[test]
@@ -625,7 +627,7 @@ mod test_release_notes {
             change_templates: vec![ChangeTemplate::from("* $summary in #$pr_number")],
             ..ReleaseNotes::default()
         };
-        assert!(notes.needs_forge_data());
+        assert!(notes.first_variable_needing_forge_data().is_some());
     }
 
     #[test]
@@ -634,12 +636,12 @@ mod test_release_notes {
             change_templates: vec![ChangeTemplate::from("* $summary by @$commit_author_login")],
             ..ReleaseNotes::default()
         };
-        assert!(notes.needs_forge_data());
+        assert!(notes.first_variable_needing_forge_data().is_some());
     }
 
     #[test]
     fn needs_forge_data_false_for_default() {
         let notes = ReleaseNotes::default();
-        assert!(!notes.needs_forge_data());
+        assert!(notes.first_variable_needing_forge_data().is_none());
     }
 }

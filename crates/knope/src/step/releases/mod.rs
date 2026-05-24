@@ -35,10 +35,11 @@ pub(crate) async fn prepare_release(
         return Err(package::Error::NoDefinedPackages.into());
     }
 
-    let needs_forge_data = state
-        .packages
-        .iter()
-        .any(|pkg| pkg.versioning.release_notes.needs_forge_data());
+    let variable_that_needs_forge_data = state.packages.iter().find_map(|pkg| {
+        pkg.versioning
+            .release_notes
+            .first_variable_needing_forge_data()
+    });
 
     let changeset_path = PathBuf::from(CHANGESET_DIR);
     let changeset = if changeset_path.exists() {
@@ -55,11 +56,17 @@ pub(crate) async fn prepare_release(
             state.ignore_conventional_commits,
         )?;
 
-        if !changes.is_empty() && needs_forge_data {
-            // TODO: error if github is not configured
+        if !changes.is_empty()
+            && let Some(variable_that_needs_forge_data) = variable_that_needs_forge_data
+        {
             if let Some(github_config) = state.github_config.as_ref() {
-                match github_api::enrich_git_info(&mut changes, github_config, state.github.clone())
-                    .await
+                match github_api::enrich_git_info(
+                    &mut changes,
+                    github_config,
+                    state.github.clone(),
+                    run_type,
+                )
+                .await
                 {
                     Ok(new_state) => {
                         state.github = new_state;
@@ -68,6 +75,10 @@ pub(crate) async fn prepare_release(
                         warn!("Failed to enrich git info from GitHub: {e}");
                     }
                 }
+            } else {
+                return Err(Error::GitHubRequiredForVariable(
+                    variable_that_needs_forge_data,
+                ));
             }
         }
 
@@ -114,6 +125,12 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/steps/prepare-release/#errors")
     )]
     NoRelease,
+    #[error("You must configure [github] to use the variable {0} in a change template")]
+    #[diagnostic(
+        code(releases::github_required_for_variable),
+        url("https://knope.tech/reference/config-file/release-notes#variables-referencing-github")
+    )]
+    GitHubRequiredForVariable(&'static str),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Semver(#[from] semver::Error),

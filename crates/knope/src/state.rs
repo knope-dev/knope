@@ -79,6 +79,10 @@ impl<T> RunType<T> {
             RunType::Real(inner) => (RunType::Real(()), inner),
         }
     }
+
+    pub(crate) fn is_dry_run(&self) -> bool {
+        matches!(self, RunType::DryRun(_))
+    }
 }
 
 /// Tracks what's been done with respect to issues in this workflow.

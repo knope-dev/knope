@@ -1,8 +1,8 @@
 use knope_versioning::changes::Change;
 use miette::Diagnostic;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
-use crate::{app_config, config, integrations::http, state};
+use crate::{app_config, config, integrations::http, state, state::RunType};
 
 #[derive(serde::Deserialize)]
 struct PullRequestInfo {
@@ -23,7 +23,22 @@ pub(crate) async fn enrich_git_info(
     changes: &mut [Change],
     github_config: &config::GitHub,
     github_state: state::GitHub,
+    run_type: RunType<()>,
 ) -> Result<state::GitHub, Error> {
+    if run_type.is_dry_run() {
+        info!(
+            "Would fetch Pull Request info from GitHub repo {owner}/{repo} for {num_changes} changes",
+            owner = github_config.owner,
+            repo = github_config.repo,
+            num_changes = changes.len(),
+        );
+        for git_info in changes.iter_mut().filter_map(|change| change.git.as_mut()) {
+            git_info.pr_number = Some(1234);
+            git_info.author_login = Some("some-user".to_string());
+        }
+        return Ok(github_state);
+    }
+
     let (token, client) = github_state.maybe_authenticated()?;
     let authorization = token.as_ref().map(|token| format!("Bearer {token}"));
 
@@ -64,7 +79,10 @@ async fn fetch_pr_for_commit(
         repo = config.repo,
     );
 
-    let mut request = client.get(&url);
+    let mut request = client
+        .get(&url)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2026-03-10");
     if let Some(authorization) = authorization {
         request = request.header("Authorization", authorization);
     }
