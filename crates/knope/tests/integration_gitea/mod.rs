@@ -18,6 +18,11 @@ struct Release {
     tag_name: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct RepoInfo {
+    empty: bool,
+}
+
 struct GiteaEnv {
     token: String,
     host: String,
@@ -202,20 +207,58 @@ fn get_head_sha(dir: &Path) -> String {
         .to_string()
 }
 
+/// Poll Forgejo until the repository is no longer marked as empty in its database.
+///
+/// When the test cleanup deletes the `integration-test-release` branch (which may
+/// be the only branch), Forgejo marks the repository as `empty: true` in its
+/// database. Re-pushing the branch updates the git pack files immediately, but the
+/// database update (`is_empty = false`) may happen asynchronously via Forgejo's
+/// internal queue.
+///
+/// This matters because the releases API route uses `ReferencesGitRepo()` (without
+/// `allowEmpty=true`), which skips opening the git repository when `is_empty=true`,
+/// leaving `ctx.Repo.GitRepo` as nil. This causes the release service to fail with
+/// 404 "The target couldn't be found." In contrast, the tags API uses
+/// `ReferencesGitRepo(true)` and is not affected by the `is_empty` flag.
+///
+/// We poll `GET /repos/{owner}/{repo}` until `"empty": false` before running
+/// `knope release` to ensure the database has been updated.
+async fn wait_for_repo_non_empty(client: &Client, token: &str, base: &str) {
+    for attempt in 0..30u32 {
+        if attempt > 0 {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+        let resp = client
+            .get(base)
+            .header("Authorization", format!("Bearer {token}"))
+            .send()
+            .await
+            .expect("Failed to call Gitea repo API");
+        if resp.status().is_success() {
+            if let Ok(info) = resp.json::<RepoInfo>().await {
+                if !info.empty {
+                    return;
+                }
+            }
+        }
+    }
+    panic!("Timed out waiting for Forgejo repo to become non-empty");
+}
+
 /// Poll Forgejo until its git layer has fully indexed the pushed commit.
 ///
-/// Forgejo updates its database cache quickly after a `git push` (the branch and
-/// git/commits REST APIs are served from this cache), but the release service
-/// creates tags by accessing the git pack files directly, which may not be
-/// fully written yet.  A `POST /releases` request that arrives before the pack
-/// files are ready returns 404 "The target couldn't be found".
+/// Even after `is_empty` is set to false, the git pack files on disk may not
+/// yet be accessible to the release service. We probe by attempting to create
+/// a lightweight temporary tag (`knope-probe`) at the HEAD SHA. A 201 response
+/// confirms the git layer can resolve the SHA.
 ///
-/// We probe readiness by attempting to create a lightweight temporary tag
-/// (`knope-probe`) at the known HEAD SHA.  A 201 response means the git layer
-/// can resolve the SHA, so we delete the probe tag and return.  Any other
-/// response (typically 404) means the pack files are not ready yet; we wait
-/// and retry.  Once this function returns, `knope release` can safely create
-/// the real tag and release.
+/// A 409 response means a stale probe tag from a previous run is still present
+/// (our cleanup may have failed); we delete it and retry rather than treating
+/// it as a readiness signal for the current SHA.
+///
+/// The probe tag is intentionally left alive after this function returns so
+/// that the commit remains reachable from a git ref while `knope release` runs.
+/// The caller is responsible for deleting it afterwards.
 async fn wait_for_gitea_git_layer(client: &Client, token: &str, base: &str, head_sha: &str) {
     const PROBE_TAG: &str = "knope-probe";
     let url = format!("{base}/tags");
@@ -240,11 +283,16 @@ async fn wait_for_gitea_git_layer(client: &Client, token: &str, base: &str, head
             .expect("Failed to call Gitea tags API");
 
         let status = resp.status();
-        if status.as_u16() == 201 || status.as_u16() == 409 {
-            // 201 = created successfully → git layer is ready.
-            // 409 = tag already exists (leftover from a previous run) → treat as ready.
-            delete_tag(client, token, base, PROBE_TAG).await;
+        if status.as_u16() == 201 {
+            // Created successfully at the current HEAD SHA → git layer is ready.
+            // Probe tag is intentionally left alive; caller deletes it after knope release.
             return;
+        }
+        if status.as_u16() == 409 {
+            // A stale probe tag from a previous run exists at an unknown SHA.
+            // Delete it and retry to get a fresh 201 at the current HEAD SHA.
+            delete_tag(client, token, base, PROBE_TAG).await;
+            continue;
         }
         // Any other status (e.g. 404 "target not found") → not ready yet, keep retrying.
     }
@@ -298,11 +346,17 @@ async fn gitea_release_workflow() {
     // Push the branch so the commit is sent to Forgejo.
     push_branch(path, branch);
 
-    // Wait until Forgejo's git layer (pack files) has the pushed commit indexed.
-    // The branch/commits API updates quickly from a database cache, but the
-    // releases service creates tags directly from pack files and may not be ready
-    // immediately after a push.  We confirm readiness by polling with a probe tag.
     let head_sha = get_head_sha(path);
+
+    // Step 1: Wait until Forgejo's database no longer considers the repo empty.
+    // Deleting and re-pushing the branch may temporarily leave the repo marked
+    // as empty in the DB (async update). The releases API skips opening the git
+    // repo when is_empty=true, returning 404 "The target couldn't be found."
+    wait_for_repo_non_empty(&client, &env.token, &base).await;
+
+    // Step 2: Confirm the git layer (pack files) can resolve the pushed SHA.
+    // The probe tag is left alive so the commit stays reachable from a ref
+    // while knope release runs (prevents any potential GC race).
     wait_for_gitea_git_layer(&client, &env.token, &base, &head_sha).await;
 
     // Run knope release (Release step only — no PrepareRelease, no git push).
@@ -312,6 +366,9 @@ async fn gitea_release_workflow() {
         .args(["release"])
         .output()
         .expect("Failed to run knope");
+
+    // Delete the probe tag now that knope release has completed.
+    delete_tag(&client, &env.token, &base, "knope-probe").await;
 
     if !output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
