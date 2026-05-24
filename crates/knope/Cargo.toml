@@ -13,6 +13,10 @@ categories = ["command-line-utilities", "development-tools"]
 rust-version = "1.85.0"
 readme = "../../README.md"
 
+# Support cargo-binstall
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/knope%2Fv{ version }/{ name }-{ target }{ archive-suffix }"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
