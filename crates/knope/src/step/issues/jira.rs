@@ -137,7 +137,7 @@ pub(crate) async fn get_issues(jira_config: &Jira, status: &str) -> Result<Vec<I
     let project = &jira_config.project;
     let jql = format!("status = {status} AND project = {project}");
     let url = format!("{}/rest/api/3/search", jira_config.url);
-    let response = http_client()?
+    let response = http_client(None)?
         .post(&url)
         .header("Authorization", &auth)
         .json(&serde_json::json!({"jql": jql, "fields": ["summary"]}))
@@ -162,7 +162,7 @@ async fn run_transition(jira_config: &Jira, issue_key: &str, status: &str) -> Re
     let auth = get_auth()?; // TODO: get auth once and store in state
     let base_url = &jira_config.url;
     let url = format!("{base_url}/rest/api/3/issue/{issue_key}/transitions");
-    let client = http_client()?;
+    let client = http_client(None)?;
     let response = client
         .get(&url)
         .header("Authorization", &auth)

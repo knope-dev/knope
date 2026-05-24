@@ -23,7 +23,7 @@ fn initialize_state(
         state::Gitea::Initialized { token, client } => (token, client),
         state::Gitea::New => {
             let token = get_or_prompt_for_gitea_token(host)?;
-            (token, http_client()?)
+            (token, http_client(None)?)
         }
     })
 }

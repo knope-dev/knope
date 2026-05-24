@@ -8,8 +8,7 @@ use tracing::info;
 use crate::{
     app_config, config,
     integrations::{
-        ApiRequestError, CreateReleaseInput, CreateReleaseResponse, git, github::initialize_state,
-        http::handle_response,
+        ApiRequestError, CreateReleaseInput, CreateReleaseResponse, git, http::handle_response,
     },
     state::{self, RunType},
 };
@@ -41,7 +40,7 @@ pub(crate) async fn create_release(
         RunType::Real(github_state) => github_state,
     };
 
-    let (token, client) = initialize_state(github_state)?;
+    let (token, client) = github_state.require_authentication()?;
 
     let url = format!(
         "https://api.github.com/repos/{owner}/{repo}/releases",
@@ -118,7 +117,7 @@ pub(crate) async fn create_release(
         .await?;
     }
 
-    Ok(state::GitHub::Initialized { token, client })
+    Ok(state::GitHub::Authenticated { token, client })
 }
 
 fn github_release_dry_run(

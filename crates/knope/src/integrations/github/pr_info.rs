@@ -2,7 +2,6 @@ use knope_versioning::changes::Change;
 use miette::Diagnostic;
 use tracing::{debug, warn};
 
-use super::initialize_state;
 use crate::{app_config, config, integrations::http, state};
 
 #[derive(serde::Deserialize)]
@@ -25,12 +24,14 @@ pub(crate) async fn enrich_git_info(
     github_config: &config::GitHub,
     github_state: state::GitHub,
 ) -> Result<state::GitHub, Error> {
-    let (token, client) = initialize_state(github_state)?;
-    let authorization = format!("Bearer {token}");
+    let (token, client) = github_state.maybe_authenticated()?;
+    let authorization = token.as_ref().map(|token| format!("Bearer {token}"));
 
     for git_info in changes.iter_mut().filter_map(|change| change.git.as_mut()) {
         let short_hash = &git_info.hash;
-        match fetch_pr_for_commit(&client, &authorization, github_config, short_hash).await {
+        match fetch_pr_for_commit(&client, authorization.as_deref(), github_config, short_hash)
+            .await
+        {
             Ok(Some((pr_number, author_login))) => {
                 git_info.pr_number = Some(pr_number);
                 git_info.author_login = Some(author_login);
@@ -44,12 +45,16 @@ pub(crate) async fn enrich_git_info(
         }
     }
 
-    Ok(state::GitHub::Initialized { token, client })
+    if let Some(token) = token {
+        Ok(state::GitHub::Authenticated { token, client })
+    } else {
+        Ok(state::GitHub::Unauthenticated { client })
+    }
 }
 
 async fn fetch_pr_for_commit(
     client: &http::Client,
-    authorization: &str,
+    authorization: Option<&str>,
     config: &config::GitHub,
     commit_sha: &str,
 ) -> Result<Option<(u64, String)>, Error> {
@@ -59,11 +64,11 @@ async fn fetch_pr_for_commit(
         repo = config.repo,
     );
 
-    let response = client
-        .get(&url)
-        .header("Authorization", authorization)
-        .send()
-        .await;
+    let mut request = client.get(&url);
+    if let Some(authorization) = authorization {
+        request = request.header("Authorization", authorization);
+    }
+    let response = request.send().await;
 
     let response = http::handle_response(
         response,

@@ -14,14 +14,21 @@ pub(crate) type Client = reqwest_middleware::ClientWithMiddleware;
 pub(crate) type Error = reqwest_middleware::Error;
 
 /// Create a standard HTTP client to use for all HTTP requests.
-pub(crate) fn http_client() -> Result<Client, ClientCreationError> {
+///
+/// `missing_token_env_var` logs warnings for the user if they are being rate-limited due to making
+///   anonymous requests (especially for GitHub).
+pub(crate) fn http_client(
+    missing_token_env_var: Option<&'static str>,
+) -> Result<Client, ClientCreationError> {
     let client = reqwest::Client::builder()
         .user_agent("Knope")
         .build()
         .map_err(ClientCreationError)?;
     let retry_policy = RetryAfterPolicy::with_policy_and_strategy(
         ExponentialBackoff::builder().build_with_max_retries(5),
-        RateLimitLoggingStrategy,
+        RateLimitLoggingStrategy {
+            missing_token_env_var,
+        },
     );
     Ok(ClientBuilder::new(client)
         .with(RetryAfterMiddleware::new_with_policy(retry_policy))
@@ -86,7 +93,9 @@ pub(crate) struct ApiRequestError {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-struct RateLimitLoggingStrategy;
+struct RateLimitLoggingStrategy {
+    missing_token_env_var: Option<&'static str>,
+}
 
 impl RetryableStrategy for RateLimitLoggingStrategy {
     fn handle(&self, res: &Result<Response, reqwest_middleware::Error>) -> Option<Retryable> {
@@ -99,6 +108,11 @@ impl RetryableStrategy for RateLimitLoggingStrategy {
                 warn!("API rate limited; retrying in {delay_secs} seconds");
             } else {
                 warn!("API rate limited; retrying after {retry_after}");
+            }
+            if let Some(missing_token_env_var) = self.missing_token_env_var {
+                warn!(
+                    "To increase your rate limit, set the {missing_token_env_var} environment variable"
+                );
             }
         }
         DefaultRetryableStrategy.handle(res)

@@ -6,7 +6,6 @@ use crate::{
     app_config, config,
     integrations::{
         ApiRequestError, PullRequest, git,
-        github::initialize_state,
         http::{Client, handle_response},
     },
     state::{self, RunType},
@@ -30,7 +29,7 @@ pub(crate) async fn create_or_update_pull_request(
         RunType::Real(state) => state,
     };
 
-    let (token, client) = initialize_state(state)?;
+    let (token, client) = state.require_authentication()?;
     let config::GitHub { owner, repo } = config;
     let base_url = format!("https://api.github.com/repos/{owner}/{repo}/pulls");
     let authorization_header = format!("Bearer {}", &token);
@@ -76,7 +75,7 @@ pub(crate) async fn create_or_update_pull_request(
         )
         .await
     }?;
-    Ok(state::GitHub::Initialized { token, client })
+    Ok(state::GitHub::Authenticated { token, client })
 }
 
 async fn update_pull_request(
