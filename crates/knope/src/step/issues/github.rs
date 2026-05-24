@@ -3,10 +3,8 @@ use tracing::info;
 
 use super::Issue;
 use crate::{
-    app_config,
-    app_config::get_or_prompt_for_github_token,
-    config,
-    integrations::http::{ClientCreationError, http_client},
+    app_config, config,
+    integrations::{http, http::ClientCreationError},
     prompt,
     prompt::select,
     state,
@@ -86,7 +84,7 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/github/")
     )]
     Api {
-        source: Box<reqwest::Error>,
+        source: Box<http::Error>,
         context: &'static str,
     },
     #[error("I/O error encountered when communicating with GitHub: {0}")]
@@ -116,10 +114,7 @@ async fn list_issues(
     github_state: state::GitHub,
     labels: Option<&[String]>,
 ) -> Result<(state::GitHub, Vec<Issue>), Error> {
-    let (token, client) = match github_state {
-        state::GitHub::Initialized { token, client } => (token, client),
-        state::GitHub::New => (get_or_prompt_for_github_token()?, http_client()?),
-    };
+    let (token, client) = github_state.require_authentication()?;
     let json_value: serde_json::Value = client
         .post("https://api.github.com/graphql")
         .header("Authorization", &format!("bearer {token}"))
@@ -156,7 +151,7 @@ async fn list_issues(
         })
         .collect();
 
-    Ok((state::GitHub::Initialized { token, client }, issues))
+    Ok((state::GitHub::Authenticated { token, client }, issues))
 }
 
 fn decode_github_response(json_value: &serde_json::Value) -> Result<Vec<ResponseIssue>, Error> {

@@ -3,7 +3,10 @@ use std::fmt::Debug;
 use knope_versioning::{Action, VersionedFile};
 
 use crate::{
+    app_config,
+    app_config::{get_github_token, get_or_prompt_for_github_token},
     config,
+    integrations::http::{Client, http_client},
     step::{issues, releases},
 };
 
@@ -76,6 +79,10 @@ impl<T> RunType<T> {
             RunType::Real(inner) => (RunType::Real(()), inner),
         }
     }
+
+    pub(crate) fn is_dry_run(&self) -> bool {
+        matches!(self, RunType::DryRun(_))
+    }
 }
 
 /// Tracks what's been done with respect to issues in this workflow.
@@ -92,17 +99,40 @@ pub(crate) enum Issue {
 #[derive(Clone, Debug)]
 pub(crate) enum GitHub {
     New,
-    Initialized {
-        token: String,
-        client: reqwest::Client,
-    },
+    Authenticated { token: String, client: Client },
+    Unauthenticated { client: Client },
+}
+
+impl GitHub {
+    pub(crate) fn require_authentication(self) -> Result<(String, Client), app_config::Error> {
+        Ok(match self {
+            Self::Authenticated { token, client } => (token, client),
+            Self::Unauthenticated { .. } | Self::New => {
+                let token = get_or_prompt_for_github_token()?;
+                (token, http_client(None)?)
+            }
+        })
+    }
+
+    pub(crate) fn maybe_authenticated(self) -> Result<(Option<String>, Client), app_config::Error> {
+        Ok(match self {
+            Self::Authenticated { token, client } => (Some(token), client),
+            Self::Unauthenticated { client } => (None, client),
+            Self::New => {
+                let token = get_github_token()?;
+                let missing_token_env_var = if token.is_none() {
+                    Some("GITHUB_TOKEN")
+                } else {
+                    None
+                };
+                (token, http_client(missing_token_env_var)?)
+            }
+        })
+    }
 }
 
 #[derive(Clone, Debug)]
 pub(crate) enum Gitea {
     New,
-    Initialized {
-        token: String,
-        client: reqwest::Client,
-    },
+    Initialized { token: String, client: Client },
 }

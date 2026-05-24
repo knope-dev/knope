@@ -111,7 +111,8 @@ skip = [
 # by default infinite
 skip-tree = [
   { name = "windows-sys", version = "0.61", depth = 5 },                                            # so many things... it'll be a while
-  { name = "getrandom", version = "0.2", depth = 1 },                                               # Waiting on ring
+  { name = "getrandom", version = "0.2", depth = 1, reason = "redox_users vs dirs" },
+  { name = "getrandom", version = "0.3", depth = 3, reason = "many things, mostly via rustls" },
   { name = "unicode-width", version = "0.1", depth = 1 },                                           # inquire
   { name = "core-foundation", version = "0.9", depth = 2, reason = "reqwest includes 2 versions" },
 ]

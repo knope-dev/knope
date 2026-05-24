@@ -1,6 +1,5 @@
-use std::path::PathBuf;
+use std::{fs::create_dir_all, path::PathBuf};
 
-use dirs::config_dir;
 use miette::Diagnostic;
 
 use crate::{integrations::http::ClientCreationError, prompt, prompt::get_input};
@@ -15,6 +14,12 @@ pub(crate) fn get_or_prompt_for_jira_token() -> Result<String, Error> {
         "jira_token",
         "No Jira token found, generate one from https://id.atlassian.com/manage-profile/security/api-tokens and input here",
     )
+}
+
+pub(crate) fn get_github_token() -> Result<Option<String>, Error> {
+    std::env::var("GITHUB_TOKEN")
+        .map(Some)
+        .or_else(|_| load_value("github_token"))
 }
 
 pub(crate) fn get_or_prompt_for_github_token() -> Result<String, Error> {
@@ -39,20 +44,35 @@ pub(crate) fn get_or_prompt_for_gitea_token(host: &str) -> Result<String, Error>
     })
 }
 
-pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String, Error> {
-    let config_dir = config_dir()
-        .ok_or(Error::CouldNotOpenConfigPath)?
-        .join("knope");
+pub(crate) fn load_value(key: &str) -> Result<Option<String>, Error> {
+    let config_dir = config_dir()?;
     let config_path = config_dir.join(key);
-    if !config_dir.exists() {
-        std::fs::create_dir_all(&config_dir)
-            .map_err(|err| Error::CouldNotCreateDirectory(config_dir, err))?;
+    if !config_path.exists() {
+        return Ok(None);
     }
-    std::fs::read_to_string(&config_path).or_else(|_| {
+    std::fs::read_to_string(&config_path)
+        .or(Err(Error::CouldNotOpenConfigPath))
+        .map(Some)
+}
+
+pub(crate) fn load_value_or_prompt(key: &str, prompt: &str) -> Result<String, Error> {
+    if let Some(value) = load_value(key)? {
+        Ok(value)
+    } else {
         let contents = get_input(prompt)?;
+        let config_dir = config_dir()?;
+        create_dir_all(&config_dir)
+            .map_err(|err| Error::CouldNotCreateDirectory(config_dir.clone(), err))?;
+        let config_path = config_dir.join(key);
         std::fs::write(config_path, &contents).map_err(Error::CouldNotWriteConfig)?;
         Ok(contents)
-    })
+    }
+}
+
+fn config_dir() -> Result<PathBuf, Error> {
+    Ok(dirs::config_dir()
+        .ok_or(Error::CouldNotOpenConfigPath)?
+        .join("knope"))
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

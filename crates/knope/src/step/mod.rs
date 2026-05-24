@@ -155,7 +155,7 @@ impl Step {
                 shell,
             } => command::run_command(state, command, shell.is_some_and(|it| it), variables)?,
             Step::PrepareRelease(prepare_release) => {
-                releases::prepare_release(state, &prepare_release)?
+                releases::prepare_release(state, &prepare_release).await?
             }
             Step::SelectIssueFromBranch => git::select_issue_from_current_branch(state)?,
             Step::Release => releases::release(state).await?,

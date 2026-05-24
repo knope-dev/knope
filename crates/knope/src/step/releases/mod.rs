@@ -9,12 +9,12 @@ use knope_versioning::{
     semver::{PackageVersions, Rule},
 };
 use miette::Diagnostic;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub(crate) use self::{package::Package, semver::bump_version_and_update_state};
 use crate::{
     RunType, fs,
-    integrations::{git, git::create_tag},
+    integrations::{git, git::create_tag, github as github_api},
     state::State,
     step::{PrepareRelease, releases::package::execute_prepare_actions},
 };
@@ -26,7 +26,7 @@ pub(crate) mod github;
 pub(crate) mod package;
 pub(crate) mod semver;
 
-pub(crate) fn prepare_release(
+pub(crate) async fn prepare_release(
     state: RunType<State>,
     prepare_release: &PrepareRelease,
 ) -> Result<RunType<State>, Error> {
@@ -34,6 +34,12 @@ pub(crate) fn prepare_release(
     if state.packages.is_empty() {
         return Err(package::Error::NoDefinedPackages.into());
     }
+
+    let variable_that_needs_forge_data = state.packages.iter().find_map(|pkg| {
+        pkg.versioning
+            .release_notes
+            .first_variable_needing_forge_data()
+    });
 
     let changeset_path = PathBuf::from(CHANGESET_DIR);
     let changeset = if changeset_path.exists() {
@@ -43,13 +49,41 @@ pub(crate) fn prepare_release(
     };
 
     for package in &mut state.packages {
-        let (all_versioned_files, actions) = package.prepare_release(
+        let mut changes = package.gather_changes(
             prepare_release,
             &state.all_git_tags,
-            state.all_versioned_files,
             &changeset,
             state.ignore_conventional_commits,
         )?;
+
+        if !changes.is_empty()
+            && let Some(variable_that_needs_forge_data) = variable_that_needs_forge_data
+        {
+            if let Some(github_config) = state.github_config.as_ref() {
+                match github_api::enrich_git_info(
+                    &mut changes,
+                    github_config,
+                    state.github.clone(),
+                    run_type,
+                )
+                .await
+                {
+                    Ok(new_state) => {
+                        state.github = new_state;
+                    }
+                    Err(e) => {
+                        warn!("Failed to enrich git info from GitHub: {e}");
+                    }
+                }
+            } else {
+                return Err(Error::GitHubRequiredForVariable(
+                    variable_that_needs_forge_data,
+                ));
+            }
+        }
+
+        let (all_versioned_files, actions) =
+            package.apply_release(&changes, prepare_release, state.all_versioned_files)?;
         state.all_versioned_files = all_versioned_files;
         state.pending_actions.extend(actions);
     }
@@ -91,6 +125,12 @@ pub(crate) enum Error {
         url("https://knope.tech/reference/config-file/steps/prepare-release/#errors")
     )]
     NoRelease,
+    #[error("You must configure [github] to use the variable {0} in a change template")]
+    #[diagnostic(
+        code(releases::github_required_for_variable),
+        url("https://knope.tech/reference/config-file/release-notes#variables-referencing-github")
+    )]
+    GitHubRequiredForVariable(&'static str),
     #[error(transparent)]
     #[diagnostic(transparent)]
     Semver(#[from] semver::Error),
