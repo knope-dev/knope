@@ -1,3 +1,14 @@
+## 0.4.3 (2026-05-24)
+
+### Features
+
+#### Add `$pr_author_login` and `$pr_number` change template variables
+
+You can now reference GitHub usernames and pull request numbers when generating changelog entries.
+This is only supported for GitHub for now.
+
+Thanks to @DaleSeo for PR #1804!
+
 ## 0.4.2 (2026-02-16)
 
 ### Features
