@@ -1,6 +1,6 @@
 {
   "extends": [
-    "config:base",
+    "config:recommended",
     ":semanticCommitTypeAll(chore)",
     "github>Turbo87/renovate-config//rust/updateToolchain",
     ":automergeStableNonMajor",
@@ -39,8 +39,8 @@
       "description": "Update GitHub Actions versions in docs",
       "customType": "regex",
       "datasourceTemplate": "github-releases",
-      "fileMatch": [
-        "^docs/src/content/docs.*\\.md(x)?$"
+      "managerFilePatterns": [
+        "/^docs/src/content/docs.*\\.md(x)?$/"
       ],
       "matchStrings": [
         "uses: (?<depName>.+)@(?<currentValue>.+)"
