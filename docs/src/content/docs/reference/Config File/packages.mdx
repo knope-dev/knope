@@ -525,18 +525,27 @@ will bump `B`, which will in turn bump `A` (subject to each package's own
 
 ### How Knope finds dependents
 
-A `versioned_files` entry like `{ path = "consumer/Cargo.toml", dependency = "my-lib" }` in
-the `my-lib` package's config means "when `my-lib` releases, write its new version into
-`consumer/Cargo.toml`". When that file is also a versioned file of another package
-(`consumer` here), Knope records that `consumer` depends on `my-lib` — the name the
-dependency goes by _inside_ the file doesn't need to match its package name in `knope.toml`.
+For any package that opted in, Knope reads its manifests (currently `Cargo.toml` and
+`package.json`): if a manifest declares a dependency whose name matches another package's
+manifest name, the relationship is detected automatically — no extra configuration needed.
+Note that this alone doesn't keep the dependency's version string inside the manifest up to
+date; add a `{ path, dependency }` entry to the dependency's `versioned_files` if you want
+that written on every release.
+
+Those `{ path, dependency }` entries also imply relationships: an entry like
+`{ path = "consumer/Cargo.toml", dependency = "my-lib" }` in the `my-lib` package's config
+means "when `my-lib` releases, write its new version into `consumer/Cargo.toml`". When that
+file is also a versioned file of another package (`consumer` here), Knope records that
+`consumer` depends on `my-lib` — the name the dependency goes by _inside_ the file doesn't
+need to match its package name in `knope.toml`.
 
 Lock files (like `Cargo.lock` or `package-lock.json`) record versions for the whole
 workspace, so sharing one does **not** create a dependency relationship.
 
-If a dependency's version is only tracked somewhere Knope can't attribute to the dependent —
-for example, a `[workspace.dependencies]` entry in a shared workspace manifest — declare the
-relationship explicitly with [`internal_dependencies`](#internal_dependencies).
+If a relationship isn't visible to either mechanism — for example, the manifest format isn't
+supported yet, or the version is only tracked in a shared workspace manifest via
+`[workspace.dependencies]` — declare it explicitly with
+[`internal_dependencies`](#internal_dependencies).
 
 ## `internal_dependencies`
 

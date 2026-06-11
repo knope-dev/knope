@@ -127,7 +127,7 @@ fn apply_releases_with_propagation(
     mut per_package_changes: Vec<Vec<knope_versioning::changes::Change>>,
     prepare_release: &PrepareRelease,
 ) -> Result<(), Error> {
-    let dependents = internal_deps::build_dependents(&state.packages);
+    let dependents = internal_deps::build_dependents(&state.packages, &state.all_versioned_files);
     let order = internal_deps::topological_order(&state.packages, &dependents);
 
     // Accumulates dependency bumps to be folded into a dependent's synthetic change before it

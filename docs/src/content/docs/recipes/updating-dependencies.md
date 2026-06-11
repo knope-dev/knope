@@ -86,10 +86,11 @@ For example, given the setup above where `knope` depends on `knope-versioning`, 
 
 :::caution
 
-Knope derives the dependency relationships from `versioned_files` entries that point at
-another package's files. If a dependency's version is only tracked in a shared file that
-belongs to no package — for example, in the workspace-root `Cargo.toml` via
-`[workspace.dependencies]` — declare the relationship explicitly with
+Knope finds the dependency relationships by reading each opted-in package's manifests
+(`Cargo.toml`, `package.json`) and from `versioned_files` entries that point at another
+package's files. If a relationship isn't visible to either — for example, the version is
+only tracked in the workspace-root `Cargo.toml` via `[workspace.dependencies]` — declare it
+explicitly with
 [`internal_dependencies`](/reference/config-file/packages#internal_dependencies) on the
 dependent's package config.
 

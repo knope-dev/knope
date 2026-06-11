@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use knope_config::InternalDependencyUpdate;
 use knope_versioning::{
+    VersionedFile,
     changes::{Change, ChangeSource, ChangeType},
     package::Name,
     semver::Version,
@@ -29,10 +30,17 @@ pub(super) struct BumpedDependency {
 /// dependencies explicitly via `internal_dependencies` for relationships that aren't visible
 /// in `versioned_files` (e.g., versions tracked only in a shared workspace manifest).
 ///
+/// For packages that opted in, Knope also reads the manifests themselves: if a package's
+/// manifest (`Cargo.toml`, `package.json`) declares a dependency whose name matches another
+/// package's manifest name, that relationship is detected with no extra configuration.
+///
 /// Edges to dependents that opted out (`update_internal_dependencies = "none"`) are skipped
 /// entirely: they can't receive propagation, and including them would only change the order
 /// in which packages are processed.
-pub(super) fn build_dependents(packages: &[Package]) -> HashMap<Name, Vec<usize>> {
+pub(super) fn build_dependents(
+    packages: &[Package],
+    all_versioned_files: &[VersionedFile],
+) -> HashMap<Name, Vec<usize>> {
     let mut owners: HashMap<RelativePathBuf, usize> = HashMap::new();
     for (idx, pkg) in packages.iter().enumerate() {
         for vf in pkg.versioning.versioned_files() {
@@ -91,6 +99,45 @@ pub(super) fn build_dependents(packages: &[Package]) -> HashMap<Name, Vec<usize>
                 continue;
             };
             add_edge(dependency_idx, dependent_idx, &mut seen);
+        }
+    }
+
+    // Manifest-derived edges: each package's manifests (the parsed contents of its
+    // non-dependency, non-lock versioned files) declare dependencies by name; match those
+    // names against the other packages' manifest names.
+    let manifests: Vec<Vec<&VersionedFile>> = packages
+        .iter()
+        .map(|pkg| {
+            pkg.versioning
+                .versioned_files()
+                .iter()
+                .filter(|config| config.dependency.is_none() && !config.is_lock_file())
+                .filter_map(|config| {
+                    all_versioned_files
+                        .iter()
+                        .find(|vf| *vf.path() == config.as_path())
+                })
+                .collect()
+        })
+        .collect();
+    let manifest_names: Vec<Vec<String>> = manifests
+        .iter()
+        .map(|files| files.iter().filter_map(|vf| vf.package_name()).collect())
+        .collect();
+    for (dependent_idx, (pkg, files)) in packages.iter().zip(&manifests).enumerate() {
+        if pkg.update_internal_dependencies == InternalDependencyUpdate::None {
+            continue;
+        }
+        for (dependency_idx, names) in manifest_names.iter().enumerate() {
+            if dependency_idx == dependent_idx {
+                continue;
+            }
+            if names
+                .iter()
+                .any(|name| files.iter().any(|vf| vf.declares_dependency(name)))
+            {
+                add_edge(dependency_idx, dependent_idx, &mut seen);
+            }
         }
     }
     edges

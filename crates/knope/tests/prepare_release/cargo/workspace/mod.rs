@@ -1,6 +1,7 @@
 mod full;
 mod internal_dependency_updates;
 mod internal_dependency_updates_explicit;
+mod internal_dependency_updates_from_manifest;
 mod internal_dependency_updates_minor;
 mod internal_dependency_updates_name_mismatch;
 mod internal_dependency_updates_none;
