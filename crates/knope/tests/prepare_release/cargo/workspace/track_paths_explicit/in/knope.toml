@@ -1,0 +1,14 @@
+[packages.first-package]
+versioned_files = ["first/Cargo.toml"]
+track_paths = true
+paths = ["first", "docs"]
+
+[packages.second-package]
+versioned_files = ["second/Cargo.toml"]
+track_paths = true
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

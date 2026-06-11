@@ -36,6 +36,12 @@ pub(crate) struct Package {
     /// Explicitly-declared names of packages this package depends on, supplementing the
     /// relationships derived from `versioned_files`.
     pub(crate) internal_dependencies: Vec<String>,
+    /// When `true`, route conventional commits to this package by the files they touched.
+    pub(crate) track_paths: bool,
+    /// Directories/files that belong to this package for path-based commit filtering. When
+    /// `track_paths` is true and this is empty, parents of the package's `versioned_files`
+    /// are used.
+    pub(crate) paths: Vec<RelativePathBuf>,
 }
 
 impl Package {
@@ -99,6 +105,8 @@ impl Package {
             override_version: None,
             update_internal_dependencies: package.update_internal_dependencies,
             internal_dependencies: package.internal_dependencies,
+            track_paths: package.track_paths,
+            paths: package.paths,
         })
     }
 
@@ -126,10 +134,23 @@ impl Package {
         let commit_messages = if should_ignore {
             Vec::new()
         } else {
-            conventional_commits::get_conventional_commits_after_last_stable_version(
+            let commits = conventional_commits::get_conventional_commits_after_last_stable_version(
                 &self.versioning.name,
                 all_tags,
-            )?
+            )?;
+            if self.track_paths {
+                let territory = self.territory();
+                debug!(
+                    "track_paths enabled for {pkg}; territory: {territory:?}",
+                    pkg = self.versioning.name,
+                );
+                commits
+                    .into_iter()
+                    .filter(|commit| commit_touches_any(commit, &territory))
+                    .collect()
+            } else {
+                commits
+            }
         };
 
         let changeset_dir = PathBuf::from(CHANGESET_DIR);
@@ -163,6 +184,30 @@ impl Package {
         Ok(self.versioning.get_changes(change_files, &commit_messages))
     }
 
+    /// Compute the package's "territory" — the set of repo-relative directories/files used
+    /// for path-based commit filtering. Falls back to parent directories of non-dependency
+    /// `versioned_files` when no explicit `paths` were configured.
+    fn territory(&self) -> Vec<RelativePathBuf> {
+        if !self.paths.is_empty() {
+            return self.paths.clone();
+        }
+        let mut out: Vec<RelativePathBuf> = Vec::new();
+        for vf in self.versioning.versioned_files() {
+            if vf.dependency.is_some() {
+                continue;
+            }
+            let path = vf.as_path();
+            let dir = path.parent().map_or_else(
+                || RelativePathBuf::from(""),
+                relative_path::RelativePath::to_relative_path_buf,
+            );
+            if !out.contains(&dir) {
+                out.push(dir);
+            }
+        }
+        out
+    }
+
     pub(crate) fn apply_release(
         &mut self,
         changes: &[Change],
@@ -185,6 +230,35 @@ impl Package {
             .apply_changes(changes, versioned_files, change_config)
             .map_err(Error::Bump)
     }
+}
+
+/// Returns `true` if any file changed by `commit` is inside any path in `territory`. An
+/// empty territory matches no files (so the package's commits are effectively dropped — the
+/// safe interpretation for "`track_paths` but nothing configured to track").
+fn commit_touches_any(
+    commit: &knope_versioning::changes::conventional_commit::Commit,
+    territory: &[RelativePathBuf],
+) -> bool {
+    if territory.is_empty() {
+        return false;
+    }
+    commit
+        .files
+        .iter()
+        .any(|file| territory.iter().any(|root| path_is_within(file, root)))
+}
+
+/// Whether `file` is `root` or sits inside `root` (treating `root` as a directory prefix).
+fn path_is_within(file: &RelativePathBuf, root: &RelativePathBuf) -> bool {
+    if root.as_str().is_empty() {
+        return true;
+    }
+    if file == root {
+        return true;
+    }
+    let root_str = root.as_str().trim_end_matches('/');
+    let file_str = file.as_str();
+    file_str.starts_with(root_str) && file_str.as_bytes().get(root_str.len()).copied() == Some(b'/')
 }
 
 pub(crate) fn execute_prepare_actions(
@@ -282,6 +356,8 @@ impl Package {
             go_versioning: GoVersioning::default(),
             update_internal_dependencies: InternalDependencyUpdate::default(),
             internal_dependencies: Vec::new(),
+            track_paths: false,
+            paths: Vec::new(),
         }
     }
 }

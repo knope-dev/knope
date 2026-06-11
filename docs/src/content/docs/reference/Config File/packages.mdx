@@ -567,3 +567,50 @@ versioned_files = ["crates/consumer/Cargo.toml"]
 update_internal_dependencies = "patch"
 internal_dependencies = ["my-lib"]
 ```
+
+## `track_paths`
+
+By default, Knope routes conventional commits to packages using the commit
+[`scopes`](#scopes) field. In a monorepo, that's friction: every developer has to remember
+to add the right scope, and a missing or misspelled scope silently drops the change.
+
+Set `track_paths = true` on a package to route commits to it based on the **files each
+commit touches** instead. A commit is included in this package's changes if any file it
+modifies is inside the package's territory.
+
+A package's territory defaults to the parent directories of its own (non-dependency)
+`versioned_files`. For a Cargo workspace member declared via `versioned_files =
+["crates/my-crate/Cargo.toml"]`, the territory is `crates/my-crate/`.
+
+```toml title="knope.toml"
+[packages.my-crate]
+versioned_files = ["crates/my-crate/Cargo.toml"]
+track_paths = true
+```
+
+## `paths`
+
+Override the auto-derived territory used by [`track_paths`](#track_paths). Useful when a
+package's files live in multiple directories (e.g. shared utilities) or when the auto
+default doesn't match your layout.
+
+```toml title="knope.toml"
+[packages.my-crate]
+versioned_files = ["crates/my-crate/Cargo.toml"]
+track_paths = true
+paths = ["crates/my-crate", "shared/api"]
+```
+
+### How `track_paths` interacts with the rest
+
+- **Commits in no package's territory are ignored.** A top-level `feat: README change` does
+  not bump any package, which is usually what you want.
+- **A commit that touches files in multiple packages is credited to each of them.** Every
+  package whose territory was touched gets the change.
+- **The `scopes` field is independent.** When `track_paths` is enabled, `scopes` is no longer
+  required for routing. If `scopes` is also set, scope filtering still applies: a commit that
+  has a scope must match the package's scopes _and_ the path filter; a commit with no scope
+  only needs to satisfy the path filter.
+- **Internal dependency propagation still applies.** A package bumped by `track_paths` will
+  still cascade to its dependents via
+  [`update_internal_dependencies`](#update_internal_dependencies).

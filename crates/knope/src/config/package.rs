@@ -61,6 +61,8 @@ pub struct Package {
     pub(crate) ignore_go_major_versioning: bool,
     pub(crate) update_internal_dependencies: InternalDependencyUpdate,
     pub(crate) internal_dependencies: Vec<String>,
+    pub(crate) track_paths: bool,
+    pub(crate) paths: Vec<RelativePathBuf>,
 }
 
 impl Package {
@@ -185,6 +187,8 @@ impl Package {
                     ignore_go_major_versioning: false,
                     update_internal_dependencies: InternalDependencyUpdate::default(),
                     internal_dependencies: Vec::new(),
+                    track_paths: false,
+                    paths: Vec::new(),
                 }
             })
             .collect())
@@ -491,6 +495,8 @@ impl Package {
             ignore_go_major_versioning,
             update_internal_dependencies,
             internal_dependencies,
+            track_paths,
+            paths,
         } = package;
         let versioned_files = versioned_files
             .into_iter()
@@ -526,6 +532,8 @@ impl Package {
             ignore_go_major_versioning,
             update_internal_dependencies,
             internal_dependencies,
+            track_paths,
+            paths,
         })
     }
 }
@@ -622,6 +630,8 @@ impl From<Package> for knope_config::Package {
             ignore_go_major_versioning: package.ignore_go_major_versioning,
             update_internal_dependencies: package.update_internal_dependencies,
             internal_dependencies: package.internal_dependencies,
+            track_paths: package.track_paths,
+            paths: package.paths,
         }
     }
 }

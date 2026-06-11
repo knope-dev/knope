@@ -1,4 +1,5 @@
 use git_conventional::{Commit as ConventionalCommit, Footer, Type};
+use relative_path::RelativePathBuf;
 use tracing::debug;
 
 use super::{Change, ChangeSource, ChangeType, GitInfo};
@@ -8,6 +9,9 @@ use crate::release_notes::Sections;
 pub struct Commit {
     pub message: String,
     pub info: Option<GitInfo>,
+    /// Files changed by this commit relative to the repo root. Empty when unknown (e.g.,
+    /// in tests that construct commits manually).
+    pub files: Vec<RelativePathBuf>,
 }
 
 /// Try to parse each commit message as a [conventional commit](https://www.conventionalcommits.org/).
