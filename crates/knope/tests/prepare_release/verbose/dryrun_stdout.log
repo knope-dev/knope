@@ -9,6 +9,9 @@ Running step PrepareRelease(PrepareRelease { prerelease_label: None, allow_empty
 Getting conventional commits since last release of package first
 Using commits since tag first/v1.2.3
 Only checking commits with scopes: ["first"]
+Getting conventional commits since last release of package second
+Using commits since tag second/v0.4.6
+Only checking commits with scopes: ["second"]
 Determining new version for first
 commit feat: A feature
 	implies rule MINOR
@@ -33,9 +36,6 @@ changeset breaking_change.md
 changeset feature.md
 	implies rule MINOR
 Using MAJOR rule to bump from 1.2.3 to 2.0.0
-Getting conventional commits since last release of package second
-Using commits since tag second/v0.4.6
-Only checking commits with scopes: ["second"]
 Determining new version for second
 commit feat: A feature
 	implies rule MINOR

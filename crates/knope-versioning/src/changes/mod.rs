@@ -172,8 +172,14 @@ impl From<FooterToken<'_>> for ChangeType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ChangeSource {
-    ConventionalCommit { description: String },
-    ChangeFile { id: Arc<changesets::UniqueId> },
+    ConventionalCommit {
+        description: String,
+    },
+    ChangeFile {
+        id: Arc<changesets::UniqueId>,
+    },
+    /// Synthesized by Knope when propagating a release through internal monorepo dependencies.
+    DependencyUpdate,
 }
 
 impl Display for ChangeSource {
@@ -184,6 +190,7 @@ impl Display for ChangeSource {
                 ..
             } => write!(f, "commit {message}"),
             Self::ChangeFile { id, .. } => write!(f, "changeset {}", id.to_file_name()),
+            Self::DependencyUpdate => write!(f, "dependency update"),
         }
     }
 }

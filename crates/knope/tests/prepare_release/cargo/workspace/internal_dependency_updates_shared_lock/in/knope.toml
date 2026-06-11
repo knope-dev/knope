@@ -1,0 +1,17 @@
+[packages.first-package]
+versioned_files = ["first/Cargo.toml", "Cargo.lock"]
+scopes = ["first-package"]
+update_internal_dependencies = "patch"
+
+[packages.second-package]
+versioned_files = [
+  "second/Cargo.toml",
+  { path = "Cargo.lock", dependency = "second-renamed" },
+]
+scopes = ["second-package"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

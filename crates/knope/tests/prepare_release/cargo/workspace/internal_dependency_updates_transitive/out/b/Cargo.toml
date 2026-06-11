@@ -1,0 +1,6 @@
+[package]
+name = "b"
+version = "1.0.1"
+
+[dependencies]
+c = "2.0.0"

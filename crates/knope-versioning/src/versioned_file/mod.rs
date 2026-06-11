@@ -495,6 +495,16 @@ impl Config {
         self.path.clone()
     }
 
+    /// Whether this file is a lock file (recording resolved versions) rather than a manifest
+    /// (declaring a package or its dependencies).
+    #[must_use]
+    pub fn is_lock_file(&self) -> bool {
+        matches!(
+            self.format,
+            Format::CargoLock | Format::PackageLockJson | Format::DenoLock
+        )
+    }
+
     #[must_use]
     pub fn to_pathbuf(&self) -> PathBuf {
         self.as_path().to_path("")
