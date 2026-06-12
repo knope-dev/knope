@@ -134,9 +134,10 @@ impl Package {
         let commit_messages = if should_ignore {
             Vec::new()
         } else {
-            let commits = conventional_commits::get_conventional_commits_after_last_stable_version(
+            let commits = conventional_commits::get_conventional_commits_after_last_release(
                 &self.versioning.name,
                 all_tags,
+                prepare_release.prerelease_label.is_some(),
             )?;
             if self.track_paths {
                 let territory = self.territory();
