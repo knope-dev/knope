@@ -487,9 +487,9 @@ dependencies = [
 
 [[package]]
 name = "deno_config"
-version = "0.97.0"
+version = "0.100.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26bd4881a2385ab360e81e040a9de805d9e5f5cfbea7c345b6a3cd46f02264bb"
+checksum = "4a06411a763d48ef63930dbf08782dcf97e8ef9c690df148a0877d42a48bfb25"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -538,9 +538,9 @@ dependencies = [
 
 [[package]]
 name = "deno_lockfile"
-version = "0.49.0"
+version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1984f4d97a53842dd99937185707224cb6f5ce60d6f04bf7d68dd93a68b866eb"
+checksum = "90eaf9974970a127206892fc6a01e26fc2bfce5a8b1efcde3780d389b612aff1"
 dependencies = [
  "async-trait",
  "deno_semver",
@@ -551,15 +551,15 @@ dependencies = [
 
 [[package]]
 name = "deno_maybe_sync"
-version = "0.34.0"
+version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb2ce6efdde2e0314c3c450eb386a65ccde6497fe4f40d0314c094e32b1bbfc3"
+checksum = "35888cf73df1b1abc87e46ed74bcbcbb274b555b2f4e9ab677b3f5e45a1eabe3"
 
 [[package]]
 name = "deno_package_json"
-version = "0.49.0"
+version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d3b3383e1e1e5817312e766374d1bdaa131e00b0bc17ee10f0a448f6db6ef1e"
+checksum = "9eeb00428bf6190cdc1bf4ce74956b4c07b82f9241e5765dea6c95c9549ad5c9"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -590,9 +590,9 @@ dependencies = [
 
 [[package]]
 name = "deno_semver"
-version = "0.9.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92d46d2fd6959170a6e9f6607a6f79683868fa82ceac56ca520ab014e4fa5b21"
+checksum = "147261611819fb4dfe339b53e3b45d6704c7e32c86ce33a88511d5bcebebaaa3"
 dependencies = [
  "capacity_builder",
  "deno_error",
@@ -1709,9 +1709,9 @@ dependencies = [
 
 [[package]]
 name = "monch"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
+checksum = "6bcc6ad3b93f756f2532d29f7c7291b8d246a2c460a99a3611327bb726830014"
 
 [[package]]
 name = "normalize-line-endings"
@@ -2637,9 +2637,9 @@ dependencies = [
 
 [[package]]
 name = "sys_traits"
-version = "0.1.27"
+version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a79feaa49de4a6c8191bdbd5fb3eada50671e9367d874d1c12e3d36db131414"
+checksum = "88826d6169418c98e8bc52a43f79d50907dfa3e87ba5161930d42c6f980b35ee"
 dependencies = [
  "sys_traits_macros",
 ]
