@@ -38,6 +38,22 @@ impl PackageJson {
         &self.path
     }
 
+    /// The `name` field of the manifest, if present.
+    pub(crate) fn package_name(&self) -> Option<String> {
+        let json = serde_json::from_str::<Map<String, Value>>(&self.raw).ok()?;
+        json.get("name")?.as_str().map(String::from)
+    }
+
+    /// Whether the manifest declares a dependency (or dev dependency) on `name`.
+    pub(crate) fn declares_dependency(&self, name: &str) -> bool {
+        let Ok(json) = serde_json::from_str::<Map<String, Value>>(&self.raw) else {
+            return false;
+        };
+        ["dependencies", "devDependencies"]
+            .iter()
+            .any(|key| json.get(*key).and_then(|deps| deps.get(name)).is_some())
+    }
+
     pub(crate) fn set_version(
         mut self,
         new_version: &Version,
