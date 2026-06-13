@@ -127,7 +127,7 @@ mod test_replace_variables {
     use relative_path::RelativePathBuf;
 
     use super::*;
-    use crate::step::issues::Issue;
+    use crate::{config, step::issues::Issue};
 
     fn state() -> State {
         let changelog = Changelog::new(RelativePathBuf::default(), String::new());
@@ -166,7 +166,7 @@ mod test_replace_variables {
             vec![package],
             all_versioned_files,
             Vec::new(),
-            false,
+            None,
         )
     }
 
@@ -209,7 +209,7 @@ mod test_replace_variables {
             all_git_tags: Vec::new(),
             all_versioned_files: Vec::new(),
             pending_actions: Vec::new(),
-            ignore_conventional_commits: false,
+            changes_config: config::Changes::default(),
         };
 
         let result =

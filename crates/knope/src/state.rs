@@ -23,8 +23,7 @@ pub(crate) struct State {
     pub(crate) all_versioned_files: Vec<VersionedFile>,
     pub(crate) pending_actions: Vec<Action>,
     pub(crate) all_git_tags: Vec<String>,
-    /// If set to true, conventional commits are ignored across all workflows
-    pub(crate) ignore_conventional_commits: bool,
+    pub(crate) changes_config: config::Changes,
 }
 
 impl State {
@@ -36,7 +35,7 @@ impl State {
         packages: Vec<releases::Package>,
         all_versioned_files: Vec<VersionedFile>,
         all_git_tags: Vec<String>,
-        ignore_conventional_commits: bool,
+        changes_config: Option<config::Changes>,
     ) -> Self {
         State {
             jira_config,
@@ -49,7 +48,7 @@ impl State {
             all_versioned_files,
             all_git_tags,
             pending_actions: Vec::new(),
-            ignore_conventional_commits,
+            changes_config: changes_config.unwrap_or_default(),
         }
     }
 }
