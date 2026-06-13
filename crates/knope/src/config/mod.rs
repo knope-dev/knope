@@ -21,6 +21,7 @@ use crate::{
 mod package;
 mod toml;
 
+pub(crate) use knope_config::Changes;
 pub(crate) use toml::{GitHub, Gitea, Jira};
 
 use crate::fs::WriteType;
@@ -28,6 +29,7 @@ use crate::fs::WriteType;
 /// A valid config, loaded from a supported file (or detected via default)
 #[derive(Debug)]
 pub(crate) struct Config {
+    pub(crate) changes: Changes,
     pub(crate) release_notes: ReleaseNotes,
     pub(crate) packages: Vec<Package>,
     /// The list of defined workflows that are selectable
@@ -38,8 +40,6 @@ pub(crate) struct Config {
     pub(crate) github: Option<GitHub>,
     /// Optional configuration to communicate with a Gitea instance
     pub(crate) gitea: Option<Gitea>,
-    /// If set to true, conventional commits are ignored across all workflows
-    pub(crate) ignore_conventional_commits: bool,
 }
 
 impl Config {
@@ -77,7 +77,7 @@ impl Config {
                 if let Step::PrepareRelease(prepare_release) = step {
                     if prepare_release.ignore_conventional_commits {
                         // Move to top-level config
-                        self.ignore_conventional_commits = true;
+                        self.changes.ignore_conventional_commits = true;
                         prepare_release.ignore_conventional_commits = false;
                         upgraded = true;
                     }
@@ -118,9 +118,12 @@ impl Config {
             )
         };
 
-        let changes = if self.ignore_conventional_commits {
+        let changes = if self.changes.ignore_conventional_commits
+            || self.changes.ignore_conventional_merge_commits
+        {
             Some(knope_config::Changes {
-                ignore_conventional_commits: true,
+                ignore_conventional_commits: self.changes.ignore_conventional_commits,
+                ignore_conventional_merge_commits: self.changes.ignore_conventional_merge_commits,
             })
         } else {
             None
@@ -199,10 +202,7 @@ impl TryFrom<(ConfigLoader, String)> for Config {
             jira: config.jira.map(Spanned::into_inner),
             github: config.github.map(Spanned::into_inner),
             gitea: config.gitea.map(Spanned::into_inner),
-            ignore_conventional_commits: config
-                .shared
-                .changes
-                .is_some_and(|c| c.ignore_conventional_commits),
+            changes: config.shared.changes.unwrap_or_default(),
         })
     }
 }
@@ -332,7 +332,7 @@ pub(crate) fn generate() -> Result<Config, package::Error> {
         github,
         gitea,
         packages,
-        ignore_conventional_commits: false,
+        changes: Changes::default(),
     })
 }
 
