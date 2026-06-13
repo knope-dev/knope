@@ -216,7 +216,7 @@ fn create_state(
         jira,
         github,
         gitea,
-        ignore_conventional_commits,
+        changes,
     } = config;
     let git_tags = if packages.is_empty() {
         // Don't mess with Git if there aren't any packages defined
@@ -275,7 +275,7 @@ fn create_state(
         packages,
         versioned_files,
         git_tags,
-        ignore_conventional_commits,
+        Some(changes),
     );
     Ok((state, workflows))
 }
