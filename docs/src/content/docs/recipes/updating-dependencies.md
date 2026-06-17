@@ -69,28 +69,28 @@ You can use this same `dependency` field to override the name of a package updat
 ## Releasing dependents automatically
 
 Wiring up `versioned_files` keeps the dependency _string_ inside dependent packages in sync,
-but by default each dependent must still have its own [changeset](/reference/concepts/change)
+but by default each dependent must still have its own [Changeset](/reference/concepts/change)
 to actually trigger a release of that dependent.
 
 To release dependents automatically whenever one of their internal dependencies releases, set
-`update_internal_dependencies` on the dependent's package config to `"patch"` or `"minor"` —
-see the
+`update_internal_dependencies` on the dependent's package config to `"patch"` or `"minor"`.
+See the
 [`update_internal_dependencies` reference](/reference/config-file/packages#update_internal_dependencies)
-for details. The default is `"none"`: dependency strings are kept in sync, but no release
-is created for the dependent.
+for details. The default is `"none"`: Knope keeps dependency strings in sync but creates no
+release for the dependent.
 
-For example, given the setup above where `knope` depends on `knope-versioning`, setting
-`update_internal_dependencies = "patch"` on the `knope` package means releasing
-`knope-versioning` will also release `knope` as a patch, and the new release notes for
-`knope` will include a `Dependencies` section listing the bumped dependencies.
+For example, take the earlier setup where `knope` depends on `knope-versioning`. Set
+`update_internal_dependencies = "patch"` on the `knope` package. Now releasing
+`knope-versioning` also releases `knope` as a patch, and the new `knope` release notes
+include a `Dependencies` section that lists the bumped dependencies.
 
 :::caution
 
 Knope finds the dependency relationships by reading each opted-in package's manifests
 (`Cargo.toml`, `package.json`) and from `versioned_files` entries that point at another
-package's files. If a relationship isn't visible to either — for example, the version is
-only tracked in the workspace-root `Cargo.toml` via `[workspace.dependencies]` — declare it
-explicitly with
+package's files. Sometimes a relationship isn't visible to either. For example, you might
+track the version only in the workspace-root `Cargo.toml` via `[workspace.dependencies]`. In
+those cases, declare it explicitly with
 [`internal_dependencies`](/reference/config-file/packages#internal_dependencies) on the
 dependent's package config.
 
