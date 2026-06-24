@@ -364,7 +364,10 @@ pub(crate) fn add_files(file_names: &[RelativePathBuf]) -> Result<(), Error> {
 /// means that there could be paths which jump _behind_ the target tag... and we want to exclude
 /// those as well. There's probably a way to optimize performance with some cool graph magic
 /// eventually, but this is good enough for now.
-pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Commit>, Error> {
+pub(crate) fn get_commit_messages_after_tag(
+    tag: Option<&str>,
+    ignore_merge_commits: bool,
+) -> Result<Vec<Commit>, Error> {
     let repo = Repository::open(".")?;
 
     let tag_ref = if let Some(tag) = tag {
@@ -406,6 +409,9 @@ pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Com
     for oid in revwalk.filter_map(Result::ok) {
         if !commits_to_exclude.contains(&oid) {
             if let Ok(commit) = repo.find_commit(oid) {
+                if ignore_merge_commits && commit.parent_count() > 1 {
+                    continue;
+                }
                 if let Some(message) = commit.message().map(String::from) {
                     commits.push(Commit {
                         message,

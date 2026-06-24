@@ -53,7 +53,7 @@ pub(crate) async fn prepare_release(
             prepare_release,
             &state.all_git_tags,
             &changeset,
-            state.ignore_conventional_commits,
+            &state.changes_config,
         )?;
 
         if !changes.is_empty()

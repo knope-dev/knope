@@ -24,6 +24,19 @@ This replaces the deprecated `ignore_conventional_commits` option on the [`Prepa
 To migrate from the old step-level setting to this top-level setting, run `knope --upgrade`.
 :::
 
+## `ignore_conventional_merge_commits` <Badge text="Knope 0.24.0+" variant="tip" />
+
+When set to `true`, Knope will not consider merge commits when determining version bumps and changelog entries.
+
+```toml title="knope.toml"
+[changes]
+ignore_conventional_merge_commits = true
+
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+```
+
 [Conventional Commits]: /reference/concepts/conventional-commits
 [Changesets]: /reference/concepts/changeset
 [`PrepareRelease` step]: /reference/config-file/steps/prepare-release
