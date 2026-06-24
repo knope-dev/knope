@@ -4,7 +4,7 @@
     ":semanticCommitTypeAll(chore)",
     "github>Turbo87/renovate-config//rust/updateToolchain",
     ":automergeStableNonMajor",
-    "helpers:pinGitHubActionDigests"
+    "helpers:pinGitHubActionDigestsToSemver"
   ],
   "platformAutomerge": true,
   "lockFileMaintenance": {
