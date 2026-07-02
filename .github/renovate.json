@@ -16,7 +16,8 @@
       "groupName": "Astro",
       "matchPackageNames": [
         "/^@?astro/",
-        "starlight"
+        "starlight",
+        "starlight-links-validator"
       ]
     },
     {
