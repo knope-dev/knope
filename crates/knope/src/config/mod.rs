@@ -307,9 +307,7 @@ pub(crate) fn generate() -> Result<Config, package::Error> {
                 .last()
                 .map(|repo| repo.strip_suffix(".git").unwrap_or(repo).to_string());
 
-            owner
-                .and_then(|owner| repo.map(|repo| (owner, repo)))
-                .map(|(owner, repo)| GitHub { owner, repo })
+            owner.zip(repo).map(|(owner, repo)| GitHub { owner, repo })
         }
         _ => None,
     };
