@@ -1,0 +1,22 @@
+Would add the following to first/Cargo.toml: second-package.version = 0.1.1, version = 1.0.1
+Would add the following to second/Cargo.toml: version = 0.1.1
+Would add the following to second/CHANGELOG.md: 
+## 0.1.1 ([DATE])
+
+### Features
+
+- A feature in the dep
+
+Would add the following to first/CHANGELOG.md: 
+## 1.0.1 ([DATE])
+
+### Dependencies
+
+- Updated dependencies
+  - second-package@0.1.1
+
+Would add files to git:
+  first/Cargo.toml
+  second/Cargo.toml
+  second/CHANGELOG.md
+  first/CHANGELOG.md

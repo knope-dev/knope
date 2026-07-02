@@ -193,6 +193,12 @@ impl Package {
         self.versions.latest()
     }
 
+    /// The versioned-file configs associated with this package.
+    #[must_use]
+    pub fn versioned_files(&self) -> &[Config] {
+        &self.versioned_files
+    }
+
     /// Apply a Rule to a [`PackageVersion`], incrementing & resetting the correct components.
     ///
     /// # Versions 0.x

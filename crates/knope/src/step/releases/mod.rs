@@ -23,6 +23,7 @@ pub(crate) mod changelog;
 pub(crate) mod conventional_commits;
 pub(crate) mod gitea;
 pub(crate) mod github;
+mod internal_deps;
 pub(crate) mod package;
 pub(crate) mod semver;
 
@@ -48,7 +49,9 @@ pub(crate) async fn prepare_release(
         Vec::new()
     };
 
-    for package in &mut state.packages {
+    let mut per_package_changes: Vec<Vec<knope_versioning::changes::Change>> =
+        Vec::with_capacity(state.packages.len());
+    for package in &state.packages {
         let mut changes = package.gather_changes(
             prepare_release,
             &state.all_git_tags,
@@ -81,12 +84,10 @@ pub(crate) async fn prepare_release(
                 ));
             }
         }
-
-        let (all_versioned_files, actions) =
-            package.apply_release(&changes, prepare_release, state.all_versioned_files)?;
-        state.all_versioned_files = all_versioned_files;
-        state.pending_actions.extend(actions);
+        per_package_changes.push(changes);
     }
+
+    apply_releases_with_propagation(&mut state, per_package_changes, prepare_release)?;
 
     let actions = state
         .all_versioned_files
@@ -112,6 +113,60 @@ pub(crate) async fn prepare_release(
 
 pub(crate) fn bump_version(state: RunType<State>, rule: &Rule) -> Result<RunType<State>, Error> {
     bump_version_and_update_state(state, rule).map_err(Error::from)
+}
+
+/// Apply each package's gathered changes in topological dependency order. After each package's
+/// release is applied, propagate a synthetic "Updated dependencies" change to every dependent
+/// whose policy is `patch` or `minor`, so dependents get released even with no own changes.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "indices come from build_dependents/topological_order over state.packages, so are always in-bounds"
+)]
+fn apply_releases_with_propagation(
+    state: &mut State,
+    mut per_package_changes: Vec<Vec<knope_versioning::changes::Change>>,
+    prepare_release: &PrepareRelease,
+) -> Result<(), Error> {
+    let dependents = internal_deps::build_dependents(&state.packages, &state.all_versioned_files);
+    let order = internal_deps::topological_order(&state.packages, &dependents);
+
+    // Accumulates dependency bumps to be folded into a dependent's synthetic change before it
+    // is applied. Keyed by the dependent's index in `state.packages`.
+    let mut pending_dep_bumps: Vec<Vec<internal_deps::BumpedDependency>> =
+        vec![Vec::new(); state.packages.len()];
+
+    for idx in order {
+        let mut changes = std::mem::take(&mut per_package_changes[idx]);
+
+        let bumps = std::mem::take(&mut pending_dep_bumps[idx]);
+        if !bumps.is_empty() {
+            let policy = state.packages[idx].update_internal_dependencies;
+            if let Some(synthetic) = internal_deps::synthetic_change(policy, &bumps) {
+                changes.push(synthetic);
+            }
+        }
+
+        let package = &mut state.packages[idx];
+        let bumped = !changes.is_empty() || package.override_version.is_some();
+        let versioned_files = std::mem::take(&mut state.all_versioned_files);
+        let (all_versioned_files, actions) =
+            package.apply_release(&changes, prepare_release, versioned_files)?;
+        state.all_versioned_files = all_versioned_files;
+        state.pending_actions.extend(actions);
+
+        if bumped
+            && let Some(new_version) = package.versioning.latest_version()
+            && let Some(targets) = dependents.get(package.name())
+        {
+            for &target in targets {
+                pending_dep_bumps[target].push(internal_deps::BumpedDependency {
+                    name: package.name().clone(),
+                    new_version: new_version.clone(),
+                });
+            }
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Diagnostic, thiserror::Error)]

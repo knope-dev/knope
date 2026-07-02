@@ -29,6 +29,7 @@ mod readme_version;
 mod release_after_prerelease;
 mod scopes;
 mod second_prerelease;
+mod second_prerelease_after_distinct_stable;
 mod tauri_conf_json;
 mod unknown_versioned_file_format;
 mod verbose;

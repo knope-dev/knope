@@ -1,0 +1,11 @@
+Would add the following to Cargo.toml: version = 1.1.0-rc.1
+Would add the following to CHANGELOG.md: 
+## 1.1.0-rc.1 ([DATE])
+
+### Fixes
+
+- A fix after the first RC
+
+Would add files to git:
+  Cargo.toml
+  CHANGELOG.md

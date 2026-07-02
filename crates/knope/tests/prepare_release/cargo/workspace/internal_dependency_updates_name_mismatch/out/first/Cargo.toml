@@ -1,0 +1,6 @@
+[package]
+name = "first-package"
+version = "1.0.1"
+
+[dependencies]
+second-lib = "0.1.1"

@@ -1,0 +1,17 @@
+[packages.first-package]
+versioned_files = ["first/Cargo.toml"]
+scopes = ["first-package"]
+update_internal_dependencies = "patch"
+
+[packages.second-package]
+versioned_files = [
+  "second/Cargo.toml",
+  { path = "first/Cargo.toml", dependency = "second-lib" },
+]
+scopes = ["second-package"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

@@ -1,0 +1,5 @@
+Would add the following to first/package.json: version = 1.0.1
+Would add the following to second/package.json: version = 0.1.1
+Would add files to git:
+  first/package.json
+  second/package.json
