@@ -486,3 +486,132 @@ ignore_go_major_versioning = true
 To maintain multiple major versions of a Go module, check out [this recipe](/recipes/multiple-major-go-versions)
 
 :::
+
+## `update_internal_dependencies`
+
+When a package is part of a monorepo and depends on another package in the same repo,
+Knope can automatically release the dependent whenever the dependency releases.
+
+Set `update_internal_dependencies` on the dependent's package config to control the bump:
+
+- `"none"` (default): don't release the dependent when its dependency changes. Knope still
+  writes the dependency's new version into the dependent's files (keeping the build
+  consistent), but creates no version bump or release notes for the dependent.
+- `"patch"`: release the dependent as a patch bump.
+- `"minor"`: release the dependent as a minor bump.
+
+```toml title="knope.toml"
+[packages.consumer]
+versioned_files = ["consumer/Cargo.toml"]
+update_internal_dependencies = "patch"  # or "minor"; defaults to "none"
+```
+
+When this propagation triggers a release, Knope adds a "Dependencies" section to the
+dependent's release notes, in the style of the
+[Changeset](https://github.com/changesets/changesets) tool:
+
+```markdown
+## 1.0.1 (2026-06-04)
+
+### Dependencies
+
+- Updated dependencies
+  - my-dependency@1.2.3
+```
+
+Propagation is transitive: if `A` depends on `B`, and `B` depends on `C`, then releasing `C`
+will bump `B`, which will in turn bump `A` (subject to each package's own
+`update_internal_dependencies` setting).
+
+### How Knope finds dependents
+
+For any package that opts in, Knope reads its manifests (currently `Cargo.toml` and
+`package.json`). If a manifest declares a dependency whose name matches another package's
+manifest name, Knope detects the relationship with no extra configuration.
+
+This detection alone doesn't keep the dependency's version string inside the manifest
+current. To write that on every release, add a `{ path, dependency }` entry to the
+dependency's `versioned_files`.
+
+Those `{ path, dependency }` entries also imply relationships: an entry like
+`{ path = "consumer/Cargo.toml", dependency = "my-lib" }` in the `my-lib` package's config
+means "when `my-lib` releases, write its new version into `consumer/Cargo.toml`". When that
+file is also a versioned file of another package (`consumer` here), Knope records that
+`consumer` depends on `my-lib`. The name the dependency goes by _inside_ the file doesn't
+need to match its package name in `knope.toml`.
+
+Lock files (like `Cargo.lock` or `package-lock.json`) record versions for the whole
+workspace, so sharing one does **not** create a dependency relationship.
+
+Sometimes a relationship isn't visible to either mechanism. Knope might not support the
+manifest format yet, or you might track the version only in a shared workspace manifest via
+`[workspace.dependencies]`. In those cases, declare it explicitly with
+[`internal_dependencies`](#internal_dependencies).
+
+## `internal_dependencies`
+
+Explicitly declares which other packages (by their name in `knope.toml`) this package
+depends on, for [`update_internal_dependencies`](#update_internal_dependencies) propagation.
+This supplements the relationships Knope derives from `versioned_files`, covering cases
+where the dependency's version isn't tracked in one of this package's own files:
+
+```toml title="knope.toml"
+[packages.my-lib]
+versioned_files = [
+  "crates/my-lib/Cargo.toml",
+  # my-lib's version is tracked in the shared workspace manifest, which no package owns
+  { path = "Cargo.toml", dependency = "my-lib" },
+]
+
+[packages.consumer]
+versioned_files = ["crates/consumer/Cargo.toml"]
+update_internal_dependencies = "patch"
+internal_dependencies = ["my-lib"]
+```
+
+## `track_paths`
+
+By default, Knope routes conventional commits to packages using the commit
+[`scopes`](#scopes) field. In a monorepo, that's friction: every developer has to remember
+to add the right scope, and a missing or misspelled scope drops the change.
+
+Set `track_paths = true` on a package to route commits to it based on the **files each
+commit touches** instead. A commit counts toward this package's changes when it modifies a
+file inside the package's territory.
+
+A package's territory defaults to the parent directories of its own (non-dependency)
+`versioned_files`. For a Cargo workspace member declared via `versioned_files =
+["crates/my-crate/Cargo.toml"]`, the territory is `crates/my-crate/`.
+
+```toml title="knope.toml"
+[packages.my-crate]
+versioned_files = ["crates/my-crate/Cargo.toml"]
+track_paths = true
+```
+
+## `paths`
+
+Override the territory that [`track_paths`](#track_paths) derives by default. This helps when
+a package's files live in several directories (for example, shared utilities) or when the
+default doesn't match your layout.
+
+```toml title="knope.toml"
+[packages.my-crate]
+versioned_files = ["crates/my-crate/Cargo.toml"]
+track_paths = true
+paths = ["crates/my-crate", "shared/api"]
+```
+
+### How `track_paths` interacts with the rest
+
+- **Knope ignores commits in no package's territory.** A top-level `feat: README change`
+  doesn't bump any package, which is usually what you want.
+- **A commit that touches files in several packages applies to each of them.** Every package
+  whose territory the commit touches gets the change.
+- **The `scopes` field stays independent.** With `track_paths` on, routing no longer needs
+  `scopes`. If you also set `scopes`, scope filtering still applies. A commit that has a scope
+  must match both the package's scopes _and_ the path filter. A commit with no scope only
+  needs to satisfy the path filter.
+- **Internal dependency propagation still applies.** A package bumped by `track_paths` will
+  still cascade to its dependents via
+  [`update_internal_dependencies`](#update_internal_dependencies).

@@ -1,0 +1,19 @@
+[packages.a]
+versioned_files = ["a/Cargo.toml"]
+scopes = ["a"]
+update_internal_dependencies = "patch"
+
+[packages.b]
+versioned_files = ["b/Cargo.toml", { path = "a/Cargo.toml", dependency = "b" }]
+scopes = ["b"]
+update_internal_dependencies = "patch"
+
+[packages.c]
+versioned_files = ["c/Cargo.toml", { path = "b/Cargo.toml", dependency = "c" }]
+scopes = ["c"]
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"

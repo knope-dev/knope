@@ -65,3 +65,33 @@ versioned_files = [
 You can use this same `dependency` field to override the name of a package updated in a `Cargo.lock`.
 
 :::
+
+## Releasing dependents automatically
+
+Wiring up `versioned_files` keeps the dependency _string_ inside dependent packages in sync,
+but by default each dependent must still have its own [Changeset](/reference/concepts/change)
+to actually trigger a release of that dependent.
+
+To release dependents automatically whenever one of their internal dependencies releases, set
+`update_internal_dependencies` on the dependent's package config to `"patch"` or `"minor"`.
+See the
+[`update_internal_dependencies` reference](/reference/config-file/packages#update_internal_dependencies)
+for details. The default is `"none"`: Knope keeps dependency strings in sync but creates no
+release for the dependent.
+
+For example, take the earlier setup where `knope` depends on `knope-versioning`. Set
+`update_internal_dependencies = "patch"` on the `knope` package. Now releasing
+`knope-versioning` also releases `knope` as a patch, and the new `knope` release notes
+include a `Dependencies` section that lists the bumped dependencies.
+
+:::caution
+
+Knope finds the dependency relationships by reading each opted-in package's manifests
+(`Cargo.toml`, `package.json`) and from `versioned_files` entries that point at another
+package's files. Sometimes a relationship isn't visible to either. For example, you might
+track the version only in the workspace-root `Cargo.toml` via `[workspace.dependencies]`. In
+those cases, declare it explicitly with
+[`internal_dependencies`](/reference/config-file/packages#internal_dependencies) on the
+dependent's package config.
+
+:::

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub use self::{
     changelog_section::ChangelogSection,
-    package::{Asset, AssetNameError, Assets, Package, VersionedFile},
+    package::{Asset, AssetNameError, Assets, InternalDependencyUpdate, Package, VersionedFile},
     template::{Template, Variable},
 };
 pub use crate::release_notes::ReleaseNotes;

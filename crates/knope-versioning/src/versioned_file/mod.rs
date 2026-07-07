@@ -117,6 +117,30 @@ impl VersionedFile {
         }
     }
 
+    /// The package name this file declares, if it's a manifest that declares one.
+    /// Currently supported for `Cargo.toml` and `package.json`.
+    #[must_use]
+    pub fn package_name(&self) -> Option<String> {
+        match self {
+            VersionedFile::Cargo(cargo) => {
+                cargo::name_from_document(&cargo.document).map(String::from)
+            }
+            VersionedFile::PackageJson(package_json) => package_json.package_name(),
+            _ => None,
+        }
+    }
+
+    /// Whether this file is a manifest declaring a dependency on `name`.
+    /// Currently supported for `Cargo.toml` and `package.json`.
+    #[must_use]
+    pub fn declares_dependency(&self, name: &str) -> bool {
+        match self {
+            VersionedFile::Cargo(cargo) => cargo::contains_dependency(&cargo.document, name),
+            VersionedFile::PackageJson(package_json) => package_json.declares_dependency(name),
+            _ => false,
+        }
+    }
+
     #[must_use]
     pub fn path(&self) -> &RelativePathBuf {
         match self {
@@ -493,6 +517,16 @@ impl Config {
     #[must_use]
     pub fn as_path(&self) -> RelativePathBuf {
         self.path.clone()
+    }
+
+    /// Whether this file is a lock file (recording resolved versions) rather than a manifest
+    /// (declaring a package or its dependencies).
+    #[must_use]
+    pub fn is_lock_file(&self) -> bool {
+        matches!(
+            self.format,
+            Format::CargoLock | Format::PackageLockJson | Format::DenoLock
+        )
     }
 
     #[must_use]

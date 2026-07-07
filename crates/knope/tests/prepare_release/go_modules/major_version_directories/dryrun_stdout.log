@@ -13,14 +13,14 @@ Getting conventional commits since last release of package v1
 No tags found starting with v1/v
 Using ALL commits
 Only checking commits with scopes: ["v1"]
-Determining new version for v1
-commit fix(v1): A fix
-	implies rule PATCH
-Using PATCH rule to bump from 1.0.0 to 1.0.1
 Getting conventional commits since last release of package v2
 No tags found starting with v2/v
 Using ALL commits
 Only checking commits with scopes: ["v2"]
+Determining new version for v1
+commit fix(v1): A fix
+	implies rule PATCH
+Using PATCH rule to bump from 1.0.0 to 1.0.1
 Determining new version for v2
 commit feat(v2): New feature
 	implies rule MINOR

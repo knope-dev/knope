@@ -407,9 +407,11 @@ pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Com
         if !commits_to_exclude.contains(&oid) {
             if let Ok(commit) = repo.find_commit(oid) {
                 if let Some(message) = commit.message().map(String::from) {
+                    let files = changed_files(&repo, &commit);
                     commits.push(Commit {
                         message,
                         info: commit_info(&commit),
+                        files,
                     });
                 }
             }
@@ -420,6 +422,40 @@ pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Com
     commits.reverse();
 
     Ok(commits)
+}
+
+/// Return the set of file paths (relative to the repo root) changed by `commit`, compared
+/// against its first parent. Returns an empty vec for root commits or on diff failure.
+fn changed_files(repo: &Repository, commit: &git2::Commit) -> Vec<RelativePathBuf> {
+    let Ok(new_tree) = commit.tree() else {
+        return Vec::new();
+    };
+    let parent_tree = commit.parent(0).ok().and_then(|parent| parent.tree().ok());
+    let Ok(diff) = repo.diff_tree_to_tree(parent_tree.as_ref(), Some(&new_tree), None) else {
+        return Vec::new();
+    };
+    let mut files = Vec::new();
+    diff.foreach(
+        &mut |delta, _| {
+            for path in [delta.new_file().path(), delta.old_file().path()]
+                .into_iter()
+                .flatten()
+            {
+                if let Some(s) = path.to_str() {
+                    let rel = RelativePathBuf::from(s.replace('\\', "/"));
+                    if !files.contains(&rel) {
+                        files.push(rel);
+                    }
+                }
+            }
+            true
+        },
+        None,
+        None,
+        None,
+    )
+    .ok();
+    files
 }
 
 fn commit_info(commit: &git2::Commit) -> Option<GitInfo> {

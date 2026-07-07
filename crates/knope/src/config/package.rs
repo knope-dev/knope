@@ -17,7 +17,7 @@ use deno_path_util::url_to_file_path;
 use deno_semver::package::PackageKind;
 use glob::glob;
 use itertools::Itertools;
-use knope_config::{Assets, ChangelogSection};
+use knope_config::{Assets, ChangelogSection, InternalDependencyUpdate};
 use knope_versioning::{
     ConfigError, UnknownFile, VersionedFileConfig, package, versioned_file::cargo,
 };
@@ -59,6 +59,10 @@ pub struct Package {
     pub(crate) extra_changelog_sections: Vec<ChangelogSection>,
     pub(crate) assets: Option<Assets>,
     pub(crate) ignore_go_major_versioning: bool,
+    pub(crate) update_internal_dependencies: InternalDependencyUpdate,
+    pub(crate) internal_dependencies: Vec<String>,
+    pub(crate) track_paths: bool,
+    pub(crate) paths: Vec<RelativePathBuf>,
 }
 
 impl Package {
@@ -181,6 +185,10 @@ impl Package {
                     extra_changelog_sections: vec![],
                     assets: None,
                     ignore_go_major_versioning: false,
+                    update_internal_dependencies: InternalDependencyUpdate::default(),
+                    internal_dependencies: Vec::new(),
+                    track_paths: false,
+                    paths: Vec::new(),
                 }
             })
             .collect())
@@ -485,6 +493,10 @@ impl Package {
             extra_changelog_sections,
             assets,
             ignore_go_major_versioning,
+            update_internal_dependencies,
+            internal_dependencies,
+            track_paths,
+            paths,
         } = package;
         let versioned_files = versioned_files
             .into_iter()
@@ -518,6 +530,10 @@ impl Package {
             extra_changelog_sections,
             assets,
             ignore_go_major_versioning,
+            update_internal_dependencies,
+            internal_dependencies,
+            track_paths,
+            paths,
         })
     }
 }
@@ -612,6 +628,10 @@ impl From<Package> for knope_config::Package {
             extra_changelog_sections: package.extra_changelog_sections,
             assets: package.assets,
             ignore_go_major_versioning: package.ignore_go_major_versioning,
+            update_internal_dependencies: package.update_internal_dependencies,
+            internal_dependencies: package.internal_dependencies,
+            track_paths: package.track_paths,
+            paths: package.paths,
         }
     }
 }

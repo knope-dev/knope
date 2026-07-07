@@ -1,0 +1,5 @@
+Would add the following to Cargo.lock: second-renamed = 0.1.1
+Would add the following to second/Cargo.toml: version = 0.1.1
+Would add files to git:
+  Cargo.lock
+  second/Cargo.toml

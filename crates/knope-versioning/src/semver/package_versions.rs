@@ -171,6 +171,21 @@ impl PackageVersions {
                 .map(|(stable, _)| *stable)
                 .unwrap_or_default()
         };
+        // An existing prerelease may already target a higher stable version (for example, a
+        // feature shipped in an earlier prerelease and the changes since then are only
+        // fixes). If the rule-derived version has no prerelease line of its own, continue
+        // the nearest existing line above it instead of regressing below a version that has
+        // already been pre-released. A rule-derived version that matches an existing line
+        // keeps it, so deliberately-newer lines (e.g. a hand-tagged 2.0.0-rc) don't take
+        // over (see `pre_after_same_pre`).
+        let stable_component = if self.prereleases.contains_key(&stable_component) {
+            stable_component
+        } else {
+            self.prereleases
+                .range(stable_component..)
+                .next()
+                .map_or(stable_component, |(existing, _)| *existing)
+        };
         let pre_version = self
             .prereleases
             .get(&stable_component)

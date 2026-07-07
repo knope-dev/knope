@@ -24,6 +24,45 @@ pub struct Package {
     pub assets: Option<Assets>,
     #[serde(default, skip_serializing_if = "<&bool>::not")]
     pub ignore_go_major_versioning: bool,
+    /// What kind of bump this package gets when one of its internal monorepo dependencies bumps.
+    #[serde(default, skip_serializing_if = "InternalDependencyUpdate::is_default")]
+    pub update_internal_dependencies: InternalDependencyUpdate,
+    /// Names of other packages in this config that this package depends on. Usually Knope
+    /// derives these relationships from `versioned_files` `dependency` entries; use this to
+    /// declare ones it can't see (for example, versions tracked only in a shared workspace
+    /// manifest).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub internal_dependencies: Vec<String>,
+    /// If `true`, conventional commits are routed to this package by the files they changed
+    /// rather than (or in addition to) the commit's scope.
+    #[serde(default, skip_serializing_if = "<&bool>::not")]
+    pub track_paths: bool,
+    /// Explicit list of directories/files that belong to this package (used when
+    /// `track_paths` is `true`). If empty, falls back to the parent directories of the
+    /// package's own (non-dependency) `versioned_files`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub paths: Vec<RelativePathBuf>,
+}
+
+/// Policy for how this package is versioned when one of its internal monorepo dependencies
+/// receives a release.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InternalDependencyUpdate {
+    /// Don't bump this package when an internal dependency bumps (the default).
+    #[default]
+    None,
+    /// Bump this package as a patch release when an internal dependency bumps.
+    Patch,
+    /// Bump this package as a minor release when an internal dependency bumps.
+    Minor,
+}
+
+impl InternalDependencyUpdate {
+    #[must_use]
+    pub fn is_default(&self) -> bool {
+        matches!(self, Self::None)
+    }
 }
 
 /// A type that deserializes from either a single regex string or an array of regex strings.

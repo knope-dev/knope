@@ -7,7 +7,12 @@ pub use release::Release;
 use serde::Deserialize;
 use time::{OffsetDateTime, macros::format_description};
 
-use crate::{Action, changes::Change, package, semver::Version};
+use crate::{
+    Action,
+    changes::{Change, ChangeSource},
+    package,
+    semver::Version,
+};
 
 mod changelog;
 mod config;
@@ -46,7 +51,10 @@ impl ReleaseNotes {
         for (section_name, sources) in self.sections.iter() {
             let mut changes = changes
                 .iter()
-                .filter(|change| sources.contains(&change.change_type))
+                .filter(|change| {
+                    sources.contains(&change.change_type)
+                        && change.original_source != ChangeSource::DependencyUpdate
+                })
                 .sorted()
                 .peekable();
             if changes.peek().is_some() {
@@ -59,6 +67,7 @@ impl ReleaseNotes {
                 write_body(&mut notes, changes, &self.change_templates);
             }
         }
+        write_dependency_updates(&mut notes, changes);
 
         let release = Release {
             title: release_title(&version)?,
@@ -94,6 +103,28 @@ impl ReleaseNotes {
     )
 )]
 pub struct TimeError(#[from] time::error::Format);
+
+/// Append a "Dependencies" section listing internal monorepo dependency bumps in changesets
+/// style: a single bullet "Updated dependencies" with each `name@version` nested under it.
+fn write_dependency_updates(out: &mut String, changes: &[Change]) {
+    let dep_changes: Vec<&Change> = changes
+        .iter()
+        .filter(|c| c.original_source == ChangeSource::DependencyUpdate)
+        .collect();
+    if dep_changes.is_empty() {
+        return;
+    }
+    if !out.is_empty() {
+        out.push_str("\n\n");
+    }
+    out.push_str("## Dependencies\n\n- Updated dependencies");
+    for change in dep_changes {
+        if let Some(details) = change.details.as_ref() {
+            out.push('\n');
+            out.push_str(details);
+        }
+    }
+}
 
 fn write_body<'change>(
     out: &mut String,
