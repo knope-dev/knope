@@ -180,7 +180,10 @@ pub(crate) fn select_issue_from_current_branch(
 pub(crate) fn current_branch() -> Result<String, Error> {
     let repo = Repository::open(".").map_err(ErrorKind::OpenRepo)?;
     let head = repo.head()?;
-    let ref_name = head.name().ok_or(ErrorKind::NotOnAGitBranch)?;
+    if !head.is_branch() {
+        return Err(ErrorKind::NotOnAGitBranch.into());
+    }
+    let ref_name = head.name()?;
     Ok(ref_name.to_owned())
 }
 
@@ -188,10 +191,10 @@ pub(crate) fn current_branch() -> Result<String, Error> {
 pub(crate) fn get_first_remote() -> Option<String> {
     let repo = Repository::open(".").ok()?;
     let remotes = repo.remotes().ok()?;
-    let remote_name = remotes.get(0)?;
+    let remote_name = remotes.get(0).ok()??;
     repo.find_remote(remote_name)
         .ok()
-        .and_then(|remote| remote.url().map(String::from))
+        .and_then(|remote| remote.url().ok().map(String::from))
 }
 
 fn select_issue_from_branch_name(ref_name: &str) -> Result<Issue, Error> {
@@ -304,7 +307,7 @@ fn switch_to_branch(repo: &Repository, branch: &Branch) -> Result<(), Error> {
     let ref_name = branch
         .get()
         .name()
-        .ok_or(Error::from(ErrorKind::BadGitBranchName))?;
+        .map_err(|_| Error::from(ErrorKind::BadGitBranchName))?;
     repo.set_head(ref_name)?;
     repo.checkout_head(Some(CheckoutBuilder::new().force()))
         .map_err(ErrorKind::IncompleteCheckout)?;
@@ -406,7 +409,7 @@ pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Com
     for oid in revwalk.filter_map(Result::ok) {
         if !commits_to_exclude.contains(&oid) {
             if let Ok(commit) = repo.find_commit(oid) {
-                if let Some(message) = commit.message().map(String::from) {
+                if let Ok(message) = commit.message().map(String::from) {
                     commits.push(Commit {
                         message,
                         info: commit_info(&commit),
@@ -424,7 +427,7 @@ pub(crate) fn get_commit_messages_after_tag(tag: Option<&str>) -> Result<Vec<Com
 
 fn commit_info(commit: &git2::Commit) -> Option<GitInfo> {
     Some(GitInfo {
-        author_name: commit.author().name().map(String::from)?,
+        author_name: commit.author().name().ok().map(String::from)?,
         hash: commit.id().to_string().get(..7).map(String::from)?,
         pr_number: None,
         pr_author_login: None,
@@ -465,7 +468,7 @@ pub(crate) fn all_tags_on_branch() -> Result<Vec<String>, Error> {
     let repo = Repository::open(current_dir().map_err(ErrorKind::CurrentDirectory)?)?;
     let mut all_tags: HashMap<Oid, Vec<String>> = HashMap::new();
     for reference in repo.references()?.filter_map(Result::ok) {
-        let Some(name) = reference.name() else {
+        let Ok(name) = reference.name() else {
             continue;
         };
         if !name.starts_with("refs/tags/") {
