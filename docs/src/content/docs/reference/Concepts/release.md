@@ -12,10 +12,6 @@ In Knope, releasing a package consists of:
 4. Create a [Git tag](#git-tags)
 5. Optionally create a release (as part of the previous step) if [a forge is configured](/reference/concepts/forge) including [release notes]
 
-:::note
-
-:::
-
 ## Git tags
 
 When there is a single package, each release gets a Git tag that looks like `v1.2.3`.
