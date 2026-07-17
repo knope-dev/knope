@@ -97,5 +97,5 @@ so the most recent version is near the top of the changelog right after the opti
 
 [package]: /reference/concepts/package
 [release notes]: /reference/concepts/release-notes
-[release]: /reference/concepts/release/
+[release]: /reference/concepts/release
 [simple-vs-complex-changes]: /reference/concepts/release-notes#simple-vs-complex-changes
