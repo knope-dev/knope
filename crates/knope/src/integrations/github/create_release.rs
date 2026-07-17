@@ -47,7 +47,7 @@ pub(crate) async fn create_release(
         owner = github_config.owner,
         repo = github_config.repo,
     );
-    let token_header = format!("token {}", &token);
+    let token_header = format!("token {token}");
 
     let response = client
         .post(&url)

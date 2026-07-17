@@ -79,6 +79,6 @@ pub(crate) async fn validate(
 
 impl std::fmt::Display for Workflow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.name)
+        write!(f, "{}", self.name)
     }
 }

@@ -32,7 +32,7 @@ pub(crate) async fn create_or_update_pull_request(
     let (token, client) = state.require_authentication()?;
     let config::GitHub { owner, repo } = config;
     let base_url = format!("https://api.github.com/repos/{owner}/{repo}/pulls");
-    let authorization_header = format!("Bearer {}", &token);
+    let authorization_header = format!("Bearer {token}");
 
     let existing_pulls_response = client
         .get(&base_url)
