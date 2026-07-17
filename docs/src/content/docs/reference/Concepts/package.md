@@ -23,4 +23,4 @@ If there is any inconsistency, that's an error.
 If there are no versioned files, the package's version is the last [release]'s Git tag.
 If there also is no valid Git tag, the package doesn't have a version (which could be an error sometimes).
 
-[release]: /reference/concepts/release
+[release]: /reference/concepts/release/

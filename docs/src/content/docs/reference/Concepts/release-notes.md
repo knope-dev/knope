@@ -124,7 +124,7 @@ within a section.
 
 [package]: /reference/concepts/package
 [changelog]: /reference/concepts/changelog
-[release]: /reference/concepts/release
+[release]: /reference/concepts/release/
 [forge]: /reference/concepts/forge
 [change file]: /reference/concepts/change-file
 [conventional commit]: /reference/concepts/conventional-commits

@@ -34,28 +34,20 @@ export default defineConfig({
         { label: "Installation", link: "/installation" },
         {
           label: "Tutorials",
-          autogenerate: {
-            directory: "tutorials",
-          },
+          items: [{ autogenerate: { directory: "tutorials" } }],
         },
         {
           label: "Recipes",
-          autogenerate: {
-            directory: "recipes",
-          },
+          items: [{ autogenerate: { directory: "recipes" } }],
         },
         {
           label: "Reference",
-          autogenerate: {
-            directory: "reference",
-          },
+          items: [{ autogenerate: { directory: "reference" } }],
           collapsed: true,
         },
         {
           label: "FAQ",
-          autogenerate: {
-            directory: "faq",
-          },
+          items: [{ autogenerate: { directory: "faq" } }],
         },
       ],
     }),
