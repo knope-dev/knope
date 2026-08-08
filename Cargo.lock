@@ -488,9 +488,9 @@ dependencies = [
 
 [[package]]
 name = "deno_config"
-version = "0.97.0"
+version = "0.106.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26bd4881a2385ab360e81e040a9de805d9e5f5cfbea7c345b6a3cd46f02264bb"
+checksum = "778759fb5a6d4af62833684daad218cf8df2286da3206a6fb63b0636d0cdacfd"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -504,7 +504,7 @@ dependencies = [
  "ignore",
  "import_map",
  "indexmap",
- "jsonc-parser",
+ "jsonc-parser 0.32.4",
  "log",
  "serde",
  "serde_json",
@@ -539,9 +539,9 @@ dependencies = [
 
 [[package]]
 name = "deno_lockfile"
-version = "0.49.0"
+version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1984f4d97a53842dd99937185707224cb6f5ce60d6f04bf7d68dd93a68b866eb"
+checksum = "c90a415eabe8899e99f15011a90c1a35bb20482ea3bca76ab21845f2678b6e1f"
 dependencies = [
  "async-trait",
  "deno_semver",
@@ -552,15 +552,18 @@ dependencies = [
 
 [[package]]
 name = "deno_maybe_sync"
-version = "0.34.0"
+version = "0.43.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb2ce6efdde2e0314c3c450eb386a65ccde6497fe4f40d0314c094e32b1bbfc3"
+checksum = "ea60b612c90ef33e757630f17135ee378ad27830c11108667fdb59b971a6226f"
+dependencies = [
+ "rustc-hash",
+]
 
 [[package]]
 name = "deno_package_json"
-version = "0.49.0"
+version = "0.58.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d3b3383e1e1e5817312e766374d1bdaa131e00b0bc17ee10f0a448f6db6ef1e"
+checksum = "0e524925751fe3788d4b0d6983e0c124a4e7c9e59819921b90cd2d15164f05b8"
 dependencies = [
  "boxed_error",
  "capacity_builder",
@@ -591,9 +594,9 @@ dependencies = [
 
 [[package]]
 name = "deno_semver"
-version = "0.9.1"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92d46d2fd6959170a6e9f6607a6f79683868fa82ceac56ca520ab014e4fa5b21"
+checksum = "ff487e9bf55c39bfbc47418a009a0de0988c4fea5e48e8ca787fa7dbff8056cc"
 dependencies = [
  "capacity_builder",
  "deno_error",
@@ -730,7 +733,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1418,6 +1421,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonc-parser"
+version = "0.33.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0560e3f9a9a03ea6b6e90b41138c5db9e21526c99eb192c1a26c68176593285"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "knope"
 version = "0.23.0"
 dependencies = [
@@ -1480,7 +1492,7 @@ dependencies = [
  "deno_semver",
  "git-conventional",
  "itertools",
- "jsonc-parser",
+ "jsonc-parser 0.33.1",
  "miette",
  "pretty_assertions",
  "regex",
@@ -1647,9 +1659,9 @@ dependencies = [
 
 [[package]]
 name = "monch"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b52c1b33ff98142aecea13138bd399b68aa7ab5d9546c300988c345004001eea"
+checksum = "6bcc6ad3b93f756f2532d29f7c7291b8d246a2c460a99a3611327bb726830014"
 
 [[package]]
 name = "normalize-line-endings"
@@ -1846,7 +1858,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2095,7 +2107,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2152,7 +2164,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2531,9 +2543,9 @@ dependencies = [
 
 [[package]]
 name = "sys_traits"
-version = "0.1.27"
+version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a79feaa49de4a6c8191bdbd5fb3eada50671e9367d874d1c12e3d36db131414"
+checksum = "88826d6169418c98e8bc52a43f79d50907dfa3e87ba5161930d42c6f980b35ee"
 dependencies = [
  "sys_traits_macros",
 ]
@@ -2580,7 +2592,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3112,7 +3124,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
