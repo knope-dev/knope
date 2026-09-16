@@ -142,13 +142,22 @@ pub fn switch_branch(path: &Path, name: &str) {
     debug!("{}", String::from_utf8_lossy(&output.stdout));
 }
 
-/// Merge a branch into the current branch
+/// Merge a branch into the current branch, with the default message
 pub fn merge_branch(path: &Path, name: &str) {
+    merge_branch_with_message(path, name, None);
+}
+
+/// Merge a branch into the current branch with the given message, or the default if None
+pub fn merge_branch_with_message(path: &Path, name: &str, message: Option<&str>) {
     let output = Command::new("git")
         .arg("merge")
         .arg("--no-ff")
         .arg("--no-edit")
         .arg(name)
+        .args(match message {
+            None => vec![],
+            Some(m) => vec!["-m", m],
+        })
         .current_dir(path)
         .output()
         .unwrap();

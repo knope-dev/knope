@@ -100,7 +100,7 @@ impl Package {
         prepare_release: &PrepareRelease,
         all_tags: &[String],
         changeset: &[changesets::Release],
-        global_ignore_conventional_commits: bool,
+        changes_config: &config::Changes,
     ) -> Result<Vec<Change>, Error> {
         let ignore_conventional_commits = prepare_release.ignore_conventional_commits;
 
@@ -114,7 +114,8 @@ impl Package {
         }
 
         // Use step-level setting if present, otherwise use global setting
-        let should_ignore = ignore_conventional_commits || global_ignore_conventional_commits;
+        let should_ignore =
+            ignore_conventional_commits || changes_config.ignore_conventional_commits;
 
         let commit_messages = if should_ignore {
             Vec::new()
@@ -122,6 +123,7 @@ impl Package {
             conventional_commits::get_conventional_commits_after_last_stable_version(
                 &self.versioning.name,
                 all_tags,
+                changes_config.ignore_conventional_merge_commits,
             )?
         };
 

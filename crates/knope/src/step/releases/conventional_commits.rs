@@ -8,6 +8,7 @@ use crate::integrations::git::{self, get_commit_messages_after_tag};
 pub(crate) fn get_conventional_commits_after_last_stable_version(
     package_name: &package::Name,
     all_tags: &[String],
+    ignore_merge_commits: bool,
 ) -> Result<Vec<Commit>, git::Error> {
     debug!(
         "Getting conventional commits since last release of package {}",
@@ -17,5 +18,5 @@ pub(crate) fn get_conventional_commits_after_last_stable_version(
         .stable()
         .map(|target_version| ReleaseTag::new(&target_version.into(), package_name));
 
-    get_commit_messages_after_tag(tag.as_ref().map(ReleaseTag::as_str))
+    get_commit_messages_after_tag(tag.as_ref().map(ReleaseTag::as_str), ignore_merge_commits)
 }
