@@ -36,6 +36,11 @@ types = ["docs"]
 name = "Notes"
 types = ["note"]
 
+[release_notes]
+change_templates = [
+  "### $summary (@$pr_author_login in #$pr_number)\n\n$details",
+  "- $summary (@$pr_author_login in #$pr_number)",
+]
 
 [github]
 owner = "knope-dev"
