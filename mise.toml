@@ -5,9 +5,9 @@ taplo = "0.10.0"
 "cargo:cargo-deny" = "0.20.2"
 
 [tasks.default]
-alias = "dev"
+alias = "check"
 
-[tasks.dev]
+[tasks.check]
 description = "Basic development tasks (test, reformat, lint)"
 depends = ["test", "reformat", "lint"]
 

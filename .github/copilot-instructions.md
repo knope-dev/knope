@@ -37,7 +37,7 @@ mise run install-docs-dependencies
 
 Use `mise tasks` to see all available tasks. Most common ones:
 
-- `mise run dev` - Run tests, reformat, and lint (default task)
+- `mise run check` - Run tests, reformat, and lint (default task)
 - `mise run test` - Run all tests
 - `mise run ci` - Run checks the same way CI does
 - `mise run reformat` - Reformat all code (Rust, TOML, docs)
@@ -139,7 +139,7 @@ The project uses several configuration files:
 
 ## When Making Changes
 
-1. Always run `mise run dev` before committing
+1. Always run `mise run check` before committing
 2. For Rust code: ensure `cargo +nightly fmt` passes
 3. For new features: add snapshot tests following existing patterns
 4. Update documentation if adding/changing user-facing features
