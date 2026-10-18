@@ -196,7 +196,7 @@ impl VersionedFile {
             Self::PyProject(pyproject) => Ok(Self::PyProject(pyproject.set_version(new_version))),
             Self::PubSpec(pubspec) => pubspec
                 .set_version(new_version)
-                .map_err(SetError::Yaml)
+                .map_err(SetError::Pubspec)
                 .map(Self::PubSpec),
             Self::Gleam(gleam) => Ok(Self::Gleam(gleam.set_version(new_version))),
             Self::GoMod(gomod) => gomod
@@ -269,16 +269,9 @@ pub enum SetError {
         )
     )]
     Json(#[from] serde_json::Error),
-    #[error("Error serializing YAML, this is a bug: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(knope_versioning::versioned_file::yaml_serialize),
-            help("This is a bug in knope, please report it."),
-            url("https://github.com/knope-dev/knope/issues"),
-        )
-    )]
-    Yaml(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    #[cfg_attr(feature = "miette", diagnostic(transparent))]
+    Pubspec(#[from] pubspec::Error),
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     GoMod(#[from] go_mod::SetError),

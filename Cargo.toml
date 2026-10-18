@@ -19,9 +19,9 @@ knope-versioning = { path = "crates/knope-versioning", version = "0.8.0" }
 miette = "7.2.0"
 regex = "1.11.0"
 relative-path = { version = "2.0.0", features = ["serde"] }
+saphyr = "0.2.2"
 serde = { version = "1.0.200", features = ["derive"] }
 serde_json = "1.0.116"
-serde_yaml = "0.9.34"
 thiserror = "2.0.0"
 toml = { version = "1.0.1", features = ["preserve_order"] }
 toml_edit = "0.25.0"

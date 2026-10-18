@@ -1,8 +1,9 @@
+use std::str::FromStr;
+
 #[cfg(feature = "miette")]
 use miette::Diagnostic;
 use relative_path::RelativePathBuf;
-use serde::{Deserialize, Serialize};
-use serde_yaml::{Mapping, Value, from_str, to_string};
+use saphyr::{EmitError, LoadableYamlNode, Mapping, Scalar, Yaml, YamlEmitter};
 use thiserror::Error;
 
 use crate::{
@@ -13,51 +14,87 @@ use crate::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PubSpec {
     raw: String,
-    parsed: Yaml,
+    version: Version,
     path: RelativePathBuf,
     diff: Option<String>,
 }
 
 impl PubSpec {
     pub(crate) fn new(path: RelativePathBuf, content: String) -> Result<Self, Error> {
-        match from_str(&content) {
-            Ok(parsed) => Ok(PubSpec {
-                raw: content,
-                parsed,
+        let parsed = match Yaml::load_from_str(&content) {
+            Ok(parsed) => parsed,
+            Err(err) => {
+                return Err(Error::Deserialize {
+                    path,
+                    message: err.to_string(),
+                });
+            }
+        };
+        let [doc] = parsed.as_slice() else {
+            return Err(Error::Deserialize {
                 path,
-                diff: None,
-            }),
-            Err(err) => Err(Error::Deserialize { path, source: err }),
-        }
+                message: format!("Expected a single YAML document, found {}", parsed.len()),
+            });
+        };
+        let Some(mapping) = doc.as_mapping() else {
+            return Err(Error::Deserialize {
+                path,
+                message: "YAML was not a mapping".into(),
+            });
+        };
+        let Some(version) = mapping.get(&Yaml::Value(Scalar::String("version".into()))) else {
+            return Err(Error::Deserialize {
+                path,
+                message: "YAML did not contain a top-level `version` field".into(),
+            });
+        };
+        let Some(version) = version.as_str() else {
+            return Err(Error::Deserialize {
+                path,
+                message: "YAML `version` field was not a string".into(),
+            });
+        };
+        let version = Version::from_str(version)?;
+        Ok(PubSpec {
+            raw: content,
+            version,
+            path,
+            diff: None,
+        })
     }
 
     pub(crate) fn get_version(&self) -> &Version {
-        &self.parsed.version
+        &self.version
     }
 
     pub(crate) fn get_path(&self) -> &RelativePathBuf {
         &self.path
     }
 
-    pub(crate) fn set_version(mut self, new_version: &Version) -> serde_yaml::Result<Self> {
+    pub(crate) fn set_version(mut self, new_version: &Version) -> Result<Self, Error> {
         let version_line = self.raw.lines().find(|line| line.starts_with("version: "));
         self.raw = if let Some(version_line) = version_line {
             // Replace only the required bit to preserve formatting & comments (since serde_yaml doesn't preserve them)
-            self.raw.replace(
-                version_line,
-                to_string(&Yaml {
-                    version: new_version.clone(),
-                })?
-                .trim(),
-            )
+            self.raw
+                .replace(version_line, &format!("version: {new_version}"))
         } else {
             // Can't replace just the one line, resort to replacing the whole thing
-            let mut yaml = from_str::<Mapping>(&self.raw)?;
+            let mut yaml = Yaml::load_from_str(&self.raw).map_err(|err| Error::Deserialize {
+                message: err.to_string(),
+                path: self.path.clone(),
+            })?;
+            let mut yaml = yaml
+                .pop()
+                .and_then(Yaml::into_mapping)
+                .unwrap_or_else(Mapping::new);
             yaml.insert(
-                Value::String("version".to_string()),
-                Value::String(new_version.to_string()),
+                Yaml::Value(Scalar::String("version".into())),
+                Yaml::Value(Scalar::String(new_version.to_string().into())),
             );
-            to_string(&yaml)?
+            let mut output = String::new();
+
+            YamlEmitter::new(&mut output).dump(&Yaml::Mapping(yaml))?;
+            output
         };
         self.diff = Some(new_version.to_string());
 
@@ -76,7 +113,7 @@ impl PubSpec {
 #[derive(Debug, Error)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
 pub enum Error {
-    #[error("Error deserializing {path}: {source}")]
+    #[error("Error deserializing {path}: {message}")]
     #[cfg_attr(
         feature = "miette",
         diagnostic(
@@ -89,17 +126,23 @@ pub enum Error {
     )]
     Deserialize {
         path: RelativePathBuf,
-        #[source]
-        source: serde_yaml::Error,
+        message: String,
     },
     #[error(transparent)]
     #[cfg_attr(feature = "miette", diagnostic(transparent))]
     Version(#[from] semver::Error),
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-struct Yaml {
-    version: Version,
+    #[error(transparent)]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(pubspec_yaml::serialize),
+            help(
+                "Knope could not update pubspec.yaml in place or seriliaze it. Please report this as a bug."
+            ),
+            url("https://github.com/knope-dev/knope/issues/new")
+        )
+    )]
+    EmitError(#[from] EmitError),
 }
 
 #[cfg(test)]
