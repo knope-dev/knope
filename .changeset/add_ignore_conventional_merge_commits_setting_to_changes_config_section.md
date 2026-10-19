@@ -1,6 +1,6 @@
 ---
-config: patch
-knope: patch
+config: minor
+knope: minor
 ---
 
 # Add `ignore_conventional_merge_commits` setting to `[changes]` config section
