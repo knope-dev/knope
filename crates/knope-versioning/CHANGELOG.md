@@ -1,3 +1,12 @@
+## 0.8.1 (2026-10-19)
+
+### Notes
+
+#### Replaced YAML library (@dbanty in #2034)
+
+The internal YAML library was replaced which may lead to slight differences in how pubspec.yaml files are handled.
+Please report any bugs!
+
 ## 0.8.0 (2026-05-24)
 
 ### Breaking Changes

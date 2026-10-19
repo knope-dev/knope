@@ -1444,7 +1444,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "base64",
  "changesets",
@@ -1486,7 +1486,7 @@ dependencies = [
 
 [[package]]
 name = "knope-config"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "indexmap",
  "knope-versioning",
@@ -1498,7 +1498,7 @@ dependencies = [
 
 [[package]]
 name = "knope-versioning"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "changesets",
  "deno_lockfile",
