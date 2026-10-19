@@ -10,6 +10,21 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.23.1 (2026-10-19)
+
+### Features
+
+#### Add `ignore_conventional_merge_commits` setting to `[changes]` config section (@mdaniels5757 in #1931)
+
+You can now ignore merge commits for conventional commit purposes.
+
+### Notes
+
+#### Replaced YAML library (@dbanty in #2034)
+
+The internal YAML library was replaced which may lead to slight differences in how pubspec.yaml files are handled.
+Please report any bugs!
+
 ## 0.23.0 (2026-05-24)
 
 ### Breaking Changes

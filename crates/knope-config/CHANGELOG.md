@@ -1,3 +1,11 @@
+## 0.4.4 (2026-10-19)
+
+### Features
+
+#### Add `ignore_conventional_merge_commits` setting to `[changes]` config section (@mdaniels5757 in #1931)
+
+You can now ignore merge commits for conventional commit purposes.
+
 ## 0.4.3 (2026-05-24)
 
 ### Features
