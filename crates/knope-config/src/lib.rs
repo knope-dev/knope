@@ -13,11 +13,15 @@ pub use self::{
 pub use crate::release_notes::ReleaseNotes;
 
 /// Configuration for how changes are tracked and processed
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Changes {
     /// If set to true, conventional commits are ignored across all workflows
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_conventional_commits: bool,
+    /// If set to true, merge commits do not count as conventional commits,
+    /// even if they would normally be parsed as such.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_conventional_merge_commits: bool,
 }
 
 #[derive(Debug, Default, Deserialize)]
