@@ -10,6 +10,8 @@ with a suggestion for how you'd like to be notified.
 
 :::
 
+Knope Bot is hosted on Render.
+
 Knope Bot collects and stores data for a few reasons:
 
 1. **Caching** for improved performance (and to obey GitHub's rate limits). This data is discarded **as soon as it's no longer useful**. Some examples:
