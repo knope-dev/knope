@@ -10,6 +10,14 @@ The results are changes to the current directory, calls to external commands, an
 Notably, anything written to standard output or standard error
 (what you see in the terminal) is _not_ considered part of the public API and may change between any versions.
 
+## 0.23.2 (2026-10-22)
+
+### Fixes
+
+#### Update bundled TLS certs (@$pr_author_login in #$pr_number)
+
+Protects from the [eMudhra Intermediate CA Compromise](https://emudhra.we-have-a-problem.com) ([RUSTSEC-2026-0382](https://rustsec.org/advisories/RUSTSEC-2026-0382), [RUSTSEC-2026-0383](https://rustsec.org/advisories/RUSTSEC-2026-0383)).
+
 ## 0.23.1 (2026-10-19)
 
 ### Features
