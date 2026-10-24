@@ -14,7 +14,7 @@ Notably, anything written to standard output or standard error
 
 ### Fixes
 
-#### Update bundled TLS certs (@$pr_author_login in #$pr_number)
+#### Update bundled TLS certs (@dbanty in #2055)
 
 Protects from the [eMudhra Intermediate CA Compromise](https://emudhra.we-have-a-problem.com) ([RUSTSEC-2026-0382](https://rustsec.org/advisories/RUSTSEC-2026-0382), [RUSTSEC-2026-0383](https://rustsec.org/advisories/RUSTSEC-2026-0383)).
 
