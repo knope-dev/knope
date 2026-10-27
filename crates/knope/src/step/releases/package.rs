@@ -133,15 +133,23 @@ impl Package {
         let change_files = {
             let change_paths: IndexMap<PathBuf, &PackageChange> = changeset
                 .iter()
-                .find(|release| release.package_name == self.versioning.name.as_ref())
-                .map(|release| {
-                    release
-                        .changes
-                        .iter()
-                        .map(|change| (changeset_dir.join(change.unique_id.to_file_name()), change))
-                        .collect()
+                // The changesets parser preserves quote delimiters in package names.
+                // Collect every matching spelling so mixed quoting keeps all changes.
+                .filter(|release| {
+                    let name = release.package_name.as_str();
+                    let unquoted = name
+                        .strip_prefix('"')
+                        .and_then(|name| name.strip_suffix('"'))
+                        .or_else(|| {
+                            name.strip_prefix('\'')
+                                .and_then(|name| name.strip_suffix('\''))
+                        });
+                    name == self.versioning.name.as_ref()
+                        || unquoted == Some(self.versioning.name.as_ref())
                 })
-                .unwrap_or_default();
+                .flat_map(|release| &release.changes)
+                .map(|change| (changeset_dir.join(change.unique_id.to_file_name()), change))
+                .collect();
 
             let mut git_info = git::get_first_commits_for_files(
                 change_paths.keys().map(PathBuf::as_path).collect(),
