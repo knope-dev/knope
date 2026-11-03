@@ -8,6 +8,10 @@ used both to decide the next version of your project and to generate a changelog
 Change files are in the `.changeset` directory,
 the complete collection of those files is a [changeset](/reference/concepts/changeset).
 
+Package names in the front matter may be unquoted, single-quoted, or double-quoted.
+For example, `my-package: patch`, `'my-package': patch`, and `"my-package": patch`
+all refer to the same package.
+
 You can create a change file with the [`CreateChangeFile`] step.
 More info about the change file format is in the [changesets docs](https://github.com/knope-dev/changesets).
 
