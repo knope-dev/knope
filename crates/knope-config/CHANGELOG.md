@@ -1,3 +1,9 @@
+## 0.4.5 (2026-11-13)
+
+### Notes
+
+- Bump knope-versioning to 0.9.0
+
 ## 0.4.4 (2026-10-19)
 
 ### Features
