@@ -1492,7 +1492,7 @@ dependencies = [
 
 [[package]]
 name = "knope"
-version = "0.23.2"
+version = "0.24.0"
 dependencies = [
  "base64",
  "changesets",
@@ -1546,7 +1546,7 @@ dependencies = [
 
 [[package]]
 name = "knope-versioning"
-version = "0.8.1"
+version = "0.9.0"
 dependencies = [
  "changesets",
  "deno_lockfile",

@@ -1,3 +1,18 @@
+## 0.9.0 (2026-11-13)
+
+### Breaking Changes
+
+#### Support quotes in changeset package names (@dbanty in #2080)
+
+In changesets, surrounding a package name with quotes no longer includes the quotes in the package name.
+So all of these values in a changeset frontmatter are now equivalent:
+
+- `my-package: minor`
+- `"my-package": minor`
+- `'my-package': minor`
+
+This matches the behavior of the JavaScript `changeset` package.
+
 ## 0.8.1 (2026-10-19)
 
 ### Notes
