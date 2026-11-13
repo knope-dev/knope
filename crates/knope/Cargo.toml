@@ -6,7 +6,6 @@ authors = ["Dylan Anthony <contact@dylananthony.com>"]
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/knope-dev/knope"
-homepage = "https://knope.tech"
 documentation = "https://knope.tech"
 keywords = ["semantic-version", "changelog", "changeset", "git", "github"]
 categories = ["command-line-utilities", "development-tools"]
